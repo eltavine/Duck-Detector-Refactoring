@@ -398,7 +398,7 @@ class KernelCheckRepository(
             if (text.contains("-dirty")) {
                 return "-dirty suffix detected in $label."
             }
-            val extraIndicator = listOf("-custom", "-mod", "-patched", "-perf")
+            val extraIndicator = listOf("-custom", "-mod", "-patched")
                 .firstOrNull { text.contains(it) }
             if (extraIndicator != null) {
                 return "Kernel version from $label contains custom build marker $extraIndicator."
