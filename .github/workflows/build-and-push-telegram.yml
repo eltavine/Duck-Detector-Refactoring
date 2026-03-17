@@ -76,7 +76,8 @@ jobs:
             -alias "${ANDROID_KEY_ALIAS}" \
             | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' \
             | head -n 1 \
-            | tr -d '[:space:]')
+            | tr -d '[:space:]:' \
+            | tr '[:upper:]' '[:lower:]')
 
           if [ -z "${expected_sha256}" ]; then
             echo "Failed to extract SHA-256 fingerprint from the configured keystore." >&2
@@ -121,9 +122,15 @@ jobs:
           import json
           from pathlib import Path
 
-          metadata_path = Path("app/build/outputs/apk/release/output-metadata.json")
-          if not metadata_path.exists():
-              raise SystemExit("Release output-metadata.json not found.")
+          metadata_candidates = [
+              Path("app/release/output-metadata.json"),
+              Path("app/build/outputs/apk/release/output-metadata.json"),
+          ]
+          metadata_path = next((path for path in metadata_candidates if path.exists()), None)
+          if metadata_path is None:
+              raise SystemExit(
+                  "Release output-metadata.json not found in app/release or app/build/outputs/apk/release."
+              )
 
           metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
           elements = metadata.get("elements") or []
@@ -177,9 +184,10 @@ jobs:
           {
             echo "apk_path=$apk_path"
             echo "apk_name=$(basename "$apk_path")"
-            echo "caption<<EOF"
-            printf '%s' "$caption"
-            echo "EOF"
+            delimiter="CAPTION_$(date +%s)_$$"
+            echo "caption<<${delimiter}"
+            printf '%s\n' "$caption"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Verify APK signature
@@ -196,14 +204,15 @@ jobs:
           actual_sha256=$(printf '%s\n' "${apksigner_output}" \
             | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
             | head -n 1 \
-            | tr -d '[:space:]')
+            | tr -d '[:space:]:' \
+            | tr '[:upper:]' '[:lower:]')
 
           if [ -z "${actual_sha256}" ]; then
             echo "Failed to extract the APK signer SHA-256 digest." >&2
             exit 1
           fi
 
-          if [ "${actual_sha256^^}" != "${EXPECTED_SIGNER_SHA256^^}" ]; then
+          if [ "${actual_sha256}" != "${EXPECTED_SIGNER_SHA256}" ]; then
             echo "APK was not signed with the expected certificate." >&2
             echo "Expected: ${EXPECTED_SIGNER_SHA256}" >&2
             echo "Actual:   ${actual_sha256}" >&2
