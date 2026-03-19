@@ -108,6 +108,17 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun DuckDetectorApp() {
+    val blacklistMatch = remember { DeviceBlacklist.matchCurrentDevice() }
+    if (blacklistMatch != null) {
+        Surface {
+            BlockedDeviceScreen(
+                match = blacklistMatch,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        return
+    }
+
     val context = LocalContext.current
     val appContext = context.applicationContext
     val consentStore = remember(appContext) { TeeNetworkConsentStore.getInstance(appContext) }
