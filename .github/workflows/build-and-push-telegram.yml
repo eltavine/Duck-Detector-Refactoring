@@ -225,25 +225,30 @@ jobs:
 
           summary = first_paragraph(commit_body)
 
-          def render(subject: str, summary_text: str) -> str:
-              lines = [
-                  f"Version: {metadata['version_name']} ({metadata['version_code']})",
-                  f"APK: {metadata['apk_name']}",
-                  f"Commit: {subject}",
-                  "",
-              ]
-              if summary_text:
-                  lines.append(summary_text)
-                  lines.append("")
-              lines.extend(
-                  [
-                      f"Author: {commit_author}",
-                      f"Branch: {git_branch}@{git_hash}",
-                      f"Build time: {duration_human}",
-                      "",
-                      f"Signature: verified : by {signer_name}",
-                  ]
+          def escape_html(text: str) -> str:
+              return (
+                  text.replace("&", "&amp;")
+                  .replace("<", "&lt;")
+                  .replace(">", "&gt;")
               )
+
+          def render(subject: str, summary_text: str) -> str:
+              commit_block_lines = [subject]
+              if summary_text:
+                  commit_block_lines.extend(["", summary_text])
+
+              commit_block = escape_html("\n".join(commit_block_lines))
+
+              lines = [
+                  f"Version: <b>{escape_html(metadata['version_name'])} ({escape_html(metadata['version_code'])})</b>",
+                  f"APK: <b>{escape_html(metadata['apk_name'])}</b>",
+                  "Commit:",
+                  f"<pre>{commit_block}</pre>",
+                  f"Author: <b>{escape_html(commit_author)}</b>",
+                  f"Branch: <b>{escape_html(git_branch)}@{escape_html(git_hash)}</b>",
+                  f"Build time: <b>{escape_html(duration_human)}</b>",
+                  f"Signature: <b>verified : by {escape_html(signer_name)}</b>",
+              ]
               return "\n".join(lines)
 
           def truncate(text: str, limit: int) -> str:
@@ -359,6 +364,7 @@ jobs:
             -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
             -F "chat_id=${TELEGRAM_CHAT_ID}" \
             -F "document=@${APK_PATH}" \
+            -F "parse_mode=HTML" \
             --form-string "caption=${TELEGRAM_CAPTION}")
 
           if [ "${http_code}" != "200" ]; then
