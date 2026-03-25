@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "tee/common/syscall_facade.h"
+#include "tee/common/timing_stats.h"
 
 namespace ducktee::trickystore {
     namespace {
@@ -69,6 +70,12 @@ namespace ducktee::trickystore {
             bool detected = false;
             std::string detail;
             std::vector<std::string> findings;
+            int honeypot_run_count = 0;
+            int honeypot_suspicious_run_count = 0;
+            std::uint64_t honeypot_median_gap_ns = 0;
+            std::uint64_t honeypot_gap_mad_ns = 0;
+            std::uint64_t honeypot_median_noise_floor_ns = 0;
+            int honeypot_median_ratio_percent = 0;
             std::string timer_source = "unknown";
             std::string timer_fallback_reason;
             std::string affinity_status = "not_requested";
@@ -86,7 +93,9 @@ namespace ducktee::trickystore {
         };
 
         constexpr int kHoneypotIterations = 40;
-        constexpr std::uint64_t kHoneypotThresholdNs = 10'000ULL;
+        constexpr std::uint64_t kHoneypotBaseGapThresholdNs = 10'000ULL;
+        constexpr std::uint64_t kHoneypotNoiseMultiplier = 6ULL;
+        constexpr std::uint64_t kHoneypotRatioThresholdPercent = 150ULL;
         constexpr int kRepeatedProbeAttempts = 3;
         constexpr std::array<ducktee::common::SyscallBackend, 3> kIoctlBackends = {
                 ducktee::common::SyscallBackend::Libc,
@@ -105,16 +114,25 @@ namespace ducktee::trickystore {
             ducktee::common::SyscallBackend backend = ducktee::common::SyscallBackend::Libc;
             bool available = false;
             std::vector<std::uint64_t> samples;
+            ducktee::common::SampleStats stats;
             std::string failure;
 
             [[nodiscard]] std::uint64_t median_ns() const {
-                if (samples.empty()) {
-                    return 0;
-                }
-                std::vector<std::uint64_t> sorted = samples;
-                std::sort(sorted.begin(), sorted.end());
-                return sorted[sorted.size() / 2];
+                return stats.median_ns;
             }
+        };
+
+        struct HoneypotRunSummary {
+            bool suspicious = false;
+            bool libc_available = false;
+            bool lower_found = false;
+            bool stable_lower_paths = false;
+            std::uint64_t libc_median_ns = 0;
+            std::uint64_t fastest_lower_median_ns = 0;
+            std::uint64_t gap_ns = 0;
+            std::uint64_t noise_floor_ns = 0;
+            std::uint64_t ratio_percent = 0;
+            std::string path_summary;
         };
 
         int raw_open(const char *path, int flags) {
@@ -140,6 +158,16 @@ namespace ducktee::trickystore {
                     backends.push_back(backend);
                 }
             }
+            return backends;
+        }
+
+        std::vector<ducktee::common::SyscallBackend> rotated_available_backends(const int attempt) {
+            auto backends = available_backends();
+            if (backends.empty()) {
+                return backends;
+            }
+            const auto rotation = static_cast<std::size_t>(attempt) % backends.size();
+            std::rotate(backends.begin(), backends.begin() + rotation, backends.end());
             return backends;
         }
 
@@ -240,7 +268,8 @@ namespace ducktee::trickystore {
                 path->samples.push_back(end >= start ? (end - start) : 0);
             }
 
-            path->available = !path->samples.empty();
+            path->stats = ducktee::common::summarize_samples(path->samples);
+            path->available = path->stats.available;
             return path->available;
         }
 
@@ -261,6 +290,21 @@ namespace ducktee::trickystore {
             return slowest <= fastest + 25'000ULL && slowest <= fastest * 3ULL / 2ULL;
         }
 
+        std::string describe_honeypot_path(const HoneypotTimingPath &path) {
+            std::ostringstream builder;
+            builder << ducktee::common::backend_label(path.backend) << "=";
+            if (path.available) {
+                builder << "med" << path.stats.median_ns << "ns";
+                builder << "/mad" << path.stats.mad_ns << "ns";
+                builder << "/p95" << path.stats.p95_ns << "ns";
+            } else if (!path.failure.empty()) {
+                builder << "unavailable(" << path.failure << ")";
+            } else {
+                builder << "unavailable";
+            }
+            return builder.str();
+        }
+
         std::string describe_honeypot_paths(const std::vector<HoneypotTimingPath> &paths) {
             std::ostringstream builder;
             bool first = true;
@@ -269,16 +313,60 @@ namespace ducktee::trickystore {
                     builder << ", ";
                 }
                 first = false;
-                builder << ducktee::common::backend_label(path.backend) << "=";
-                if (path.available) {
-                    builder << path.median_ns() << "ns";
-                } else if (!path.failure.empty()) {
-                    builder << "unavailable(" << path.failure << ")";
-                } else {
-                    builder << "unavailable";
-                }
+                builder << describe_honeypot_path(path);
             }
             return builder.str();
+        }
+
+        HoneypotRunSummary analyze_honeypot_paths(const std::vector<HoneypotTimingPath> &paths) {
+            HoneypotRunSummary summary;
+            summary.path_summary = describe_honeypot_paths(paths);
+
+            const auto libc_it = std::find_if(
+                    paths.begin(),
+                    paths.end(),
+                    [](const HoneypotTimingPath &path) {
+                        return path.backend == ducktee::common::SyscallBackend::Libc;
+                    }
+            );
+            const HoneypotTimingPath *fastest_lower_path = nullptr;
+            for (const auto &path: paths) {
+                if (!path.available || path.backend == ducktee::common::SyscallBackend::Libc) {
+                    continue;
+                }
+                if (fastest_lower_path == nullptr || path.median_ns() < fastest_lower_path->median_ns()) {
+                    fastest_lower_path = &path;
+                }
+            }
+
+            summary.stable_lower_paths = lower_paths_are_stable(paths);
+            summary.libc_available = libc_it != paths.end() && libc_it->available;
+            summary.lower_found = fastest_lower_path != nullptr;
+            summary.libc_median_ns = summary.libc_available ? libc_it->median_ns() : 0;
+            summary.fastest_lower_median_ns =
+                    summary.lower_found ? fastest_lower_path->median_ns() : 0;
+
+            if (!summary.libc_available ||
+                !summary.lower_found ||
+                summary.libc_median_ns <= summary.fastest_lower_median_ns) {
+                return summary;
+            }
+
+            summary.gap_ns = summary.libc_median_ns - summary.fastest_lower_median_ns;
+            const std::uint64_t libc_mad = libc_it->stats.mad_ns;
+            const std::uint64_t lower_mad = fastest_lower_path->stats.mad_ns;
+            summary.noise_floor_ns = std::max({
+                    static_cast<std::uint64_t>(kHoneypotBaseGapThresholdNs),
+                    static_cast<std::uint64_t>(libc_mad * 4ULL),
+                    static_cast<std::uint64_t>(lower_mad * kHoneypotNoiseMultiplier),
+            });
+            summary.ratio_percent =
+                    (summary.libc_median_ns * 100ULL) / std::max<std::uint64_t>(1ULL,
+                                                                                summary.fastest_lower_median_ns);
+            summary.suspicious = summary.stable_lower_paths &&
+                                 summary.gap_ns > summary.noise_floor_ns &&
+                                 summary.ratio_percent >= kHoneypotRatioThresholdPercent;
+            return summary;
         }
 
         LibInfo find_library(const std::string &needle) {
@@ -748,7 +836,7 @@ namespace ducktee::trickystore {
             return snapshot;
         }
 
-        MethodSnapshot run_single_ioctl_honeypot_probe() {
+        MethodSnapshot run_single_ioctl_honeypot_probe(const int attempt) {
             MethodSnapshot snapshot;
             ducktee::common::LocalTimerSelection timer;
             (void) ducktee::common::select_preferred_local_timer(true, &timer);
@@ -770,7 +858,7 @@ namespace ducktee::trickystore {
             }
 
             std::vector<HoneypotTimingPath> paths;
-            for (const auto backend: available_backends()) {
+            for (const auto backend: rotated_available_backends(attempt)) {
                 HoneypotTimingPath path;
                 path.backend = backend;
                 (void) collect_honeypot_backend_samples(binder_fd, timer, &path);
@@ -780,42 +868,22 @@ namespace ducktee::trickystore {
             munmap(mapped, 4096);
             close(binder_fd);
 
-            const auto libc_it = std::find_if(
-                    paths.begin(),
-                    paths.end(),
-                    [](const HoneypotTimingPath &path) {
-                        return path.backend == ducktee::common::SyscallBackend::Libc;
-                    }
-            );
-            std::uint64_t fastest_lower = 0;
-            bool lower_found = false;
-            for (const auto &path: paths) {
-                if (!path.available || path.backend == ducktee::common::SyscallBackend::Libc) {
-                    continue;
-                }
-                const auto median = path.median_ns();
-                if (!lower_found || median < fastest_lower) {
-                    fastest_lower = median;
-                    lower_found = true;
-                }
-            }
+            const HoneypotRunSummary run = analyze_honeypot_paths(paths);
+            snapshot.honeypot_run_count = 1;
+            snapshot.honeypot_suspicious_run_count = run.suspicious ? 1 : 0;
+            snapshot.honeypot_median_gap_ns = run.gap_ns;
+            snapshot.honeypot_median_noise_floor_ns = run.noise_floor_ns;
+            snapshot.honeypot_median_ratio_percent = static_cast<int>(run.ratio_percent);
 
-            const bool stable_lower_paths = lower_paths_are_stable(paths);
-            const bool libc_available = libc_it != paths.end() && libc_it->available;
-            const std::uint64_t libc_median = libc_available ? libc_it->median_ns() : 0;
-            const bool suspicious = libc_available &&
-                                    lower_found &&
-                                    stable_lower_paths &&
-                                    libc_median > fastest_lower &&
-                                    (libc_median - fastest_lower) > kHoneypotThresholdNs &&
-                                    libc_median > fastest_lower * 3ULL / 2ULL;
-
-            if (suspicious) {
+            if (run.suspicious) {
                 snapshot.detected = true;
                 std::ostringstream builder;
                 builder
                         << "Keystore-style binder ioctl median timing diverged across redundant backends: "
-                        << describe_honeypot_paths(paths)
+                        << run.path_summary
+                        << ". gap=" << run.gap_ns << "ns"
+                        << ", noise_floor=" << run.noise_floor_ns << "ns"
+                        << ", ratio=" << run.ratio_percent << "%"
                         << ". timer=" << snapshot.timer_source
                         << ", affinity=" << snapshot.affinity_status;
                 if (!snapshot.timer_fallback_reason.empty()) {
@@ -828,14 +896,17 @@ namespace ducktee::trickystore {
                 std::ostringstream builder;
                 builder
                         << "Keystore-style binder honeypot timing stayed within normal bounds across redundant backends. "
-                        << describe_honeypot_paths(paths)
+                        << run.path_summary
+                        << " gap=" << run.gap_ns << "ns"
+                        << ", noise_floor=" << run.noise_floor_ns << "ns"
+                        << ", ratio=" << run.ratio_percent << "%"
                         << " timer=" << snapshot.timer_source
                         << ", affinity=" << snapshot.affinity_status;
                 if (!snapshot.timer_fallback_reason.empty()) {
                     builder << ", fallback=" << snapshot.timer_fallback_reason;
                 }
                 builder << ".";
-                if (!stable_lower_paths) {
+                if (!run.stable_lower_paths) {
                     builder
                             << " Lower-level syscall and asm paths were not stable enough to escalate.";
                 }
@@ -848,15 +919,25 @@ namespace ducktee::trickystore {
             MethodSnapshot snapshot;
             int hit_count = 0;
             std::string last_detail;
+            std::vector<std::uint64_t> gaps;
+            std::vector<std::uint64_t> noise_floors;
+            std::vector<std::uint64_t> ratios;
 
             for (int attempt = 0; attempt < kRepeatedProbeAttempts; ++attempt) {
-                const MethodSnapshot single = run_single_ioctl_honeypot_probe();
+                const MethodSnapshot single = run_single_ioctl_honeypot_probe(attempt);
                 if (!single.detail.empty()) {
                     last_detail = single.detail;
                 }
                 snapshot.timer_source = single.timer_source;
                 snapshot.timer_fallback_reason = single.timer_fallback_reason;
                 snapshot.affinity_status = single.affinity_status;
+                if (single.honeypot_median_gap_ns > 0 ||
+                    single.honeypot_median_noise_floor_ns > 0 ||
+                    single.honeypot_median_ratio_percent > 0) {
+                    gaps.push_back(single.honeypot_median_gap_ns);
+                    noise_floors.push_back(single.honeypot_median_noise_floor_ns);
+                    ratios.push_back(static_cast<std::uint64_t>(single.honeypot_median_ratio_percent));
+                }
                 if (!single.detected) {
                     continue;
                 }
@@ -866,11 +947,24 @@ namespace ducktee::trickystore {
                 }
             }
 
+            const auto gap_stats = ducktee::common::summarize_samples(gaps);
+            const auto noise_stats = ducktee::common::summarize_samples(noise_floors);
+            const auto ratio_stats = ducktee::common::summarize_samples(ratios);
+            snapshot.honeypot_run_count = kRepeatedProbeAttempts;
+            snapshot.honeypot_suspicious_run_count = hit_count;
+            snapshot.honeypot_median_gap_ns = gap_stats.median_ns;
+            snapshot.honeypot_gap_mad_ns = gap_stats.mad_ns;
+            snapshot.honeypot_median_noise_floor_ns = noise_stats.median_ns;
+            snapshot.honeypot_median_ratio_percent = static_cast<int>(ratio_stats.median_ns);
             snapshot.detected = hit_count >= 2;
             std::ostringstream builder;
             if (snapshot.detected) {
                 builder << "Keystore-style binder honeypot triggered on " << hit_count
-                        << "/" << kRepeatedProbeAttempts << " timing runs.";
+                        << "/" << kRepeatedProbeAttempts << " timing runs."
+                        << " median_gap=" << snapshot.honeypot_median_gap_ns << "ns"
+                        << ", gap_mad=" << snapshot.honeypot_gap_mad_ns << "ns"
+                        << ", noise_floor=" << snapshot.honeypot_median_noise_floor_ns << "ns"
+                        << ", median_ratio=" << snapshot.honeypot_median_ratio_percent << "%.";
                 snapshot.detail = builder.str();
             } else {
                 builder << "Keystore-style binder honeypot stayed within normal bounds across "
@@ -880,6 +974,12 @@ namespace ducktee::trickystore {
                             << " suspicious run).";
                 } else {
                     builder << ".";
+                }
+                if (gap_stats.available) {
+                    builder << " median_gap=" << snapshot.honeypot_median_gap_ns << "ns"
+                            << ", gap_mad=" << snapshot.honeypot_gap_mad_ns << "ns"
+                            << ", noise_floor=" << snapshot.honeypot_median_noise_floor_ns << "ns"
+                            << ", median_ratio=" << snapshot.honeypot_median_ratio_percent << "%.";
                 }
                 if (!last_detail.empty()) {
                     builder << " " << last_detail;
@@ -934,6 +1034,12 @@ namespace ducktee::trickystore {
         snapshot.timer_source = honeypot_result.timer_source;
         snapshot.timer_fallback_reason = honeypot_result.timer_fallback_reason;
         snapshot.affinity_status = honeypot_result.affinity_status;
+        snapshot.honeypot_run_count = honeypot_result.honeypot_run_count;
+        snapshot.honeypot_suspicious_run_count = honeypot_result.honeypot_suspicious_run_count;
+        snapshot.honeypot_median_gap_ns = honeypot_result.honeypot_median_gap_ns;
+        snapshot.honeypot_gap_mad_ns = honeypot_result.honeypot_gap_mad_ns;
+        snapshot.honeypot_median_noise_floor_ns = honeypot_result.honeypot_median_noise_floor_ns;
+        snapshot.honeypot_median_ratio_percent = honeypot_result.honeypot_median_ratio_percent;
         if (honeypot_result.detected) {
             snapshot.detected = true;
             snapshot.honeypot_detected = true;

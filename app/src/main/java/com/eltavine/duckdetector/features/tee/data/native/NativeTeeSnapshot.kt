@@ -18,4 +18,10 @@ data class NativeTeeSnapshot(
     val trickyStoreTimerSource: String = "unknown",
     val trickyStoreTimerFallbackReason: String? = null,
     val trickyStoreAffinityStatus: String = "not_requested",
+    val trickyStoreTimingRunCount: Int? = null,
+    val trickyStoreTimingSuspiciousRunCount: Int? = null,
+    val trickyStoreTimingMedianGapNs: Long? = null,
+    val trickyStoreTimingGapMadNs: Long? = null,
+    val trickyStoreTimingMedianNoiseFloorNs: Long? = null,
+    val trickyStoreTimingMedianRatioPercent: Int? = null,
 )

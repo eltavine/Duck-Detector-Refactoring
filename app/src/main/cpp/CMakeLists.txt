@@ -8,6 +8,7 @@ set(TEE_COMMON_SOURCES
     tee/common/jni_bridge.cpp
     tee/common/result_codec.cpp
     tee/common/syscall_facade.cpp
+    tee/common/timing_stats.cpp
 )
 
 set(TEE_KEYSTORE_SOURCES

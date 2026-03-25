@@ -40,6 +40,12 @@ Java_com_eltavine_duckdetector_features_tee_data_native_TeeNativeBridge_nativeIn
     codec.put_bool("SYSCALL_MISMATCH", snapshot.syscall_mismatch_detected);
     codec.put_bool("INLINE_HOOK", snapshot.inline_hook_detected);
     codec.put_bool("HONEYPOT", snapshot.honeypot_detected);
+    codec.put_int("RUNS", snapshot.honeypot_run_count);
+    codec.put_int("SUSPICIOUS_RUNS", snapshot.honeypot_suspicious_run_count);
+    codec.put_int("MEDIAN_GAP_NS", static_cast<long>(snapshot.honeypot_median_gap_ns));
+    codec.put_int("GAP_MAD_NS", static_cast<long>(snapshot.honeypot_gap_mad_ns));
+    codec.put_int("MEDIAN_NOISE_NS", static_cast<long>(snapshot.honeypot_median_noise_floor_ns));
+    codec.put_int("MEDIAN_RATIO_PERCENT", snapshot.honeypot_median_ratio_percent);
     codec.put("TIMER_SOURCE", snapshot.timer_source);
     codec.put("TIMER_FALLBACK", snapshot.timer_fallback_reason);
     codec.put("AFFINITY", snapshot.affinity_status);

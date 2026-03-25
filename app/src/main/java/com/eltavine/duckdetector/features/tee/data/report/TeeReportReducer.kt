@@ -16,6 +16,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
 import java.time.LocalDate
 import java.time.Period
+import java.util.Locale
 import kotlin.math.absoluteValue
 
 class TeeReportReducer(
@@ -1067,6 +1068,10 @@ class TeeReportReducer(
                 append(artifacts.native.trickyStoreTimerSource)
                 append(" • ")
                 append(artifacts.native.trickyStoreAffinityStatus)
+                nativeTimingStatsSummary(artifacts)?.let {
+                    append('\n')
+                    append(it)
+                }
                 artifacts.native.trickyStoreDetails
                     .takeUnless { it == "Native probe unavailable" }
                     ?.takeIf { it.isNotBlank() }
@@ -1075,8 +1080,14 @@ class TeeReportReducer(
                         append(it)
                     }
             }
-            artifacts.native.trickyStoreDetails != "Native probe unavailable" -> buildString {
+            artifacts.native.trickyStoreDetails != "Native probe unavailable" &&
+                !hasNativeReviewSignals(artifacts) &&
+                !artifacts.native.leafDerPrimaryDetected -> buildString {
                 append(artifacts.native.trickyStoreDetails)
+                nativeTimingStatsSummary(artifacts)?.let {
+                    append("\n")
+                    append(it)
+                }
                 if (artifacts.native.trickyStoreTimerSource != "unknown") {
                     append("\n")
                     append(artifacts.native.trickyStoreTimerSource)
@@ -1095,6 +1106,40 @@ class TeeReportReducer(
 
             else -> "No local process-side anomaly"
         }
+    }
+
+    private fun nativeTimingStatsSummary(artifacts: TeeScanArtifacts): String? {
+        return buildList {
+            val suspiciousRuns = artifacts.native.trickyStoreTimingSuspiciousRunCount
+            val totalRuns = artifacts.native.trickyStoreTimingRunCount
+            if (suspiciousRuns != null && totalRuns != null && totalRuns > 0) {
+                add("$suspiciousRuns/$totalRuns suspicious runs")
+            }
+            artifacts.native.trickyStoreTimingMedianGapNs
+                ?.takeIf { it > 0L }
+                ?.let { add("median gap ${formatNanoseconds(it)}") }
+            artifacts.native.trickyStoreTimingGapMadNs
+                ?.takeIf { it > 0L }
+                ?.let { add("gap MAD ${formatNanoseconds(it)}") }
+            artifacts.native.trickyStoreTimingMedianNoiseFloorNs
+                ?.takeIf { it > 0L }
+                ?.let { add("noise floor ${formatNanoseconds(it)}") }
+            artifacts.native.trickyStoreTimingMedianRatioPercent
+                ?.takeIf { it > 0 }
+                ?.let { add("median ratio ${formatRatioPercent(it)}") }
+        }.takeIf { it.isNotEmpty() }?.joinToString(separator = " • ")
+    }
+
+    private fun formatNanoseconds(valueNs: Long): String {
+        return when {
+            valueNs >= 1_000_000L -> String.format(Locale.US, "%.2fms", valueNs / 1_000_000.0)
+            valueNs >= 100L -> String.format(Locale.US, "%.1fus", valueNs / 1_000.0)
+            else -> "${valueNs}ns"
+        }
+    }
+
+    private fun formatRatioPercent(percent: Int): String {
+        return String.format(Locale.US, "%.2fx", percent / 100.0)
     }
 
     private fun bootConsistencyValue(artifacts: TeeScanArtifacts): String {

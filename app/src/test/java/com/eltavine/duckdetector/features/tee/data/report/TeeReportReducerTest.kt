@@ -169,6 +169,12 @@ class TeeReportReducerTest {
                     trickyStoreTimerSource = "arm64_cntvct",
                     trickyStoreTimerFallbackReason = "counter self-check failed once; retried with monotonic clock",
                     trickyStoreAffinityStatus = "bound_cpu0",
+                    trickyStoreTimingRunCount = 3,
+                    trickyStoreTimingSuspiciousRunCount = 2,
+                    trickyStoreTimingMedianGapNs = 18420L,
+                    trickyStoreTimingGapMadNs = 910L,
+                    trickyStoreTimingMedianNoiseFloorNs = 10000L,
+                    trickyStoreTimingMedianRatioPercent = 167,
                 ),
             ),
         )
@@ -178,6 +184,11 @@ class TeeReportReducerTest {
                     it.body.contains("Honeypot") &&
                     it.body.contains("arm64_cntvct") &&
                     it.body.contains("bound_cpu0") &&
+                    it.body.contains("2/3 suspicious runs") &&
+                    it.body.contains("18.4us") &&
+                    it.body.contains("0.9us") &&
+                    it.body.contains("10.0us") &&
+                    it.body.contains("1.67x") &&
                     it.body.contains("Keystore-style binder honeypot triggered on 2/3 timing runs.")
         })
     }
@@ -192,6 +203,12 @@ class TeeReportReducerTest {
                     trickyStoreDetails = "Keystore-style binder honeypot timing stayed within normal bounds across redundant backends. libc=41234ns, syscall=25011ns, asm=24890ns timer=arm64_cntvct, affinity=bound_cpu0.",
                     trickyStoreTimerSource = "arm64_cntvct",
                     trickyStoreAffinityStatus = "bound_cpu0",
+                    trickyStoreTimingRunCount = 3,
+                    trickyStoreTimingSuspiciousRunCount = 0,
+                    trickyStoreTimingMedianGapNs = 16342L,
+                    trickyStoreTimingGapMadNs = 850L,
+                    trickyStoreTimingMedianNoiseFloorNs = 10000L,
+                    trickyStoreTimingMedianRatioPercent = 166,
                 ),
             ),
         )
@@ -201,6 +218,11 @@ class TeeReportReducerTest {
                     it.body.contains("41234ns") &&
                     it.body.contains("25011ns") &&
                     it.body.contains("24890ns") &&
+                    it.body.contains("0/3 suspicious runs") &&
+                    it.body.contains("16.3us") &&
+                    it.body.contains("0.9us") &&
+                    it.body.contains("10.0us") &&
+                    it.body.contains("1.66x") &&
                     it.body.contains("arm64_cntvct") &&
                     it.body.contains("bound_cpu0")
         })

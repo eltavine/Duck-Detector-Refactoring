@@ -26,6 +26,12 @@ class TeeNativeBridgeTest {
                 TIMER_SOURCE=arm64_cntvct
                 TIMER_FALLBACK=clock_gettime monotonic unavailable
                 AFFINITY=bound_cpu0
+                RUNS=3
+                SUSPICIOUS_RUNS=2
+                MEDIAN_GAP_NS=18420
+                GAP_MAD_NS=910
+                MEDIAN_NOISE_NS=10000
+                MEDIAN_RATIO_PERCENT=167
                 METHOD=GOT_HOOK
                 METHOD=HONEYPOT
                 DETAILS=hooked
@@ -46,6 +52,12 @@ class TeeNativeBridgeTest {
         assertEquals("arm64_cntvct", snapshot.trickyStoreTimerSource)
         assertEquals("clock_gettime monotonic unavailable", snapshot.trickyStoreTimerFallbackReason)
         assertEquals("bound_cpu0", snapshot.trickyStoreAffinityStatus)
+        assertEquals(3, snapshot.trickyStoreTimingRunCount)
+        assertEquals(2, snapshot.trickyStoreTimingSuspiciousRunCount)
+        assertEquals(18420L, snapshot.trickyStoreTimingMedianGapNs)
+        assertEquals(910L, snapshot.trickyStoreTimingGapMadNs)
+        assertEquals(10000L, snapshot.trickyStoreTimingMedianNoiseFloorNs)
+        assertEquals(167, snapshot.trickyStoreTimingMedianRatioPercent)
         assertEquals(listOf("GOT_HOOK", "HONEYPOT"), snapshot.trickyStoreMethods)
         assertTrue(snapshot.leafDerSecondaryDetected)
     }
@@ -65,6 +77,12 @@ class TeeNativeBridgeTest {
         assertEquals("unknown", snapshot.trickyStoreTimerSource)
         assertEquals(null, snapshot.trickyStoreTimerFallbackReason)
         assertEquals("not_requested", snapshot.trickyStoreAffinityStatus)
+        assertEquals(null, snapshot.trickyStoreTimingRunCount)
+        assertEquals(null, snapshot.trickyStoreTimingSuspiciousRunCount)
+        assertEquals(null, snapshot.trickyStoreTimingMedianGapNs)
+        assertEquals(null, snapshot.trickyStoreTimingGapMadNs)
+        assertEquals(null, snapshot.trickyStoreTimingMedianNoiseFloorNs)
+        assertEquals(null, snapshot.trickyStoreTimingMedianRatioPercent)
         assertTrue(snapshot.trickyStoreMethods.isEmpty())
     }
 }
