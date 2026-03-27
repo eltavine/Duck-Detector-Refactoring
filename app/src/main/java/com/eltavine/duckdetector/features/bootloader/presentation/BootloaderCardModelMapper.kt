@@ -138,14 +138,7 @@ class BootloaderCardModelMapper {
                 BootloaderHeaderFactModel(
                     label = "Trust",
                     value = trustLabel(report.trustRoot),
-                    status = when (report.trustRoot) {
-                        TeeTrustRoot.GOOGLE,
-                        TeeTrustRoot.GOOGLE_RKP -> DetectorStatus.allClear()
-
-                        TeeTrustRoot.AOSP -> DetectorStatus.warning()
-                        TeeTrustRoot.FACTORY,
-                        TeeTrustRoot.UNKNOWN -> DetectorStatus.info(InfoKind.SUPPORT)
-                    },
+                    status = trustStatus(report),
                 ),
             )
         }
@@ -293,9 +286,11 @@ class BootloaderCardModelMapper {
                 BootloaderDetailRowModel(
                     label = "Attestation chain",
                     value = report.attestationChainLength.toString(),
-                    status = if (report.attestationAvailable) DetectorStatus.allClear() else DetectorStatus.info(
-                        InfoKind.SUPPORT
-                    ),
+                    status = when {
+                        report.attestationChainLength == 0 -> DetectorStatus.danger()
+                        report.attestationAvailable -> DetectorStatus.allClear()
+                        else -> DetectorStatus.info(InfoKind.SUPPORT)
+                    },
                 ),
                 BootloaderDetailRowModel(
                     label = "Hardware-backed",
@@ -445,6 +440,19 @@ class BootloaderCardModelMapper {
             TeeTrustRoot.AOSP -> "AOSP"
             TeeTrustRoot.FACTORY -> "Factory"
             TeeTrustRoot.UNKNOWN -> "Unknown"
+        }
+    }
+
+    private fun trustStatus(report: BootloaderReport): DetectorStatus {
+        return when {
+            report.attestationChainLength == 0 -> DetectorStatus.danger()
+            report.trustRoot == TeeTrustRoot.UNKNOWN -> DetectorStatus.danger()
+            report.trustRoot == TeeTrustRoot.GOOGLE || report.trustRoot == TeeTrustRoot.GOOGLE_RKP ->
+                DetectorStatus.allClear()
+
+            report.trustRoot == TeeTrustRoot.AOSP -> DetectorStatus.warning()
+            report.trustRoot == TeeTrustRoot.FACTORY -> DetectorStatus.info(InfoKind.SUPPORT)
+            else -> DetectorStatus.info(InfoKind.SUPPORT)
         }
     }
 

@@ -287,13 +287,19 @@ class BootloaderRepository(
         trust: CertificateTrustResult,
     ): List<BootloaderFinding> {
         if (!hasAttestation(attestation)) {
+            val keyPairGenerationFailure =
+                BootloaderSeverityRules.isKeyPairGenerationFailure(attestation.errorMessage)
             return listOf(
                 BootloaderFinding(
                     id = "attestation_unavailable",
                     label = "Key attestation",
-                    value = "Unavailable",
+                    value = if (keyPairGenerationFailure) "Failed" else "Unavailable",
                     group = BootloaderFindingGroup.ATTESTATION,
-                    severity = BootloaderFindingSeverity.INFO,
+                    severity = if (keyPairGenerationFailure) {
+                        BootloaderFindingSeverity.DANGER
+                    } else {
+                        BootloaderFindingSeverity.INFO
+                    },
                     detail = attestation.errorMessage
                         ?: "Key attestation did not expose a usable certificate chain.",
                 ),
@@ -628,6 +634,9 @@ class BootloaderRepository(
                 label = "Key attestation",
                 summary = when {
                     hasAttestation(attestation) -> tierLabel(attestation.tier)
+                    BootloaderSeverityRules.isKeyPairGenerationFailure(attestation.errorMessage) ->
+                        "Failed"
+
                     evidenceMode == BootloaderEvidenceMode.PROPERTIES_ONLY -> "Fallback only"
                     else -> "Unavailable"
                 },
@@ -636,6 +645,9 @@ class BootloaderRepository(
                         BootloaderMethodOutcome.CLEAN
 
                     hasAttestation(attestation) -> BootloaderMethodOutcome.WARNING
+                    BootloaderSeverityRules.isKeyPairGenerationFailure(attestation.errorMessage) ->
+                        BootloaderMethodOutcome.DANGER
+
                     evidenceMode == BootloaderEvidenceMode.PROPERTIES_ONLY -> BootloaderMethodOutcome.SUPPORT
                     else -> BootloaderMethodOutcome.SUPPORT
                 },
@@ -650,10 +662,11 @@ class BootloaderRepository(
                     else -> trustRootLabel(trust.trustRoot)
                 },
                 outcome = when {
-                    trust.chainLength == 0 -> BootloaderMethodOutcome.SUPPORT
+                    trust.chainLength == 0 -> BootloaderMethodOutcome.DANGER
                     !trust.chainSignatureValid || trust.expiredCertificates.isNotEmpty() || trust.issuerMismatches.isNotEmpty() ->
                         BootloaderMethodOutcome.DANGER
 
+                    trust.trustRoot == TeeTrustRoot.UNKNOWN -> BootloaderMethodOutcome.DANGER
                     trust.trustRoot == TeeTrustRoot.AOSP -> BootloaderMethodOutcome.WARNING
                     else -> BootloaderMethodOutcome.CLEAN
                 },
@@ -991,19 +1004,7 @@ class BootloaderRepository(
     }
 
     private fun trustRootSeverity(trust: CertificateTrustResult): BootloaderFindingSeverity {
-        return when {
-            trust.chainLength == 0 -> BootloaderFindingSeverity.INFO
-            !trust.chainSignatureValid || trust.expiredCertificates.isNotEmpty() || trust.issuerMismatches.isNotEmpty() ->
-                BootloaderFindingSeverity.DANGER
-
-            trust.trustRoot == TeeTrustRoot.AOSP -> BootloaderFindingSeverity.WARNING
-            trust.trustRoot == TeeTrustRoot.GOOGLE || trust.trustRoot == TeeTrustRoot.GOOGLE_RKP ->
-                BootloaderFindingSeverity.SAFE
-
-            trust.trustRoot == TeeTrustRoot.FACTORY -> BootloaderFindingSeverity.INFO
-            TeeTrustRoot.UNKNOWN == trust.trustRoot -> BootloaderFindingSeverity.INFO
-            else -> BootloaderFindingSeverity.INFO
-        }
+        return BootloaderSeverityRules.trustRootSeverity(trust)
     }
 
     private fun trustRootDetail(trust: CertificateTrustResult): String {
