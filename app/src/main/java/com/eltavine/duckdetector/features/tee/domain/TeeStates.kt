@@ -44,10 +44,12 @@ data class TeePatchState(
 )
 
 data class TeeSoterState(
-    val expectedSupport: Boolean = false,
+    val serviceReachable: Boolean = false,
+    val keyPrepared: Boolean = false,
+    val signSessionAvailable: Boolean = false,
     val available: Boolean = false,
-    val damaged: Boolean = false,
-    val summary: String = "Soter check not required",
+    val warning: Boolean = false,
+    val summary: String = "Soter check skipped",
 )
 
 data class TeeNetworkState(

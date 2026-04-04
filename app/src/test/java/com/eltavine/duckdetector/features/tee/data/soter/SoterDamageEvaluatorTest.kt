@@ -9,31 +9,42 @@ class SoterDamageEvaluatorTest {
     private val evaluator = SoterDamageEvaluator()
 
     @Test
-    fun `expected support without capability becomes damaged`() {
+    fun `service failure skips probe without warning`() {
         val state = evaluator.evaluate(
-            expectedSupport = true,
-            servicePackagePresent = true,
-            initialized = true,
-            supported = false,
-            errorMessage = null,
+            serviceReachable = false,
+            keyPrepared = false,
+            signSessionAvailable = false,
+            errorMessage = "skipped",
         )
 
-        assertTrue(state.expectedSupport)
-        assertTrue(state.damaged)
-        assertTrue(state.summary.contains("expected", ignoreCase = true))
+        assertFalse(state.serviceReachable)
+        assertFalse(state.warning)
+        assertTrue(state.summary.contains("skipped", ignoreCase = true))
     }
 
     @Test
-    fun `supported device stays available`() {
+    fun `key or signing failure becomes warning`() {
         val state = evaluator.evaluate(
-            expectedSupport = true,
-            servicePackagePresent = true,
-            initialized = true,
-            supported = true,
+            serviceReachable = true,
+            keyPrepared = true,
+            signSessionAvailable = false,
+            errorMessage = "sign failed",
+        )
+
+        assertFalse(state.available)
+        assertTrue(state.warning)
+    }
+
+    @Test
+    fun `successful sequence stays available`() {
+        val state = evaluator.evaluate(
+            serviceReachable = true,
+            keyPrepared = true,
+            signSessionAvailable = true,
             errorMessage = null,
         )
 
         assertTrue(state.available)
-        assertFalse(state.damaged)
+        assertFalse(state.warning)
     }
 }

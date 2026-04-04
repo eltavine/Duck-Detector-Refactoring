@@ -308,9 +308,6 @@ class TeeReportReducer(
             artifacts.strongBox.hardFailures.forEach { message ->
                 add(fact("StrongBox", message, TeeSignalLevel.WARN))
             }
-            if (artifacts.soter.damaged) {
-                add(fact("Soter", artifacts.soter.summary, TeeSignalLevel.FAIL))
-            }
         }
     }
 
@@ -348,6 +345,9 @@ class TeeReportReducer(
             }
             artifacts.rkp.consistencyIssue?.let { issue ->
                 add(fact("RKP consistency", issue, TeeSignalLevel.WARN))
+            }
+            if (artifacts.soter.warning) {
+                add(fact("Soter", artifacts.soter.summary, TeeSignalLevel.WARN))
             }
         }
     }
@@ -1364,9 +1364,8 @@ class TeeReportReducer(
     }
 
     private fun soterLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
-        artifacts.soter.damaged -> TeeSignalLevel.FAIL
+        artifacts.soter.warning -> TeeSignalLevel.WARN
         artifacts.soter.available -> TeeSignalLevel.PASS
-        artifacts.soter.expectedSupport -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.INFO
     }
 

@@ -5,25 +5,26 @@ import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
 class SoterDamageEvaluator {
 
     fun evaluate(
-        expectedSupport: Boolean,
-        servicePackagePresent: Boolean,
-        initialized: Boolean,
-        supported: Boolean,
+        serviceReachable: Boolean,
+        keyPrepared: Boolean,
+        signSessionAvailable: Boolean,
         errorMessage: String?,
     ): TeeSoterState {
-        val damaged = expectedSupport && initialized && !supported
+        val available = serviceReachable && keyPrepared && signSessionAvailable
+        val warning = serviceReachable && !available
         val summary = when {
-            supported -> "Soter initialized and reports device support."
-            damaged -> "Soter support was expected, but initialization completed without capability."
-            expectedSupport && !servicePackagePresent -> "Soter support looks expected for this vendor, but the service package is absent."
+            available -> "Soter Treble service was reachable and ASK/AuthKey/initSigh all succeeded."
+            !serviceReachable -> errorMessage ?: "Soter Treble service was not reachable; probe skipped."
             errorMessage != null -> errorMessage
-            expectedSupport -> "Soter support could not be confirmed."
-            else -> "Soter is not expected on this device family."
+            !keyPrepared -> "Soter Treble service was reachable, but ASK/AuthKey preparation failed."
+            else -> "Soter Treble service was reachable, but signing session initialization failed."
         }
         return TeeSoterState(
-            expectedSupport = expectedSupport,
-            available = supported,
-            damaged = damaged,
+            serviceReachable = serviceReachable,
+            keyPrepared = keyPrepared,
+            signSessionAvailable = signSessionAvailable,
+            available = available,
+            warning = warning,
             summary = summary,
         )
     }
