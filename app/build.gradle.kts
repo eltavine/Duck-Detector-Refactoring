@@ -87,13 +87,14 @@ abstract class RenameApkTask : DefaultTask() {
 
 android {
     namespace = "com.eltavine.duckdetector"
-    compileSdk = 36
+    compileSdk = 37
+    compileSdkMinor = 0
     ndkVersion = "30.0.14904198 rc1"
 
     defaultConfig {
         applicationId = "com.eltavine.duckdetector"
         minSdk = 29
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 214
         versionName = "26.3.14-alpha"
         buildConfigField("String", "BUILD_TIME_UTC", "\"$buildTimeUtc\"")
@@ -155,11 +156,11 @@ androidComponents {
     onVariants(selector().all()) { variant ->
         val taskName = "rename${
             variant.name.replaceFirstChar { firstChar ->
-            if (firstChar.isLowerCase()) {
-                firstChar.titlecase()
-            } else {
-                firstChar.toString()
-            }
+                if (firstChar.isLowerCase()) {
+                    firstChar.titlecase()
+                } else {
+                    firstChar.toString()
+                }
             }
         }Apk"
 
