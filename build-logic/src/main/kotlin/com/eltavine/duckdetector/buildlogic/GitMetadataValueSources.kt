@@ -7,7 +7,6 @@ import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -46,41 +45,6 @@ abstract class GitCommitTimestampValueSource @Inject constructor(
         )
         val instant = epochSeconds.toLongOrNull()?.let(Instant::ofEpochSecond) ?: return UNKNOWN
         return BUILD_TIME_FORMATTER.format(instant)
-    }
-}
-
-abstract class GitCommitCountValueSource @Inject constructor(
-    private val execOperations: ExecOperations,
-) : ValueSource<Int, GitRepositoryParameters> {
-    override fun obtain(): Int {
-        val count = runGitCommand(
-            execOperations = execOperations,
-            repositoryRoot = parameters.repositoryRoot.get(),
-            "rev-list",
-            "--count",
-            "HEAD",
-        )
-        return count.toIntOrNull() ?: 1
-    }
-}
-
-abstract class GitMonthlyCommitCountValueSource @Inject constructor(
-    private val execOperations: ExecOperations,
-) : ValueSource<Int, GitRepositoryParameters> {
-    override fun obtain(): Int {
-        val firstDayOfMonth = LocalDate.now(ZoneOffset.UTC)
-            .withDayOfMonth(1)
-            .format(DateTimeFormatter.ofPattern("yyyy-MM-01"))
-
-        val count = runGitCommand(
-            execOperations = execOperations,
-            repositoryRoot = parameters.repositoryRoot.get(),
-            "rev-list",
-            "--count",
-            "--since=$firstDayOfMonth",
-            "HEAD",
-        )
-        return count.toIntOrNull() ?: 0
     }
 }
 

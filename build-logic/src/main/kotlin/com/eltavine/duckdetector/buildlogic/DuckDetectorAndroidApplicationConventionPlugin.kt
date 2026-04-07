@@ -7,14 +7,9 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
-        val versionCodeOffset = 154
-
         pluginManager.apply("com.android.application")
         pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 
@@ -34,14 +29,6 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
                 }
             )
             .orElse("unknown")
-
-        val gitCommitCount = providers.of(GitCommitCountValueSource::class.java) {
-            parameters.repositoryRoot.set(rootDir.absolutePath)
-        }
-
-        val monthlyCommitCount = providers.of(GitMonthlyCommitCountValueSource::class.java) {
-            parameters.repositoryRoot.set(rootDir.absolutePath)
-        }
 
         val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH")
         val releaseStorePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
@@ -67,10 +54,6 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
             defaultConfig {
                 minSdk = requiredIntGradleProperty("duckdetector.android.minSdk")
                 targetSdk = requiredIntGradleProperty("duckdetector.android.targetSdk")
-                versionCode = versionCodeOffset + gitCommitCount.get()
-                val versionNamePatchPart = monthlyCommitCount.get()
-                versionName = "${LocalDate.now(ZoneOffset.UTC)
-                    .format(DateTimeFormatter.ofPattern("yyyy.MM"))}.${if (versionNamePatchPart > 0) versionNamePatchPart else "unknown"}"
                 testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 buildConfigField("String", "BUILD_TIME_UTC", "\"${buildTimeUtc.get()}\"")
                 buildConfigField("String", "BUILD_HASH", "\"${buildHash.get()}\"")
