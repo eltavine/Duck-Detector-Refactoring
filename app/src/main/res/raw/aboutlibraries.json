@@ -2177,6 +2177,30 @@
       "funding": []
     },
     {
+      "uniqueId": "org.lsposed.hiddenapibypass:hiddenapibypass",
+      "artifactVersion": "6.1",
+      "name": "AndroidHiddenApiBypass",
+      "description": "Bypass restrictions to access hidden APIs on Android.",
+      "website": "https://github.com/LSPosed/AndroidHiddenApiBypass",
+      "developers": [
+        {
+          "name": "LSPosed"
+        }
+      ],
+      "organization": {
+        "name": "LSPosed"
+      },
+      "scm": {
+        "connection": "scm:git:https://github.com/LSPosed/AndroidHiddenApiBypass.git",
+        "developerConnection": "scm:git:ssh://git@github.com/LSPosed/AndroidHiddenApiBypass.git",
+        "url": "https://github.com/LSPosed/AndroidHiddenApiBypass"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
       "uniqueId": "com.google.android.datatransport:transport-api",
       "artifactVersion": "3.2.0",
       "name": "com.google.android.datatransport:transport-api",

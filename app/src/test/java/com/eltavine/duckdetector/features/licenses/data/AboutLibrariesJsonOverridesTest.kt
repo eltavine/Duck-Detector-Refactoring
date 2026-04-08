@@ -38,4 +38,37 @@ class AboutLibrariesJsonOverridesTest {
         assertEquals("BSD-3-Clause", library.getJSONArray("licenses").getString(0))
         assertTrue(library.getString("description").contains("BSD 3-Clause"))
     }
+
+    @Test
+    fun apply_rewritesHiddenApiBypassLicenseMetadata() {
+        val input = """
+            {
+              "libraries": [
+                {
+                  "uniqueId": "org.lsposed.hiddenapibypass:hiddenapibypass",
+                  "name": "hiddenapibypass",
+                  "description": "Original",
+                  "website": "https://github.com/LSPosed/AndroidHiddenApiBypass",
+                  "licenses": ["other"]
+                }
+              ],
+              "licenses": {
+                "Apache-2.0": {
+                  "name": "Apache License 2.0"
+                }
+              }
+            }
+        """.trimIndent()
+
+        val updated = JSONObject(AboutLibrariesJsonOverrides.apply(input))
+        val library = updated.getJSONArray("libraries").getJSONObject(0)
+
+        assertEquals("Android HiddenApiBypass", library.getString("name"))
+        assertEquals(
+            "https://github.com/LSPosed/AndroidHiddenApiBypass/blob/main/LICENSE",
+            library.getString("website"),
+        )
+        assertEquals("Apache-2.0", library.getJSONArray("licenses").getString(0))
+        assertTrue(library.getString("description").contains("Apache License 2.0"))
+    }
 }
