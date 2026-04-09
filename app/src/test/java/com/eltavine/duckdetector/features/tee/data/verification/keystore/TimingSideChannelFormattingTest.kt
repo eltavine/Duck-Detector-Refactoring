@@ -18,14 +18,34 @@ class TimingSideChannelFormattingTest {
             suspicious = false,
             sampleCount = 1000,
             warmupCount = 5,
-            measurementDetail = "securityLevel.getKeyEntry timing via private binder proxy",
+            measurementDetail = "service.getKeyEntry timing via private binder proxy",
             timerFallbackReason = null,
             partialFailureReason = "non-attested path unavailable",
         )
 
-        assertTrue(detail.contains("securityLevel.getKeyEntry timing via private binder proxy"))
+        assertTrue(detail.contains("service.getKeyEntry timing via private binder proxy"))
         assertTrue(detail.contains("partialFailure=non-attested path unavailable"))
         assertTrue(detail.contains("timer=arm64_cntvct"))
+    }
+
+    @Test
+    fun `paired diff helper keeps same-loop pairing semantics`() {
+        val paired = pairedDiffSeries(
+            attestedSamples = listOf(0.62, 0.61, 0.60),
+            nonAttestedSamples = listOf(0.30, 0.31, 0.29),
+        )
+
+        assertEquals(listOf(0.32, 0.30, 0.31), paired)
+    }
+
+    @Test
+    fun `paired diff helper truncates to completed pairs only`() {
+        val paired = pairedDiffSeries(
+            attestedSamples = listOf(0.62, 0.61, 0.60),
+            nonAttestedSamples = listOf(0.30, 0.31),
+        )
+
+        assertEquals(listOf(0.32, 0.30), paired)
     }
 
     @Test

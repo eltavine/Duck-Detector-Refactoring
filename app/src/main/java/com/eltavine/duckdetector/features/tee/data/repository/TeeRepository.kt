@@ -103,11 +103,15 @@ class TeeRepository(
                 nativeBridge.collectSnapshot(snapshot.rawCertificates.firstOrNull()?.encoded)
             val soter = runCatching { soterProbe.inspect() }.getOrDefault(TeeSoterState())
             val bootConsistency = bootConsistencyProbe.inspect(snapshot)
+            val timingSideChannel = timingSideChannelProbe.inspect(
+                useStrongBox = false,
+                nativeSnapshot = native,
+            )
             val deepChecks = collectDeepChecks(
                 useStrongBox = snapshot.tier == TeeTier.STRONGBOX,
                 deepChecksAllowed = snapshot.tier == TeeTier.TEE || snapshot.tier == TeeTier.STRONGBOX,
                 snapshot = snapshot,
-                native = native,
+                timingSideChannel = timingSideChannel,
             )
 
 
@@ -157,14 +161,10 @@ class TeeRepository(
         useStrongBox: Boolean,
         deepChecksAllowed: Boolean,
         snapshot: com.eltavine.duckdetector.features.tee.data.attestation.AttestationSnapshot,
-        native: com.eltavine.duckdetector.features.tee.data.native.NativeTeeSnapshot,
+        timingSideChannel: com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult,
     ): DeferredChecks = coroutineScope {
-        val timingSideChannel = async {
-            timingSideChannelProbe.inspect(useStrongBox = useStrongBox, nativeSnapshot = native)
-        }
-
         if (!deepChecksAllowed) {
-            return@coroutineScope DeferredChecks.skipped(snapshot, timingSideChannel.await())
+            return@coroutineScope DeferredChecks.skipped(snapshot, timingSideChannel)
         }
 
         val pairConsistency = async { pairConsistencyProbe.inspect(useStrongBox = useStrongBox) }
@@ -194,7 +194,6 @@ class TeeRepository(
         val aesGcmResult = aesGcm.await()
         val lifecycleResult = lifecycle.await()
         val timingResult = timing.await()
-        val timingSideChannelResult = timingSideChannel.await()
         val oversizedChallengeResult = oversizedChallenge.await()
         val keyboxImportResult = keyboxImport.await()
         val keystore2HookResult = keystore2Hook.await()
@@ -222,7 +221,7 @@ class TeeRepository(
             aesGcm = aesGcmResult,
             lifecycle = lifecycleResult,
             timing = timingResult,
-            timingSideChannel = timingSideChannelResult,
+            timingSideChannel = timingSideChannel,
             oversizedChallenge = oversizedChallengeResult,
             keyboxImport = keyboxImportResult,
             keystore2Hook = keystore2HookResult,

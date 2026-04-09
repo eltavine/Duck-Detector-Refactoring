@@ -27,7 +27,7 @@ class TimingSideChannelProbe(
         }
 
         return runCatching {
-            val sessionResult = binderClient.openSession(useStrongBox = useStrongBox)
+            val sessionResult = binderClient.openSession(useStrongBox = false)
             val session = sessionResult.session
                 ?: throw IllegalStateException(
                     sessionResult.failureReason
@@ -57,24 +57,22 @@ class TimingSideChannelProbe(
 
                 val measurement = Measurement(
                     source = "keystore2_security_level_proxy",
-                    detail = "Measured securityLevel.getKeyEntry timing via project-wide private binder proxy; serviceProxy=${session.serviceProxyActive}, securityLevelProxy=${session.securityLevelProxyActive}, proxyInstalled=${session.proxyInstalled}",
+                    detail = "Measured service.getKeyEntry timing on a TEE-only private binder proxy path; serviceProxy=${session.serviceProxyActive}, securityLevelProxy=${session.securityLevelProxyActive}, proxyInstalled=${session.proxyInstalled}",
                     measureMillis = { descriptor, timer -> measurePrivateGetKeyEntryMillis(session.service, descriptor, timer) },
                     timerSource = measurementContext.timeSource,
                 )
 
-                warmUp(measurement, attestedDescriptor, warnings)
-                warmUp(measurement, nonAttestedDescriptor, warnings)
-                val attestedSeries = sampleSeries(measurement, attestedDescriptor, warnings)
-                val nonAttestedSeries = sampleSeries(measurement, nonAttestedDescriptor, warnings)
-                check(attestedSeries.samples.isNotEmpty() || nonAttestedSeries.samples.isNotEmpty()) {
+                warmUpPair(measurement, attestedDescriptor, nonAttestedDescriptor, warnings)
+                val pairedSeries = samplePairedSeries(measurement, attestedDescriptor, nonAttestedDescriptor, warnings)
+                check(pairedSeries.attestedSamples.isNotEmpty() && pairedSeries.nonAttestedSamples.isNotEmpty()) {
                     "Timing side-channel measurement produced no samples"
                 }
-                partialFailureReason = listOfNotNull(attestedSeries.failureReason, nonAttestedSeries.failureReason)
+                partialFailureReason = listOfNotNull(pairedSeries.failureReason)
                     .joinToString("; ")
                     .takeIf { it.isNotBlank() }
 
-                val avgAttested = attestedSeries.samples.averageOrNull()
-                val avgNonAttested = nonAttestedSeries.samples.averageOrNull()
+                val avgAttested = pairedSeries.attestedSamples.averageOrNull()
+                val avgNonAttested = pairedSeries.nonAttestedSamples.averageOrNull()
                 val diff = if (avgAttested != null && avgNonAttested != null) avgAttested - avgNonAttested else null
                 val suspicious = diff?.let(::isPositiveTimingSideChannelDiff) ?: false
 
@@ -82,7 +80,7 @@ class TimingSideChannelProbe(
                     probeRan = true,
                     measurementAvailable = true,
                     suspicious = suspicious,
-                    sampleCount = maxOf(attestedSeries.samples.size, nonAttestedSeries.samples.size),
+                    sampleCount = pairedSeries.pairedSampleCount,
                     warmupCount = WARMUP_COUNT,
                     avgAttestedMillis = avgAttested,
                     avgNonAttestedMillis = avgNonAttested,
@@ -104,7 +102,7 @@ class TimingSideChannelProbe(
                         avgNonAttestedMillis = avgNonAttested,
                         diffMillis = diff,
                         suspicious = suspicious,
-                        sampleCount = maxOf(attestedSeries.samples.size, nonAttestedSeries.samples.size),
+                        sampleCount = pairedSeries.pairedSampleCount,
                         warmupCount = WARMUP_COUNT,
                         measurementDetail = measurement.detail,
                         timerFallbackReason = measurementContext.timerFallbackReason,
@@ -132,35 +130,51 @@ class TimingSideChannelProbe(
         }
     }
 
-    private fun warmUp(
+    private fun warmUpPair(
         measurement: Measurement,
-        descriptor: Any,
+        attestedDescriptor: Any,
+        nonAttestedDescriptor: Any,
         warnings: MutableList<String>,
     ) {
         repeat(WARMUP_COUNT) { index ->
-            runCatching { measurement.measureMillis(descriptor, measurement.timerSource) }
-                .onFailure { warnings += "warmup[$index]=${it.message ?: "failed"}" }
+            runCatching { measurement.measureMillis(attestedDescriptor, measurement.timerSource) }
+                .onFailure { warnings += "warmup.attested[$index]=${it.message ?: "failed"}" }
+            runCatching { measurement.measureMillis(nonAttestedDescriptor, measurement.timerSource) }
+                .onFailure { warnings += "warmup.nonAttested[$index]=${it.message ?: "failed"}" }
         }
     }
 
-    private fun sampleSeries(
+    private fun samplePairedSeries(
         measurement: Measurement,
-        descriptor: Any,
+        attestedDescriptor: Any,
+        nonAttestedDescriptor: Any,
         warnings: MutableList<String>,
-    ): SampleSeries {
-        val samples = mutableListOf<Double>()
+    ): PairedSampleSeries {
+        val attestedSamples = mutableListOf<Double>()
+        val nonAttestedSamples = mutableListOf<Double>()
         var firstFailure: String? = null
         repeat(LOOP_COUNT) { index ->
-            runCatching { measurement.measureMillis(descriptor, measurement.timerSource) }
-                .onSuccess { samples += it }
-                .onFailure {
-                    if (firstFailure == null) {
-                        firstFailure = it.message ?: "failed"
-                    }
-                    warnings += "sample[$index]=${it.message ?: "failed"}"
+            val attested = runCatching { measurement.measureMillis(attestedDescriptor, measurement.timerSource) }
+            val nonAttested = runCatching { measurement.measureMillis(nonAttestedDescriptor, measurement.timerSource) }
+
+            if (attested.isSuccess && nonAttested.isSuccess) {
+                attestedSamples += attested.getOrThrow()
+                nonAttestedSamples += nonAttested.getOrThrow()
+            } else {
+                val failure = attested.exceptionOrNull()?.message
+                    ?: nonAttested.exceptionOrNull()?.message
+                    ?: "failed"
+                if (firstFailure == null) {
+                    firstFailure = failure
                 }
+                warnings += "sample.paired[$index]=$failure"
+            }
         }
-        return SampleSeries(samples = samples, failureReason = firstFailure)
+        return PairedSampleSeries(
+            attestedSamples = attestedSamples,
+            nonAttestedSamples = nonAttestedSamples,
+            failureReason = firstFailure,
+        )
     }
 
     private fun measurePrivateGetKeyEntryMillis(
@@ -211,8 +225,6 @@ class TimingSideChannelProbe(
         )
     }
 
-    private fun Double.formatMillis(): String = String.format(Locale.US, "%.3f", this)
-
     private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else average()
 
     private data class Measurement(
@@ -222,10 +234,14 @@ class TimingSideChannelProbe(
         val timerSource: StableTimeSource,
     )
 
-    private data class SampleSeries(
-        val samples: List<Double>,
+    private data class PairedSampleSeries(
+        val attestedSamples: List<Double>,
+        val nonAttestedSamples: List<Double>,
         val failureReason: String? = null,
-    )
+    ) {
+        val pairedSampleCount: Int
+            get() = minOf(attestedSamples.size, nonAttestedSamples.size)
+    }
 
     private data class TimerMetadata(
         val timerSource: String,
@@ -309,6 +325,18 @@ internal fun buildTimingSideChannelDetail(
         partialFailureReason?.let {
             append(" partialFailure=")
             append(it)
+        }
+    }
+}
+
+internal fun pairedDiffSeries(
+    attestedSamples: List<Double>,
+    nonAttestedSamples: List<Double>,
+): List<Double> {
+    val pairedCount = minOf(attestedSamples.size, nonAttestedSamples.size)
+    return buildList(pairedCount) {
+        repeat(pairedCount) { index ->
+            add(attestedSamples[index] - nonAttestedSamples[index])
         }
     }
 }
