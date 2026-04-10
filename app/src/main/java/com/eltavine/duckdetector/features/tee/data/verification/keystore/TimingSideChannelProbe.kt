@@ -64,6 +64,7 @@ class TimingSideChannelProbe(
 
                 warmUpPair(measurement, attestedDescriptor, nonAttestedDescriptor, warnings)
                 val pairedSeries = samplePairedSeries(measurement, attestedDescriptor, nonAttestedDescriptor, warnings)
+                val filteredSeries = pairedSeries.filterOutlierPairs()
                 check(pairedSeries.attestedSamples.isNotEmpty() && pairedSeries.nonAttestedSamples.isNotEmpty()) {
                     "Timing side-channel measurement produced no samples"
                 }
@@ -71,16 +72,22 @@ class TimingSideChannelProbe(
                     .joinToString("; ")
                     .takeIf { it.isNotBlank() }
 
-                val avgAttested = pairedSeries.attestedSamples.averageOrNull()
-                val avgNonAttested = pairedSeries.nonAttestedSamples.averageOrNull()
+                val avgAttested = filteredSeries.attestedSamples.averageOrNull()
+                val avgNonAttested = filteredSeries.nonAttestedSamples.averageOrNull()
                 val diff = if (avgAttested != null && avgNonAttested != null) avgAttested - avgNonAttested else null
                 val suspicious = diff?.let(::isPositiveTimingSideChannelDiff) ?: false
+                val filteredCount = pairedSeries.pairedSampleCount - filteredSeries.pairedSampleCount
+                val filteringNote = if (filteredCount > 0) {
+                    "filteredBadSamples=$filteredCount/${pairedSeries.pairedSampleCount}"
+                } else {
+                    null
+                }
 
                 TimingSideChannelResult(
                     probeRan = true,
                     measurementAvailable = true,
                     suspicious = suspicious,
-                    sampleCount = pairedSeries.pairedSampleCount,
+                    sampleCount = filteredSeries.pairedSampleCount,
                     warmupCount = WARMUP_COUNT,
                     avgAttestedMillis = avgAttested,
                     avgNonAttestedMillis = avgNonAttested,
@@ -102,11 +109,13 @@ class TimingSideChannelProbe(
                         avgNonAttestedMillis = avgNonAttested,
                         diffMillis = diff,
                         suspicious = suspicious,
-                        sampleCount = pairedSeries.pairedSampleCount,
+                        sampleCount = filteredSeries.pairedSampleCount,
                         warmupCount = WARMUP_COUNT,
                         measurementDetail = measurement.detail,
                         timerFallbackReason = measurementContext.timerFallbackReason,
-                        partialFailureReason = partialFailureReason,
+                        partialFailureReason = listOfNotNull(partialFailureReason, filteringNote)
+                            .joinToString("; ")
+                            .takeIf { it.isNotBlank() },
                     ),
                 )
             } finally {
@@ -241,6 +250,30 @@ class TimingSideChannelProbe(
     ) {
         val pairedSampleCount: Int
             get() = minOf(attestedSamples.size, nonAttestedSamples.size)
+
+        fun filterOutlierPairs(): PairedSampleSeries {
+            val pairedDiffs = pairedDiffSeries(attestedSamples, nonAttestedSamples)
+            if (pairedDiffs.size < 8) {
+                return this
+            }
+            val median = pairedDiffs.sorted()[pairedDiffs.size / 2]
+            val absoluteDeviation = pairedDiffs.map { kotlin.math.abs(it - median) }.sorted()
+            val mad = absoluteDeviation[absoluteDeviation.size / 2]
+            if (mad == 0.0) {
+                return this
+            }
+            val keepIndices = pairedDiffs.mapIndexedNotNull { index, diff ->
+                if (kotlin.math.abs(diff - median) <= mad * 6.0) index else null
+            }
+            if (keepIndices.size == pairedDiffs.size || keepIndices.isEmpty()) {
+                return this
+            }
+            return PairedSampleSeries(
+                attestedSamples = keepIndices.map { attestedSamples[it] },
+                nonAttestedSamples = keepIndices.map { nonAttestedSamples[it] },
+                failureReason = failureReason,
+            )
+        }
     }
 
     private data class TimerMetadata(

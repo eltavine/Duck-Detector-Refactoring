@@ -49,6 +49,27 @@ class TimingSideChannelFormattingTest {
     }
 
     @Test
+    fun `detail includes filtered bad sample count when post filtering removes outliers`() {
+        val detail = buildTimingSideChannelDetail(
+            source = "keystore2_security_level_proxy",
+            timerSource = "arm64_cntvct",
+            affinity = "bound_cpu0",
+            avgAttestedMillis = 0.612,
+            avgNonAttestedMillis = 0.300,
+            diffMillis = 0.312,
+            suspicious = true,
+            sampleCount = 18,
+            warmupCount = 5,
+            measurementDetail = "service.getKeyEntry timing via private binder proxy",
+            timerFallbackReason = null,
+            partialFailureReason = "filteredBadSamples=2/20",
+        )
+
+        assertTrue(detail.contains("filteredBadSamples=2/20"))
+        assertTrue(detail.contains("samples=18"))
+    }
+
+    @Test
     fun `stable timer helper treats register timer as hard requirement when requested`() {
         val stable = stableTimerReadNs(
             preferRegisterTimer = true,

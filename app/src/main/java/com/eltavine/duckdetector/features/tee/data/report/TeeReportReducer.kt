@@ -1224,8 +1224,13 @@ class TeeReportReducer(
             result.suspicious -> "Positive"
             else -> "Not positive"
         }
+        val filtered = Regex("filteredBadSamples=\\d+/\\d+")
+            .find(result.detail)
+            ?.value
+            ?.let { " • $it" }
+            .orEmpty()
         val reason = result.failureReason?.takeIf { it.isNotBlank() }?.let { " • reason $it" }.orEmpty()
-        return "$timerSource • $affinity • attested $avgAttested • non-attested $avgNonAttested • diff $diff • threshold ±0.3ms • $state$reason"
+        return "$timerSource • $affinity • attested $avgAttested • non-attested $avgNonAttested • diff $diff$filtered • threshold ±0.3ms • $state$reason"
     }
 
     private fun timingSideChannelSummary(artifacts: TeeScanArtifacts): String {

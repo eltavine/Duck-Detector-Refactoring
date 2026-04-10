@@ -519,12 +519,12 @@ class TeeReportReducerTest {
                     probeRan = true,
                     measurementAvailable = true,
                     suspicious = true,
-                    sampleCount = 20,
+                    sampleCount = 18,
                     warmupCount = 5,
                     avgAttestedMillis = 0.612,
                     avgNonAttestedMillis = 0.300,
                     diffMillis = 0.312,
-                    detail = "register timer source; avgAttested=0.612ms, avgNonAttested=0.300ms, diff=0.312ms",
+                    detail = "register timer source; avgAttested=0.612ms, avgNonAttested=0.300ms, diff=0.312ms partialFailure=filteredBadSamples=2/20",
                 ),
             ),
         )
@@ -540,6 +540,7 @@ class TeeReportReducerTest {
                     it.body.contains("attested 0.612ms") &&
                     it.body.contains("non-attested 0.300ms") &&
                     it.body.contains("diff 0.312ms") &&
+                    it.body.contains("filteredBadSamples=2/20") &&
                     it.body.contains("threshold ±0.3ms") &&
                     it.level == TeeSignalLevel.WARN
         })
