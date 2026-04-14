@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: Telegram
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -413,6 +413,36 @@ jobs:
           name: ${{ steps.metadata.outputs.apk_name }}
           path: ${{ steps.metadata.outputs.apk_path }}
           if-no-files-found: error
+
+      - name: Prepare release asset
+        id: release_asset
+        run: |
+          echo "asset_path=${{ steps.metadata.outputs.apk_path }}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare nightly release note
+        if: github.ref_name == 'main' || github.ref_name == 'master'
+        shell: bash
+        run: |
+          cat <<EOF > nightly-release-note.md
+          Nightly APK build
+
+          Commit: ${GITHUB_SHA}
+          Branch: ${GITHUB_REF_NAME}
+          EOF
+
+      - name: Update nightly APK release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_name == 'main' || github.ref_name == 'master'
+        with:
+          tag_name: nightly
+          name: Nightly APK Build
+          body_path: nightly-release-note.md
+          prerelease: false
+          overwrite: true
+          files: |
+            ${{ steps.release_asset.outputs.asset_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push APK to Telegram channel
         shell: bash
