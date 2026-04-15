@@ -1100,6 +1100,37 @@ class TeeReportReducerTest {
         })
     }
 
+    @Test
+    fun `abnormal soter environment becomes local warning and yellows card state`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                soter = TeeSoterState(
+                    serviceReachable = false,
+                    keyPrepared = false,
+                    signSessionAvailable = false,
+                    available = false,
+                    damaged = false,
+                    abnormalEnvironment = true,
+                    summary = "Abnormal Soter environment: Simplified Chinese locale on a likely Soter-supporting device, but PackageManager could not resolve com.tencent.soter.soterserver.",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.WARN, report.supplementaryReviewLevel)
+        assertTrue(report.summary.contains("abnormal soter environment", ignoreCase = true))
+        assertTrue(report.signals.any {
+            it.label == "Signals" &&
+                    it.value.contains("1 local")
+        })
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Soter" &&
+                    it.body.contains("abnormal soter environment", ignoreCase = true) &&
+                    it.level == TeeSignalLevel.WARN
+        })
+    }
+
     private fun baseArtifacts(
         tier: TeeTier = TeeTier.TEE,
         chainStructure: ChainStructureResult = ChainStructureResult(

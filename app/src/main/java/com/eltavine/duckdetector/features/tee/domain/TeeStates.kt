@@ -49,6 +49,7 @@ data class TeeSoterState(
     val signSessionAvailable: Boolean = false,
     val available: Boolean = false,
     val damaged: Boolean = false,
+    val abnormalEnvironment: Boolean = false,
     val summary: String = "Soter check skipped",
 )
 

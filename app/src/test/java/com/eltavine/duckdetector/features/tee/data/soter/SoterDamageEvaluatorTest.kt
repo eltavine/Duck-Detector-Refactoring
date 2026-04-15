@@ -50,4 +50,20 @@ class SoterDamageEvaluatorTest {
         assertFalse(state.damaged)
         assertTrue(state.summary.contains("soter", ignoreCase = true))
     }
+
+    @Test
+    fun `abnormal environment stays warning without damage`() {
+        val state = evaluator.evaluate(
+            serviceReachable = false,
+            keyPrepared = false,
+            signSessionAvailable = false,
+            errorMessage = "skipped",
+            abnormalEnvironment = true,
+        )
+
+        assertFalse(state.available)
+        assertFalse(state.damaged)
+        assertTrue(state.abnormalEnvironment)
+        assertTrue(state.summary.contains("abnormal soter environment", ignoreCase = true))
+    }
 }

@@ -9,13 +9,20 @@ import com.tencent.soter.soterserver.SoterSessionResult
 
 class SoterCapabilityProbe internal constructor(
     private val client: SoterClient,
+    private val environmentInspector: SoterEnvironmentInspector = SoterEnvironmentInspector {
+        SoterEnvironmentSnapshot()
+    },
     private val damageEvaluator: SoterDamageEvaluator = SoterDamageEvaluator(),
 ) {
 
     constructor(
         context: Context,
         damageEvaluator: SoterDamageEvaluator = SoterDamageEvaluator(),
-    ) : this(AndroidSoterClient(context.applicationContext), damageEvaluator)
+    ) : this(
+        AndroidSoterClient(context.applicationContext),
+        AndroidSoterEnvironmentInspector(context.applicationContext),
+        damageEvaluator,
+    )
 
     fun inspect(): TeeSoterState {
         val result = runProbe()
@@ -24,11 +31,13 @@ class SoterCapabilityProbe internal constructor(
             keyPrepared = result.keyPrepareOk,
             signSessionAvailable = result.signSessionOk,
             errorMessage = result.uiSummary,
+            abnormalEnvironment = result.abnormalEnvironment,
         )
     }
 
     private fun runProbe(): ProbeResult {
         val testAlias = "$TEST_ALIAS_PREFIX${System.currentTimeMillis()}"
+        val environment = runCatching { environmentInspector.inspect() }.getOrDefault(SoterEnvironmentSnapshot())
 
         var nativeSupport = false
         var coreType = 0
@@ -118,6 +127,7 @@ class SoterCapabilityProbe internal constructor(
             initServiceOk = initServiceOk,
             keyPrepareOk = keyPrepareOk,
             signSessionOk = signSessionOk,
+            abnormalEnvironment = environment.abnormalEnvironment,
             uiSummary = summary,
         )
     }
@@ -205,6 +215,7 @@ class SoterCapabilityProbe internal constructor(
         val initServiceOk: Boolean,
         val keyPrepareOk: Boolean,
         val signSessionOk: Boolean,
+        val abnormalEnvironment: Boolean,
         val uiSummary: String,
     )
 

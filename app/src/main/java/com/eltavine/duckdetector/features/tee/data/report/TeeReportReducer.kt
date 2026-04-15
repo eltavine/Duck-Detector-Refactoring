@@ -182,6 +182,15 @@ class TeeReportReducer(
 
     private fun collectSupplementaryIndicators(artifacts: TeeScanArtifacts): List<TeeEvidenceItem> {
         return buildList {
+            if (artifacts.soter.abnormalEnvironment) {
+                add(
+                    fact(
+                        "Soter environment",
+                        artifacts.soter.summary,
+                        TeeSignalLevel.WARN,
+                    )
+                )
+            }
             if (artifacts.timingSideChannel.measurementAvailable && artifacts.timingSideChannel.suspicious) {
                 add(
                     fact(
@@ -1855,6 +1864,7 @@ class TeeReportReducer(
     private fun soterLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
         artifacts.soter.damaged -> TeeSignalLevel.FAIL
         artifacts.soter.available -> TeeSignalLevel.PASS
+        artifacts.soter.abnormalEnvironment -> TeeSignalLevel.WARN
         !artifacts.soter.serviceReachable -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.INFO
     }

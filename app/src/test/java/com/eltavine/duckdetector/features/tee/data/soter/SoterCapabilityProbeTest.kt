@@ -29,6 +29,31 @@ class SoterCapabilityProbeTest {
     }
 
     @Test
+    fun `expected simplified chinese device without soter package becomes abnormal environment`() {
+        val client = FakeSoterClient(
+            nativeSupport = true,
+            coreType = SoterCore.IS_TREBLE,
+            trebleConnected = false,
+        )
+
+        val state = SoterCapabilityProbe(
+            client = client,
+            environmentInspector = SoterEnvironmentInspector {
+                SoterEnvironmentSnapshot(
+                    supportExpected = true,
+                    simplifiedChineseLocale = true,
+                    servicePackageVisible = false,
+                )
+            },
+        ).inspect()
+
+        assertFalse(state.serviceReachable)
+        assertFalse(state.damaged)
+        assertTrue(state.abnormalEnvironment)
+        assertTrue(state.summary.contains("abnormal soter environment", ignoreCase = true))
+    }
+
+    @Test
     fun `pre existing ask is not removed during cleanup`() {
         val client = FakeSoterClient(
             nativeSupport = true,
