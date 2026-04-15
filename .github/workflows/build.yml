@@ -480,7 +480,7 @@ jobs:
         shell: bash
         env:
           ONEBOT_WS_URL: ${{ secrets.ONEBOT_WS_URL }}
-          QQ_GROUP_ID: ${{ secrets.QQ_GROUP_ID }}
+          QQ_GROUP_IDS: ${{ vars.QQ_GROUP_IDS }}
           BUILD_CAPTION_HTML: ${{ steps.metadata.outputs.caption }}
           APK_NAME: ${{ steps.metadata.outputs.apk_name }}
           APK_PUBLIC_URL: ${{ fromJSON(steps.nightly_release.outputs.assets)[0].browser_download_url }}
@@ -492,17 +492,29 @@ jobs:
           import re
           import uuid
           from html import unescape
+          from typing import Final, List, Dict, Any, Optional
 
           import websockets
+          from websockets.client import WebSocketClientProtocol
 
-          ws_url = os.environ["ONEBOT_WS_URL"]
-          group_id = int(os.environ["QQ_GROUP_ID"])
-          caption_html = os.environ["BUILD_CAPTION_HTML"]
-          apk_name = os.environ["APK_NAME"]
-          apk_public_url = os.environ["APK_PUBLIC_URL"]
+          ws_url: Final[str] = os.environ["ONEBOT_WS_URL"]
+
+          group_ids: Final[List[int]] = [
+              int(x)
+              for x in re.split(r"[,\s]+", os.environ["QQ_GROUP_IDS"].strip())
+              if x
+          ]
+
+          caption_html: Final[str] = os.environ["BUILD_CAPTION_HTML"]
+          apk_name: Final[str] = os.environ["APK_NAME"]
+          apk_public_url: Final[str] = os.environ["APK_PUBLIC_URL"]
+
+          CONCURRENCY: Final[int] = 3
+          RETRY: Final[int] = 2
+          DELAY_BETWEEN_ACTIONS: Final[float] = 0.3
 
           def html_to_plain_text(text: str) -> str:
-              text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+              text = re.sub(r"<br\s*/?>", "\n", text)
               text = text.replace("</pre>", "\n").replace("<pre>", "")
               text = text.replace("</b>", "").replace("<b>", "")
               text = re.sub(r"<[^>]+>", "", text)
@@ -510,53 +522,107 @@ jobs:
               text = re.sub(r"\n{3,}", "\n\n", text).strip()
               return text
 
-          async def call_api(ws, action, params):
-              echo = str(uuid.uuid4())
-              payload = {
+
+          async def call_api(
+              ws: WebSocketClientProtocol,
+              action: str,
+              params: Dict[str, Any],
+          ) -> Dict[str, Any]:
+              echo: str = str(uuid.uuid4())
+
+              payload: Dict[str, Any] = {
                   "action": action,
                   "params": params,
                   "echo": echo,
               }
+
               await ws.send(json.dumps(payload, ensure_ascii=False))
 
               while True:
-                  raw = await ws.recv()
-                  data = json.loads(raw)
+                  raw: str = await ws.recv()
+                  data: Dict[str, Any] = json.loads(raw)
 
                   if data.get("echo") != echo:
                       continue
 
                   if data.get("status") != "ok":
                       raise RuntimeError(f"{action} failed: {data}")
+
                   return data
 
-          async def main():
-              async with websockets.connect(ws_url) as ws:
-                  plain_caption = html_to_plain_text(caption_html)
 
-                  await call_api(ws, "send_group_msg", {
-                      "group_id": group_id,
-                      "message": plain_caption
-                  })
+          async def download_apk(ws: WebSocketClientProtocol) -> str:
+              resp: Dict[str, Any] = await call_api(ws, "download_file", {
+                  "url": apk_public_url,
+                  "thread_count": 1,
+                  "headers": []
+              })
 
-                  download_resp = await call_api(ws, "download_file", {
-                      "url": apk_public_url,
-                      "thread_count": 1,
-                      "headers": []
-                  })
+              data: Dict[str, Any] = resp.get("data") or {}
 
-                  data = download_resp.get("data") or {}
-                  local_path = data.get("file") or data.get("path") or data.get("file_path")
-                  if not local_path:
-                      raise RuntimeError(f"download_file succeeded but no local path returned: {download_resp}")
+              local_path: Optional[str] = (
+                  data.get("file")
+                  or data.get("path")
+                  or data.get("file_path")
+              )
 
-                  await call_api(ws, "upload_group_file", {
-                      "group_id": group_id,
-                      "file": local_path,
-                      "name": apk_name
-                  })
+              if not local_path:
+                  raise RuntimeError(f"No file path returned: {resp}")
+              return local_path
 
-          asyncio.run(main())
+          async def send_to_group(
+              ws: WebSocketClientProtocol,
+              group_id: int,
+              plain_caption: str,
+              local_path: str,
+          ) -> None:
+              for attempt in range(RETRY + 1):
+                  try:
+                      await call_api(ws, "send_group_msg", {
+                          "group_id": group_id,
+                          "message": plain_caption
+                      })
+
+                      await asyncio.sleep(DELAY_BETWEEN_ACTIONS)
+
+                      await call_api(ws, "upload_group_file", {
+                          "group_id": group_id,
+                          "file": local_path,
+                          "name": apk_name
+                      })
+
+                      print(f"[OK] group {group_id}")
+                      return
+
+                  except Exception as e:
+                      print(f"[WARN] group {group_id} attempt {attempt} failed: {e}")
+
+                      if attempt >= RETRY:
+                          print(f"[FAIL] group {group_id}")
+                          return
+
+                      await asyncio.sleep(1)
+
+
+          async def main() -> None:
+              async with websockets.connect(
+                  ws_url,
+                  ping_interval=20,
+                  ping_timeout=20
+              ) as ws:
+
+                  plain_caption: str = html_to_plain_text(caption_html)
+                  local_path: str = await download_apk(ws)
+                  sem: asyncio.Semaphore = asyncio.Semaphore(CONCURRENCY)
+                  async def worker(group_id: int) -> None:
+                      async with sem:
+                          await send_to_group(ws, group_id, plain_caption, local_path)
+
+                  await asyncio.gather(*(worker(gid) for gid in group_ids))
+
+
+          if __name__ == "__main__":
+              asyncio.run(main())
           PY
 
       - name: Push APK to Telegram channel
