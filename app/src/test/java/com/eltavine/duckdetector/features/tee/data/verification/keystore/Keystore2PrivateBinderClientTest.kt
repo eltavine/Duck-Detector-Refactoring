@@ -103,9 +103,40 @@ class Keystore2PrivateBinderClientTest {
 
     @Test
     fun `positive diff helper is symmetric around threshold`() {
-        assertTrue(isPositiveTimingSideChannelDiff(0.3001))
-        assertTrue(isPositiveTimingSideChannelDiff(-0.3001))
-        assertFalse(isPositiveTimingSideChannelDiff(0.3))
-        assertFalse(isPositiveTimingSideChannelDiff(-0.3))
+        assertTrue(isPositiveTimingSideChannelDiff(0.2001))
+        assertTrue(isPositiveTimingSideChannelDiff(-0.2001))
+        assertFalse(isPositiveTimingSideChannelDiff(0.2))
+        assertFalse(isPositiveTimingSideChannelDiff(-0.2))
+    }
+
+    @Test
+    fun `key parameter setter mapping follows AOSP keymint union shape`() {
+        assertEquals("setAlgorithm", keyParameterSetterNameForTag(0x10000002))
+        assertEquals("setEcCurve", keyParameterSetterNameForTag(0x1000000A))
+        assertEquals("setKeyPurpose", keyParameterSetterNameForTag(0x20000001))
+        assertEquals("setDigest", keyParameterSetterNameForTag(0x20000005))
+        assertEquals("setBoolValue", keyParameterSetterNameForTag(0x700001F7))
+        assertEquals("setBlob", keyParameterSetterNameForTag(0x900002C4.toInt()))
+    }
+
+    @Test
+    fun `parameter type helper preserves primitive reflection types`() {
+        assertEquals(Int::class.javaPrimitiveType, keyParameterParameterType(1))
+        assertEquals(Long::class.javaPrimitiveType, keyParameterParameterType(1L))
+        assertEquals(Boolean::class.javaPrimitiveType, keyParameterParameterType(true))
+        assertEquals(ByteArray::class.java, keyParameterParameterType(byteArrayOf(1, 2, 3)))
+    }
+
+    @Test
+    fun `captured throwable collector de-duplicates same stack`() {
+        val collector = CapturedThrowableCollector()
+        val failure = IllegalStateException("boom")
+
+        collector.record("warmup.attested[0]", "IllegalStateException: boom", failure)
+        collector.record("warmup.attested[1]", "IllegalStateException: boom", failure)
+
+        val records = collector.snapshot()
+        assertEquals(1, records.size)
+        assertEquals(2, records.single().occurrenceCount)
     }
 }

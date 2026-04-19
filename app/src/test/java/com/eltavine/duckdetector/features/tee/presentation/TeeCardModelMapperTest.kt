@@ -178,7 +178,8 @@ class TeeCardModelMapperTest {
                             TeeEvidenceItem(
                                 "Keystore2",
                                 "Binder reply fingerprint matched a Java-hook style path.",
-                                TeeSignalLevel.FAIL
+                                TeeSignalLevel.FAIL,
+                                hiddenCopyText = "copy-me",
                             ),
                         ),
                     ),
@@ -194,6 +195,136 @@ class TeeCardModelMapperTest {
 
         assertEquals(DetectorStatus.warning(), model.status)
         assertEquals("Aligned + review", model.headerFacts.first { it.label == "Verdict" }.value)
+        assertEquals("copy-me", model.factGroups.single().rows.single().hiddenCopyText)
+    }
+
+    @Test
+    fun `tricky store timing skip signature escalates aligned tee card to danger`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "Captured Tricky-Store Patch Mode. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                signals = listOf(
+                    TeeSignal(
+                        "Signals",
+                        "0 policy hard • 0 policy review • 1 local",
+                        TeeSignalLevel.WARN,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Timing side-channel",
+                                "Captured Tricky-Store Patch Mode • Register timer • bound_cpu0",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
+    fun `tee simulator timing skip signature escalates aligned tee card to danger`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "Captured TEE Simulator Patch Mode. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                signals = listOf(
+                    TeeSignal(
+                        "Signals",
+                        "0 policy hard • 0 policy review • 1 local",
+                        TeeSignalLevel.WARN,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Timing side-channel",
+                                "Captured TEE Simulator Patch Mode • Fallback timer • not_requested",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
+    fun `matched tee simulator generate mode fingerprint escalates aligned tee card to danger`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "Matched TEE Simulator generate-mode fingerprint. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                signals = listOf(
+                    TeeSignal(
+                        "TEE Simulator generate-mode fingerprint",
+                        "Matched",
+                        TeeSignalLevel.FAIL,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "TEE Simulator generate-mode fingerprint",
+                                "Matched TEE Simulator generate-mode fingerprint.",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
     }
 
     @Test

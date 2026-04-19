@@ -1,5 +1,10 @@
 package com.eltavine.duckdetector.features.tee.ui.card
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -33,11 +38,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
@@ -364,12 +373,32 @@ private fun TeeFactGroup(
 private fun TeeFactRow(
     row: TeeFactRowModel,
 ) {
+    val context = LocalContext.current
+    val clipboardLabel = stringResource(R.string.tee_timing_stack_clipboard_label)
+    val copiedToast = stringResource(R.string.tee_timing_stack_copied_toast)
+    val valueModifier = if (row.hiddenCopyText != null) {
+        // timing 栈复制是故意做成“无显式 affordance”的双击隐藏入口，避免把正常读卡 UI 变成调试工具面板。
+        // Timing stack copy is intentionally a no-affordance double-tap entry so the normal card UI does not turn into a visible debugging panel.
+        Modifier.combinedClickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = {},
+            onDoubleClick = {
+                context.getSystemService(ClipboardManager::class.java)
+                    ?.setPrimaryClip(ClipData.newPlainText(clipboardLabel, row.hiddenCopyText))
+                Toast.makeText(context, copiedToast, Toast.LENGTH_SHORT).show()
+            },
+        )
+    } else {
+        Modifier
+    }
     DetectorDetailRowBlock(
         label = row.label,
         value = row.value,
         status = row.status,
         statusIcon = iconFor(row.icon),
         verticalPadding = 0.dp,
+        valueModifier = valueModifier,
     )
 }
 

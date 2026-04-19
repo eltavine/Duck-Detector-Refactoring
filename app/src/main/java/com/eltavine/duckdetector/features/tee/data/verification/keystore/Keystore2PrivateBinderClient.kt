@@ -9,6 +9,10 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.security.SecureRandom
 
+/**
+ * 通过隐藏 API 打开一个“只对当前探针可见”的 Keystore2 私有代理会话，避免把全局 ServiceManager 状态污染给其他探针。
+ * Opens a Keystore2 private proxy session that is scoped to the current probe so other probes keep seeing the real ServiceManager state.
+ */
 class Keystore2PrivateBinderClient {
 
     fun lookupBinder(): IBinder? {
@@ -69,7 +73,10 @@ class Keystore2PrivateBinderClient {
         return executeRequest(binder, buildGetKeyEntryRequest(alias))
     }
 
-    fun openSession(useStrongBox: Boolean = false): Keystore2PrivateSessionResult {
+    fun openSession(
+        useStrongBox: Boolean = false,
+        captureGenerateKeyReplies: Boolean = false,
+    ): Keystore2PrivateSessionResult {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return Keystore2PrivateSessionResult(
                 failureReason = "Keystore2 private binder proxy requires Android 12 or newer.",
@@ -77,35 +84,49 @@ class Keystore2PrivateBinderClient {
         }
 
         ensureHiddenApiAccess()
-        val proxyInstalled = installPrivateBinderProxy()
         val binder = lookupBinder() ?: return Keystore2PrivateSessionResult(
             failureReason = "Keystore2 binder endpoint was not available.",
         )
-        val service = getKeystoreService() ?: return Keystore2PrivateSessionResult(
-            failureReason = "Keystore2 service interface was not available after installing the private binder proxy.",
+        // 这里统一收集会话内所有隐藏接口异常，供 timing side-channel 在 skip 时做静态签名判定。
+        // Collect every hidden-interface failure for this session so timing side-channel can still classify skip-mode signatures.
+        val diagnosticsCollector = CapturedThrowableCollector()
+        val service = createPrivateKeystoreServiceProxy(
+            rawBinder = binder,
+            diagnosticsCollector = diagnosticsCollector,
+            captureGenerateKeyReplies = captureGenerateKeyReplies,
+        ) ?: return Keystore2PrivateSessionResult(
+            failureReason = "Keystore2 service interface was not available after opening the private binder session.",
+            capturedFailures = diagnosticsCollector.snapshot(),
         )
         val securityLevel = resolveSecurityLevel(
             service = service,
             level = if (useStrongBox) SECURITY_LEVEL_STRONGBOX else SECURITY_LEVEL_TRUSTED_ENVIRONMENT,
         ) ?: return Keystore2PrivateSessionResult(
             failureReason = "Keystore2 security level proxy was not available.",
+            capturedFailures = diagnosticsCollector.snapshot(),
         )
 
         val session = Keystore2PrivateSession(
             binder = binder,
             service = service,
             securityLevel = securityLevel,
-            proxyInstalled = proxyInstalled,
+            proxyInstalled = true,
             serviceProxyActive = Proxy.isProxyClass(service.javaClass),
             securityLevelProxyActive = Proxy.isProxyClass(securityLevel.javaClass),
+            diagnosticsCollector = diagnosticsCollector,
         )
         return if (!session.serviceProxyActive || !session.securityLevelProxyActive) {
             Keystore2PrivateSessionResult(
                 failureReason = "Keystore2 private binder proxy did not wrap both service and security-level interfaces.",
+                capturedFailures = diagnosticsCollector.snapshot(),
             )
         } else {
             Keystore2PrivateSessionResult(session = session)
         }
+    }
+
+    fun closeSession(session: Keystore2PrivateSession) {
+        generateKeyReplyCaptureSlot.remove()
     }
 
     fun createKeyDescriptor(alias: String): Any {
@@ -118,7 +139,7 @@ class Keystore2PrivateBinderClient {
         return descriptor
     }
 
-    fun generateAttestationKey(securityLevel: Any, keyDescriptor: Any) {
+    fun generateAttestationKey(securityLevel: Any, keyDescriptor: Any): Any? {
         var lastFailure: Throwable? = null
         val parameterSets = listOf(
             listOf(
@@ -148,8 +169,7 @@ class Keystore2PrivateBinderClient {
 
         for (parameters in parameterSets) {
             try {
-                invokeGenerateKey(securityLevel, keyDescriptor, null, parameters)
-                return
+                return invokeGenerateKey(securityLevel, keyDescriptor, null, parameters)
             } catch (throwable: Throwable) {
                 lastFailure = throwable
             }
@@ -163,13 +183,16 @@ class Keystore2PrivateBinderClient {
         keyDescriptor: Any,
         attestationKeyDescriptor: Any?,
         attest: Boolean,
-    ) {
+    ): Any? {
         val parameters = buildSigningKeyParameters(attest)
-        invokeGenerateKey(securityLevel, keyDescriptor, attestationKeyDescriptor, parameters)
+        return invokeGenerateKey(securityLevel, keyDescriptor, attestationKeyDescriptor, parameters)
     }
 
     fun captureGenerateKeyReply(useStrongBox: Boolean = false): GenerateKeyReplyCaptureResult {
-        val sessionResult = openSession(useStrongBox = useStrongBox)
+        val sessionResult = openSession(
+            useStrongBox = useStrongBox,
+            captureGenerateKeyReplies = true,
+        )
         val session = sessionResult.session ?: return GenerateKeyReplyCaptureResult(
             available = false,
             detail = sessionResult.failureReason ?: "Keystore2 private binder proxy session unavailable.",
@@ -221,6 +244,7 @@ class Keystore2PrivateBinderClient {
             )
         } finally {
             deleteKey(session.service, keyDescriptor)
+            closeSession(session)
         }
     }
 
@@ -240,6 +264,22 @@ class Keystore2PrivateBinderClient {
         return getMetadata(keyEntryResponse)?.let { metadata ->
             getFieldValue(metadata, "key")
         } ?: getFieldValue(keyEntryResponse, "key")
+    }
+
+    fun resolveFollowUpDescriptor(requestedDescriptor: Any, keyMetadataOrResponse: Any?): Any {
+        val returnedDescriptor = keyMetadataOrResponse?.let(::getReturnedDescriptor) ?: return requestedDescriptor
+        val returnedNamespace = getDescriptorNamespace(returnedDescriptor)
+        val keyIdDomain = getDomainKeyId()
+        return when {
+            // AOSP 在成功生成后可能把后续操作入口切到 KEY_ID 语义；继续拿原 alias descriptor 调隐藏接口，部分设备会直接打成 KEY_NOT_FOUND。
+            // AOSP may switch follow-up operations to KEY_ID semantics after generateKey; reusing the original alias descriptor can trigger KEY_NOT_FOUND on some devices.
+            getDescriptorDomain(returnedDescriptor) == keyIdDomain -> returnedDescriptor
+            returnedNamespace != null && returnedNamespace >= 0L -> createKeyIdDescriptor(
+                nspace = returnedNamespace,
+                aliasHint = getDescriptorAlias(requestedDescriptor),
+            )
+            else -> returnedDescriptor
+        }
     }
 
     fun getSecurityLevelBinder(keyEntryResponse: Any): Any? = getFieldValue(keyEntryResponse, "iSecurityLevel")
@@ -473,11 +513,13 @@ class Keystore2PrivateBinderClient {
 
     fun describeThrowable(throwable: Throwable): String {
         val root = findRootCause(throwable)
+        val serviceSpecificCode = extractServiceSpecificErrorCode(throwable)
         val detail = root.message?.takeIf { it.isNotBlank() }
-        return if (detail != null) {
-            "${root.javaClass.simpleName}: $detail"
-        } else {
-            root.javaClass.simpleName
+        return when {
+            serviceSpecificCode != null && detail != null -> "${root.javaClass.simpleName}(code $serviceSpecificCode): $detail"
+            serviceSpecificCode != null -> "${root.javaClass.simpleName}(code $serviceSpecificCode)"
+            detail != null -> "${root.javaClass.simpleName}: $detail"
+            else -> root.javaClass.simpleName
         }
     }
 
@@ -486,14 +528,14 @@ class Keystore2PrivateBinderClient {
         keyDescriptor: Any,
         attestationKeyDescriptor: Any?,
         parameters: List<Any>,
-    ) {
+    ): Any? {
         val invocation = buildGenerateKeyInvocation(
             securityLevel = securityLevel,
             keyDescriptor = keyDescriptor,
             attestationKeyDescriptor = attestationKeyDescriptor,
             parameters = parameters,
         )
-        invokeProxyMethod(invocation.target, invocation.method, invocation.args)
+        return invokeProxyMethod(invocation.target, invocation.method, invocation.args)
     }
 
     private fun invokeGenerateKeyWithReplyCapture(
@@ -596,55 +638,25 @@ class Keystore2PrivateBinderClient {
     }
 
     private fun createKeyParameterValue(valueClass: Class<*>, tag: Int, value: Any): Any {
-        val factoryName = factoryNameForTag(tag)
-        if (factoryName != null) {
-            valueClass.methods.firstOrNull {
-                it.name == factoryName && it.parameterTypes.size == 1
-            }?.let { factory ->
-                factory.isAccessible = true
-                return factory.invoke(null, value)
-            }
-        }
-
         val valueObject = valueClass.getDeclaredConstructor().newInstance()
-        val setterName = setterNameForTag(tag)
-        val setter = valueClass.declaredMethods.firstOrNull {
-            it.name == setterName && it.parameterTypes.size == 1
-        } ?: throw NoSuchMethodException("Unable to find $setterName on ${valueClass.name}")
-        setter.isAccessible = true
-        setter.invoke(valueObject, value)
+        val setterName = keyParameterSetterNameForTag(tag)
+        val parameterType = keyParameterParameterType(value)
+
+        try {
+            // KeyParameterValue 是 AIDL union，优先按真实 setter + 参数类型写值；只有签名被 OEM 改形时才退到名称匹配。
+            // KeyParameterValue is an AIDL union, so we prefer the real setter + parameter type and only fall back to name matching for OEM-shaped signatures.
+            val setter = valueClass.getDeclaredMethod(setterName, parameterType)
+            setter.isAccessible = true
+            setter.invoke(valueObject, value)
+        } catch (_: NoSuchMethodException) {
+            val setter = valueClass.declaredMethods.firstOrNull {
+                it.name == setterName && it.parameterTypes.size == 1
+            } ?: throw NoSuchMethodException("Unable to find $setterName on ${valueClass.name}")
+            setter.isAccessible = true
+            setter.invoke(valueObject, value)
+        }
+
         return valueObject
-    }
-
-    private fun factoryNameForTag(tag: Int): String? {
-        return when (tag and 0xf0000000.toInt()) {
-            0x10000000, 0x20000000 -> when (tag and 0x0fffffff) {
-                1 -> "keyPurpose"
-                2 -> "algorithm"
-                5 -> "digest"
-                else -> null
-            }
-            0x30000000, 0x40000000 -> "integer"
-            0x70000000 -> "boolValue"
-            0x80000000.toInt(), 0x90000000.toInt() -> "blob"
-            else -> null
-        }
-    }
-
-    private fun setterNameForTag(tag: Int): String {
-        return when (tag and 0xf0000000.toInt()) {
-            0x10000000, 0x20000000 -> when (tag and 0x0fffffff) {
-                1 -> "setKeyPurpose"
-                2 -> "setAlgorithm"
-                5 -> "setDigest"
-                10 -> "setEcCurve"
-                else -> "setInteger"
-            }
-            0x30000000, 0x40000000 -> "setInteger"
-            0x70000000 -> "setBoolValue"
-            0x80000000.toInt(), 0x90000000.toInt() -> "setBlob"
-            else -> "setInteger"
-        }
     }
 
     private fun ensureHiddenApiAccess() {
@@ -670,60 +682,49 @@ class Keystore2PrivateBinderClient {
         }.getOrNull()
     }
 
-    private fun installPrivateBinderProxy(): Boolean {
-        return runCatching {
-            val serviceManager = loadClass("android.os.ServiceManager")
-            val cacheField = serviceManager.getDeclaredField("sCache")
-            cacheField.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val cache = cacheField.get(null) as? MutableMap<String, IBinder>
-                ?: return false
-            cache.remove(SERVICE_NAME)
-            val getService = serviceManager.getDeclaredMethod("getService", String::class.java)
-            val rawBinder = getService.invoke(null, SERVICE_NAME) as? IBinder ?: return false
-            cache[SERVICE_NAME] = createKeystoreServiceBinderProxy(rawBinder)
-            true
-        }.getOrDefault(false)
-    }
-
-    private fun createKeystoreServiceBinderProxy(rawBinder: IBinder): IBinder {
+    private fun createPrivateKeystoreServiceProxy(
+        rawBinder: IBinder,
+        diagnosticsCollector: CapturedThrowableCollector,
+        captureGenerateKeyReplies: Boolean,
+    ): Any? {
         val serviceInterface = loadClass(CLASS_IKEYSTORE_SERVICE)
         val serviceProxyClass = loadClass("${CLASS_IKEYSTORE_SERVICE}\$Stub\$Proxy")
         val constructor = serviceProxyClass.getDeclaredConstructor(IBinder::class.java)
         constructor.isAccessible = true
         val stubProxy = constructor.newInstance(rawBinder)
 
-        val serviceProxy = Proxy.newProxyInstance(
+        return Proxy.newProxyInstance(
             ClassLoader.getSystemClassLoader(),
             arrayOf(serviceInterface),
         ) { _, method, args ->
-            invokeProxyMethod(stubProxy, method, args) { result ->
-                if (method.name == "getSecurityLevel" && result != null) {
-                    createSecurityLevelProxy(result)
-                } else {
-                    result
-                }
-            }
+            invokeProxyMethod(
+                target = stubProxy,
+                method = method,
+                args = args,
+                mapper = { result ->
+                    // service.getSecurityLevel() 返回的对象也必须包一层私有代理；否则 generateKey 这类深层 transact 会绕过会话级诊断和 reply capture。
+                    // The object returned by service.getSecurityLevel() also needs a private proxy, or deeper transacts such as generateKey bypass session diagnostics and reply capture.
+                    if (method.name == "getSecurityLevel" && result != null) {
+                        createPrivateSecurityLevelProxy(
+                            realSecurityLevel = result,
+                            diagnosticsCollector = diagnosticsCollector,
+                            captureGenerateKeyReplies = captureGenerateKeyReplies,
+                        )
+                    } else {
+                        result
+                    }
+                },
+                diagnosticsCollector = diagnosticsCollector,
+                failurePhase = "service.${method.name}",
+            )
         }
-
-        return Proxy.newProxyInstance(
-            ClassLoader.getSystemClassLoader(),
-            arrayOf(IBinder::class.java),
-        ) { _, method, args ->
-            when (method.name) {
-                "queryLocalInterface" -> serviceProxy
-                "transact" -> rawBinder.transact(
-                    args[0] as Int,
-                    args[1] as Parcel,
-                    args[2] as? Parcel,
-                    args[3] as Int,
-                )
-                else -> invokeProxyMethod(rawBinder, method, args)
-            }
-        } as IBinder
     }
 
-    private fun createSecurityLevelProxy(realSecurityLevel: Any): Any {
+    private fun createPrivateSecurityLevelProxy(
+        realSecurityLevel: Any,
+        diagnosticsCollector: CapturedThrowableCollector,
+        captureGenerateKeyReplies: Boolean,
+    ): Any {
         return runCatching {
             val securityLevelInterface = loadClass(CLASS_IKEYSTORE_SECURITY_LEVEL)
             val securityLevelProxyClass = loadClass("${CLASS_IKEYSTORE_SECURITY_LEVEL}\$Stub\$Proxy")
@@ -745,14 +746,24 @@ class Keystore2PrivateBinderClient {
                             reply,
                             args[3] as Int,
                         )
-                        captureGenerateKeyReplyFromTransact(
-                            transactionCode = transactionCode,
-                            reply = reply,
-                            transactReturned = success,
-                        )
+                        // generateKey 指纹检测依赖原始 reply bytes，所以只能在 transact 边界抓包，晚一步就只剩解包后的对象了。
+                        // The generateKey fingerprint depends on raw reply bytes, so capture has to happen at the transact boundary before the parcel is decoded.
+                        if (captureGenerateKeyReplies) {
+                            captureGenerateKeyReplyFromTransact(
+                                transactionCode = transactionCode,
+                                reply = reply,
+                                transactReturned = success,
+                            )
+                        }
                         success
                     }
-                    else -> invokeProxyMethod(rawBinder, method, args)
+                    else -> invokeProxyMethod(
+                        rawBinder,
+                        method,
+                        args,
+                        diagnosticsCollector = diagnosticsCollector,
+                        failurePhase = "securityLevelBinder.${method.name}",
+                    )
                 }
             } as IBinder
 
@@ -766,7 +777,13 @@ class Keystore2PrivateBinderClient {
                 if (method.name == "asBinder") {
                     binderProxy
                 } else {
-                    invokeProxyMethod(stubProxy, method, args)
+                    invokeProxyMethod(
+                        stubProxy,
+                        method,
+                        args,
+                        diagnosticsCollector = diagnosticsCollector,
+                        failurePhase = "securityLevel.${method.name}",
+                    )
                 }
             }
         }.getOrElse { realSecurityLevel }
@@ -777,12 +794,22 @@ class Keystore2PrivateBinderClient {
         method: Method,
         args: Array<out Any?>?,
         mapper: ((Any?) -> Any?)? = null,
+        diagnosticsCollector: CapturedThrowableCollector? = null,
+        failurePhase: String? = null,
     ): Any? {
         return try {
             val result = method.invoke(target, *(args ?: emptyArray()))
             mapper?.invoke(result) ?: result
         } catch (throwable: InvocationTargetException) {
-            throw throwable.cause ?: throwable
+            val cause = throwable.cause ?: throwable
+            if (diagnosticsCollector != null && failurePhase != null) {
+                diagnosticsCollector.record(
+                    phase = failurePhase,
+                    summary = describeThrowable(cause),
+                    throwable = cause,
+                )
+            }
+            throw cause
         }
     }
 
@@ -1032,6 +1059,7 @@ data class BinderTransactionResult(
 data class Keystore2PrivateSessionResult(
     val session: Keystore2PrivateSession? = null,
     val failureReason: String? = null,
+    val capturedFailures: List<CapturedThrowableRecord> = emptyList(),
 )
 
 data class Keystore2PrivateSession(
@@ -1041,6 +1069,7 @@ data class Keystore2PrivateSession(
     val proxyInstalled: Boolean,
     val serviceProxyActive: Boolean,
     val securityLevelProxyActive: Boolean,
+    val diagnosticsCollector: CapturedThrowableCollector = CapturedThrowableCollector(),
 )
 
 data class TimingKeyAliases(
@@ -1049,3 +1078,84 @@ data class TimingKeyAliases(
     val nonAttestedAlias: String,
     val attestKeyAlias: String,
 )
+
+data class CapturedThrowableRecord(
+    val phase: String,
+    val summary: String,
+    val stackTrace: String,
+    val fingerprint: String,
+    val occurrenceCount: Int = 1,
+)
+
+class CapturedThrowableCollector {
+    private val records = LinkedHashMap<String, CapturedThrowableRecord>()
+
+    fun record(
+        phase: String,
+        summary: String,
+        throwable: Throwable,
+    ) {
+        // 这里按摘要+堆栈去重，保留第一次出现的位置，并累计次数；这样复制出来的 payload 既能静态审查，也不会被重复异常淹没。
+        // De-duplicate by summary + stack, keep the first occurrence phase, and accumulate counts so copied payloads stay reviewable instead of noisy.
+        val fingerprint = capturedThrowableFingerprint(summary, throwable)
+        val current = records[fingerprint]
+        records[fingerprint] = if (current == null) {
+            CapturedThrowableRecord(
+                phase = phase,
+                summary = summary,
+                stackTrace = throwable.stackTraceToString().trim(),
+                fingerprint = fingerprint,
+            )
+        } else {
+            current.copy(occurrenceCount = current.occurrenceCount + 1)
+        }
+    }
+
+    fun isEmpty(): Boolean = records.isEmpty()
+
+    fun snapshot(): List<CapturedThrowableRecord> = records.values.toList()
+}
+
+internal fun keyParameterSetterNameForTag(tag: Int): String {
+    val type = tag and 0xf0000000.toInt()
+    val tagId = tag and 0x0fffffff
+    return when (type) {
+        0x10000000, 0x20000000 -> when (tagId) {
+            1 -> "setKeyPurpose"
+            2 -> "setAlgorithm"
+            4 -> "setBlockMode"
+            5 -> "setDigest"
+            6 -> "setPaddingMode"
+            10 -> "setEcCurve"
+            304 -> "setSecurityLevel"
+            702 -> "setOrigin"
+            else -> "setInteger"
+        }
+        0x30000000, 0x40000000 -> "setInteger"
+        0x50000000, 0xA0000000.toInt() -> "setLongInteger"
+        0x60000000 -> "setDateTime"
+        0x70000000 -> "setBoolValue"
+        0x80000000.toInt(), 0x90000000.toInt() -> "setBlob"
+        else -> "setInteger"
+    }
+}
+
+internal fun keyParameterParameterType(value: Any): Class<*> {
+    return when (value) {
+        is Int -> Int::class.javaPrimitiveType ?: Int::class.java
+        is Long -> Long::class.javaPrimitiveType ?: Long::class.java
+        is Boolean -> Boolean::class.javaPrimitiveType ?: Boolean::class.java
+        else -> value.javaClass
+    }
+}
+
+internal fun capturedThrowableFingerprint(
+    summary: String,
+    throwable: Throwable,
+): String {
+    val root = generateSequence(throwable) { it.cause }.last()
+    val frames = root.stackTrace
+        .take(6)
+        .joinToString("|") { frame -> "${frame.className}.${frame.methodName}:${frame.lineNumber}" }
+    return "${root.javaClass.name}|$summary|$frames"
+}

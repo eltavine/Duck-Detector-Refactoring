@@ -44,6 +44,8 @@
     <string name="about_clipboard_build_time_line">Build Time (UTC): %1$s UTC</string>
     <string name="about_clipboard_build_hash_line">Build Hash: %1$s</string>
     <string name="about_copy_toast">Build info copied</string>
+    <string name="tee_timing_stack_clipboard_label">Timing side-channel stack info</string>
+    <string name="tee_timing_stack_copied_toast">Stack info copied</string>
     <string name="author_summary_eltavine">Contributed UI, C++, ASM and Kotlin.</string>
     <string name="author_summary_baka">TEE &amp; Zygisk</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>

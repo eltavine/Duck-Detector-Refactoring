@@ -44,6 +44,8 @@
     <string name="about_clipboard_build_time_line">构建时间（UTC）：%1$s UTC</string>
     <string name="about_clipboard_build_hash_line">构建哈希：%1$s</string>
     <string name="about_copy_toast">构建信息已复制</string>
+    <string name="tee_timing_stack_clipboard_label">Timing-SideChannel 堆栈信息</string>
+    <string name="tee_timing_stack_copied_toast">已复制堆栈信息</string>
     <string name="author_summary_eltavine">负责 UI、C++、ASM 与 Kotlin。</string>
     <string name="author_summary_baka">TEE 与 Zygisk</string>
     <string name="author_summary_xiaotong">TEE（C++、Kotlin）</string>

@@ -27,6 +27,9 @@ fun DetectorDetailRowBlock(
     value: String,
     status: DetectorStatus,
     modifier: Modifier = Modifier,
+    // 让上层在不改版式的前提下给 value 文本附加隐藏手势或语义。
+    // Lets callers attach hidden gestures or semantics to the value text without changing the row layout.
+    valueModifier: Modifier = Modifier,
     detail: String? = null,
     detailMonospace: Boolean = false,
     statusIcon: ImageVector? = null,
@@ -65,6 +68,7 @@ fun DetectorDetailRowBlock(
             )
             WrapSafeText(
                 text = value,
+                modifier = valueModifier,
                 style = MaterialTheme.typography.labelLarge,
                 color = appearance.iconTint,
                 textAlign = TextAlign.Center,

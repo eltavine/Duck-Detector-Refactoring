@@ -39,6 +39,9 @@ data class TeeFactRowModel(
     val label: String,
     val value: String,
     val status: DetectorStatus,
+    // 只给实现层透传隐藏复制载荷，展示层看到 null 就表示该行没有任何额外交互。
+    // Only carries hidden copy payload through the UI model layer; null means the row has no extra interaction.
+    val hiddenCopyText: String? = null,
 )
 
 data class TeeFactGroupModel(

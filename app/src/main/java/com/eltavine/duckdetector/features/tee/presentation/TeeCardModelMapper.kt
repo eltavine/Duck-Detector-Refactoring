@@ -50,6 +50,7 @@ class TeeCardModelMapper {
                             label = item.title,
                             value = item.body,
                             status = item.level.toDetectorStatus(),
+                            hiddenCopyText = item.hiddenCopyText,
                         )
                     },
                 )
@@ -177,14 +178,37 @@ class TeeCardModelMapper {
 
     private fun TeeReport.toDetectorStatus(): DetectorStatus = when (verdict) {
         TeeVerdict.LOADING -> DetectorStatus.info(InfoKind.SUPPORT)
-        TeeVerdict.CONSISTENT -> if (supplementaryIndicatorCount > 0) {
-            DetectorStatus.warning()
-        } else {
-            DetectorStatus.allClear()
+        TeeVerdict.CONSISTENT -> when {
+            // 这些本地信号虽然还挂在 CONSISTENT verdict 之下，但安全语义已经达到红卡级别，所以卡片状态要透传为 danger。
+            // These local signals still live under a CONSISTENT verdict, but their security meaning is red-card level, so the card status must escalate to danger.
+            hasDangerLocalEscalation() -> DetectorStatus.danger()
+            supplementaryIndicatorCount > 0 -> DetectorStatus.warning()
+            else -> DetectorStatus.allClear()
         }
         TeeVerdict.SUSPICIOUS -> DetectorStatus.warning()
         TeeVerdict.TAMPERED, TeeVerdict.BROKEN -> DetectorStatus.danger()
         TeeVerdict.INCONCLUSIVE -> DetectorStatus.info(InfoKind.ERROR)
+    }
+
+    private fun TeeReport.hasDangerLocalEscalation(): Boolean {
+        return sections.asSequence()
+            .flatMap { it.items.asSequence() }
+            .any { item ->
+                // 这里只识别“本地补充证据里已经可以单独定性为 patch mode / simulator fingerprint”的强信号，避免把普通 supplementary review 也拉成 danger。
+                // Only treat locally conclusive patch-mode / simulator-fingerprint findings as danger here, keeping ordinary supplementary review at warning.
+                when (item.title) {
+                    "Timing side-channel" -> item.level == TeeSignalLevel.FAIL && (
+                        item.body.contains("Captured Tricky-Store Patch Mode", ignoreCase = true) ||
+                            item.body.contains("Captured TEE Simulator Patch Mode", ignoreCase = true)
+                        )
+
+                    "TEE Simulator generate-mode fingerprint" ->
+                        item.level == TeeSignalLevel.FAIL &&
+                            item.body.contains("Matched TEE Simulator generate-mode fingerprint.", ignoreCase = true)
+
+                    else -> false
+                }
+            }
     }
 
     private fun TeeReport.tierStatus(): DetectorStatus = when (tier) {

@@ -46,6 +46,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
 import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -588,9 +589,9 @@ class TeeReportReducerTest {
                     sampleCount = 18,
                     warmupCount = 5,
                     avgAttestedMillis = 0.612,
-                    avgNonAttestedMillis = 0.300,
-                    diffMillis = 0.312,
-                    detail = "register timer source; avgAttested=0.612ms, avgNonAttested=0.300ms, diff=0.312ms partialFailure=filteredBadSamples=2/20",
+                    avgNonAttestedMillis = 0.400,
+                    diffMillis = 0.212,
+                    detail = "register timer source; avgAttested=0.612ms, avgNonAttested=0.400ms, diff=0.212ms partialFailure=filteredBadSamples=2/20",
                 ),
             ),
         )
@@ -599,15 +600,15 @@ class TeeReportReducerTest {
         assertEquals(1, report.supplementaryIndicatorCount)
         assertTrue(report.summary.contains("timing side-channel", ignoreCase = true))
         assertTrue(report.summary.contains("supplementary", ignoreCase = true))
-        assertTrue(report.summary.contains("+0.3ms", ignoreCase = true))
+        assertTrue(report.summary.contains("+0.2ms", ignoreCase = true))
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "Timing side-channel" &&
                     it.body.contains("Register timer") &&
                     it.body.contains("attested 0.612ms") &&
-                    it.body.contains("non-attested 0.300ms") &&
-                    it.body.contains("diff 0.312ms") &&
+                    it.body.contains("non-attested 0.400ms") &&
+                    it.body.contains("diff 0.212ms") &&
                     it.body.contains("filteredBadSamples=2/20") &&
-                    it.body.contains("threshold ±0.3ms") &&
+                    it.body.contains("threshold ±0.2ms") &&
                     it.level == TeeSignalLevel.WARN
         })
     }
@@ -622,10 +623,10 @@ class TeeReportReducerTest {
                     suspicious = false,
                     sampleCount = 20,
                     warmupCount = 5,
-                    avgAttestedMillis = 0.300,
+                    avgAttestedMillis = 0.200,
                     avgNonAttestedMillis = 0.000,
-                    diffMillis = 0.300,
-                    detail = "fallback timer path; avgAttested=0.300ms, avgNonAttested=0.000ms, diff=0.300ms",
+                    diffMillis = 0.200,
+                    detail = "fallback timer path; avgAttested=0.200ms, avgNonAttested=0.000ms, diff=0.200ms",
                 ),
             ),
         )
@@ -635,7 +636,7 @@ class TeeReportReducerTest {
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "Timing side-channel" &&
                     it.body.contains("Fallback timer") &&
-                    it.body.contains("diff 0.300ms") &&
+                    it.body.contains("diff 0.200ms") &&
                     it.body.contains("Not positive") &&
                     it.level == TeeSignalLevel.INFO
         })
@@ -662,12 +663,12 @@ class TeeReportReducerTest {
         assertEquals(TeeVerdict.CONSISTENT, report.verdict)
         assertEquals(1, report.supplementaryIndicatorCount)
         assertTrue(report.summary.contains("Fallback timer timing side-channel stayed supplementary"))
-        assertTrue(report.summary.contains("-0.3ms"))
+        assertTrue(report.summary.contains("-0.2ms"))
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "Timing side-channel" &&
                     it.body.contains("Fallback timer") &&
                     it.body.contains("diff -0.350ms") &&
-                    it.body.contains("threshold ±0.3ms") &&
+                    it.body.contains("threshold ±0.2ms") &&
                     it.level == TeeSignalLevel.WARN
         })
     }
@@ -686,6 +687,7 @@ class TeeReportReducerTest {
                     timerSource = "arm64_cntvct",
                     affinity = "bound_cpu0",
                     failureReason = "Keystore2 getKeyEntry transact returned false",
+                    stackCopyPayload = "phase=warmup.attested[0]\nsummary=ServiceSpecificException(code 7)",
                     detail = "measurement unavailable after binder transact failure",
                 ),
             ),
@@ -700,6 +702,98 @@ class TeeReportReducerTest {
                     it.body.contains("Measurement unavailable") &&
                     it.body.contains("reason Keystore2 getKeyEntry transact returned false") &&
                     it.level == TeeSignalLevel.INFO
+        })
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Timing side-channel" &&
+                it.hiddenCopyText?.contains("phase=warmup.attested[0]") == true
+        })
+    }
+
+    @Test
+    fun `timing side-channel skipped getKeyEntry stack marks tricky-store patch mode as fail`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                timingSideChannel = TimingSideChannelResult(
+                    probeRan = true,
+                    measurementAvailable = false,
+                    sampleCount = 0,
+                    warmupCount = 5,
+                    timerSource = "arm64_cntvct",
+                    affinity = "bound_cpu0",
+                    failureReason = "cleanup failed",
+                    stackCopyPayload = """
+                        phase=warmup.attested[0]
+                        summary=ServiceSpecificException(code 7)
+
+                        Caused by: android.os.ServiceSpecificException (code 7)
+                        	at android.os.Parcel.createException(Parcel.java:3353)
+                        	at android.os.Parcel.readException(Parcel.java:3336)
+                        	at ${'$'}Proxy5.getKeyEntry(Unknown Source)
+                    """.trimIndent(),
+                    detail = "measurement unavailable after getKeyEntry failure",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Captured Tricky-Store Patch Mode", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Timing side-channel" &&
+                    it.body.contains("Captured Tricky-Store Patch Mode") &&
+                    it.body.contains("Register timer") &&
+                    it.body.contains("bound_cpu0") &&
+                    it.level == TeeSignalLevel.FAIL
+        })
+        assertFalse(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Timing side-channel" && it.body.contains("Measurement unavailable")
+        })
+    }
+
+    @Test
+    fun `timing side-channel skipped generateKey and deleteKey stack marks tee simulator patch mode as fail`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                timingSideChannel = TimingSideChannelResult(
+                    probeRan = true,
+                    measurementAvailable = false,
+                    sampleCount = 0,
+                    warmupCount = 5,
+                    timerSource = "clock_monotonic",
+                    affinity = "not_requested",
+                    failureReason = "security level generateKey failed",
+                    stackCopyPayload = """
+                        phase=securityLevel.generateKey
+                        summary=ServiceSpecificException(code -49)
+
+                        android.os.ServiceSpecificException (code -49)
+                        	at android.os.Parcel.createExceptionOrNull(Parcel.java:3383)
+                        	at android.os.Parcel.createException(Parcel.java:3353)
+                        	at android.os.Parcel.readException(Parcel.java:3336)
+                        	at ${'$'}Proxy7.generateKey(Unknown Source)
+
+                        Caused by:
+                            0: Legacy database is empty.
+                            1: Error::Rc(r#KEY_NOT_FOUND) (code 7)
+                        	at ${'$'}Proxy5.deleteKey(Unknown Source)
+                    """.trimIndent(),
+                    detail = "measurement unavailable after legacy database failure",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Captured TEE Simulator Patch Mode", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Timing side-channel" &&
+                    it.body.contains("Captured TEE Simulator Patch Mode") &&
+                    it.body.contains("Fallback timer") &&
+                    it.body.contains("not_requested") &&
+                    it.level == TeeSignalLevel.FAIL
+        })
+        assertFalse(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Timing side-channel" && it.body.contains("Measurement unavailable")
         })
     }
 
