@@ -7,7 +7,7 @@ English: This software is provided "as is", without warranty of any kind, expres
 中文: 本软件按“原样”提供，不提供任何明示或暗示的保证。本程序仅供教育、诊断和安全研究目的使用。开发者对因使用本应用程序而导致的任何直接或间接损坏、数据丢失或系统不稳定不承担任何责任。依赖启发式安全检测的风险由您自行承担。
 
 
-LICENSE: MIT License 
+LICENSE: Apache License 2.0
 
 > Development rules: see [CODING_STANDARDS.md](./CODING_STANDARDS.md) before making code, workflow,
 > or commit changes.
