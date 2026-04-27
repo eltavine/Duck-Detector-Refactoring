@@ -18,9 +18,12 @@ package com.eltavine.duckdetector.features.dashboard.ui
 
 import android.content.ClipData
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +44,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +71,7 @@ import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.bootloader.ui.card.BootloaderDetectorCard
 import com.eltavine.duckdetector.features.customrom.ui.card.CustomRomDetectorCard
 import com.eltavine.duckdetector.features.dangerousapps.ui.card.DangerousAppsDetectorCard
+import com.eltavine.duckdetector.features.dashboard.data.DashboardExportFormatter
 import com.eltavine.duckdetector.features.dashboard.ui.model.DashboardDetectorCardEntry
 import com.eltavine.duckdetector.features.dashboard.ui.model.DashboardFindingModel
 import com.eltavine.duckdetector.features.dashboard.ui.model.DashboardOverviewMetricModel
@@ -103,6 +108,32 @@ fun DashboardScreen(
     onDismissTeeCertificates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val formatter = DashboardExportFormatter()
+                val text = formatter.format(uiState)
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(text.toByteArray(Charsets.UTF_8))
+                }
+                Toast.makeText(
+                    context,
+                    "Report saved",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    context,
+                    "Save failed: ${e.message}",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -122,6 +153,13 @@ fun DashboardScreen(
             ),
         ) {
             item { BrandHeader() }
+            item {
+                ExportButton(
+                    onClick = {
+                        exportLauncher.launch("duck_detector_report.txt")
+                    },
+                )
+            }
             item {
                 DashboardSummarySection(
                     overview = uiState.overview,
@@ -352,6 +390,27 @@ private fun BrandHeader() {
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun ExportButton(
+    onClick: () -> Unit,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.FileDownload,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        WrapSafeText(
+            text = "Export Report",
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }
 
