@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.tee.data.verification.keystore
 
 import com.eltavine.duckdetector.features.tee.data.native.NativeTeeSnapshot
 import com.eltavine.duckdetector.features.tee.data.native.TeeRegisterTimerNativeBridge
+import android.os.SystemClock
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -134,7 +135,7 @@ class TimingSideChannelProbe(
                 val avgAttested = filteredSeries.attestedSamples.averageOrNull()
                 val avgNonAttested = filteredSeries.nonAttestedSamples.averageOrNull()
                 val diff = if (avgAttested != null && avgNonAttested != null) avgAttested - avgNonAttested else null
-                val suspicious = diff?.let(::isPositiveTimingSideChannelDiff) ?: false
+                val suspicious = isPositiveTimingSideChannelRatio(avgAttested, avgNonAttested)
                 val filteredCount = pairedSeries.pairedSampleCount - filteredSeries.pairedSampleCount
                 val filteringNote = if (filteredCount > 0) {
                     "filteredBadSamples=$filteredCount/${pairedSeries.pairedSampleCount}"
@@ -268,12 +269,20 @@ class TimingSideChannelProbe(
                 }
                 warnings += "sample.paired[$index]=$failure"
             }
+            throttleSamplingLoop(index)
         }
         return PairedSampleSeries(
             attestedSamples = attestedSamples,
             nonAttestedSamples = nonAttestedSamples,
             failureReason = firstFailure,
         )
+    }
+
+    private fun throttleSamplingLoop(index: Int) {
+        if ((index + 1) % SAMPLE_THROTTLE_EVERY_PAIRS != 0) {
+            return
+        }
+        SystemClock.sleep(SAMPLE_THROTTLE_SLEEP_MS)
     }
 
     private fun measurePrivateGetKeyEntryMillis(
@@ -386,7 +395,9 @@ class TimingSideChannelProbe(
 
     companion object {
         private const val WARMUP_COUNT = 5
-        private const val LOOP_COUNT = 1000
+        private const val LOOP_COUNT = 500
+        private const val SAMPLE_THROTTLE_EVERY_PAIRS = 25
+        private const val SAMPLE_THROTTLE_SLEEP_MS = 8L
     }
 }
 
@@ -411,9 +422,33 @@ internal fun stableTimerReadNs(
     return monotonicSource()
 }
 
-internal fun isPositiveTimingSideChannelDiff(diffMillis: Double): Boolean {
-    return diffMillis > TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS ||
-        diffMillis < -TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS
+internal fun isPositiveTimingSideChannelRatio(
+    avgAttestedMillis: Double?,
+    avgNonAttestedMillis: Double?,
+): Boolean {
+    val ratio = timingSideChannelRatio(avgAttestedMillis, avgNonAttestedMillis) ?: return false
+    return ratio > TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
+}
+
+internal fun timingSideChannelRatio(
+    avgAttestedMillis: Double?,
+    avgNonAttestedMillis: Double?,
+): Double? {
+    val attested = avgAttestedMillis ?: return null
+    val nonAttested = avgNonAttestedMillis ?: return null
+    if (
+        attested <= 0.0 ||
+        nonAttested <= 0.0 ||
+        attested.isNaN() ||
+        nonAttested.isNaN() ||
+        attested.isInfinite() ||
+        nonAttested.isInfinite()
+    ) {
+        return null
+    }
+    val high = maxOf(attested, nonAttested)
+    val low = minOf(attested, nonAttested)
+    return high / low
 }
 
 internal fun buildTimingSideChannelDetail(
@@ -431,6 +466,7 @@ internal fun buildTimingSideChannelDetail(
     partialFailureReason: String?,
 ): String {
     return buildString {
+        val ratio = timingSideChannelRatio(avgAttestedMillis, avgNonAttestedMillis)
         append("semantics=service.getKeyEntry")
         append(", source=")
         append(source)
@@ -446,11 +482,10 @@ internal fun buildTimingSideChannelDetail(
         append(diffMillis?.let { String.format(Locale.US, "%.3f", it) } ?: "n/a")
         append("ms, suspicious=")
         append(suspicious)
-        append(", threshold=diff > ")
-        append(String.format(Locale.US, "%.1f", TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS))
-        append("ms || diff < -")
-        append(String.format(Locale.US, "%.1f", TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS))
-        append("ms")
+        append(", ratio=")
+        append(ratio?.let { String.format(Locale.US, "%.3f", it) } ?: "n/a")
+        append(", threshold=ratio > ")
+        append(String.format(Locale.US, "%.1f", TIMING_SIDE_CHANNEL_THRESHOLD_RATIO))
         append(", warmup=")
         append(warmupCount)
         append(", samples=")
@@ -533,4 +568,4 @@ data class TimingSideChannelResult(
 }
 
 // 阈值故意保持单点常量，避免 probe/reducer/test 三处漂移。 / Keep the threshold as a single source of truth so probe, reducer, and tests cannot drift.
-internal const val TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS = 0.2
+internal const val TIMING_SIDE_CHANNEL_THRESHOLD_RATIO = 1.1

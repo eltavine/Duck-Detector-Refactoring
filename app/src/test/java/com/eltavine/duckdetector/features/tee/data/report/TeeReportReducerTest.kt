@@ -616,7 +616,7 @@ class TeeReportReducerTest {
         assertEquals(1, report.supplementaryIndicatorCount)
         assertTrue(report.summary.contains("timing side-channel", ignoreCase = true))
         assertTrue(report.summary.contains("supplementary", ignoreCase = true))
-        assertTrue(report.summary.contains("+0.2ms", ignoreCase = true))
+        assertTrue(report.summary.contains("ratio 1.53x exceeded 1.1x", ignoreCase = true))
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "Timing side-channel" &&
                     it.body.contains("Register timer") &&
@@ -624,13 +624,14 @@ class TeeReportReducerTest {
                     it.body.contains("non-attested 0.400ms") &&
                     it.body.contains("diff 0.212ms") &&
                     it.body.contains("filteredBadSamples=2/20") &&
-                    it.body.contains("threshold ±0.2ms") &&
+                    it.body.contains("ratio 1.530x") &&
+                    it.body.contains("threshold > 1.1x") &&
                     it.level == TeeSignalLevel.WARN
         })
     }
 
     @Test
-    fun `timing side-channel equality threshold stays informational`() {
+    fun `timing side-channel invalid ratio stays informational`() {
         val report = reducer.reduce(
             baseArtifacts(
                 timingSideChannel = TimingSideChannelResult(
@@ -653,6 +654,7 @@ class TeeReportReducerTest {
             it.title == "Timing side-channel" &&
                     it.body.contains("Fallback timer") &&
                     it.body.contains("diff 0.200ms") &&
+                    it.body.contains("ratio n/a") &&
                     it.body.contains("Not positive") &&
                     it.level == TeeSignalLevel.INFO
         })
@@ -679,12 +681,13 @@ class TeeReportReducerTest {
         assertEquals(TeeVerdict.CONSISTENT, report.verdict)
         assertEquals(1, report.supplementaryIndicatorCount)
         assertTrue(report.summary.contains("Fallback timer timing side-channel stayed supplementary"))
-        assertTrue(report.summary.contains("-0.2ms"))
+        assertTrue(report.summary.contains("ratio 4.50x exceeded 1.1x"))
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "Timing side-channel" &&
                     it.body.contains("Fallback timer") &&
                     it.body.contains("diff -0.350ms") &&
-                    it.body.contains("threshold ±0.2ms") &&
+                    it.body.contains("ratio 4.500x") &&
+                    it.body.contains("threshold > 1.1x") &&
                     it.level == TeeSignalLevel.WARN
         })
     }
@@ -697,7 +700,7 @@ class TeeReportReducerTest {
                     probeRan = true,
                     measurementAvailable = false,
                     suspicious = false,
-                    sampleCount = 1000,
+                    sampleCount = 500,
                     warmupCount = 5,
                     source = "keystore2_getKeyEntry_binder",
                     timerSource = "arm64_cntvct",

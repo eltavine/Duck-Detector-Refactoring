@@ -30,8 +30,9 @@ import com.eltavine.duckdetector.features.tee.domain.TeeSignalLevel
 import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
-import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.timingSideChannelRatio
 import java.time.LocalDate
 import java.time.Period
 import java.util.Locale
@@ -1306,7 +1307,9 @@ class TeeReportReducer(
         val result = artifacts.timingSideChannel
         val skipSignature = timingSideChannelSkipSignature(result)
         val timerSource = timingSideChannelTimerSourceLabel(result.timerSource, result.detail)
-        val thresholdMillis = String.format(Locale.US, "%.1f", TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS)
+        val thresholdRatio = String.format(Locale.US, "%.1fx", TIMING_SIDE_CHANNEL_THRESHOLD_RATIO)
+        val ratio = timingSideChannelRatio(result.avgAttestedMillis, result.avgNonAttestedMillis)
+        val ratioLabel = ratio?.let { String.format(Locale.US, "%.3fx", it) } ?: "n/a"
         val affinity = when {
             result.affinity.isBlank() || result.affinity == "unknown" -> "affinity unknown"
             else -> result.affinity
@@ -1327,30 +1330,32 @@ class TeeReportReducer(
             result.suspicious -> "Positive"
             else -> "Not positive"
         }
-        val filtered = Regex("filteredBadSamples=\\d+/\\d+")
+        val filtered = Regex("""filteredBadSamples=\d+/\d+""")
             .find(result.detail)
             ?.value
             ?.let { " • $it" }
             .orEmpty()
         val reason = result.failureReason?.takeIf { it.isNotBlank() }?.let { " • reason $it" }.orEmpty()
-        return "$timerSource • $affinity • attested $avgAttested • non-attested $avgNonAttested • diff $diff$filtered • threshold ±${thresholdMillis}ms • $state$reason"
+        return "$timerSource • $affinity • attested $avgAttested • non-attested $avgNonAttested • diff $diff • ratio $ratioLabel$filtered • threshold > $thresholdRatio • $state$reason"
     }
 
     private fun timingSideChannelSummary(artifacts: TeeScanArtifacts): String {
         val result = artifacts.timingSideChannel
         timingSideChannelSkipSignature(result)?.let { return it.summary }
         val timerSource = timingSideChannelTimerSourceLabel(result.timerSource, result.detail)
-        val thresholdMillis = String.format(Locale.US, "%.1f", TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS)
+        val thresholdRatio = String.format(Locale.US, "%.1fx", TIMING_SIDE_CHANNEL_THRESHOLD_RATIO)
         if (!result.measurementAvailable) {
             return "$timerSource timing side-channel could not finish measurement; ${result.failureReason ?: "reason unavailable"}."
         }
-        val thresholdDirection = result.diffMillis?.let { diff ->
-            when {
-                diff > TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS -> "diff exceeded +${thresholdMillis}ms"
-                diff < -TIMING_SIDE_CHANNEL_THRESHOLD_MILLIS -> "diff went below -${thresholdMillis}ms"
-                else -> "diff stayed within +/-${thresholdMillis}ms"
+        val ratio = timingSideChannelRatio(result.avgAttestedMillis, result.avgNonAttestedMillis)
+        val thresholdDirection = ratio?.let { value ->
+            val ratioText = String.format(Locale.US, "%.2fx", value)
+            if (value > TIMING_SIDE_CHANNEL_THRESHOLD_RATIO) {
+                "ratio $ratioText exceeded $thresholdRatio"
+            } else {
+                "ratio $ratioText stayed within $thresholdRatio"
             }
-        } ?: "diff unavailable"
+        } ?: "ratio unavailable"
         return "$timerSource timing side-channel stayed supplementary; $thresholdDirection."
     }
 

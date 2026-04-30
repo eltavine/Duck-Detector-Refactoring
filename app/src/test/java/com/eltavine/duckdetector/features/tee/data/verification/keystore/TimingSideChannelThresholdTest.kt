@@ -23,31 +23,48 @@ import org.junit.Test
 class TimingSideChannelThresholdTest {
 
     @Test
-    fun `diff above 0_2ms is positive`() {
-        assertTrue(isPositiveTimingSideChannelDiff(diffMillis = 0.2001))
+    fun `ratio above 1_1x is positive`() {
+        assertTrue(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 0.612,
+                avgNonAttestedMillis = 0.400,
+            ),
+        )
     }
 
     @Test
-    fun `diff below minus 0_2ms is positive`() {
-        assertTrue(isPositiveTimingSideChannelDiff(diffMillis = -0.2001))
+    fun `ratio above 1_1x is positive regardless of direction`() {
+        assertTrue(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 0.100,
+                avgNonAttestedMillis = 0.450,
+            ),
+        )
     }
 
     @Test
-    fun `diff equal to 0_2ms is not positive`() {
-        assertFalse(isPositiveTimingSideChannelDiff(diffMillis = 0.2))
+    fun `ratio equal to 1_1x is not positive`() {
+        assertFalse(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 1.10,
+                avgNonAttestedMillis = 1.00,
+            ),
+        )
     }
 
     @Test
-    fun `diff equal to minus 0_2ms is not positive`() {
-        assertFalse(isPositiveTimingSideChannelDiff(diffMillis = -0.2))
+    fun `ratio inside threshold is not positive`() {
+        assertFalse(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 1.09,
+                avgNonAttestedMillis = 1.00,
+            ),
+        )
     }
 
     @Test
-    fun `diff inside symmetric threshold is not positive`() {
-        assertFalse(isPositiveTimingSideChannelDiff(diffMillis = 0.1999))
-    }
-
-    private fun isPositiveTimingSideChannelDiff(diffMillis: Double): Boolean {
-        return diffMillis > 0.2 || diffMillis < -0.2
+    fun `missing or invalid timing is not positive`() {
+        assertFalse(isPositiveTimingSideChannelRatio(null, 1.00))
+        assertFalse(isPositiveTimingSideChannelRatio(1.00, 0.0))
     }
 }
