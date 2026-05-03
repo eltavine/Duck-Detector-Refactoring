@@ -1,0 +1,174 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="duck_logo_description">Логотип Duck Detector</string>
+    <string name="social_github">GitHub</string>
+    <string name="social_telegram">Telegram</string>
+    <string name="user_agreement">Угода користувача</string>
+    <string name="disclaimer">&amp; Відмова від відповідальності</string>
+    <string name="please_read_carefully">Уважно прочитайте, перш ніж продовжити</string>
+    <string name="agreement_risk_title">Нагадування про небезпечне використання</string>
+    <string name="agreement_risk_body_emphasis">Не розглядайте окремий результат як остаточний юридичний висновок, висновок щодо відповідності, гарантії чи безпеки.</string>
+    <string name="agreement_risk_body_template">Duck Detector забезпечує лише опорні сигнали. %1$s Завжди поєднуйте результати програми з перевіркою вручну, попередніми доказами та власною оцінкою ризику, перш ніж вживати заходів.</string>
+    <string name="user_agreement_title">Угода користувача</string>
+    <string name="user_agreement_content" formatted="false">Використовуючи Duck Detector, ви погоджуєтеся з такими умовами:&#10;&#10;1. Мета використання&#10;Ця програма призначена виключно для освітніх цілей та оцінки особистої безпеки. Це допомагає користувачам зрозуміти стан безпеки їхніх власних пристроїв.&#10;&#10;2.Без гарантії&#10;Ця програма надається&quot;як є&quot; без будь-яких гарантій, явних чи непрямих.Розробники не гарантують точність, повноту або достовірність результатів виявлення.&#10;&#10;3. Відповідальність користувача&#10;Ви несете повну відповідальність за те, як ви використовуєте цю програму, і будь-які наслідки, які можуть виникнути внаслідок її використання.&#10;&#10;4. Дотримання законів&#10;Ви погоджуєтеся використовувати цю програму відповідно до всіх відповідних місцевих, національних і міжнародних законів і правил.</string>
+    <string name="disclaimer_title">Відмова від відповідальності</string>
+    <string name="disclaimer_content" formatted="false">IMPORTANT NOTICE:&#10;&#10;1. Обмеження виявлення&#10;Duck Detector використовує різні методи для виявлення стану безпеки пристрою, але жоден метод виявлення не є 100&#37; точні. Результати слід вважати індикаторами, а не остаточними оцінками.&#10;&#10;2. Помилкові спрацьовування та помилкові негативи&#10;Програма може давати хибно-позитивні або хибно-негативні результати. Завжди використовуйте професійні інструменти безпеки та власну перевірку для комплексної оцінки.&#10;&#10;3. Жодної відповідальності&#10;Розробники, учасники та розповсюджувачі Duck Detector не несуть відповідальності за будь-які прямі, непрямі, випадкові, спеціальні чи непрямі збитки, спричинені використанням або неможливістю використання цієї програми.&#10;&#10;4. Сторонні послуги&#10;Якщо ви дозволите онлайн-перевірки відкликання, програма може зв’язатися з кінцевою точкою відкликання атестації Google. Самі сканування безпеки все ще виконуються локально на вашому пристрої, а результати детектора навмисно не завантажуються як телеметрія сканування.</string>
+    <string name="privacy_notice_title">Повідомлення про конфіденційність</string>
+    <string name="privacy_notice_content" formatted="false">Короткий опис конфіденційності: перевірки безпеки виконуються локально на вашому пристрої. Результати детектора не навмисно завантажуються як сканована телеметрія. Якщо ви дозволите онлайн-перевірки відкликання, програма може зв’язатися з кінцевою точкою відкликання атестації Google.</string>
+    <string name="timer_elapsed">Минуло 30 секунд</string>
+    <string name="timer_waiting">Будь ласка, зачекайте %1$ds</string>
+    <string name="fully_reviewed">Повністю переглянуто</string>
+    <string name="scroll_to_bottom">Прокрутіть вниз</string>
+    <string name="i_agree_continue">Я згоден &amp; Продовжити</string>
+    <string name="complete_all_conditions">Виконайте всі умови</string>
+    <string name="agreement_acknowledgement">Продовжуючи, ви підтверджуєте, що прочитали ці умови та погоджуєтеся з ними.</string>
+    <string name="settings_title">Налаштування</string>
+    <string name="settings_subtitle">Елементи керування часом виконання для шляхів онлайн-підтвердження.</string>
+    <string name="settings_crl_title">Дозволити онлайн-перевірки CRL</string>
+    <string name="settings_crl_summary">Запитуйте канал відкликання атестації Google під час перевірки TEE.</string>
+<string name="settings_crl_footer">Зміни негайно застосовуються до детектора TEE. Інші модулі залишаються незмінними.</string>
+    <string name="about_title">Про програму</string>
+    <string name="about_subtitle">Посилання на проект та метадані збірки.</string>
+    <string name="about_label_version">Версія</string>
+    <string name="about_value_version">%1$s (%2$d)</string>
+    <string name="about_label_website">Веб-сайт</string>
+    <string name="about_label_email">Електронна пошта</string>
+    <string name="about_label_build_time">Час збірки</string>
+    <string name="about_value_build_time">%1$s UTC</string>
+    <string name="about_label_build_hash">Хеш збірки</string>
+    <string name="about_label_privacy">Конфіденційність / Використання даних</string>
+    <string name="about_privacy_summary">Перевірки виконуються локально на пристрої. Онлайн-пошук CRL є необов’язковим і відбувається лише тоді, коли ви ввімкнете його в Налаштуваннях.</string>
+    <string name="about_label_copy_build_info">Копіювати інформацію про збірку</string>
+    <string name="about_copy_build_info_summary">Копіювати версію, час збірки та хеш збірки</string>
+    <string name="about_clipboard_label">Інформація про збірку Duck Detector</string>
+    <string name="about_clipboard_version_line">Версія: %1$s (%2$d)</string>
+    <string name="about_clipboard_build_time_line">Час збірки (UTC): %1$s UTC</string>
+    <string name="about_clipboard_build_hash_line">Хеш збірки: %1$s</string>
+    <string name="about_copy_toast">Інформацію про збірку скопійовано</string>
+    <string name="tee_timing_stack_clipboard_label">Інформація про стек синхронізації сторонніх каналів</string>
+    <string name="tee_timing_stack_copied_toast">Інформацію про стек скопійовано</string>
+
+    <string name="author_summary_eltavine">Зробив внесок в UI, C++, ASM та Kotlin.</string>
+    <string name="author_summary_baka">TEE та Zygisk</string>
+    <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
+    <string name="author_summary_wxx">CI (Kotlin)</string>
+    <string name="author_swipe_hint_single">Проведіть пальцем вліво або вправо, щоб переглянути авторів.</string>
+    <string name="author_swipe_hint_paged">Проведіть пальцем вліво або вправо, щоб переглянути авторів. %1$d/%2$d</string>
+    <string name="author_boundary_toast">Кінець списку</string>
+
+    <string name="licenses_entry_label">Прозорість</string>
+    <string name="licenses_entry_title">Бібліотеки з відкритим кодом</string>
+    <string name="licenses_entry_subtitle">Переглянути вбудовані сторонні проекти та ознайомитися з їхніми ліцензіями.</string>
+    <string name="licenses_screen_back">Назад</string>
+    <string name="licenses_screen_title">Ліцензії відкритого коду</string>
+    <string name="licenses_screen_subtitle">Сторонні компоненти, включені в цю збірку.</string>
+    <string name="licenses_inventory_title">Інвентар вбудованих бібліотек</string>
+    <string name="licenses_inventory_subtitle">Натисніть на будь-яку залежність, щоб переглянути текст ліцензії та посилання на проект.</string>
+    <string name="licenses_dialog_close">Закрити</string>
+    <string name="licenses_dialog_home_page">Домашня сторінка</string>
+    <string name="licenses_dialog_source_repo">Репозиторій коду</string>
+    <string name="licenses_dialog_version">Версія %1$s</string>
+    <string name="licenses_dialog_licenses">Ліцензії: %1$s</string>
+    <string name="licenses_dialog_open">Відкрити</string>
+    <string name="licenses_dialog_no_license_text">Текст ліцензії відсутній.</string>
+
+    <string name="alpha_title">АЛЬФА-ЗБІРКА</string>
+    <string name="alpha_banner">АЛЬФА</string>
+    <string name="alpha_message">Ця збірка є альфа-версією для тестування. Через масштабний рефакторинг C++ та асемблера можуть виникати нестабільні збої.</string>
+    <string name="alpha_warning_runtime">У цій гілці все ще можуть траплятися неочікувані помилки під час запуску або збої під час роботи.</string>
+    <string name="alpha_warning_report">Якщо ви зіткнулися з проблемою, будь ласка, повідомте про неї. Особливо корисними будуть чіткі кроки для відтворення помилки.</string>
+    <string name="alpha_warning_download">Якщо ви не знаєте, як отримати журналі збоїв (logs), завантажте AppErrorsTracking за одним із посилань нижче.</string>
+    <string name="alpha_helper">Помічник з логів збоїв: AppErrorsTracking доступний на GitHub Actions та Telegram CI.</string>
+    <string name="alpha_dismiss_ready">Тепер ви можете закрити це попередження.</string>
+    <string name="alpha_dismiss_waiting">Закриття буде доступне через %1$ds.</string>
+    <string name="alpha_continue">Я розумію, продовжити</string>
+    <string name="alpha_continue_waiting">Я розумію (%1$ds)</string>
+
+    <string name="screen_capture_title">Виявлено знімок екрана</string>
+    <string name="screen_capture_message">Якщо знімок екрана не містить детальної інформації, це питання не буде розглянуто.</string>
+    <string name="dialog_continue">Продовжити</string>
+    <string name="dialog_continue_waiting">Продовжити (%1$ds)</string>
+    <string name="detector_result_title">Перш ніж звертатися по допомогу</string>
+    <string name="detector_result_notice">Надайте повну інформацію, щоб отримати допомогу.</string>
+    <string name="detector_result_detail">Картки «Небезпека» та «Попередження» були автоматично розгорнуті для повного ознайомлення.</string>
+
+    <string name="startup_review_label">Перевірка політики запуску</string>
+    <string name="startup_preparing_title">Підготовка до запуску</string>
+    <string name="startup_before_scan_title">Перед скануванням</string>
+    <string name="startup_loading_detail">Налаштування та видимість PackageManager все ще завантажуються. ViewModels детектора призупинено до завершення цього процесу.</string>
+    <string name="startup_intro_detail">Зробіть необхідний вибір перед початком сканування. Сповіщення, маршрутизація Live Update, мережа CRL та видимість PackageManager перевіряються тут в одному місці. Робота детектора заблокована, доки кожна картка нижче не буде опрацьована.</string>
+    <string name="startup_loading_state">Завантаження стану запуску…</string>
+    <string name="startup_progress_resolved">Вирішено %1$d з %2$d карток запуску</string>
+    <string name="startup_loading_dependencies_title">Завантаження залежностей запуску</string>
+    <string name="startup_loading_dependencies_detail">Читання сховищ згоди та видимості PackageManager перед запуском будь-якого детектора.</string>
+    <string name="startup_status_ready">Готово</string>
+    <string name="startup_status_action_required">Потрібна дія</string>
+    <string name="startup_status_skipped">Пропущено</string>
+    <string name="startup_status_unsupported">Не підтримується</string>
+    <string name="startup_status_waiting">Очікування</string>
+    <string name="startup_status_regular">Звичайний</string>
+    <string name="startup_status_local">Локальний</string>
+    <string name="startup_status_acknowledged">Підтверджено</string>
+    <string name="startup_status_review_later">Переглянути пізніше</string>
+
+    <string name="startup_notifications_title">Сповіщення</string>
+    <string name="startup_notifications_ready_headline">Сповіщення сканування увімкнено.</string>
+    <string name="startup_notifications_ready_detail">Duck Detector може публікувати сповіщення про хід сканування, поки картки детектора збирають докази.</string>
+    <string name="startup_notifications_prompt_headline">Виберіть, чи може хід сканування надсилати сповіщення.</string>
+    <string name="startup_notifications_prompt_detail_api33">Android %1$d вимагає дозвіл на сповіщення під час виконання. Сканування при запуску заблоковано, доки ви не дозволите це або явно не продовжите без нього.</string>
+    <string name="startup_notifications_prompt_detail_legacy">Ця версія Android не вимагає запиту на дозвіл сповіщень, але політика запуску все одно має зафіксувати ваш вибір.</string>
+    <string name="startup_notifications_allow">Дозволити сповіщення</string>
+    <string name="startup_notifications_skip">Пропустити</string>
+    <string name="startup_notifications_skipped_headline">Сповіщення було пропущено.</string>
+    <string name="startup_notifications_skipped_detail">Хід сканування відображатиметься лише всередині програми, доки ви не надасте дозвіл на сповіщення пізніше.</string>
+
+    <string name="startup_live_update_title">Live Update</string>
+    <string name="startup_live_update_unsupported_headline">Пріоритетні постійні сповіщення недоступні в цій версії Android.</string>
+    <string name="startup_live_update_unsupported_detail">Duck Detector використовуватиме звичайний шлях сповіщень, коли буде доступний дозвіл на сповіщення.</string>
+    <string name="startup_live_update_waiting_headline">Live Update залежить від шляху сповіщень.</string>
+    <string name="startup_live_update_waiting_detail">Спочатку надайте дозвіл на сповіщення. Якщо ви залишите сповіщення вимкненими, ця картка повернеться до режиму лише внутрішнього прогресу програми.</string>
+    <string name="startup_live_update_ready_headline">Пріоритетні постійні сповіщення дозволені.</string>
+    <string name="startup_live_update_ready_detail">У підтримуваних версіях Android прогрес сканування може відображатися через розширений шлях Live Update.</string>
+    <string name="startup_live_update_prompt_headline">Виберіть, чи використовувати шлях Android Live Update.</string>
+    <string name="startup_live_update_prompt_detail">Duck Detector може відкрити системну сторінку для пріоритетних постійних сповіщень. Якщо ви пропустите це, прогрес сканування повернеться до звичайного сповіщення.</string>
+    <string name="startup_live_update_open_settings">Відкрити налаштування</string>
+    <string name="startup_live_update_use_regular">Використовувати звичайні</string>
+    <string name="startup_live_update_regular_headline">Вибрано звичайні сповіщення.</string>
+    <string name="startup_live_update_regular_detail">Пріоритетні постійні сповіщення залишаються вимкненими. Замість цього прогрес сканування використовуватиме звичайний шлях сповіщень.</string>
+
+    <string name="startup_crl_title">Мережа CRL</string>
+    <string name="startup_crl_prompt_headline">Виберіть, чи можуть перевірки відкликання TEE використовувати мережу.</string>
+    <string name="startup_crl_prompt_detail">Дозвіл на використання мережі дозволяє Duck Detector запитувати фід відкликання атестації Google під час валідації TEE. Режим «Лише локально» пропускає онлайн-оновлення.</string>
+    <string name="startup_crl_allow_network">Дозволити мережу</string>
+    <string name="startup_crl_local_only">Лише локально</string>
+    <string name="startup_crl_ready_headline">Онлайн-оновлення CRL дозволено.</string>
+    <string name="startup_crl_ready_detail">Валідація TEE може оновлювати фід відкликання атестації Google кожного разу, коли дозволяють умови мережі.</string>
+    <string name="startup_crl_local_headline">Перевірки відкликання TEE виконуються лише локально.</string>
+    <string name="startup_crl_local_detail">Duck Detector не виконуватиме онлайн-оновлення CRL, доки ви не ввімкнете його знову в Налаштуваннях.</string>
+
+    <string name="startup_package_manager_title">PackageManager</string>
+    <string name="startup_package_restricted_headline">Інвентар пакетів виглядає обмеженим або відфільтрованим.</string>
+    <string name="startup_package_restricted_detail">PackageManager надав доступ лише до %1$d встановлених пакетів. Детектор небезпечних програм та пов’язані перевірки можуть не виявити всі інструменти через обмежену видимість або фільтрацію в стилі HMA.</string>
+    <string name="startup_package_continue_anyway">Продовжити у будь-якому випадку</string>
+    <string name="startup_package_ack_headline">Обмежена видимість PackageManager підтверджена.</string>
+    <string name="startup_package_ack_detail">Поточна кількість видимих пакетів: %1$d. Висновки щодо небезпечних програм можуть бути неповними в межах цього обсягу інвентарю.</string>
+    <string name="startup_package_low_inventory_headline">PackageManager виглядає повним, але видимий інвентар незвично малий.</string>
+    <string name="startup_package_low_inventory_detail">Поточна кількість видимих пакетів: %1$d. Запуск продовжиться, але детектор небезпечних програм розгляне цю умову як потенційний доказ фільтрації.</string>
+    <string name="startup_package_ready_headline">Інвентар PackageManager виглядає повним.</string>
+    <string name="startup_package_ready_detail">Поточна кількість видимих пакетів: %1$d. Детектор небезпечних програм може використовувати стандартний шлях інвентаризації пакетів.</string>
+</resources>
