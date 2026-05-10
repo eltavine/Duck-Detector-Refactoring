@@ -286,7 +286,7 @@ class SelinuxRepository(
         result: SelinuxContextValidityProbeResult,
     ): SelinuxCheckResult {
         val status = when (result.state) {
-            SelinuxContextValidityState.CLEAN -> "No Root Selinux Context found"
+            SelinuxContextValidityState.CLEAN -> ""
             SelinuxContextValidityState.ROOT_PRESENT -> "Root Selinux Context found"
         }
 
