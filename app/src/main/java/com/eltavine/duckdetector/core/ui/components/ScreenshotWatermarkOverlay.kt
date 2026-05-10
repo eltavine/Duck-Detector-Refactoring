@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
@@ -43,7 +42,7 @@ import java.util.Locale
 @Composable
 fun ScreenshotWatermarkOverlay(
     modifier: Modifier = Modifier,
-    alpha: Float = 0.08f,
+    alpha: Float = 0.05f,
     textSizeSp: Float = 11f,
     spacingDp: Float = 180f,
     rotationDegrees: Float = -30f
@@ -61,14 +60,18 @@ fun ScreenshotWatermarkOverlay(
         }
     }
 
-    val versionName = BuildConfig.VERSION_NAME
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
-    val timeString = remember(currentTimeMillis) { dateFormat.format(Date(currentTimeMillis)) }
-    val watermarkText = "v$versionName | $timeString"
+    val dateFormat = remember { SimpleDateFormat("MMM d. yy HH:mm", Locale.getDefault()) }
+    val timeString = remember(currentTimeMillis) {
+        val date = Date(currentTimeMillis)
+        val day = dateFormat.format(date)
+        val d = java.util.Calendar.getInstance().apply { time = date }.get(java.util.Calendar.DAY_OF_MONTH)
+        val suffix = if (d in 11..13) "ᵗʰ" else when (d % 10) { 1 -> "ˢᵗ"; 2 -> "ⁿᵈ"; 3 -> "ʳᵈ"; else -> "ᵗʰ" }
+        day.replaceFirst(Regex("""\d+\."""), "$d$suffix")
+    }
+    val versionPrefix = BuildConfig.VERSION_NAME.split(".").take(3).joinToString(".")
+    val versionSuffix = BuildConfig.BUILD_HASH.take(7)
 
     val isDarkTheme = isSystemInDarkTheme()
-    val textColor =
-        if (isDarkTheme) Color.White.copy(alpha = alpha) else Color.Black.copy(alpha = alpha)
 
     Canvas(
         modifier = modifier.fillMaxSize()
@@ -90,8 +93,28 @@ fun ScreenshotWatermarkOverlay(
                 typeface = android.graphics.Typeface.MONOSPACE
             }
 
+            val lineHeight = paint.fontSpacing
+            val smallPaint = android.graphics.Paint(paint).apply {
+                textSize = textSizePx * 0.5f
+            }
+            val prefixWidth = paint.measureText(versionPrefix)
+            val suffixWidth = smallPaint.measureText(versionSuffix)
+            val suffixBgPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(
+                    (alpha * 0.1f * 255).toInt(),
+                    colorValue, colorValue, colorValue
+                )
+                style = android.graphics.Paint.Style.FILL
+            }
+            val maxTextWidth = maxOf(
+                prefixWidth + suffixWidth,
+                paint.measureText(timeString)
+            )
+            val safeHSpacing = maxOf(spacingPx, maxTextWidth * 1.3f)
+            val safeVSpacing = maxOf(spacingPx * 0.6f, lineHeight * 2.5f)
+
             val startX = -diagonal / 2
-            val startY = -diagonal / 2
+            val startY = -diagonal / 2 + lineHeight
             val endX = canvasWidth + diagonal / 2
             val endY = canvasHeight + diagonal / 2
 
@@ -99,15 +122,19 @@ fun ScreenshotWatermarkOverlay(
             while (y < endY) {
                 var x = startX
                 while (x < endX) {
-                    drawContext.canvas.nativeCanvas.drawText(
-                        watermarkText,
-                        x,
-                        y,
-                        paint
+                    drawContext.canvas.nativeCanvas.drawText(versionPrefix, x, y, paint)
+                    drawContext.canvas.nativeCanvas.drawRect(
+                        x + prefixWidth - suffixWidth * 0.05f,
+                        y - lineHeight * 0.45f,
+                        x + prefixWidth + suffixWidth * 1.05f,
+                        y + lineHeight * 0.1f,
+                        suffixBgPaint
                     )
-                    x += spacingPx
+                    drawContext.canvas.nativeCanvas.drawText(versionSuffix, x + prefixWidth, y, smallPaint)
+                    drawContext.canvas.nativeCanvas.drawText(timeString, x + prefixWidth * 0.3f, y + lineHeight, paint)
+                    x += safeHSpacing
                 }
-                y += spacingPx * 0.6f
+                y += safeVSpacing
             }
         }
     }
