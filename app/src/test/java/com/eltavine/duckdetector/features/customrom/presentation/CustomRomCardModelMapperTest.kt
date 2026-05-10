@@ -113,7 +113,7 @@ class CustomRomCardModelMapperTest {
             },
         )
         assertTrue(
-            model.summary.contains("property-area coverage was unavailable"),
+            model.summary.contains("incomplete on this build"),
         )
     }
 

@@ -118,11 +118,31 @@ class Keystore2PrivateBinderClientTest {
     }
 
     @Test
-    fun `positive diff helper is symmetric around threshold`() {
-        assertTrue(isPositiveTimingSideChannelDiff(0.2001))
-        assertTrue(isPositiveTimingSideChannelDiff(-0.2001))
-        assertFalse(isPositiveTimingSideChannelDiff(0.2))
-        assertFalse(isPositiveTimingSideChannelDiff(-0.2))
+    fun `positive ratio helper is symmetric around threshold`() {
+        assertTrue(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 1.1001,
+                avgNonAttestedMillis = 1.0,
+            ),
+        )
+        assertTrue(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 1.0,
+                avgNonAttestedMillis = 1.1001,
+            ),
+        )
+        assertFalse(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 1.1,
+                avgNonAttestedMillis = 1.0,
+            ),
+        )
+        assertFalse(
+            isPositiveTimingSideChannelRatio(
+                avgAttestedMillis = 1.0,
+                avgNonAttestedMillis = 1.1,
+            ),
+        )
     }
 
     @Test

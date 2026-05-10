@@ -33,6 +33,8 @@ set(SU_SOURCES
 
 set(SELINUX_SOURCES
     selinux/audit_probe.cpp
+    selinux/context_validity_probe.cpp
+    selinux/context_validity_native_bridge.cpp
     selinux/native_bridge.cpp
 )
 

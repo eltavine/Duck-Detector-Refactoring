@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.selinux.presentation
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -69,11 +70,11 @@ class SelinuxViewModel(
     }
 
     companion object {
-        fun factory(): ViewModelProvider.Factory {
+        fun factory(context: Context): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SelinuxViewModel(SelinuxRepository()) as T
+                    return SelinuxViewModel(SelinuxRepository(context.applicationContext)) as T
                 }
             }
         }

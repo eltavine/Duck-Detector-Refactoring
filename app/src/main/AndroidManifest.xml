@@ -74,6 +74,11 @@ limitations under the License.
             android:name=".features.virtualization.data.service.VirtualizationIsolatedProbeService"
             android:exported="false"
             android:isolatedProcess="true" />
+        <service
+            android:name=".features.selinux.data.service.SelinuxContextValidityCarrierService"
+            android:exported="false"
+            android:isolatedProcess="true"
+            android:useAppZygote="true" />
     </application>
 
 </manifest>

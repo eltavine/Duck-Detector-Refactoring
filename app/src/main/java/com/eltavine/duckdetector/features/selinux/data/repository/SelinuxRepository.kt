@@ -16,7 +16,12 @@
 
 package com.eltavine.duckdetector.features.selinux.data.repository
 
+import android.content.Context
 import android.os.Build
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbeResult
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityState
+import com.eltavine.duckdetector.features.selinux.data.service.SelinuxContextValidityCarrierManager
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxAuditRuntimeProbe
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditEvidence
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityAnalysis
@@ -33,17 +38,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class SelinuxRepository(
+    context: Context? = null,
     private val auditRuntimeProbe: SelinuxAuditRuntimeProbe = SelinuxAuditRuntimeProbe(),
-) {
+    private val contextValidityProbe: SelinuxContextValidityProbe = SelinuxContextValidityProbe(),
+    private val contextValidityCarrierManager: SelinuxContextValidityCarrierManager =
+        SelinuxContextValidityCarrierManager(context?.applicationContext),
+    ) {
 
     suspend fun scan(): SelinuxReport = withContext(Dispatchers.IO) {
-        runCatching { scanInternal() }
-            .getOrElse { throwable ->
-                SelinuxReport.failed(throwable.message ?: "SELinux scan failed.")
-            }
+        try {
+            scanInternal()
+        } catch (throwable: Throwable) {
+            SelinuxReport.failed(throwable.message ?: "SELinux scan failed.")
+        }
     }
 
-    private fun scanInternal(): SelinuxReport {
+    private suspend fun scanInternal(): SelinuxReport {
         val methods = mutableListOf<SelinuxCheckResult>()
 
         val filesystemResult = checkSelinuxFilesystem()
@@ -75,6 +85,19 @@ class SelinuxRepository(
 
         val procAttrResult = checkViaProcAttr()
         methods += procAttrResult
+
+        val contextValidityResult = contextValidityCarrierManager.collect().let { carrierResult ->
+            if (
+                carrierResult.available &&
+                carrierResult.carrierMatchesExpected &&
+                carrierResult.probeAttempted
+            ) {
+                carrierResult
+            } else {
+                contextValidityProbe.inspect()
+            }
+        }
+        methods += buildContextValidityMethod(contextValidityResult)
 
         val statusResolution = determineStatusWithParadoxLogic(methods)
         val processContext = readProcessContext()
@@ -257,6 +280,85 @@ class SelinuxRepository(
                 )
             }.getOrNull()
         }
+    }
+
+    private fun buildContextValidityMethod(
+        result: SelinuxContextValidityProbeResult,
+    ): SelinuxCheckResult {
+        val status = when (result.state) {
+            SelinuxContextValidityState.CLEAN -> SelinuxContextValidityProbe.BITPAIR_CLEAN
+            SelinuxContextValidityState.KSU_PRESENT -> SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT
+            SelinuxContextValidityState.AMBIGUOUS -> SelinuxContextValidityProbe.BITPAIR_AMBIGUOUS
+            SelinuxContextValidityState.INCONSISTENT -> SelinuxContextValidityProbe.BITPAIR_SELF_TEST_FAILED
+            SelinuxContextValidityState.UNAVAILABLE -> SelinuxContextValidityProbe.BITPAIR_UNSUPPORTED
+        }
+
+        val detail = buildList {
+            add("Carrier=${result.carrierContext ?: "<unreadable>"}")
+            add("Carrier match=${if (result.carrierMatchesExpected) "yes" else "no"}")
+            add("Carrier control=${when (result.carrierControlValid) {
+                true -> "accepted"
+                false -> "rejected"
+                null -> "unavailable"
+            }}")
+            add("Negative control=${when (result.negativeControlRejected) {
+                true -> "rejected"
+                false -> "accepted"
+                null -> "unavailable"
+            }}")
+            add("File control=${when (result.fileControlValid) {
+                true -> "accepted"
+                false -> "rejected"
+                null -> "unavailable"
+            }}")
+            add("File negative control=${when (result.fileNegativeControlRejected) {
+                true -> "rejected"
+                false -> "accepted"
+                null -> "unavailable"
+            }}")
+            add("Oracle trusted=${if (result.oracleControlsPassed) "yes" else "no"}")
+            add("Repeatability=${if (result.ksuResultsStable) "stable" else "unstable"}")
+            add("Query=${result.queryMethod.ifBlank { "raw selinuxfs write" }}")
+            when (result.state) {
+                SelinuxContextValidityState.CLEAN ->
+                    add("Pair 00: both KSU-specific contexts were rejected by live policy.")
+
+                SelinuxContextValidityState.KSU_PRESENT ->
+                    add("Pair 11: both KSU-specific contexts were accepted by live policy.")
+
+                SelinuxContextValidityState.AMBIGUOUS ->
+                    add("Pair 01/10: one KSU-specific context validated while the other did not.")
+
+                SelinuxContextValidityState.INCONSISTENT ->
+                    add(
+                        if (result.oracleControlsPassed) {
+                            "KSU context repeatability failed, so the verdict was not trusted."
+                        } else {
+                            "Oracle self-test failed, so KSU context results were not trusted."
+                        },
+                    )
+
+                SelinuxContextValidityState.UNAVAILABLE ->
+                    add(result.failureReason ?: "Context validity oracle stayed unavailable.")
+            }
+            result.notes.forEach { note ->
+                add(note)
+            }
+        }.joinToString(" | ")
+
+        return SelinuxCheckResult(
+            method = SelinuxContextValidityProbe.METHOD_LABEL,
+            status = status,
+            isSecure = when (result.state) {
+                SelinuxContextValidityState.CLEAN -> true
+                SelinuxContextValidityState.KSU_PRESENT -> false
+                SelinuxContextValidityState.AMBIGUOUS,
+                SelinuxContextValidityState.INCONSISTENT,
+                SelinuxContextValidityState.UNAVAILABLE -> null
+            },
+            permissionDenied = false,
+            details = detail,
+        )
     }
 
     private fun summarizeAuditResidue(
