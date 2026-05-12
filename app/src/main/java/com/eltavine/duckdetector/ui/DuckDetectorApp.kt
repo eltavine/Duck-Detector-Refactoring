@@ -64,7 +64,6 @@ import com.eltavine.duckdetector.core.ui.components.AlphaBuildWarningOverlay
 import com.eltavine.duckdetector.core.ui.components.DetectorAutoExpansionDirective
 import com.eltavine.duckdetector.core.ui.components.LocalDetectorAutoExpansionDirective
 import com.eltavine.duckdetector.core.ui.components.ScreenshotWatermarkOverlay
-import com.eltavine.duckdetector.core.ui.components.isAlphaVersion
 import com.eltavine.duckdetector.features.bootloader.presentation.BootloaderUiStage
 import com.eltavine.duckdetector.features.bootloader.presentation.BootloaderUiState
 import com.eltavine.duckdetector.features.bootloader.presentation.BootloaderViewModel
@@ -260,9 +259,7 @@ fun DuckDetectorApp() {
         )
     }
     val startupPoliciesReady = shouldCreateDetectorViewModels(gateState)
-    val requiresAlphaAcknowledgement = remember(BuildConfig.VERSION_NAME) {
-        isAlphaVersion(BuildConfig.VERSION_NAME)
-    }
+    val requiresAlphaAcknowledgement = BuildConfig.isAlphaVersion
     var alphaAcknowledged by rememberSaveable(BuildConfig.VERSION_NAME) {
         mutableStateOf(false)
     }

@@ -119,6 +119,7 @@ Project build configuration is split between `gradle.properties`,
 - `compileSdk = 37.0`
 - `versionCode = 300 + git commit count`
 - `versionName = yyyy.MM.dd-short hash` in the `Asia/Singapore` timezone
+- `BuildConfig.isAlphaVersion` is generated from the build logic boolean flag
 
 ## Build
 

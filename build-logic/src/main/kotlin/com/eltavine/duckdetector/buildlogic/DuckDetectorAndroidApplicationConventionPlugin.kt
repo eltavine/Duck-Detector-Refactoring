@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 private const val VERSION_CODE_BASE = 300
 private const val VERSION_NAME_ZONE_ID = "Asia/Singapore"
+private const val isAlphaVersion = true
 
 class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
@@ -89,6 +90,7 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
                 testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 buildConfigField("String", "BUILD_TIME_UTC", "\"${buildTimeUtc.get()}\"")
                 buildConfigField("String", "BUILD_HASH", "\"${buildHash.get()}\"")
+                buildConfigField("boolean", "isAlphaVersion", isAlphaVersion.toString())
             }
 
             if (file("src/main/cpp/CMakeLists.txt").exists()) {
