@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.selinux.data.native
 
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentPayloadCodec
+
 internal object SelinuxContextValidityPayloadCodec {
 
     fun encode(snapshot: SelinuxContextValiditySnapshot): String {
@@ -29,6 +31,22 @@ internal object SelinuxContextValidityPayloadCodec {
             append("CARRIER_MATCHES_EXPECTED=")
                 .append(if (snapshot.carrierMatchesExpected) '1' else '0')
                 .append('\n')
+            snapshot.selinuxEnabled?.let {
+                append("SELINUX_ENABLED=").append(if (it) '1' else '0').append('\n')
+            }
+            snapshot.selinuxEnforced?.let {
+                append("SELINUX_ENFORCED=").append(if (it) '1' else '0').append('\n')
+            }
+            snapshot.pidContextMatchesCurrent?.let {
+                append("PID_CONTEXT_MATCHES_CURRENT=").append(if (it) '1' else '0').append('\n')
+            }
+            snapshot.procSelfContextMatchesCurrent?.let {
+                append("PROC_SELF_CONTEXT_MATCHES_CURRENT=").append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.dyntransitionCheckPassed?.let {
+                append("DYNTRANSITION_CHECK_PASSED=").append(if (it) '1' else '0').append('\n')
+            }
             snapshot.carrierControlValid?.let {
                 append("CARRIER_CONTROL_VALID=").append(if (it) '1' else '0').append('\n')
             }
@@ -56,8 +74,8 @@ internal object SelinuxContextValidityPayloadCodec {
             snapshot.ksuFileValid?.let {
                 append("KSU_FILE_VALID=").append(if (it) '1' else '0').append('\n')
             }
-            snapshot.magiskFileValid?.let {
-                append("MAGISK_FILE_VALID=").append(if (it) '1' else '0').append('\n')
+            snapshot.bitPair?.takeIf { it.isNotEmpty() }?.let {
+                append("BIT_PAIR=").append(escapeValue(it)).append('\n')
             }
             append("DIRTY_POLICY_AVAILABLE=")
                 .append(if (snapshot.dirtyPolicyAvailable) '1' else '0')
@@ -95,13 +113,28 @@ internal object SelinuxContextValidityPayloadCodec {
                     .append(if (it) '1' else '0')
                     .append('\n')
             }
+            snapshot.dirtyPolicyFsckSysAdminAllowed?.let {
+                append("DIRTY_POLICY_FSCK_SYS_ADMIN_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.dirtyPolicyShellSuTransitionAllowed?.let {
+                append("DIRTY_POLICY_SHELL_SU_TRANSITION_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.dirtyPolicyAdbdAdbrootBinderCallAllowed?.let {
+                append("DIRTY_POLICY_ADBD_ADBROOT_BINDER_CALL_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
             snapshot.dirtyPolicyMagiskBinderCallAllowed?.let {
                 append("DIRTY_POLICY_MAGISK_BINDER_CALL_ALLOWED=")
                     .append(if (it) '1' else '0')
                     .append('\n')
             }
-            snapshot.dirtyPolicyKsuBinderCallAllowed?.let {
-                append("DIRTY_POLICY_KSU_BINDER_CALL_ALLOWED=")
+            snapshot.dirtyPolicyKsuFileReadAllowed?.let {
+                append("DIRTY_POLICY_KSU_FILE_READ_ALLOWED=")
                     .append(if (it) '1' else '0')
                     .append('\n')
             }
@@ -110,11 +143,34 @@ internal object SelinuxContextValidityPayloadCodec {
                     .append(if (it) '1' else '0')
                     .append('\n')
             }
+            snapshot.dirtyPolicyXposedDataFileReadAllowed?.let {
+                append("DIRTY_POLICY_XPOSED_DATA_FILE_READ_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.dirtyPolicyZygoteAdbDataSearchAllowed?.let {
+                append("DIRTY_POLICY_ZYGOTE_ADB_DATA_SEARCH_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
             snapshot.dirtyPolicyFailureReason?.takeIf { it.isNotEmpty() }?.let {
                 append("DIRTY_POLICY_FAILURE_REASON=").append(escapeValue(it)).append('\n')
             }
             snapshot.dirtyPolicyNotes.forEach { note ->
                 append("DIRTY_POLICY_NOTE=").append(escapeValue(note)).append('\n')
+            }
+            append("PROC_ATTR_CURRENT_PROBE_ATTEMPTED=")
+                .append(if (snapshot.procAttrCurrentProbeAttempted) '1' else '0')
+                .append('\n')
+            snapshot.procAttrCurrentResults.forEach { result ->
+                append("PROC_ATTR_CURRENT_RESULT=")
+                    .append(escapeValue(SelinuxProcAttrCurrentPayloadCodec.encode(result)))
+                    .append('\n')
+            }
+            snapshot.procAttrCurrentFailureReason?.takeIf { it.isNotEmpty() }?.let {
+                append("PROC_ATTR_CURRENT_FAILURE_REASON=")
+                    .append(escapeValue(it))
+                    .append('\n')
             }
             snapshot.failureReason?.takeIf { it.isNotEmpty() }?.let {
                 append("FAILURE_REASON=").append(escapeValue(it)).append('\n')

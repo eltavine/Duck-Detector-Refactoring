@@ -32,9 +32,14 @@ namespace duckdetector::selinux {
         std::optional<bool> access_control_allowed;
         std::optional<bool> negative_control_rejected;
         std::optional<bool> system_server_execmem_allowed;
+        std::optional<bool> fsck_sys_admin_allowed;
+        std::optional<bool> shell_su_transition_allowed;
+        std::optional<bool> adbd_adbroot_binder_call_allowed;
         std::optional<bool> magisk_binder_call_allowed;
-        std::optional<bool> ksu_binder_call_allowed;
+        std::optional<bool> ksu_file_read_allowed;
         std::optional<bool> lsposed_file_read_allowed;
+        std::optional<bool> xposed_data_file_read_allowed;
+        std::optional<bool> zygote_adb_data_search_allowed;
         bool controls_passed = false;
         bool stable = false;
         std::string query_method;
@@ -47,6 +52,11 @@ namespace duckdetector::selinux {
         bool probe_attempted = false;
         std::string carrier_context;
         bool carrier_matches_expected = false;
+        std::optional<bool> selinux_enabled;
+        std::optional<bool> selinux_enforced;
+        std::optional<bool> pid_context_matches_current;
+        std::optional<bool> proc_self_context_matches_current;
+        std::optional<bool> dyntransition_check_passed;
         std::optional<bool> carrier_control_valid;
         std::optional<bool> negative_control_rejected;
         std::optional<bool> file_control_valid;
@@ -56,13 +66,13 @@ namespace duckdetector::selinux {
         std::string query_method;
         std::optional<bool> ksu_domain_valid;
         std::optional<bool> ksu_file_valid;
-        std::optional<bool> magisk_file_valid;
+        std::string bit_pair;
         DirtyPolicyProbeSnapshot dirty_policy;
         std::string failure_reason;
         std::vector<std::string> notes;
     };
 
-    ContextValidityProbeSnapshot collect_context_validity_snapshot(JNIEnv *env);
+    ContextValidityProbeSnapshot collect_context_validity_snapshot();
 
 }  // namespace duckdetector::selinux
 

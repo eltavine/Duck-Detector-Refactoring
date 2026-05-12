@@ -21,6 +21,8 @@ import android.os.Build
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbeResult
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityState
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 import com.eltavine.duckdetector.features.selinux.data.service.SelinuxContextValidityCarrierManager
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxAuditRuntimeProbe
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditEvidence
@@ -86,18 +88,30 @@ class SelinuxRepository(
         val procAttrResult = checkViaProcAttr()
         methods += procAttrResult
 
-        val contextValidityResult = contextValidityCarrierManager.collect().let { carrierResult ->
+        val carrierResult = contextValidityCarrierManager.collect()
+        val contextValidityResult = carrierResult.let {
             if (
-                carrierResult.available &&
-                carrierResult.carrierMatchesExpected &&
-                carrierResult.probeAttempted
+                it.available &&
+                it.carrierMatchesExpected &&
+                it.probeAttempted
             ) {
-                carrierResult
+                it
             } else {
                 contextValidityProbe.inspect()
             }
         }
-        methods += buildContextValidityMethod(contextValidityResult)
+        val contextValiditySource = if (
+            carrierResult.available &&
+            carrierResult.carrierMatchesExpected &&
+            carrierResult.probeAttempted
+        ) {
+            EvidenceSource.DEDICATED_CARRIER
+        } else {
+            EvidenceSource.LOCAL_FALLBACK
+        }
+        methods += buildContextValidityMethod(contextValidityResult, contextValiditySource)
+        methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
+        methods += buildDirtyPolicyMethods(carrierResult, EvidenceSource.DEDICATED_CARRIER)
 
         val statusResolution = determineStatusWithParadoxLogic(methods)
         val processContext = readProcessContext()
@@ -284,23 +298,21 @@ class SelinuxRepository(
 
     private fun buildContextValidityMethod(
         result: SelinuxContextValidityProbeResult,
+        source: EvidenceSource,
     ): SelinuxCheckResult {
         val status = when (result.state) {
             SelinuxContextValidityState.UNAVAILABLE ->
-                SelinuxContextValidityProbe.STATUS_ORACLE_UNAVAILABLE
+                SelinuxContextValidityProbe.BITPAIR_UNSUPPORTED
 
             SelinuxContextValidityState.CLEAN -> ""
-            SelinuxContextValidityState.ROOT_PRESENT ->
-                SelinuxContextValidityProbe.STATUS_ROOT_CONTEXT_FOUND
+            SelinuxContextValidityState.KSU_PRESENT ->
+                SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT
 
-            SelinuxContextValidityState.BLOCKED_ORACLE ->
-                SelinuxContextValidityProbe.STATUS_ORACLE_BLOCKED
+            SelinuxContextValidityState.AMBIGUOUS ->
+                SelinuxContextValidityProbe.BITPAIR_AMBIGUOUS
 
-            SelinuxContextValidityState.UNTRUSTED_ORACLE ->
-                SelinuxContextValidityProbe.STATUS_ORACLE_SELF_TEST_FAILED
-
-            SelinuxContextValidityState.UNSTABLE_RESULTS ->
-                SelinuxContextValidityProbe.STATUS_ORACLE_UNSTABLE
+            SelinuxContextValidityState.INCONSISTENT ->
+                SelinuxContextValidityProbe.BITPAIR_SELF_TEST_FAILED
         }
 
         val detail = buildList {
@@ -328,6 +340,7 @@ class SelinuxRepository(
             }}\n")
             add("Oracle trusted=${if (result.oracleControlsPassed) "yes" else "no"}\n")
             add("Repeatability=${if (result.ksuResultsStable) "stable" else "unstable"}\n")
+            add("Evidence source=${source.label}\n")
             add(
                 "Query=${
                     when (result.state) {
@@ -341,19 +354,16 @@ class SelinuxRepository(
                     add("The app_zygote carrier snapshot was unavailable or untrusted.\n")
 
                 SelinuxContextValidityState.CLEAN ->
-                    add("Root contexts were not found by live policy.\n")
+                    add("KSU-specific contexts were not found by live policy.\n")
 
-                SelinuxContextValidityState.ROOT_PRESENT ->
-                    add("Root contexts were found by live policy.\n")
+                SelinuxContextValidityState.KSU_PRESENT ->
+                    add("Both KSU-specific contexts were found by live policy.\n")
 
-                SelinuxContextValidityState.BLOCKED_ORACLE ->
-                    add("app_zygote SELinux context queries were blocked by policy and root context checks were not trusted.\n")
+                SelinuxContextValidityState.AMBIGUOUS ->
+                    add("The two KSU-specific contexts split across live policy checks.\n")
 
-                SelinuxContextValidityState.UNTRUSTED_ORACLE ->
-                    add("Context validity oracle failed its self-test and root context checks were not trusted.\n")
-
-                SelinuxContextValidityState.UNSTABLE_RESULTS ->
-                    add("Context validity oracle repeated inconsistently and root context checks were not trusted.\n")
+                SelinuxContextValidityState.INCONSISTENT ->
+                    add("Context validity oracle self-test or repeatability failed, so the KSU verdict was not trusted.\n")
             }
             result.notes.forEach { note ->
                 add(note)
@@ -366,13 +376,192 @@ class SelinuxRepository(
             isSecure = when (result.state) {
                 SelinuxContextValidityState.UNAVAILABLE -> null
                 SelinuxContextValidityState.CLEAN -> true
-                SelinuxContextValidityState.ROOT_PRESENT -> false
-                SelinuxContextValidityState.BLOCKED_ORACLE -> null
-                SelinuxContextValidityState.UNTRUSTED_ORACLE -> null
-                SelinuxContextValidityState.UNSTABLE_RESULTS -> null
+                SelinuxContextValidityState.KSU_PRESENT -> false
+                SelinuxContextValidityState.AMBIGUOUS -> null
+                SelinuxContextValidityState.INCONSISTENT -> null
             },
             permissionDenied = false,
             details = detail,
+        )
+    }
+
+    private fun buildProcAttrCurrentMethod(
+        result: SelinuxContextValidityProbeResult,
+        source: EvidenceSource,
+    ): SelinuxCheckResult {
+        val outcomes = result.procAttrCurrentResults
+        if (!result.procAttrCurrentProbeAttempted) {
+            return SelinuxCheckResult(
+                method = SelinuxProcAttrCurrentProbe.METHOD_LABEL,
+                status = SelinuxProcAttrCurrentProbe.STATUS_UNSUPPORTED,
+                isSecure = null,
+                permissionDenied = false,
+                details = listOfNotNull(
+                    "Evidence source=${source.label}",
+                    result.procAttrCurrentFailureReason ?: "Dedicated app_zygote attr/current write probe skipped.",
+                ).joinToString(" | "),
+            )
+        }
+        if (outcomes.isEmpty()) {
+            return SelinuxCheckResult(
+                method = SelinuxProcAttrCurrentProbe.METHOD_LABEL,
+                status = SelinuxProcAttrCurrentProbe.STATUS_UNSUPPORTED,
+                isSecure = null,
+                permissionDenied = false,
+                details = listOfNotNull(
+                    "Evidence source=${source.label}",
+                    result.procAttrCurrentFailureReason ?: "Dedicated app_zygote attr/current write probe returned no results.",
+                ).joinToString(" | "),
+            )
+        }
+
+        val detected = outcomes.filter(SelinuxProcAttrCurrentResult::detected)
+        val clean = outcomes.all {
+            it.outcomeClass == SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL
+        }
+        val status = when {
+            detected.isNotEmpty() -> "Detected: ${detected.joinToString { it.label }}"
+            clean -> SelinuxProcAttrCurrentProbe.STATUS_CLEAN
+            else -> SelinuxProcAttrCurrentProbe.STATUS_UNSUPPORTED
+        }
+        val detail = listOf(
+            "Evidence source=${source.label}",
+            outcomes.joinToString(" | ") { outcome ->
+                "${outcome.label}=${outcome.outcomeClass} target=${outcome.targetContext} raw=${outcome.rawMessage}"
+            },
+        ).joinToString(" | ")
+
+        return SelinuxCheckResult(
+            method = SelinuxProcAttrCurrentProbe.METHOD_LABEL,
+            status = status,
+            isSecure = when {
+                detected.isNotEmpty() -> false
+                clean -> true
+                else -> null
+            },
+            permissionDenied = false,
+            details = detail,
+        )
+    }
+
+    internal fun buildDirtyPolicyMethods(
+        result: SelinuxContextValidityProbeResult,
+    ): List<SelinuxCheckResult> = buildDirtyPolicyMethods(result, EvidenceSource.DEDICATED_CARRIER)
+
+    private fun buildDirtyPolicyMethods(
+        result: SelinuxContextValidityProbeResult,
+        source: EvidenceSource,
+    ): List<SelinuxCheckResult> {
+        val oracleTrusted = isDirtyPolicyOracleTrusted(result)
+        return listOf(
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: system_server execmem",
+                allowed = result.dirtyPolicySystemServerExecmemAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: system_server -> system_server:process execmem. This should stay denied on stock policy because executable system_server memory is supporting dirty-policy evidence.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: fsck_untrusted sys_admin",
+                allowed = result.dirtyPolicyFsckSysAdminAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: fsck_untrusted -> fsck_untrusted:capability sys_admin. This should stay denied on stock policy because it represents a DirtySepolicy neverallow-style violation.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: shell -> su transition",
+                allowed = result.dirtyPolicyShellSuTransitionAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: shell -> su:process transition. This is only evaluated for confirmed user builds because stock user builds should not expose an AOSP su transition path.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: adbd -> adbroot binder",
+                allowed = result.dirtyPolicyAdbdAdbrootBinderCallAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: adbd -> adbroot:binder call. This should stay denied on stock policy because it is supporting adb-root dirty-policy evidence.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: untrusted_app -> magisk binder",
+                allowed = result.dirtyPolicyMagiskBinderCallAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: untrusted_app -> magisk:binder call. This should stay denied on stock policy because ordinary apps should not talk to a Magisk domain over binder.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: untrusted_app -> ksu_file read",
+                allowed = result.dirtyPolicyKsuFileReadAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: untrusted_app -> ksu_file:file read. This should stay denied on stock policy because ordinary apps should not read KernelSU-labeled files.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: untrusted_app -> lsposed_file read",
+                allowed = result.dirtyPolicyLsposedFileReadAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: untrusted_app -> lsposed_file:file read. This should stay denied on stock policy because ordinary apps should not read LSPosed-labeled files.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: untrusted_app -> xposed_data read",
+                allowed = result.dirtyPolicyXposedDataFileReadAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: untrusted_app -> xposed_data:file read. This should stay denied on stock policy because ordinary apps should not read Xposed data directly.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+            dirtyPolicyRuleMethod(
+                label = "Dirty sepolicy rule: zygote -> adb_data_file search",
+                allowed = result.dirtyPolicyZygoteAdbDataSearchAllowed.takeIf { oracleTrusted },
+                detail = "Observed edge: zygote -> adb_data_file:dir search. This should stay denied on stock policy because zygote should not traverse adb data directories.",
+                failureReason = result.dirtyPolicyFailureReason,
+                source = source,
+            ),
+        )
+    }
+
+    internal fun isDirtyPolicyOracleTrusted(
+        result: SelinuxContextValidityProbeResult,
+    ): Boolean {
+        return result.dirtyPolicyAvailable &&
+            result.dirtyPolicyProbeAttempted &&
+            result.dirtyPolicyCarrierMatchesExpected &&
+            result.dirtyPolicyControlsPassed &&
+            result.dirtyPolicyStable &&
+            result.dirtyPolicyAccessControlAllowed == true &&
+            result.dirtyPolicyNegativeControlRejected == true
+    }
+
+    private fun dirtyPolicyRuleMethod(
+        label: String,
+        allowed: Boolean?,
+        detail: String,
+        failureReason: String?,
+        source: EvidenceSource,
+    ): SelinuxCheckResult {
+        val status = when (allowed) {
+            true -> "Allowed"
+            false -> "Denied"
+            null -> "Unavailable"
+        }
+        return SelinuxCheckResult(
+            method = label,
+            status = status,
+            isSecure = when (allowed) {
+                true -> false
+                false -> true
+                null -> null
+            },
+            permissionDenied = false,
+            details = listOfNotNull(
+                "Evidence source=${source.label}",
+                when (allowed) {
+                    true -> "$detail The access oracle reported this edge as allowed."
+                    false -> "$detail The access oracle reported this edge as denied."
+                    null -> "$detail The access oracle could not produce a verdict for this edge."
+                },
+                failureReason?.takeIf { allowed == null }?.let { "Reason: $it" },
+            ).joinToString(" | "),
         )
     }
 
@@ -819,6 +1008,13 @@ class SelinuxRepository(
         val label: String,
         val paradoxDetected: Boolean,
     )
+
+    private enum class EvidenceSource(
+        val label: String,
+    ) {
+        DEDICATED_CARRIER("dedicated app_zygote carrier"),
+        LOCAL_FALLBACK("local native fallback"),
+    }
 
     private data class AuditResidueRule(
         val path: String,

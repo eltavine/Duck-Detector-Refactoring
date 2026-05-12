@@ -20,12 +20,11 @@ import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextVali
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
 
 enum class SelinuxContextValidityState {
-    UNAVAILABLE,
     CLEAN,
-    ROOT_PRESENT,
-    BLOCKED_ORACLE,
-    UNTRUSTED_ORACLE,
-    UNSTABLE_RESULTS,
+    KSU_PRESENT,
+    AMBIGUOUS,
+    INCONSISTENT,
+    UNAVAILABLE,
 }
 
 data class SelinuxContextValidityProbeResult(
@@ -34,6 +33,11 @@ data class SelinuxContextValidityProbeResult(
     val probeAttempted: Boolean,
     val carrierContext: String?,
     val carrierMatchesExpected: Boolean,
+    val selinuxEnabled: Boolean?,
+    val selinuxEnforced: Boolean?,
+    val pidContextMatchesCurrent: Boolean?,
+    val procSelfContextMatchesCurrent: Boolean?,
+    val dyntransitionCheckPassed: Boolean?,
     val carrierControlValid: Boolean?,
     val negativeControlRejected: Boolean?,
     val fileControlValid: Boolean?,
@@ -43,7 +47,30 @@ data class SelinuxContextValidityProbeResult(
     val queryMethod: String,
     val ksuDomainValid: Boolean?,
     val ksuFileValid: Boolean?,
-    val magiskFileValid: Boolean?,
+    val bitPair: String?,
+    val dirtyPolicyAvailable: Boolean,
+    val dirtyPolicyProbeAttempted: Boolean,
+    val dirtyPolicyCarrierContext: String?,
+    val dirtyPolicyCarrierMatchesExpected: Boolean,
+    val dirtyPolicyControlsPassed: Boolean,
+    val dirtyPolicyStable: Boolean,
+    val dirtyPolicyQueryMethod: String,
+    val dirtyPolicyAccessControlAllowed: Boolean?,
+    val dirtyPolicyNegativeControlRejected: Boolean?,
+    val dirtyPolicySystemServerExecmemAllowed: Boolean?,
+    val dirtyPolicyFsckSysAdminAllowed: Boolean?,
+    val dirtyPolicyShellSuTransitionAllowed: Boolean?,
+    val dirtyPolicyAdbdAdbrootBinderCallAllowed: Boolean?,
+    val dirtyPolicyMagiskBinderCallAllowed: Boolean?,
+    val dirtyPolicyKsuFileReadAllowed: Boolean?,
+    val dirtyPolicyLsposedFileReadAllowed: Boolean?,
+    val dirtyPolicyXposedDataFileReadAllowed: Boolean?,
+    val dirtyPolicyZygoteAdbDataSearchAllowed: Boolean?,
+    val dirtyPolicyFailureReason: String?,
+    val dirtyPolicyNotes: List<String>,
+    val procAttrCurrentProbeAttempted: Boolean,
+    val procAttrCurrentResults: List<SelinuxProcAttrCurrentResult>,
+    val procAttrCurrentFailureReason: String?,
     val failureReason: String?,
     val notes: List<String>,
 )
@@ -61,42 +88,34 @@ class SelinuxContextValidityProbe(
     }
 
     internal fun SelinuxContextValiditySnapshot.toProbeResult(): SelinuxContextValidityProbeResult {
-        val trustedCarrier = available && probeAttempted && carrierMatchesExpected
-        val hasRootContext = ksuDomainValid == true || ksuFileValid == true || magiskFileValid == true
-        val oracleBlockedByPolicy = trustedCarrier &&
-            !oracleControlsPassed &&
-            hasPolicyDeniedEvidence()
         val state = when {
-            !available || !probeAttempted -> SelinuxContextValidityState.UNAVAILABLE
+            !available -> SelinuxContextValidityState.UNAVAILABLE
             !carrierMatchesExpected -> SelinuxContextValidityState.UNAVAILABLE
-            oracleBlockedByPolicy -> SelinuxContextValidityState.BLOCKED_ORACLE
-            trustedCarrier && !oracleControlsPassed -> SelinuxContextValidityState.UNTRUSTED_ORACLE
-            trustedCarrier && oracleControlsPassed && !ksuResultsStable -> SelinuxContextValidityState.UNSTABLE_RESULTS
-            trustedCarrier && hasRootContext -> SelinuxContextValidityState.ROOT_PRESENT
-            else -> SelinuxContextValidityState.CLEAN
+            !probeAttempted -> SelinuxContextValidityState.UNAVAILABLE
+            !oracleControlsPassed -> SelinuxContextValidityState.INCONSISTENT
+            !ksuResultsStable -> SelinuxContextValidityState.INCONSISTENT
+            ksuDomainValid == null || ksuFileValid == null -> SelinuxContextValidityState.UNAVAILABLE
+            ksuDomainValid && ksuFileValid -> SelinuxContextValidityState.KSU_PRESENT
+            !ksuDomainValid && !ksuFileValid -> SelinuxContextValidityState.CLEAN
+            else -> SelinuxContextValidityState.AMBIGUOUS
         }
 
         val notes = buildList {
             addAll(this@toProbeResult.notes)
-            failureReason?.takeIf { it.isNotBlank() }?.let(::add)
             when (state) {
-                SelinuxContextValidityState.UNAVAILABLE ->
-                    add("The app_zygote carrier snapshot was unavailable or untrusted.")
-
                 SelinuxContextValidityState.CLEAN ->
-                    add("Root specific contexts were not found by live policy.")
+                    add("Bit pair 00 means both KSU-specific contexts were rejected by live policy.")
 
-                SelinuxContextValidityState.ROOT_PRESENT ->
-                    add("Root contexts were found by live policy.")
+                SelinuxContextValidityState.KSU_PRESENT ->
+                    add("Bit pair 11 means both KSU-specific contexts were accepted by live policy.")
 
-                SelinuxContextValidityState.BLOCKED_ORACLE ->
-                    add("app_zygote SELinux context queries were blocked by policy.")
+                SelinuxContextValidityState.AMBIGUOUS ->
+                    add("Bit pair 01/10 means the KSU-specific contexts split across live policy checks.")
 
-                SelinuxContextValidityState.UNTRUSTED_ORACLE ->
-                    add("Context validity oracle failed its self-test.")
+                SelinuxContextValidityState.INCONSISTENT ->
+                    add("Oracle self-test failed, so the KSU-specific context verdict is not trusted.")
 
-                SelinuxContextValidityState.UNSTABLE_RESULTS ->
-                    add("Context validity oracle repeated inconsistently.")
+                SelinuxContextValidityState.UNAVAILABLE -> Unit
             }
         }.distinct()
 
@@ -106,6 +125,11 @@ class SelinuxContextValidityProbe(
             probeAttempted = probeAttempted,
             carrierContext = carrierContext,
             carrierMatchesExpected = carrierMatchesExpected,
+            selinuxEnabled = selinuxEnabled,
+            selinuxEnforced = selinuxEnforced,
+            pidContextMatchesCurrent = pidContextMatchesCurrent,
+            procSelfContextMatchesCurrent = procSelfContextMatchesCurrent,
+            dyntransitionCheckPassed = dyntransitionCheckPassed,
             carrierControlValid = carrierControlValid,
             negativeControlRejected = negativeControlRejected,
             fileControlValid = fileControlValid,
@@ -115,7 +139,30 @@ class SelinuxContextValidityProbe(
             queryMethod = queryMethod,
             ksuDomainValid = ksuDomainValid,
             ksuFileValid = ksuFileValid,
-            magiskFileValid = magiskFileValid,
+            bitPair = bitPair,
+            dirtyPolicyAvailable = dirtyPolicyAvailable,
+            dirtyPolicyProbeAttempted = dirtyPolicyProbeAttempted,
+            dirtyPolicyCarrierContext = dirtyPolicyCarrierContext,
+            dirtyPolicyCarrierMatchesExpected = dirtyPolicyCarrierMatchesExpected,
+            dirtyPolicyControlsPassed = dirtyPolicyControlsPassed,
+            dirtyPolicyStable = dirtyPolicyStable,
+            dirtyPolicyQueryMethod = dirtyPolicyQueryMethod,
+            dirtyPolicyAccessControlAllowed = dirtyPolicyAccessControlAllowed,
+            dirtyPolicyNegativeControlRejected = dirtyPolicyNegativeControlRejected,
+            dirtyPolicySystemServerExecmemAllowed = dirtyPolicySystemServerExecmemAllowed,
+            dirtyPolicyFsckSysAdminAllowed = dirtyPolicyFsckSysAdminAllowed,
+            dirtyPolicyShellSuTransitionAllowed = dirtyPolicyShellSuTransitionAllowed,
+            dirtyPolicyAdbdAdbrootBinderCallAllowed = dirtyPolicyAdbdAdbrootBinderCallAllowed,
+            dirtyPolicyMagiskBinderCallAllowed = dirtyPolicyMagiskBinderCallAllowed,
+            dirtyPolicyKsuFileReadAllowed = dirtyPolicyKsuFileReadAllowed,
+            dirtyPolicyLsposedFileReadAllowed = dirtyPolicyLsposedFileReadAllowed,
+            dirtyPolicyXposedDataFileReadAllowed = dirtyPolicyXposedDataFileReadAllowed,
+            dirtyPolicyZygoteAdbDataSearchAllowed = dirtyPolicyZygoteAdbDataSearchAllowed,
+            dirtyPolicyFailureReason = dirtyPolicyFailureReason,
+            dirtyPolicyNotes = dirtyPolicyNotes,
+            procAttrCurrentProbeAttempted = procAttrCurrentProbeAttempted,
+            procAttrCurrentResults = procAttrCurrentResults,
+            procAttrCurrentFailureReason = procAttrCurrentFailureReason,
             failureReason = failureReason,
             notes = notes,
         )
@@ -123,19 +170,10 @@ class SelinuxContextValidityProbe(
 
     companion object {
         const val METHOD_LABEL = "Context validity oracle"
-        const val STATUS_ORACLE_UNAVAILABLE = "Context oracle unavailable"
-        const val STATUS_ROOT_CONTEXT_FOUND = "Root Selinux Context found"
-        const val STATUS_ORACLE_BLOCKED = "Context oracle blocked"
-        const val STATUS_ORACLE_SELF_TEST_FAILED = "Context oracle self-test failed"
-        const val STATUS_ORACLE_UNSTABLE = "Context oracle unstable"
-    }
-
-    private fun SelinuxContextValiditySnapshot.hasPolicyDeniedEvidence(): Boolean {
-        return listOfNotNull(failureReason)
-            .plus(notes)
-            .any { note ->
-                note.contains("Permission denied", ignoreCase = true) ||
-                    note.contains("EACCES", ignoreCase = true)
-            }
+        const val BITPAIR_CLEAN = "00"
+        const val BITPAIR_KSU_PRESENT = "11"
+        const val BITPAIR_AMBIGUOUS = "01/10"
+        const val BITPAIR_SELF_TEST_FAILED = "Self-test failed"
+        const val BITPAIR_UNSUPPORTED = "Unsupported"
     }
 }

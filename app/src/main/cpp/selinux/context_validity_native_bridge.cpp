@@ -61,6 +61,24 @@ namespace {
         }
         output << "CARRIER_MATCHES_EXPECTED=" << (snapshot.carrier_matches_expected ? '1' : '0')
                << '\n';
+        if (snapshot.selinux_enabled.has_value()) {
+            output << "SELINUX_ENABLED=" << (*snapshot.selinux_enabled ? '1' : '0') << '\n';
+        }
+        if (snapshot.selinux_enforced.has_value()) {
+            output << "SELINUX_ENFORCED=" << (*snapshot.selinux_enforced ? '1' : '0') << '\n';
+        }
+        if (snapshot.pid_context_matches_current.has_value()) {
+            output << "PID_CONTEXT_MATCHES_CURRENT="
+                   << (*snapshot.pid_context_matches_current ? '1' : '0') << '\n';
+        }
+        if (snapshot.proc_self_context_matches_current.has_value()) {
+            output << "PROC_SELF_CONTEXT_MATCHES_CURRENT="
+                   << (*snapshot.proc_self_context_matches_current ? '1' : '0') << '\n';
+        }
+        if (snapshot.dyntransition_check_passed.has_value()) {
+            output << "DYNTRANSITION_CHECK_PASSED="
+                   << (*snapshot.dyntransition_check_passed ? '1' : '0') << '\n';
+        }
         if (snapshot.carrier_control_valid.has_value()) {
             output << "CARRIER_CONTROL_VALID=" << (*snapshot.carrier_control_valid ? '1' : '0')
                    << '\n';
@@ -88,9 +106,6 @@ namespace {
         }
         if (snapshot.ksu_file_valid.has_value()) {
             output << "KSU_FILE_VALID=" << (*snapshot.ksu_file_valid ? '1' : '0') << '\n';
-        }
-        if (snapshot.magisk_file_valid.has_value()) {
-            output << "MAGISK_FILE_VALID=" << (*snapshot.magisk_file_valid ? '1' : '0') << '\n';
         }
         output << "DIRTY_POLICY_AVAILABLE=" << (snapshot.dirty_policy.available ? '1' : '0')
                << '\n';
@@ -121,17 +136,37 @@ namespace {
             output << "DIRTY_POLICY_SYSTEM_SERVER_EXECMEM_ALLOWED="
                    << (*snapshot.dirty_policy.system_server_execmem_allowed ? '1' : '0') << '\n';
         }
+        if (snapshot.dirty_policy.fsck_sys_admin_allowed.has_value()) {
+            output << "DIRTY_POLICY_FSCK_SYS_ADMIN_ALLOWED="
+                   << (*snapshot.dirty_policy.fsck_sys_admin_allowed ? '1' : '0') << '\n';
+        }
+        if (snapshot.dirty_policy.shell_su_transition_allowed.has_value()) {
+            output << "DIRTY_POLICY_SHELL_SU_TRANSITION_ALLOWED="
+                   << (*snapshot.dirty_policy.shell_su_transition_allowed ? '1' : '0') << '\n';
+        }
+        if (snapshot.dirty_policy.adbd_adbroot_binder_call_allowed.has_value()) {
+            output << "DIRTY_POLICY_ADBD_ADBROOT_BINDER_CALL_ALLOWED="
+                   << (*snapshot.dirty_policy.adbd_adbroot_binder_call_allowed ? '1' : '0') << '\n';
+        }
         if (snapshot.dirty_policy.magisk_binder_call_allowed.has_value()) {
             output << "DIRTY_POLICY_MAGISK_BINDER_CALL_ALLOWED="
                    << (*snapshot.dirty_policy.magisk_binder_call_allowed ? '1' : '0') << '\n';
         }
-        if (snapshot.dirty_policy.ksu_binder_call_allowed.has_value()) {
-            output << "DIRTY_POLICY_KSU_BINDER_CALL_ALLOWED="
-                   << (*snapshot.dirty_policy.ksu_binder_call_allowed ? '1' : '0') << '\n';
+        if (snapshot.dirty_policy.ksu_file_read_allowed.has_value()) {
+            output << "DIRTY_POLICY_KSU_FILE_READ_ALLOWED="
+                   << (*snapshot.dirty_policy.ksu_file_read_allowed ? '1' : '0') << '\n';
         }
         if (snapshot.dirty_policy.lsposed_file_read_allowed.has_value()) {
             output << "DIRTY_POLICY_LSPOSED_FILE_READ_ALLOWED="
                    << (*snapshot.dirty_policy.lsposed_file_read_allowed ? '1' : '0') << '\n';
+        }
+        if (snapshot.dirty_policy.xposed_data_file_read_allowed.has_value()) {
+            output << "DIRTY_POLICY_XPOSED_DATA_FILE_READ_ALLOWED="
+                   << (*snapshot.dirty_policy.xposed_data_file_read_allowed ? '1' : '0') << '\n';
+        }
+        if (snapshot.dirty_policy.zygote_adb_data_search_allowed.has_value()) {
+            output << "DIRTY_POLICY_ZYGOTE_ADB_DATA_SEARCH_ALLOWED="
+                   << (*snapshot.dirty_policy.zygote_adb_data_search_allowed ? '1' : '0') << '\n';
         }
         if (!snapshot.dirty_policy.failure_reason.empty()) {
             output << "DIRTY_POLICY_FAILURE_REASON="
@@ -193,14 +228,14 @@ namespace {
 }  // namespace
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_eltavine_duckdetector_features_selinux_data_native_SelinuxContextValidityBridge_nativeCollectContextValiditySnapshot(
+Java_com_eltavine_duckdetector_features_selinux_data_native_SelinuxContextValidityBridge_nativeCollectContextValiditySnapshotInternal(
         JNIEnv *env,
         jclass clazz) {
     try {
         return to_jstring(
                 env,
                 encode_snapshot(
-                        duckdetector::selinux::collect_context_validity_snapshot(env)
+                        duckdetector::selinux::collect_context_validity_snapshot()
                 )
         );
     } catch (const std::exception &error) {

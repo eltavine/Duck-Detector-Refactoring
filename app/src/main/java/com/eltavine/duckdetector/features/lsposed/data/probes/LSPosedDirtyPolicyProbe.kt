@@ -34,7 +34,7 @@ data class LSPosedDirtyPolicyProbeResult(
     val negativeControlRejected: Boolean?,
     val systemServerExecmemAllowed: Boolean?,
     val magiskBinderCallAllowed: Boolean?,
-    val ksuBinderCallAllowed: Boolean?,
+    val ksuFileReadAllowed: Boolean?,
     val lsposedFileReadAllowed: Boolean?,
     val failureReason: String?,
     val notes: List<String>,
@@ -75,7 +75,7 @@ data class LSPosedDirtyPolicyProbeResult(
             append(" | negative control rejected=").append(yesNoLabel(negativeControlRejected))
             append(" | system_server execmem=").append(ruleLabel(systemServerExecmemAllowed))
             append(" | Magisk binder=").append(ruleLabel(magiskBinderCallAllowed))
-            append(" | KernelSU binder=").append(ruleLabel(ksuBinderCallAllowed))
+            append(" | KernelSU file read=").append(ruleLabel(ksuFileReadAllowed))
             append(" | LSPosed file read=").append(ruleLabel(lsposedFileReadAllowed))
             failureReason?.takeIf { it.isNotBlank() }?.let {
                 appendLine()
@@ -108,7 +108,11 @@ class LSPosedDirtyPolicyProbe {
     fun run(snapshot: SelinuxContextValiditySnapshot): LSPosedDirtyPolicyProbeResult {
         val available = snapshot.dirtyPolicyAvailable &&
             snapshot.dirtyPolicyProbeAttempted &&
-            snapshot.dirtyPolicyCarrierMatchesExpected
+            snapshot.dirtyPolicyCarrierMatchesExpected &&
+            snapshot.dirtyPolicyControlsPassed &&
+            snapshot.dirtyPolicyStable &&
+            snapshot.dirtyPolicyAccessControlAllowed == true &&
+            snapshot.dirtyPolicyNegativeControlRejected == true
 
         return LSPosedDirtyPolicyProbeResult(
             available = available,
@@ -124,7 +128,7 @@ class LSPosedDirtyPolicyProbe {
             negativeControlRejected = snapshot.dirtyPolicyNegativeControlRejected,
             systemServerExecmemAllowed = snapshot.dirtyPolicySystemServerExecmemAllowed,
             magiskBinderCallAllowed = snapshot.dirtyPolicyMagiskBinderCallAllowed,
-            ksuBinderCallAllowed = snapshot.dirtyPolicyKsuBinderCallAllowed,
+            ksuFileReadAllowed = snapshot.dirtyPolicyKsuFileReadAllowed,
             lsposedFileReadAllowed = snapshot.dirtyPolicyLsposedFileReadAllowed,
             failureReason = snapshot.dirtyPolicyFailureReason,
             notes = snapshot.dirtyPolicyNotes,
@@ -158,14 +162,14 @@ class LSPosedDirtyPolicyProbe {
                     ),
                 )
             }
-            if (snapshot.dirtyPolicyKsuBinderCallAllowed == true) {
+            if (snapshot.dirtyPolicyKsuFileReadAllowed == true) {
                 add(
                     policySignal(
-                        id = "policy_ksu_binder_call",
-                        label = "KernelSU binder",
+                        id = "policy_ksu_file_read",
+                        label = "KernelSU file read",
                         value = "Allowed",
                         severity = LSPosedSignalSeverity.WARNING,
-                        detail = "The app_zygote SELinux access oracle reported untrusted_app -> ksu:binder call as allowed. This is supporting dirty-policy evidence, not an LSPosed-specific rule.",
+                        detail = "The app_zygote SELinux access oracle reported untrusted_app -> ksu_file:file read as allowed. This is supporting dirty-policy evidence, not an LSPosed-specific rule.",
                     ),
                 )
             }
