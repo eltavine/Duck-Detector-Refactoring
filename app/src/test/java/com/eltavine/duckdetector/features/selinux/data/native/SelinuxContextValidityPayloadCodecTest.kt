@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.selinux.data.native
 
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,6 +32,11 @@ class SelinuxContextValidityPayloadCodecTest {
             probeAttempted = true,
             carrierContext = "u:r:app_zygote:s0:c1,c2",
             carrierMatchesExpected = true,
+            selinuxEnabled = true,
+            selinuxEnforced = true,
+            pidContextMatchesCurrent = true,
+            procSelfContextMatchesCurrent = true,
+            dyntransitionCheckPassed = true,
             carrierControlValid = true,
             negativeControlRejected = true,
             fileControlValid = true,
@@ -40,7 +46,7 @@ class SelinuxContextValidityPayloadCodecTest {
             queryMethod = "raw selinuxfs write",
             ksuDomainValid = true,
             ksuFileValid = false,
-            magiskFileValid = false,
+            bitPair = "11",
             dirtyPolicyAvailable = true,
             dirtyPolicyProbeAttempted = true,
             dirtyPolicyCarrierContext = "u:r:app_zygote:s0:c1,c2",
@@ -50,15 +56,33 @@ class SelinuxContextValidityPayloadCodecTest {
             dirtyPolicyQueryMethod = "android.os.SELinux.checkSELinuxAccess",
             dirtyPolicyAccessControlAllowed = true,
             dirtyPolicyNegativeControlRejected = true,
-            dirtyPolicySystemServerExecmemAllowed = false,
-            dirtyPolicyMagiskBinderCallAllowed = false,
-            dirtyPolicyKsuBinderCallAllowed = false,
+            dirtyPolicySystemServerExecmemAllowed = true,
+            dirtyPolicyFsckSysAdminAllowed = false,
+            dirtyPolicyShellSuTransitionAllowed = false,
+            dirtyPolicyAdbdAdbrootBinderCallAllowed = true,
+            dirtyPolicyMagiskBinderCallAllowed = true,
+            dirtyPolicyKsuFileReadAllowed = false,
             dirtyPolicyLsposedFileReadAllowed = true,
-            dirtyPolicyFailureReason = "Dirty\npolicy unavailable",
-            dirtyPolicyNotes = listOf(
-                "Carrier context: u:r:app_zygote:s0",
-                "LSPosed\tpolicy\nread",
+            dirtyPolicyXposedDataFileReadAllowed = false,
+            dirtyPolicyZygoteAdbDataSearchAllowed = true,
+            dirtyPolicyFailureReason = "Dirty policy oracle self-test failed.",
+            dirtyPolicyNotes = listOf("system_server execmem=allowed"),
+            procAttrCurrentProbeAttempted = true,
+            procAttrCurrentResults = listOf(
+                SelinuxProcAttrCurrentResult(
+                    label = "KernelSU",
+                    targetContext = "u:r:ksu:s0",
+                    outcomeClass = SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL,
+                    rawMessage = "ErrnoException: errno=22, Invalid argument",
+                ),
+                SelinuxProcAttrCurrentResult(
+                    label = "Magisk",
+                    targetContext = "u:r:magisk:s0",
+                    outcomeClass = SelinuxProcAttrCurrentResult.OUTCOME_DETECTED_NON_EINVAL,
+                    rawMessage = "ErrnoException: errno=13, Permission denied",
+                ),
             ),
+            procAttrCurrentFailureReason = "Carrier self-check did not establish a trusted app_zygote context.",
             failureReason = "Carrier\ncontext unavailable",
             notes = listOf(
                 "Carrier context: u:r:app_zygote:s0",
@@ -72,6 +96,11 @@ class SelinuxContextValidityPayloadCodecTest {
         assertTrue(parsed.probeAttempted)
         assertEquals(snapshot.carrierContext, parsed.carrierContext)
         assertTrue(parsed.carrierMatchesExpected)
+        assertTrue(parsed.selinuxEnabled == true)
+        assertTrue(parsed.selinuxEnforced == true)
+        assertTrue(parsed.pidContextMatchesCurrent == true)
+        assertTrue(parsed.procSelfContextMatchesCurrent == true)
+        assertTrue(parsed.dyntransitionCheckPassed == true)
         assertTrue(parsed.carrierControlValid == true)
         assertTrue(parsed.negativeControlRejected == true)
         assertTrue(parsed.fileControlValid == true)
@@ -81,7 +110,7 @@ class SelinuxContextValidityPayloadCodecTest {
         assertEquals(snapshot.queryMethod, parsed.queryMethod)
         assertTrue(parsed.ksuDomainValid == true)
         assertTrue(parsed.ksuFileValid == false)
-        assertTrue(parsed.magiskFileValid == false)
+        assertEquals(snapshot.bitPair, parsed.bitPair)
         assertTrue(parsed.dirtyPolicyAvailable)
         assertTrue(parsed.dirtyPolicyProbeAttempted)
         assertEquals(snapshot.dirtyPolicyCarrierContext, parsed.dirtyPolicyCarrierContext)
@@ -89,14 +118,22 @@ class SelinuxContextValidityPayloadCodecTest {
         assertTrue(parsed.dirtyPolicyControlsPassed)
         assertTrue(parsed.dirtyPolicyStable)
         assertEquals(snapshot.dirtyPolicyQueryMethod, parsed.dirtyPolicyQueryMethod)
-        assertTrue(parsed.dirtyPolicyAccessControlAllowed == true)
-        assertTrue(parsed.dirtyPolicyNegativeControlRejected == true)
-        assertTrue(parsed.dirtyPolicySystemServerExecmemAllowed == false)
-        assertTrue(parsed.dirtyPolicyMagiskBinderCallAllowed == false)
-        assertTrue(parsed.dirtyPolicyKsuBinderCallAllowed == false)
-        assertTrue(parsed.dirtyPolicyLsposedFileReadAllowed == true)
+        assertEquals(snapshot.dirtyPolicyAccessControlAllowed, parsed.dirtyPolicyAccessControlAllowed)
+        assertEquals(snapshot.dirtyPolicyNegativeControlRejected, parsed.dirtyPolicyNegativeControlRejected)
+        assertEquals(snapshot.dirtyPolicySystemServerExecmemAllowed, parsed.dirtyPolicySystemServerExecmemAllowed)
+        assertEquals(snapshot.dirtyPolicyFsckSysAdminAllowed, parsed.dirtyPolicyFsckSysAdminAllowed)
+        assertEquals(snapshot.dirtyPolicyShellSuTransitionAllowed, parsed.dirtyPolicyShellSuTransitionAllowed)
+        assertEquals(snapshot.dirtyPolicyAdbdAdbrootBinderCallAllowed, parsed.dirtyPolicyAdbdAdbrootBinderCallAllowed)
+        assertEquals(snapshot.dirtyPolicyMagiskBinderCallAllowed, parsed.dirtyPolicyMagiskBinderCallAllowed)
+        assertEquals(snapshot.dirtyPolicyKsuFileReadAllowed, parsed.dirtyPolicyKsuFileReadAllowed)
+        assertEquals(snapshot.dirtyPolicyLsposedFileReadAllowed, parsed.dirtyPolicyLsposedFileReadAllowed)
+        assertEquals(snapshot.dirtyPolicyXposedDataFileReadAllowed, parsed.dirtyPolicyXposedDataFileReadAllowed)
+        assertEquals(snapshot.dirtyPolicyZygoteAdbDataSearchAllowed, parsed.dirtyPolicyZygoteAdbDataSearchAllowed)
         assertEquals(snapshot.dirtyPolicyFailureReason, parsed.dirtyPolicyFailureReason)
         assertEquals(snapshot.dirtyPolicyNotes, parsed.dirtyPolicyNotes)
+        assertTrue(parsed.procAttrCurrentProbeAttempted)
+        assertEquals(snapshot.procAttrCurrentResults, parsed.procAttrCurrentResults)
+        assertEquals(snapshot.procAttrCurrentFailureReason, parsed.procAttrCurrentFailureReason)
         assertEquals(snapshot.failureReason, parsed.failureReason)
         assertEquals(snapshot.notes, parsed.notes)
     }

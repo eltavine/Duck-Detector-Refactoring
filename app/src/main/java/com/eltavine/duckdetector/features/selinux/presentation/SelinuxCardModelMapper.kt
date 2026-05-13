@@ -27,6 +27,7 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyWeakness
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentProbe
 import com.eltavine.duckdetector.features.selinux.ui.model.SelinuxCardModel
 import com.eltavine.duckdetector.features.selinux.ui.model.SelinuxDetailRowModel
 import com.eltavine.duckdetector.features.selinux.ui.model.SelinuxHeaderFactModel
@@ -56,10 +57,10 @@ class SelinuxCardModelMapper {
 
     private fun buildSubtitle(report: SelinuxReport): String {
         return when (report.stage) {
-            SelinuxStage.LOADING -> "sysfs + getenforce + proc attr + context oracle + policy + audit"
+            SelinuxStage.LOADING -> "sysfs + getenforce + proc attr + app_zygote attr write + context oracle + policy + audit"
             SelinuxStage.FAILED -> "local status probe failed"
             SelinuxStage.READY -> buildString {
-                append("5 local checks")
+                append("6 local checks")
                 if (report.policyAnalysis != null) {
                     append(" + policy")
                 }
@@ -72,21 +73,36 @@ class SelinuxCardModelMapper {
 
     private fun buildVerdict(report: SelinuxReport): String {
         val contextValidity = contextValidityResult(report)
+        val procAttrCurrent = procAttrCurrentResult(report)
+        val dirtyPolicyHit = firstTrustedPolicyRuleHit(report)
+        val repeatabilityFailed =
+            contextValidity?.details?.contains("repeatability failed", ignoreCase = true) == true
+        val appZygoteCarrierState = contextValiditySupportState(contextValidity)
         return when (report.stage) {
             SelinuxStage.LOADING -> "Scanning SELinux state"
             SelinuxStage.FAILED -> "SELinux scan failed"
             SelinuxStage.READY -> when (report.mode) {
                 SelinuxMode.ENFORCING -> when {
                     report.auditIntegrity?.state == SelinuxAuditIntegrityState.TAMPERED -> "Enforcing with audit rewrite"
-                    contextValidity?.isRootContextSignal() == true ->
-                        "Enforcing with Root context materialized"
+                    contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT ->
+                        "Enforcing with KSU context materialized"
+                    procAttrCurrent?.isSecure == false -> "Enforcing with app_zygote attr-write anomaly"
+                    dirtyPolicyHit != null -> trustedPolicyRuleVerdict(dirtyPolicyHit)
+                    appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
+                        "Enforcing with untrusted app_zygote carrier"
+                    appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ->
+                        "Enforcing with reduced app_zygote coverage"
 
-                    contextValidity?.isOracleUnavailable() == true ->
-                        "Enforcing with unavailable context oracle"
+                    contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_SELF_TEST_FAILED ->
+                        if (repeatabilityFailed) {
+                            "Enforcing with unstable context oracle"
+                        } else {
+                            "Enforcing with untrusted context oracle"
+                        }
 
-                    contextValidity?.isOracleBlocked() == true -> "Enforcing with app_zygote SELinux query blocked"
-                    contextValidity?.isOracleSelfTestFailure() == true -> "Enforcing with untrusted context oracle"
-                    contextValidity?.isOracleUnstable() == true -> "Enforcing with unstable context oracle"
+                    contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_AMBIGUOUS ->
+                        "Enforcing with context split"
+
                     report.auditIntegrity?.state == SelinuxAuditIntegrityState.EXPOSED -> "Enforcing with audit exposure"
                     report.policyAnalysis?.weakness == SelinuxPolicyWeakness.SEVERE -> "Enforcing with weak policy"
                     report.auditIntegrity?.state == SelinuxAuditIntegrityState.RESIDUE -> "Enforcing with audit risk"
@@ -104,9 +120,14 @@ class SelinuxCardModelMapper {
 
     private fun buildSummary(report: SelinuxReport): String {
         val contextValidity = contextValidityResult(report)
+        val procAttrCurrent = procAttrCurrentResult(report)
+        val dirtyPolicyHit = firstTrustedPolicyRuleHit(report)
+        val repeatabilityFailed =
+            contextValidity?.details?.contains("repeatability failed", ignoreCase = true) == true
+        val appZygoteCarrierState = contextValiditySupportState(contextValidity)
         return when (report.stage) {
             SelinuxStage.LOADING ->
-                "Checking sysfs, getenforce, and /proc/self/attr/current before deriving final mode with paradox logic."
+                "Checking sysfs, getenforce, /proc/self/attr/current, and app_zygote attr writes before deriving final mode with paradox logic."
 
             SelinuxStage.FAILED ->
                 report.errorMessage
@@ -131,6 +152,16 @@ class SelinuxCardModelMapper {
                         if (report.paradoxDetected) {
                             add("Permission-denied probes also reinforced the enforcing verdict.")
                         }
+                        if (procAttrCurrent?.isSecure == false) {
+                            add(
+                                "The dedicated app_zygote carrier hit anomalous /proc/self/attr/current write outcomes while probing privileged contexts: ${
+                                    procAttrCurrent.status.removePrefix("Detected: ")
+                                }.",
+                            )
+                        }
+                        if (dirtyPolicyHit != null) {
+                            add(trustedPolicyRuleSummary(dirtyPolicyHit))
+                        }
                         when (report.auditIntegrity?.state) {
                             SelinuxAuditIntegrityState.TAMPERED ->
                                 add("Recent audit or log markers suggest logd output is being rewritten before apps inspect it.")
@@ -147,16 +178,50 @@ class SelinuxCardModelMapper {
                             SelinuxAuditIntegrityState.CLEAR, null -> Unit
                         }
                     }
-                    val contextNote = contextValiditySummaryNote(contextValidity)
-                    val unavailableNote = if (contextValidity?.isOracleUnavailable() == true) {
-                        "app_zygote carrier snapshot was unavailable."
-                    } else {
-                        null
+                    val contextNote = when (contextValidity?.status) {
+                        SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT ->
+                            "The context validity oracle accepted both KSU-specific contexts from the current carrier."
+
+                        SelinuxContextValidityProbe.BITPAIR_CLEAN ->
+                            "The context validity oracle rejected both KSU-specific contexts in live policy."
+
+                        SelinuxContextValidityProbe.BITPAIR_SELF_TEST_FAILED ->
+                            if (repeatabilityFailed) {
+                                "The context validity oracle repeated inconsistently, so its KSU verdict was not trusted."
+                            } else {
+                                "The context validity oracle failed its self-test, so its KSU verdict was not trusted."
+                            }
+
+                        SelinuxContextValidityProbe.BITPAIR_AMBIGUOUS ->
+                            "The context validity oracle split across the two KSU-specific contexts."
+
+                        SelinuxContextValidityProbe.BITPAIR_UNSUPPORTED ->
+                            when (appZygoteCarrierState) {
+                                AppZygoteCarrierSupportState.UNTRUSTED ->
+                                    buildString {
+                                        append("The dedicated app_zygote carrier did not land in the expected app_zygote context, so app_zygote-only SELinux evidence was not trusted.")
+                                        contextValidity.details?.let {
+                                            append(' ')
+                                            append(it)
+                                        }
+                                    }
+                                AppZygoteCarrierSupportState.FAILED ->
+                                    buildString {
+                                        append("The dedicated app_zygote carrier failed before the oracle produced a trusted result, so app_zygote-only SELinux coverage was reduced.")
+                                        contextValidity.details?.let {
+                                            append(' ')
+                                            append(it)
+                                        }
+                                    }
+                                AppZygoteCarrierSupportState.AVAILABLE ->
+                                    contextValidity.details ?: "The context validity oracle stayed unavailable."
+                            }
+
+                        else -> null
                     }
                     listOf(base)
                         .plus(extra)
                         .plus(contextNote?.let { listOf(it) }.orEmpty())
-                        .plus(unavailableNote?.let { listOf(it) }.orEmpty())
                         .joinToString(" ")
                 }
 
@@ -262,6 +327,11 @@ class SelinuxCardModelMapper {
 
     private fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemModel> {
         val contextValidity = contextValidityResult(report)
+        val procAttrCurrent = procAttrCurrentResult(report)
+        val dirtyPolicyHit = firstTrustedPolicyRuleHit(report)
+        val repeatabilityFailed =
+            contextValidity?.details?.contains("repeatability failed", ignoreCase = true) == true
+        val appZygoteCarrierState = contextValiditySupportState(contextValidity)
         if (report.stage != SelinuxStage.READY) {
             return when (report.stage) {
                 SelinuxStage.LOADING -> listOf(
@@ -367,45 +437,142 @@ class SelinuxCardModelMapper {
             }
         }
 
-        if (contextValidity?.isRootContextSignal() == true) {
-            items += SelinuxImpactItemModel(
-                "The app_zygote carrier validated root contexts in live policy.",
+        when (contextValidity?.status) {
+            SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT -> items += SelinuxImpactItemModel(
+                "The app_zygote carrier validated both KSU-specific contexts in live policy.",
                 DetectorStatus.danger(),
             )
-        } else if (contextValidity?.isOracleUnavailable() == true) {
-            items += SelinuxImpactItemModel(
-                "The app_zygote context oracle was unavailable, so live policy checks could not be trusted.",
+
+            SelinuxContextValidityProbe.BITPAIR_CLEAN -> items += SelinuxImpactItemModel(
+                "The app_zygote carrier rejected both KSU-specific contexts.",
+                DetectorStatus.allClear(),
+            )
+
+            SelinuxContextValidityProbe.BITPAIR_SELF_TEST_FAILED -> items += SelinuxImpactItemModel(
+                if (repeatabilityFailed) {
+                    "The context validity oracle repeated inconsistently, so its KSU verdict was not trusted."
+                } else {
+                    "The context validity oracle failed its self-test, so its KSU verdict was not trusted."
+                },
+                DetectorStatus.warning(),
+            )
+
+            SelinuxContextValidityProbe.BITPAIR_AMBIGUOUS -> items += SelinuxImpactItemModel(
+                "The context validity oracle split across the two KSU-specific contexts.",
+                DetectorStatus.warning(),
+            )
+
+            SelinuxContextValidityProbe.BITPAIR_UNSUPPORTED -> items += SelinuxImpactItemModel(
+                contextValidity.details ?: "The context validity oracle stayed unavailable.",
+                when (appZygoteCarrierState) {
+                    AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
+                    AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)
+                    AppZygoteCarrierSupportState.AVAILABLE -> DetectorStatus.info(InfoKind.SUPPORT)
+                },
+            )
+
+            else -> Unit
+        }
+        when {
+            procAttrCurrent?.isSecure == false -> items += SelinuxImpactItemModel(
+                "The dedicated app_zygote carrier observed anomalous /proc/self/attr/current writes for ${procAttrCurrent.status.removePrefix("Detected: ")}.",
+                DetectorStatus.danger(),
+            )
+
+            procAttrCurrent?.isSecure == true -> items += SelinuxImpactItemModel(
+                "The dedicated app_zygote carrier rejected the tested privileged contexts with normal EINVAL results.",
+                DetectorStatus.allClear(),
+            )
+
+            procAttrCurrent != null -> items += SelinuxImpactItemModel(
+                procAttrCurrent.details ?: "The dedicated app_zygote attr/current write probe stayed unavailable.",
                 DetectorStatus.info(InfoKind.SUPPORT),
             )
-        } else if (contextValidity?.isOracleBlocked() == true) {
+        }
+        if (dirtyPolicyHit != null) {
             items += SelinuxImpactItemModel(
-                "app_zygote SELinux context queries were blocked by policy, which is unexpected for the stock app_zygote domain.",
-                DetectorStatus.warning(),
-            )
-        } else if (contextValidity?.isOracleSelfTestFailure() == true) {
-            items += SelinuxImpactItemModel(
-                "The app_zygote context oracle failed its self-test, so root-context results were not trusted.",
-                DetectorStatus.warning(),
-            )
-        } else if (contextValidity?.isOracleUnstable() == true) {
-            items += SelinuxImpactItemModel(
-                "The app_zygote context oracle repeated inconsistently, so root-context results were not trusted.",
-                DetectorStatus.warning(),
+                trustedPolicyRuleImpact(dirtyPolicyHit),
+                DetectorStatus.danger(),
             )
         }
-
         return items
     }
 
     private fun buildMethodRows(report: SelinuxReport): List<SelinuxDetailRowModel> {
-        return report.methods.map { result ->
-            SelinuxDetailRowModel(
-                label = result.method,
-                value = result.status,
-                status = methodStatus(result),
-                detail = result.details,
-            )
+        val msdRows = report.methods.filter { isMsdPolicyRuleMethod(it.method) }
+        var msdInserted = false
+        return buildList {
+            report.methods.forEach { result ->
+                if (isMsdPolicyRuleMethod(result.method)) {
+                    if (!msdInserted) {
+                        buildAggregatedMsdMethodRow(msdRows)?.let(::add)
+                        msdInserted = true
+                    }
+                } else {
+                    add(methodRow(result))
+                }
+            }
         }
+    }
+
+    private fun methodRow(result: SelinuxCheckResult): SelinuxDetailRowModel {
+        return SelinuxDetailRowModel(
+            label = result.method,
+            value = result.status,
+            status = methodStatus(result),
+            detail = result.details,
+        )
+    }
+
+    private fun buildAggregatedMsdMethodRow(results: List<SelinuxCheckResult>): SelinuxDetailRowModel? {
+        if (results.isEmpty()) {
+            return null
+        }
+        val allowed = results.filter { it.status == "Allowed" }.map { msdPolicyRuleName(it.method) }
+        val denied = results.filter { it.status == "Denied" }.map { msdPolicyRuleName(it.method) }
+        val unavailable = results.filter { it.status == "Unavailable" }.map { msdPolicyRuleName(it.method) }
+        val aggregateResult = SelinuxCheckResult(
+            method = "Dirty sepolicy rule: MSD",
+            status = when {
+                allowed.isNotEmpty() -> "Allowed"
+                unavailable.isNotEmpty() -> "Unavailable"
+                else -> "Denied"
+            },
+            isSecure = when {
+                allowed.isNotEmpty() -> false
+                unavailable.isNotEmpty() -> null
+                else -> true
+            },
+            permissionDenied = results.all { it.permissionDenied },
+            details = null,
+            dirtyPolicyTrusted = results.any { it.dirtyPolicyTrusted },
+        )
+        return SelinuxDetailRowModel(
+            label = aggregateResult.method,
+            value = buildList {
+                if (allowed.isNotEmpty()) {
+                    add("${allowed.size} allowed")
+                }
+                if (denied.isNotEmpty()) {
+                    add("${denied.size} denied")
+                }
+                if (unavailable.isNotEmpty()) {
+                    add("${unavailable.size} unavailable")
+                }
+            }.joinToString(", "),
+            status = methodStatus(aggregateResult),
+            detail = buildList {
+                if (allowed.isNotEmpty()) {
+                    add("Allowed: ${allowed.joinToString()}")
+                }
+                if (denied.isNotEmpty()) {
+                    add("Denied: ${denied.joinToString()}")
+                }
+                if (unavailable.isNotEmpty()) {
+                    add("Unavailable: ${unavailable.joinToString()}")
+                }
+            }.joinToString(" | "),
+        )
     }
 
     private fun buildPolicyRows(policy: SelinuxPolicyAnalysis?): List<SelinuxDetailRowModel> {
@@ -657,6 +824,7 @@ class SelinuxCardModelMapper {
             "Enforcing mode blocks disallowed actions instead of only logging them.",
             "Production Android devices are expected to run enforcing SELinux.",
             "app_zygote can query SELinux context validity through selinux_check_context, which ultimately writes to /sys/fs/selinux/context.",
+            "A dedicated app_zygote carrier can also probe privileged context materialization by writing candidate labels to /proc/self/attr/current and classifying non-EINVAL outcomes.",
             "Audit or log surfaces can be rewritten in user space, so missing suspicious tcontext values is not always proof.",
             "Readable AVC denial lines should be treated as audit-surface leakage, not as direct proof of a root process.",
             "comm, exe, path, and name fields inside AVC logs are supporting hints, not standalone proof of a live su daemon.",
@@ -685,12 +853,22 @@ class SelinuxCardModelMapper {
 
     private fun methodStatus(result: SelinuxCheckResult): DetectorStatus {
         if (result.method == SelinuxContextValidityProbe.METHOD_LABEL) {
+            return when (result.status) {
+                SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT -> DetectorStatus.danger()
+                SelinuxContextValidityProbe.BITPAIR_CLEAN -> DetectorStatus.allClear()
+                SelinuxContextValidityProbe.BITPAIR_AMBIGUOUS -> DetectorStatus.warning()
+                SelinuxContextValidityProbe.BITPAIR_SELF_TEST_FAILED -> DetectorStatus.warning()
+                else -> when (contextValiditySupportState(result)) {
+                    AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
+                    AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)
+                    AppZygoteCarrierSupportState.AVAILABLE -> DetectorStatus.info(InfoKind.SUPPORT)
+                }
+            }
+        }
+        if (result.method == SelinuxProcAttrCurrentProbe.METHOD_LABEL) {
             return when {
-                result.isRootContextSignal() -> DetectorStatus.danger()
-                result.isOracleBlocked() ||
-                        result.isOracleSelfTestFailure() ||
-                        result.isOracleUnstable() -> DetectorStatus.warning()
-
+                result.isSecure == false -> DetectorStatus.danger()
+                result.isSecure == true -> DetectorStatus.allClear()
                 else -> DetectorStatus.info(InfoKind.SUPPORT)
             }
         }
@@ -753,22 +931,28 @@ class SelinuxCardModelMapper {
         return report.methods.firstOrNull { it.method == SelinuxContextValidityProbe.METHOD_LABEL }
     }
 
+    private fun procAttrCurrentResult(report: SelinuxReport): SelinuxCheckResult? {
+        return report.methods.firstOrNull { it.method == SelinuxProcAttrCurrentProbe.METHOD_LABEL }
+    }
+
     private fun SelinuxReport.toDetectorStatus(): DetectorStatus {
         val contextValidity = contextValidityResult(this)
+        val procAttrCurrent = procAttrCurrentResult(this)
+        val dirtyPolicyHit = firstTrustedPolicyRuleHit(this)
+        val appZygoteCarrierState = contextValiditySupportState(contextValidity)
         return when (stage) {
             SelinuxStage.LOADING -> DetectorStatus.info(InfoKind.SUPPORT)
             SelinuxStage.FAILED -> DetectorStatus.info(InfoKind.ERROR)
             SelinuxStage.READY -> when (mode) {
                 SelinuxMode.ENFORCING -> when {
                     auditIntegrity?.state == SelinuxAuditIntegrityState.TAMPERED -> DetectorStatus.danger()
-                    contextValidity?.isRootContextSignal() == true -> DetectorStatus.danger()
-                    contextValidity?.isOracleBlocked() == true ||
-                            contextValidity?.isOracleSelfTestFailure() == true ||
-                            contextValidity?.isOracleUnstable() == true -> DetectorStatus.warning()
-
-                    contextValidity?.isOracleUnavailable() == true ->
-                        DetectorStatus.info(InfoKind.SUPPORT)
-
+                    contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT -> DetectorStatus.danger()
+                    procAttrCurrent?.isSecure == false -> DetectorStatus.danger()
+                    dirtyPolicyHit != null -> DetectorStatus.warning()
+                    appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
+                    appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)
+                    contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_SELF_TEST_FAILED -> DetectorStatus.warning()
+                    contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_AMBIGUOUS -> DetectorStatus.warning()
                     policyAnalysis?.weakness == SelinuxPolicyWeakness.SEVERE ||
                             policyAnalysis?.weakness == SelinuxPolicyWeakness.MODERATE ||
                             auditIntegrity?.state == SelinuxAuditIntegrityState.EXPOSED ||
@@ -783,45 +967,66 @@ class SelinuxCardModelMapper {
         }
     }
 
-    private fun contextValiditySummaryNote(result: SelinuxCheckResult?): String? {
-        return when {
-            result == null -> null
-            result.isRootContextSignal() -> result.status
-            result.isOracleBlocked() ->
-                "app_zygote SELinux context queries were blocked by policy."
-
-            result.isOracleSelfTestFailure() ->
-                "Context validity oracle failed its self-test, so root context checks were not trusted."
-
-            result.isOracleUnstable() ->
-                "Context validity oracle repeated inconsistently, so root context checks were not trusted."
-
-            else -> null
+    private fun firstTrustedPolicyRuleHit(report: SelinuxReport): SelinuxCheckResult? {
+        return report.methods.firstOrNull {
+            isPolicyRuleMethod(it.method) &&
+                it.status == "Allowed" &&
+                it.isSecure == false &&
+                it.dirtyPolicyTrusted
         }
     }
 
-    private fun SelinuxCheckResult.isRootContextSignal(): Boolean {
-        return method == SelinuxContextValidityProbe.METHOD_LABEL &&
-                status == SelinuxContextValidityProbe.STATUS_ROOT_CONTEXT_FOUND
+    private fun isPolicyRuleMethod(method: String): Boolean {
+        return method.startsWith("Dirty sepolicy rule: ") ||
+            method.startsWith("MSD checker: ")
     }
 
-    private fun SelinuxCheckResult.isOracleBlocked(): Boolean {
-        return method == SelinuxContextValidityProbe.METHOD_LABEL &&
-                status == SelinuxContextValidityProbe.STATUS_ORACLE_BLOCKED
+    private fun isMsdPolicyRuleMethod(method: String): Boolean {
+        return method.startsWith("MSD checker: ")
     }
 
-    private fun SelinuxCheckResult.isOracleSelfTestFailure(): Boolean {
-        return method == SelinuxContextValidityProbe.METHOD_LABEL &&
-                status == SelinuxContextValidityProbe.STATUS_ORACLE_SELF_TEST_FAILED
+    private fun policyRuleDisplayName(method: String): String {
+        return when {
+            method.startsWith("Dirty sepolicy rule: ") -> method.removePrefix("Dirty sepolicy rule: ")
+            method.startsWith("MSD checker: ") -> "MSD: ${method.removePrefix("MSD checker: ")}"
+            else -> method
+        }
     }
 
-    private fun SelinuxCheckResult.isOracleUnstable(): Boolean {
-        return method == SelinuxContextValidityProbe.METHOD_LABEL &&
-                status == SelinuxContextValidityProbe.STATUS_ORACLE_UNSTABLE
+    private fun msdPolicyRuleName(method: String): String {
+        return method.removePrefix("MSD checker: ")
     }
 
-    private fun SelinuxCheckResult.isOracleUnavailable(): Boolean {
-        return method == SelinuxContextValidityProbe.METHOD_LABEL &&
-                status == SelinuxContextValidityProbe.STATUS_ORACLE_UNAVAILABLE
+    private fun trustedPolicyRuleVerdict(result: SelinuxCheckResult): String {
+        return "Enforcing with dirty sepolicy rule"
+    }
+
+    private fun trustedPolicyRuleSummary(result: SelinuxCheckResult): String {
+        return "A trusted DirtySepolicy-style access query reported ${policyRuleDisplayName(result.method)} as allowed."
+    }
+
+    private fun trustedPolicyRuleImpact(result: SelinuxCheckResult): String {
+        return "A trusted DirtySepolicy-style access rule was allowed: ${policyRuleDisplayName(result.method)}."
+    }
+
+    private fun contextValiditySupportState(result: SelinuxCheckResult?): AppZygoteCarrierSupportState {
+        if (result?.method != SelinuxContextValidityProbe.METHOD_LABEL ||
+            result.status != SelinuxContextValidityProbe.BITPAIR_UNSUPPORTED
+        ) {
+            return AppZygoteCarrierSupportState.AVAILABLE
+        }
+        return when {
+            result.details.orEmpty().contains("Carrier state=untrusted") ->
+                AppZygoteCarrierSupportState.UNTRUSTED
+            result.details.orEmpty().contains("Carrier state=failed") ->
+                AppZygoteCarrierSupportState.FAILED
+            else -> AppZygoteCarrierSupportState.AVAILABLE
+        }
+    }
+
+    private enum class AppZygoteCarrierSupportState {
+        AVAILABLE,
+        FAILED,
+        UNTRUSTED,
     }
 }

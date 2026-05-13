@@ -641,6 +641,7 @@ class LSPosedCardModelMapper {
                 !zygotePermissionAvailable ||
                 !runtimeArtifactAvailable ||
                 !logcatAvailable ||
+                !dirtyPolicyAvailable ||
                 packageVisibility != LSPosedPackageVisibility.FULL
     }
 

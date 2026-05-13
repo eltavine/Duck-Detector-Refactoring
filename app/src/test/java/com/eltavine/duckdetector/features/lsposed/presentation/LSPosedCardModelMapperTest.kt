@@ -113,8 +113,8 @@ class LSPosedCardModelMapperTest {
 
         val model = mapper.map(report)
 
-        assertEquals(DetectionSeverity.ALL_CLEAR, model.status.severity)
-        assertEquals("No LSPosed/Xposed runtime signal", model.verdict)
+        assertEquals(DetectionSeverity.INFO, model.status.severity)
+        assertEquals("LSPosed scan has reduced coverage", model.verdict)
         assertTrue(
             model.policyRows.any {
                 it.label == "SELinux policy" && it.value == "Unavailable"

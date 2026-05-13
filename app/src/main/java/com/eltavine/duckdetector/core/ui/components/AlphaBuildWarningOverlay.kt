@@ -53,6 +53,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -74,6 +75,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.R
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 private const val APP_ERRORS_TRACKING_GITHUB =
     "https://github.com/KitsunePie/AppErrorsTracking/actions"
@@ -83,13 +85,12 @@ private const val APP_ERRORS_TRACKING_TELEGRAM =
 @Composable
 fun AlphaBuildWarningOverlay(
     versionName: String = BuildConfig.VERSION_NAME,
-    isAlphaBuild: Boolean = BuildConfig.isAlphaVersion,
     forceVisible: Boolean? = null,
     onDismissed: (() -> Unit)? = null,
 ) {
-    val shouldShow = isAlphaBuild
-    var internalVisible by rememberSaveable(versionName, isAlphaBuild) { mutableStateOf(shouldShow) }
-    var remainingSeconds by rememberSaveable(versionName, isAlphaBuild) {
+    val shouldShow = remember(versionName) { isAlphaVersion(versionName) }
+    var internalVisible by rememberSaveable(versionName) { mutableStateOf(shouldShow) }
+    var remainingSeconds by rememberSaveable(versionName) {
         mutableIntStateOf(if (shouldShow) 3 else 0)
     }
     val visible = forceVisible ?: internalVisible
@@ -267,12 +268,16 @@ fun AlphaBuildWarningOverlay(
     }
 }
 
+fun isAlphaVersion(versionName: String): Boolean {
+    return versionName.lowercase(Locale.ROOT).contains("alpha")
+}
+
 @Composable
 fun AlphaBuildBanner(
     modifier: Modifier = Modifier,
-    isAlphaBuild: Boolean = BuildConfig.isAlphaVersion,
+    versionName: String = BuildConfig.VERSION_NAME,
 ) {
-    if (!isAlphaBuild) {
+    if (!isAlphaVersion(versionName)) {
         return
     }
 

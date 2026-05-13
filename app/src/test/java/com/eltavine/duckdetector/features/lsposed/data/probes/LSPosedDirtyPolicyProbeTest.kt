@@ -20,6 +20,7 @@ import com.eltavine.duckdetector.features.lsposed.domain.LSPosedMethodOutcome
 import com.eltavine.duckdetector.features.lsposed.domain.LSPosedSignalGroup
 import com.eltavine.duckdetector.features.lsposed.domain.LSPosedSignalSeverity
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
+import com.eltavine.duckdetector.features.selinux.data.probes.DedicatedCarrierState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -73,6 +74,7 @@ class LSPosedDirtyPolicyProbeTest {
                 dirtyPolicyAccessControlAllowed = true,
                 dirtyPolicyNegativeControlRejected = true,
                 dirtyPolicyMagiskBinderCallAllowed = true,
+                dirtyPolicyKsuFileReadAllowed = false,
                 dirtyPolicyLsposedFileReadAllowed = false,
             ),
         )
@@ -133,7 +135,81 @@ class LSPosedDirtyPolicyProbeTest {
 
         assertFalse(result.available)
         assertEquals(LSPosedMethodOutcome.SUPPORT, result.outcome)
-        assertEquals("Unavailable", result.summary)
+        assertEquals("Untrusted carrier", result.summary)
         assertTrue(result.signals.isEmpty())
+    }
+
+    @Test
+    fun `matched carrier without oracle verdict is not reported as carrier failure`() {
+        val result = probe.run(
+            SelinuxContextValiditySnapshot(
+                dirtyPolicyAvailable = false,
+                dirtyPolicyProbeAttempted = false,
+                dirtyPolicyCarrierContext = "u:r:app_zygote:s0:c1,c2",
+                dirtyPolicyCarrierMatchesExpected = true,
+                dirtyPolicyFailureReason = "SELinux.checkSELinuxAccess unavailable from preload carrier.",
+            ),
+        )
+
+        assertFalse(result.available)
+        assertEquals(DedicatedCarrierState.OK, result.carrierState)
+        assertEquals("Oracle unavailable", result.summary)
+        assertEquals(LSPosedMethodOutcome.SUPPORT, result.outcome)
+    }
+
+    @Test
+    fun `java and native dedicated dirty policy tracks both contribute signals`() {
+        val result = probe.run(
+            SelinuxContextValiditySnapshot(
+                dirtyPolicyAvailable = true,
+                dirtyPolicyProbeAttempted = true,
+                dirtyPolicyCarrierContext = "u:r:app_zygote:s0:c1,c2",
+                dirtyPolicyCarrierMatchesExpected = true,
+                dirtyPolicyControlsPassed = true,
+                dirtyPolicyStable = true,
+                dirtyPolicyLsposedFileReadAllowed = true,
+                javaDirtyPolicyAvailable = true,
+                javaDirtyPolicyProbeAttempted = true,
+                javaDirtyPolicyCarrierContext = "u:r:app_zygote:s0:c1,c2",
+                javaDirtyPolicyCarrierMatchesExpected = true,
+                javaDirtyPolicyControlsPassed = true,
+                javaDirtyPolicyStable = true,
+                javaDirtyPolicyMagiskBinderCallAllowed = true,
+            ),
+        )
+
+        assertTrue(result.available)
+        assertEquals(2, result.hitCount)
+        assertTrue(result.signals.any { it.id == "policy_lsposed_file_read" })
+        assertTrue(result.signals.any { it.id == "policy_magisk_binder_call" })
+        assertTrue(result.detail.contains("Native dedicated="))
+        assertTrue(result.detail.contains("Java dedicated="))
+    }
+
+    @Test
+    fun `conflicting native and java dirty policy verdicts suppress lsposed policy signal`() {
+        val result = probe.run(
+            SelinuxContextValiditySnapshot(
+                dirtyPolicyAvailable = true,
+                dirtyPolicyProbeAttempted = true,
+                dirtyPolicyCarrierContext = "u:r:app_zygote:s0:c1,c2",
+                dirtyPolicyCarrierMatchesExpected = true,
+                dirtyPolicyControlsPassed = true,
+                dirtyPolicyStable = true,
+                dirtyPolicyLsposedFileReadAllowed = true,
+                javaDirtyPolicyAvailable = true,
+                javaDirtyPolicyProbeAttempted = true,
+                javaDirtyPolicyCarrierContext = "u:r:app_zygote:s0:c1,c2",
+                javaDirtyPolicyCarrierMatchesExpected = true,
+                javaDirtyPolicyControlsPassed = true,
+                javaDirtyPolicyStable = true,
+                javaDirtyPolicyLsposedFileReadAllowed = false,
+            ),
+        )
+
+        assertTrue(result.available)
+        assertEquals(0, result.hitCount)
+        assertEquals(null, result.lsposedFileReadAllowed)
+        assertEquals(LSPosedMethodOutcome.CLEAN, result.outcome)
     }
 }

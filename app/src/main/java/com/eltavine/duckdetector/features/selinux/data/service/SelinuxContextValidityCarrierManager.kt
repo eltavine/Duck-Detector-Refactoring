@@ -37,13 +37,13 @@ open class SelinuxContextValidityCarrierManager(
 ) {
 
     open suspend fun collectSnapshot(): SelinuxContextValiditySnapshot {
-        val appContext = context?.applicationContext ?: return SelinuxContextValiditySnapshot(
-            failureReason = "SELinux carrier service unavailable.",
+        val appContext = context?.applicationContext ?: return carrierFailureSnapshot(
+            "SELinux carrier service unavailable.",
         )
         return withTimeoutOrNull(DETECTION_TIMEOUT_MS) {
             performRemoteSnapshotCollection(appContext)
-        } ?: SelinuxContextValiditySnapshot(
-            failureReason = "SELinux carrier probe timed out.",
+        } ?: carrierFailureSnapshot(
+            "SELinux carrier probe timed out.",
         )
     }
 
@@ -55,8 +55,19 @@ open class SelinuxContextValidityCarrierManager(
         return performRemoteCall(
             context = context,
             onConnected = { proxy -> SelinuxContextValidityBridge().parse(proxy.collectSnapshot()) },
-            onNullBinder = { SelinuxContextValiditySnapshot(failureReason = "SELinux carrier service returned a null binder.") },
-            onError = { error -> SelinuxContextValiditySnapshot(failureReason = error) },
+            onNullBinder = { carrierFailureSnapshot("SELinux carrier service returned a null binder.") },
+            onError = { error -> carrierFailureSnapshot(error) },
+        )
+    }
+
+    private fun carrierFailureSnapshot(
+        reason: String,
+    ): SelinuxContextValiditySnapshot {
+        return SelinuxContextValiditySnapshot(
+            dirtyPolicyFailureReason = reason,
+            javaDirtyPolicyFailureReason = reason,
+            procAttrCurrentFailureReason = reason,
+            failureReason = reason,
         )
     }
 
@@ -118,6 +129,6 @@ open class SelinuxContextValidityCarrierManager(
     }
 
     companion object {
-        private const val DETECTION_TIMEOUT_MS = 6_000L
+        private const val DETECTION_TIMEOUT_MS = 15_000L
     }
 }

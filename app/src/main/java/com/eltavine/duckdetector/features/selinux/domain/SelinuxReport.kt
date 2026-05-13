@@ -35,6 +35,7 @@ data class SelinuxCheckResult(
     val isSecure: Boolean?,
     val permissionDenied: Boolean,
     val details: String? = null,
+    val dirtyPolicyTrusted: Boolean = false,
 )
 
 data class SelinuxPolicyAnalysis(
