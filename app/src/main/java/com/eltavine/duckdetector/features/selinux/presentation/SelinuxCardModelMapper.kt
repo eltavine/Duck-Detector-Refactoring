@@ -87,7 +87,7 @@ class SelinuxCardModelMapper {
                     contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT ->
                         "Enforcing with KSU context materialized"
                     procAttrCurrent?.isSecure == false -> "Enforcing with app_zygote attr-write anomaly"
-                    dirtyPolicyHit != null -> trustedPolicyRuleVerdict(dirtyPolicyHit)
+                    dirtyPolicyHit != null -> trustedPolicyRuleVerdict()
                     appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
                         "Enforcing with untrusted app_zygote carrier"
                     appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ->
@@ -997,7 +997,7 @@ class SelinuxCardModelMapper {
         return method.removePrefix("MSD checker: ")
     }
 
-    private fun trustedPolicyRuleVerdict(result: SelinuxCheckResult): String {
+    private fun trustedPolicyRuleVerdict(): String {
         return "Enforcing with dirty sepolicy rule"
     }
 

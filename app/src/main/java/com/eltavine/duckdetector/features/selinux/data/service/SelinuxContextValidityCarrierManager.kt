@@ -24,8 +24,6 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityBridge
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
-import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
-import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbeResult
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
@@ -33,7 +31,6 @@ import kotlin.coroutines.resume
 open class SelinuxContextValidityCarrierManager(
     private val context: Context? = null,
     private val serviceClass: Class<out Service> = SelinuxContextValidityCarrierService::class.java,
-    private val probe: SelinuxContextValidityProbe = SelinuxContextValidityProbe(),
 ) {
 
     open suspend fun collectSnapshot(): SelinuxContextValiditySnapshot {
@@ -45,10 +42,6 @@ open class SelinuxContextValidityCarrierManager(
         } ?: carrierFailureSnapshot(
             "SELinux carrier probe timed out.",
         )
-    }
-
-    open suspend fun collect(): SelinuxContextValidityProbeResult {
-        return probe.interpret(collectSnapshot())
     }
 
     private suspend fun performRemoteSnapshotCollection(context: Context): SelinuxContextValiditySnapshot {
