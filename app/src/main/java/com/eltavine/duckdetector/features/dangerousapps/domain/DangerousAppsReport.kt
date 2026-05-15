@@ -32,6 +32,7 @@ enum class DangerousDetectionMethodKind(
     val label: String,
 ) {
     PACKAGE_MANAGER("PackageManager"),
+    CREATE_PACKAGE_CONTEXT_ZIP("createPackageContext + ZipFile"),
     OPEN_APK_FD("Open APK FD"),
     DIRECTORY_LISTING("Android/data Directory Listing"),
     ZWC_BYPASS("Android/data ZWC Bypass"),

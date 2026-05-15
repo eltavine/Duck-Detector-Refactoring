@@ -22,6 +22,7 @@ import android.os.Parcel
 import android.provider.Settings
 import android.text.TextUtils
 import com.eltavine.duckdetector.features.dangerousapps.data.native.DangerousAppsNativeBridge
+import com.eltavine.duckdetector.features.dangerousapps.data.probes.CreatePackageContextZipProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.OpenApkFdPackageProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.SceneLoopbackProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.rules.DangerousAppsCatalog
@@ -40,6 +41,8 @@ import kotlinx.coroutines.withContext
 class DangerousAppsRepository(
     private val context: Context,
     private val nativeBridge: DangerousAppsNativeBridge = DangerousAppsNativeBridge(),
+    private val createPackageContextZipProbe: CreatePackageContextZipProbe =
+        CreatePackageContextZipProbe(context),
     private val openApkFdPackageProbe: OpenApkFdPackageProbe = OpenApkFdPackageProbe(),
     private val sceneLoopbackProbe: SceneLoopbackProbe = SceneLoopbackProbe(),
 ) {
@@ -85,6 +88,19 @@ class DangerousAppsRepository(
                 }
             }
         }
+
+        createPackageContextZipProbe
+            .run(targets.mapTo(linkedSetOf()) { it.packageName })
+            .detectedPackages
+            .forEach { packageName ->
+                appendMethod(
+                    detectedApps = detectedApps,
+                    packageName = packageName,
+                    method = DangerousDetectionMethod(
+                        DangerousDetectionMethodKind.CREATE_PACKAGE_CONTEXT_ZIP,
+                    ),
+                )
+            }
 
         openApkFdPackageProbe
             .run(targets.mapTo(linkedSetOf()) { it.packageName })
@@ -229,6 +245,7 @@ class DangerousAppsRepository(
             if (packageVisibility == DangerousPackageVisibility.FULL) {
                 add(DangerousDetectionMethodKind.PACKAGE_MANAGER)
             }
+            add(DangerousDetectionMethodKind.CREATE_PACKAGE_CONTEXT_ZIP)
             add(DangerousDetectionMethodKind.OPEN_APK_FD)
             add(DangerousDetectionMethodKind.DIRECTORY_LISTING)
             add(DangerousDetectionMethodKind.ZWC_BYPASS)

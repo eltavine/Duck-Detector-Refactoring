@@ -91,7 +91,7 @@ class DangerousAppsCardModelMapper {
     private fun buildSummary(report: DangerousAppsReport): String {
         return when (report.stage) {
             DangerousAppsStage.LOADING ->
-                "PackageManager, open APK descriptors, storage mirrors, loopback, IPC, accessibility, and native package-path probes are collecting local evidence."
+                "PackageManager, createPackageContext + ZipFile, open APK descriptors, storage mirrors, loopback, IPC, accessibility, and native package-path probes are collecting local evidence."
 
             DangerousAppsStage.FAILED ->
                 report.issues.firstOrNull()
@@ -99,7 +99,7 @@ class DangerousAppsCardModelMapper {
 
             DangerousAppsStage.READY -> when {
                 report.hiddenCount > 0 ->
-                    "${report.hiddenCount} package(s) were visible to non-PackageManager probes but absent from PackageManager."
+                    "${report.hiddenCount} package(s) were visible to direct corroboration probes but absent from PackageManager inventory."
 
                 report.detectedCount > 0 ->
                     buildString {
@@ -120,10 +120,10 @@ class DangerousAppsCardModelMapper {
                     "PackageManager reported a full inventory surface but returned only ${report.packageManagerVisibleCount} visible packages. That is unusually low for a modern device and can happen under HMA-style whitelist filtering."
 
                 report.packageVisibility == DangerousPackageVisibility.RESTRICTED ->
-                    "Open APK descriptor and storage-side probes still ran, but a clean result may under-report installed tools when PackageManager visibility is scoped."
+                    "createPackageContext + ZipFile, open APK descriptor, and storage-side probes still ran, but a clean result may under-report installed tools when PackageManager visibility is scoped."
 
                 else ->
-                    "PackageManager, open APK descriptors, storage, loopback, IPC, accessibility, and native package-path probes did not surface known high-risk tools."
+                    "PackageManager, createPackageContext + ZipFile, open APK descriptors, storage, loopback, IPC, accessibility, and native package-path probes did not surface known high-risk tools."
             }
         }
     }
@@ -168,7 +168,7 @@ class DangerousAppsCardModelMapper {
         }
         return DangerousAppsHmaAlertModel(
             title = "HMA mismatch",
-            summary = "These packages were detected by non-PackageManager probes but hidden from PackageManager. This is the only Dangerous Apps path that stays red.",
+            summary = "These packages were detected by direct corroboration probes but hidden from PackageManager inventory. This is the only Dangerous Apps path that stays red.",
             hiddenPackages = report.hiddenFromPackageManager.map { finding ->
                 DangerousAppsHiddenPackageItemModel(
                     appName = finding.target.appName,

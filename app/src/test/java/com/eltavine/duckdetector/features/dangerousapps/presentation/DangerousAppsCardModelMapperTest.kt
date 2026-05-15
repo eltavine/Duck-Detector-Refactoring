@@ -18,8 +18,11 @@ package com.eltavine.duckdetector.features.dangerousapps.presentation
 
 import com.eltavine.duckdetector.core.ui.model.DetectionSeverity
 import com.eltavine.duckdetector.features.dangerousapps.data.rules.DangerousAppsCatalog
+import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppFinding
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppsReport
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppsStage
+import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousDetectionMethod
+import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousDetectionMethodKind
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousPackageVisibility
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -57,6 +60,38 @@ class DangerousAppsCardModelMapperTest {
                         fact.status.severity == DetectionSeverity.WARNING &&
                         fact.value.contains("43")
             },
+        )
+    }
+
+    @Test
+    fun `hidden package copy uses direct corroboration language`() {
+        val target = DangerousAppsCatalog.targets.first()
+        val finding = DangerousAppFinding(
+            target = target,
+            methods = listOf(
+                DangerousDetectionMethod(DangerousDetectionMethodKind.CREATE_PACKAGE_CONTEXT_ZIP),
+            ),
+        )
+        val model = mapper.map(
+            DangerousAppsReport(
+                stage = DangerousAppsStage.READY,
+                packageVisibility = DangerousPackageVisibility.FULL,
+                packageManagerVisibleCount = 120,
+                suspiciousLowPmInventory = false,
+                targets = DangerousAppsCatalog.targets,
+                findings = listOf(finding),
+                hiddenFromPackageManager = listOf(finding),
+                probesRan = listOf(DangerousDetectionMethodKind.CREATE_PACKAGE_CONTEXT_ZIP),
+            ),
+        )
+
+        assertEquals(DetectionSeverity.DANGER, model.status.severity)
+        assertTrue(model.summary.contains("direct corroboration probes"))
+        assertTrue(model.summary.contains("PackageManager inventory"))
+        assertTrue(model.hmaAlert?.summary.orEmpty().contains("direct corroboration probes"))
+        assertEquals(
+            listOf("createPackageContext + ZipFile"),
+            model.packageItems.single().methods,
         )
     }
 }
