@@ -840,7 +840,8 @@ class KernelCheckRepository(
             "shirkneko", "mirinfork", "brokestar",
             "xiaoxiaow", "qdykernel", "numbers", "cctv",
             "arter97", "blu_spark", "elementalx", "franco", 
-            "kirisakura", "sultan", "weeb", "nethunter",
+            "kirisakura", "sultan", "nethunter", "kdrag0n",
+            "example", "mishka", "lyrico" "hyperhelper", "niko",
             "aptkernel", "coolzyd9107", "aptusitu", "Glow-v"
         ).map { keyword ->
             KernelKeywordRule(keyword = keyword, ignoreCase = true)
