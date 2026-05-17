@@ -825,7 +825,10 @@ class KernelCheckRepository(
             "mirinfork",
             "brokestar",
             "sukisu",
-            "Glow-v"
+            "Glow-v",
+            "aptkernel",
+            "coolzyd9107",
+            "aptusitu",
         )
 
         private val CASE_SENSITIVE_KEYWORDS = listOf("OKI")
