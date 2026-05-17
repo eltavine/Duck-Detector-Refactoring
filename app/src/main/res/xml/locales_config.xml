@@ -24,4 +24,5 @@ limitations under the License.
     <locale android:name="ko" />
     <locale android:name="ja" />
     <locale android:name="th" />
+    <locale android:name="uk" />
 </locale-config>
