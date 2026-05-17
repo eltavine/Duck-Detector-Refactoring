@@ -28,7 +28,6 @@ import com.eltavine.duckdetector.features.kernelcheck.domain.KernelCheckStage
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.LinkedHashSet
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -65,104 +64,111 @@ class KernelCheckRepository(
             )
         }
 
-        val dangerFindings = mutableListOf<KernelCheckFinding>()
-        val infoFindings = mutableListOf<KernelCheckFinding>()
         val combinedIdentity = identitySources.joinToString(separator = "\n")
 
-        val emojis = findEmojis(combinedIdentity)
-        if (emojis.isNotEmpty()) {
-            dangerFindings += KernelCheckFinding(
-                id = "emoji",
-                label = "Emoji markers",
-                value = emojis.joinToString(" "),
-                detail = "Kernel identity contains emoji codepoints.",
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+        val emojiFinding = findEmojis(combinedIdentity)
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                KernelCheckFinding(
+                    id = "emoji",
+                    label = "Emoji markers",
+                    value = it.joinToString(" "),
+                    detail = "Kernel identity contains emoji codepoints.",
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
-        val chineseChars = findChineseCharacters(combinedIdentity)
-        if (chineseChars.isNotEmpty()) {
-            dangerFindings += KernelCheckFinding(
-                id = "chinese_chars",
-                label = "Chinese glyphs",
-                value = chineseChars.joinToString(""),
-                detail = "Kernel identity contains CJK characters.",
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+        val chineseCharFinding = findChineseCharacters(combinedIdentity)
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                KernelCheckFinding(
+                    id = "chinese_chars",
+                    label = "Chinese glyphs",
+                    value = it.joinToString(""),
+                    detail = "Kernel identity contains CJK characters.",
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
         val nonLatinScriptResult = findNonLatinScriptCharacters(combinedIdentity)
-        if (nonLatinScriptResult.samples.isNotEmpty()) {
-            dangerFindings += KernelCheckFinding(
-                id = "non_latin_scripts",
-                label = "Other language scripts",
-                value = nonLatinScriptResult.scriptNames.joinToString(", "),
-                detail = buildString {
-                    append("Kernel identity contains non-Latin script characters")
-                    if (nonLatinScriptResult.scriptNames.isNotEmpty()) {
-                        append(": ")
-                        append(nonLatinScriptResult.scriptNames.joinToString(", "))
-                    }
-                    if (nonLatinScriptResult.samples.isNotEmpty()) {
-                        append(". Samples: ")
-                        append(nonLatinScriptResult.samples.joinToString(" "))
-                    }
-                    append(".")
-                },
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+        val nonLatinScriptFinding = nonLatinScriptResult.samples
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                KernelCheckFinding(
+                    id = "non_latin_scripts",
+                    label = "Other language scripts",
+                    value = nonLatinScriptResult.scriptNames.joinToString(", "),
+                    detail = buildString {
+                        append("Kernel identity contains non-Latin script characters")
+                        if (nonLatinScriptResult.scriptNames.isNotEmpty()) {
+                            append(": ")
+                            append(nonLatinScriptResult.scriptNames.joinToString(", "))
+                        }
+                        if (nonLatinScriptResult.samples.isNotEmpty()) {
+                            append(". Samples: ")
+                            append(nonLatinScriptResult.samples.joinToString(" "))
+                        }
+                        append(".")
+                    },
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
-        val telegramMatches = TELEGRAM_REGEX.findAll(combinedIdentity)
+        val telegramFinding = TELEGRAM_REGEX.findAll(combinedIdentity)
             .map { it.value }
             .distinct()
             .toList()
-        if (telegramMatches.isNotEmpty()) {
-            dangerFindings += KernelCheckFinding(
-                id = "telegram_ref",
-                label = "Telegram reference",
-                value = telegramMatches.joinToString(", "),
-                detail = "Kernel identity references TG/Telegram style handles or channels.",
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                KernelCheckFinding(
+                    id = "telegram_ref",
+                    label = "Telegram reference",
+                    value = it.joinToString(", "),
+                    detail = "Kernel identity references TG/Telegram style handles or channels.",
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
-        val mentionMatches = MENTION_REGEX.findAll(combinedIdentity)
+        val mentionFinding = MENTION_REGEX.findAll(combinedIdentity)
             .map { it.value }
             .distinct()
             .toList()
-        if (mentionMatches.isNotEmpty()) {
-            dangerFindings += KernelCheckFinding(
-                id = "at_mention",
-                label = "@ mentions",
-                value = mentionMatches.joinToString(", "),
-                detail = "Kernel identity contains maintainer-style @ mentions.",
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                KernelCheckFinding(
+                    id = "at_mention",
+                    label = "@ mentions",
+                    value = it.joinToString(", "),
+                    detail = "Kernel identity contains maintainer-style @ mentions.",
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
-        val customKeywords = detectCustomKernelKeywords(combinedIdentity)
-        if (customKeywords.isNotEmpty()) {
-            dangerFindings += KernelCheckFinding(
-                id = "custom_kernel",
-                label = "Custom identifiers",
-                value = customKeywords.joinToString(", "),
-                detail = "Known community kernel identifiers matched the kernel identity.",
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+        val customKeywordFinding = detectCustomKernelKeywords(combinedIdentity)
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                KernelCheckFinding(
+                    id = "custom_kernel",
+                    label = "Custom identifiers",
+                    value = it.joinToString(", "),
+                    detail = "Known community kernel identifiers matched the kernel identity.",
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
         val cmdlineMatches = nativeSnapshot.findings.details("CMDLINE|CRITICAL|")
             .ifEmpty { detectCriticalCmdlineFallback(procCmdline) }
-        if (cmdlineMatches.isNotEmpty()) {
-            dangerFindings += KernelCheckFinding(
-                id = "suspicious_cmdline",
-                label = "Boot cmdline",
-                value = "${cmdlineMatches.size} hit(s)",
-                detail = cmdlineMatches.joinToString(separator = "\n"),
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+        val cmdlineFinding = cmdlineMatches
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                KernelCheckFinding(
+                    id = "suspicious_cmdline",
+                    label = "Boot cmdline",
+                    value = "${it.size} hit(s)",
+                    detail = it.joinToString(separator = "\n"),
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
         val buildTimeDetail = nativeSnapshot.findings.firstDetail("BUILD_TIME|MISMATCH|")
             ?: detectBuildTimeMismatchFallback(
@@ -170,39 +176,60 @@ class KernelCheckRepository(
                 procVersion = procVersion,
                 systemBuildTime = Build.TIME,
             )
-        if (buildTimeDetail != null) {
-            dangerFindings += KernelCheckFinding(
-                id = "build_time_mismatch",
-                label = "Build time drift",
-                value = "Mismatch",
-                detail = buildTimeDetail,
-                severity = KernelCheckFindingSeverity.HARD,
-            )
-        }
+        val buildTimeFinding = buildTimeDetail
+            ?.let {
+                KernelCheckFinding(
+                    id = "build_time_mismatch",
+                    label = "Build time drift",
+                    value = "Mismatch",
+                    detail = it,
+                    severity = KernelCheckFindingSeverity.HARD,
+                )
+            }
 
         val kptrDetail = nativeSnapshot.findings.firstDetail("KPTR_RESTRICT|DISABLED|")
-        if (kptrDetail != null || nativeSnapshot.kptrExposed) {
-            infoFindings += KernelCheckFinding(
-                id = "kptr_exposed",
-                label = "Kernel pointers",
-                value = "Exposed",
-                detail = kptrDetail ?: "kptr_restrict appears disabled.",
-                severity = KernelCheckFindingSeverity.INFO,
-            )
-        }
+        val kptrFinding = (kptrDetail ?: "kptr_restrict appears disabled.")
+            .takeIf { kptrDetail != null || nativeSnapshot.kptrExposed }
+            ?.let {
+                KernelCheckFinding(
+                    id = "kptr_exposed",
+                    label = "Kernel pointers",
+                    value = "Exposed",
+                    detail = it,
+                    severity = KernelCheckFindingSeverity.INFO,
+                )
+            }
 
         val cveAssessment = detectCvePatchState()
-        if (cveAssessment.state == KernelCheckCvePatchState.UNPATCHED ||
-            cveAssessment.state == KernelCheckCvePatchState.PARTIALLY_PATCHED
-        ) {
-            infoFindings += KernelCheckFinding(
-                id = "cve_patch_state",
-                label = "CVE-2024-43093",
-                value = cveAssessment.state.label,
-                detail = cveAssessment.detail,
-                severity = KernelCheckFindingSeverity.INFO,
-            )
-        }
+        val cveFinding = cveAssessment
+            .takeIf {
+                it.state in setOf(
+                    KernelCheckCvePatchState.UNPATCHED,
+                    KernelCheckCvePatchState.PARTIALLY_PATCHED,
+                )
+            }
+            ?.let {
+                KernelCheckFinding(
+                    id = "cve_patch_state",
+                    label = "CVE-2024-43093",
+                    value = it.state.label,
+                    detail = it.detail,
+                    severity = KernelCheckFindingSeverity.INFO,
+                )
+            }
+
+        val dangerFindings = listOfNotNull(
+            emojiFinding,
+            chineseCharFinding,
+            nonLatinScriptFinding,
+            telegramFinding,
+            mentionFinding,
+            customKeywordFinding,
+            cmdlineFinding,
+            buildTimeFinding,
+        )
+
+        val infoFindings = listOfNotNull(kptrFinding, cveFinding)
 
         val methods = buildMethods(
             dangerFindings = dangerFindings,
@@ -363,38 +390,30 @@ class KernelCheckRepository(
 
     private fun detectCustomKernelKeywords(
         input: String,
-    ): List<String> {
-        if (input.isBlank()) {
-            return emptyList()
-        }
-        return buildList {
-            CUSTOM_KERNEL_KEYWORDS.forEach { keyword ->
-                if (input.contains(keyword, ignoreCase = true)) {
-                    add(keyword)
-                }
+    ): List<String> =
+        input.takeUnless(String::isBlank)
+            ?.let { identity ->
+                KERNEL_KEYWORD_RULES
+                    .filter { it.matches(identity) }
+                    .map { it.keyword }
             }
-            CASE_SENSITIVE_KEYWORDS.forEach { keyword ->
-                if (input.contains(keyword)) {
-                    add(keyword)
-                }
-            }
-        }
-    }
+            .orEmpty()
 
     private fun detectCriticalCmdlineFallback(
         procCmdline: String,
-    ): List<String> {
-        if (procCmdline.isBlank()) {
-            return emptyList()
-        }
-        return CMDLINE_CHECKS.filter {
-            it.isCritical && procCmdline.contains(
-                it.pattern,
-                ignoreCase = true
-            )
-        }
-            .map { it.description }
-    }
+    ): List<String> =
+        procCmdline.takeUnless(String::isBlank)
+            ?.let { cmdline ->
+                CMDLINE_CHECKS
+                    .filter {
+                        it.isCritical && cmdline.contains(
+                            it.pattern,
+                            ignoreCase = true,
+                        )
+                    }
+                    .map { it.description }
+            }
+            .orEmpty()
 
     private fun detectBuildTimeMismatchFallback(
         unameOutput: String,
@@ -409,22 +428,31 @@ class KernelCheckRepository(
             "/proc/version" to procVersion,
         )
         val parser = SimpleDateFormat("EEE MMM d HH:mm:ss z yyyy", Locale.US)
-        for ((label, text) in sources) {
-            if (text.isBlank()) {
-                continue
+        return sources
+            .asSequence()
+            .filter { (_, text) -> text.isNotBlank() }
+            .mapNotNull { (label, text) ->
+                BUILD_TIME_REGEX.find(text)
+                    ?.value
+                    ?.replace(Regex("\\s+"), " ")
+                    ?.let { kernelDateText ->
+                        runCatching { parser.parse(kernelDateText) }
+                            .getOrNull()
+                            ?.let { kernelDate -> label to kernelDate }
+                    }
             }
-            val match = BUILD_TIME_REGEX.find(text) ?: continue
-            val kernelDateText = match.value.replace(Regex("\\s+"), " ")
-            val kernelDate = runCatching { parser.parse(kernelDateText) }.getOrNull() ?: continue
-            val diffDays = TimeUnit.MILLISECONDS.toDays(kernelDate.time - systemBuildTime)
-            if (diffDays <= 30 && diffDays >= -365) {
-                continue
+            .map { (label, kernelDate) ->
+                val diffDays = TimeUnit.MILLISECONDS.toDays(kernelDate.time - systemBuildTime)
+                val systemDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(systemBuildTime))
+                val kernelDateShort = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(kernelDate)
+
+                Triple(label, kernelDateShort, systemDate) to diffDays
             }
-            val systemDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(systemBuildTime))
-            val kernelDateShort = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(kernelDate)
-            return "$label -> Kernel: $kernelDateShort, System: $systemDate (diff: $diffDays days)"
-        }
-        return null
+            .firstOrNull { (_, diffDays) -> diffDays !in -365L..30L }
+            ?.let { (dates, diffDays) ->
+                val (label, kernelDateShort, systemDate) = dates
+                "$label -> Kernel: $kernelDateShort, System: $systemDate (diff: $diffDays days)"
+            }
     }
 
     private fun getUnameOutput(): String {
@@ -471,18 +499,12 @@ class KernelCheckRepository(
 
     private fun findEmojis(
         text: String,
-    ): List<String> {
-        val matches = LinkedHashSet<String>()
-        var index = 0
-        while (index < text.length) {
-            val codePoint = text.codePointAt(index)
-            if (isEmoji(codePoint)) {
-                matches += String(Character.toChars(codePoint))
-            }
-            index += Character.charCount(codePoint)
-        }
-        return matches.toList()
-    }
+    ): List<String> =
+        text.codePointSequence()
+            .filter(::isEmoji)
+            .map(::codePointToString)
+            .distinct()
+            .toList()
 
     private fun isEmoji(
         codePoint: Int,
@@ -504,18 +526,12 @@ class KernelCheckRepository(
 
     private fun findChineseCharacters(
         text: String,
-    ): List<String> {
-        val matches = LinkedHashSet<String>()
-        var index = 0
-        while (index < text.length) {
-            val codePoint = text.codePointAt(index)
-            if (isChineseCharacter(codePoint)) {
-                matches += String(Character.toChars(codePoint))
-            }
-            index += Character.charCount(codePoint)
-        }
-        return matches.toList()
-    }
+    ): List<String> =
+        text.codePointSequence()
+            .filter(::isChineseCharacter)
+            .map(::codePointToString)
+            .distinct()
+            .toList()
 
     private fun isChineseCharacter(
         codePoint: Int,
@@ -536,33 +552,27 @@ class KernelCheckRepository(
 
     private fun findNonLatinScriptCharacters(
         text: String,
-    ): NonLatinScriptScanResult {
-        val scripts = LinkedHashSet<String>()
-        val samples = LinkedHashSet<String>()
-        var index = 0
-        while (index < text.length) {
-            val codePoint = text.codePointAt(index)
-            if (isUnexpectedNonLatinScript(codePoint)) {
-                scripts += unicodeScriptLabel(Character.UnicodeScript.of(codePoint))
-                if (samples.size < MAX_SCRIPT_SAMPLE_COUNT) {
-                    samples += String(Character.toChars(codePoint))
-                }
+    ): NonLatinScriptScanResult =
+        text.codePointSequence()
+            .filter(::isUnexpectedNonLatinScript)
+            .toList()
+            .let { codePoints ->
+                NonLatinScriptScanResult(
+                    scriptNames = codePoints
+                        .map { Character.UnicodeScript.of(it) }
+                        .map(::unicodeScriptLabel)
+                        .distinct(),
+                    samples = codePoints
+                        .map(::codePointToString)
+                        .distinct()
+                        .take(MAX_SCRIPT_SAMPLE_COUNT),
+                )
             }
-            index += Character.charCount(codePoint)
-        }
-        return NonLatinScriptScanResult(
-            scriptNames = scripts.toList(),
-            samples = samples.toList(),
-        )
-    }
 
     private fun isUnexpectedNonLatinScript(
         codePoint: Int,
-    ): Boolean {
-        if (!Character.isLetter(codePoint)) {
-            return false
-        }
-        return when (Character.UnicodeScript.of(codePoint)) {
+    ): Boolean =
+        Character.isLetter(codePoint) && when (Character.UnicodeScript.of(codePoint)) {
             Character.UnicodeScript.LATIN,
             Character.UnicodeScript.COMMON,
             Character.UnicodeScript.INHERITED,
@@ -570,7 +580,6 @@ class KernelCheckRepository(
 
             else -> true
         }
-    }
 
     private fun unicodeScriptLabel(
         script: Character.UnicodeScript,
@@ -607,6 +616,20 @@ class KernelCheckRepository(
                 }
         }
     }
+
+    private fun String.codePointSequence(): Sequence<Int> =
+        takeIf { it.isNotEmpty() }
+            ?.let { text ->
+                generateSequence(0) { index ->
+                    (index + Character.charCount(text.codePointAt(index)))
+                        .takeIf { it < text.length }
+                }.map(text::codePointAt)
+            }
+            ?: emptySequence()
+
+    private fun codePointToString(
+        codePoint: Int,
+    ): String = String(Character.toChars(codePoint))
 
     private fun detectCvePatchState(): CvePatchAssessment {
         val targetPath = "/sdcard/Android/data"
@@ -728,33 +751,29 @@ class KernelCheckRepository(
             "$basePath/$bypassChar",
         )
 
-        var hadCompletedAttempt = false
-        bypassPaths.forEach { bypassPath ->
-            val probe = runListProbe(bypassPath)
-            if (probe.completed) {
-                hadCompletedAttempt = true
-            }
-            if (probe.succeeded) {
-                return UnicodeBypassProbe(
+        val bypassProbes = bypassPaths.map(::runListProbe)
+
+        return when {
+            bypassProbes.any { it.succeeded } ->
+                UnicodeBypassProbe(
                     state = UnicodeBypassState.BYPASSED,
                     bypassName = bypassName,
                     detail = "$bypassName successfully bypassed the path filter.",
                 )
-            }
-        }
 
-        return if (hadCompletedAttempt) {
-            UnicodeBypassProbe(
-                state = UnicodeBypassState.BLOCKED,
-                bypassName = bypassName,
-                detail = "$bypassName was blocked by the path filter.",
-            )
-        } else {
-            UnicodeBypassProbe(
-                state = UnicodeBypassState.INCONCLUSIVE,
-                bypassName = bypassName,
-                detail = "The $bypassName probe could not execute reliably.",
-            )
+            bypassProbes.any { it.completed } ->
+                UnicodeBypassProbe(
+                    state = UnicodeBypassState.BLOCKED,
+                    bypassName = bypassName,
+                    detail = "$bypassName was blocked by the path filter.",
+                )
+
+            else ->
+                UnicodeBypassProbe(
+                    state = UnicodeBypassState.INCONCLUSIVE,
+                    bypassName = bypassName,
+                    detail = "The $bypassName probe could not execute reliably.",
+                )
         }
     }
 
@@ -809,51 +828,67 @@ class KernelCheckRepository(
         private const val MAX_SCRIPT_SAMPLE_COUNT = 8
 
         private val TELEGRAM_REGEX =
-            Regex("""\bTG\b|\btg\b|\bTelegram\b|\btelegram\b|t\.me/""", RegexOption.IGNORE_CASE)
+            Regex("""\bTG\b|\bTelegram\b|t\.me/""", RegexOption.IGNORE_CASE)
 
         private val MENTION_REGEX = Regex("@[A-Za-z0-9_]+")
 
         private val BUILD_TIME_REGEX =
             Regex("""\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\w+\s+\d{4}""")
 
-        private val CUSTOM_KERNEL_KEYWORDS = listOf(
-            "xiaoxiaow",
-            "qdykernel",
-            "numbers",
-            "cctv",
-            "shirkneko",
-            "mirinfork",
-            "brokestar",
-            "sukisu",
-            "Glow-v"
-        )
+        private val KERNEL_KEYWORD_RULES = listOf(
+            "kernelsu", "sukisu", "apatch", 
+            "shirkneko", "mirinfork", "brokestar",
+            "xiaoxiaow", "qdykernel", "numbers", "cctv",
+            "arter97", "blu_spark", "elementalx", "franco", 
+            "kirisakura", "sultan", "weeb", "nethunter",
+            "moe", "neko", "dora", "lyb", "Glow-v"
+        ).map { keyword ->
+            KernelKeywordRule(keyword = keyword, ignoreCase = true)
+        } + listOf(
+            KernelKeywordRule(keyword = "OKI", ignoreCase = false, wholeWord = true),
 
-        private val CASE_SENSITIVE_KEYWORDS = listOf("OKI")
-
-        private val KEYWORD_SCAN_COUNT =
-            CUSTOM_KERNEL_KEYWORDS.size + CASE_SENSITIVE_KEYWORDS.size + 5
+        private val KEYWORD_SCAN_COUNT = KERNEL_KEYWORD_RULES.size + 5
 
         private val CMDLINE_CHECKS = listOf(
-            CmdlineCheck(
-                "androidboot.verifiedbootstate=orange",
-                "Bootloader unlocked (orange)",
-                true
-            ),
-            CmdlineCheck("androidboot.verifiedbootstate=yellow", "Self-signed boot (yellow)", true),
-            CmdlineCheck("androidboot.enable_dm_verity=0", "dm-verity disabled", true),
-            CmdlineCheck("androidboot.secboot=disabled", "Secure boot disabled", true),
-            CmdlineCheck("androidboot.vbmeta.device_state=unlocked", "vbmeta unlocked", true),
-            CmdlineCheck("skip_initramfs", "Skip initramfs (possible root)", false),
-            CmdlineCheck("init=/sbin", "Custom init path", true),
-            CmdlineCheck("init=/system", "Custom init path", false),
-            CmdlineCheck("androidboot.force_normal_boot=1", "Force normal boot", false),
-            CmdlineCheck("magisk", "Magisk reference in cmdline", true),
-            CmdlineCheck("ksu", "KernelSU reference in cmdline", true),
-            CmdlineCheck("apatch", "APatch reference in cmdline", true),
-            CmdlineCheck("rootfs=", "Custom rootfs", false),
-            CmdlineCheck("androidboot.slot_suffix=", "Slot suffix present", false),
+            CmdlineCheck("androidboot.verifiedbootstate=orange", "Bootloader unlocked (orange)", isCritical = true),
+            CmdlineCheck("androidboot.verifiedbootstate=yellow", "Self-signed boot (yellow)", isCritical = true),
+            CmdlineCheck("androidboot.enable_dm_verity=0", "dm-verity disabled", isCritical = true),
+            CmdlineCheck("androidboot.secboot=disabled", "Secure boot disabled", isCritical = true),
+            CmdlineCheck("androidboot.vbmeta.device_state=unlocked", "vbmeta unlocked", isCritical = true),
+            CmdlineCheck("skip_initramfs", "Skip initramfs (possible root)", isCritical = false),
+            CmdlineCheck("init=/sbin", "Custom init path", isCritical = true),
+            CmdlineCheck("init=/system", "Custom init path", isCritical = false),
+            CmdlineCheck("androidboot.force_normal_boot=1", "Force normal boot", isCritical = false),
+            CmdlineCheck("magisk", "Magisk reference in cmdline", isCritical = true),
+            CmdlineCheck("ksu", "KernelSU reference in cmdline", isCritical = true),
+            CmdlineCheck("apatch", "APatch reference in cmdline", isCritical = true),
+            CmdlineCheck("rootfs=", "Custom rootfs", isCritical = false),
+            CmdlineCheck("androidboot.slot_suffix=", "Slot suffix present", isCritical = false),
         )
     }
+}
+
+private data class KernelKeywordRule(
+    val keyword: String,
+    val ignoreCase: Boolean,
+    val wholeWord: Boolean = false,
+) {
+    private val regex: Regex by lazy {
+        Regex(
+            pattern = if (wholeWord) {
+                """\b${Regex.escape(keyword)}\b"""
+            } else {
+                Regex.escape(keyword)
+            },
+            options = listOfNotNull(
+                RegexOption.IGNORE_CASE.takeIf { ignoreCase },
+            ).toSet(),
+        )
+    }
+
+    fun matches(
+        input: String,
+    ): Boolean = regex.containsMatchIn(input)
 }
 
 private data class CmdlineCheck(
