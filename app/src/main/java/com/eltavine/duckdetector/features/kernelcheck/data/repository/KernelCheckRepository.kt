@@ -841,13 +841,12 @@ class KernelCheckRepository(
             "xiaoxiaow", "qdykernel", "numbers", "cctv",
             "arter97", "blu_spark", "elementalx", "franco", 
             "kirisakura", "sultan", "nethunter", "kdrag0n",
-            "example", "mishka", "lyrico", "hyperhelper",
+            "example", "mishka", "lyrico" "hyperhelper",
             "aptkernel", "coolzyd9107", "aptusitu", "Glow-v"
         ).map { keyword ->
             KernelKeywordRule(keyword = keyword, ignoreCase = true)
         } + listOf(
             KernelKeywordRule(keyword = "OKI", ignoreCase = false, wholeWord = true),
-        )
 
         private val KEYWORD_SCAN_COUNT = KERNEL_KEYWORD_RULES.size + 5
 
