@@ -121,6 +121,7 @@ class TeeReportReducerTest {
                     executed = true,
                     available = true,
                     matched = true,
+                    diagnosticCopyText = "reply raw hex dump",
                     detail = "malicious-module generate-mode parcel fingerprint observed",
                 ),
             ),
@@ -135,8 +136,10 @@ class TeeReportReducerTest {
         })
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "TEE Simulator generate-mode fingerprint" &&
-                it.body.contains("TEE Simulator generate-mode fingerprint", ignoreCase = true)
+                it.body.contains("TEE Simulator generate-mode fingerprint", ignoreCase = true) &&
+                it.hiddenCopyText == "reply raw hex dump"
         })
+        assertFalse(report.exportText.contains("reply raw hex dump"))
     }
 
     @Test
@@ -147,6 +150,7 @@ class TeeReportReducerTest {
                     executed = true,
                     available = true,
                     matched = false,
+                    diagnosticCopyText = "clean diagnostic",
                     detail = "clean",
                 ),
             ),
@@ -155,7 +159,8 @@ class TeeReportReducerTest {
         assertEquals(0, report.supplementaryIndicatorCount)
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "TEE Simulator generate-mode fingerprint" &&
-                it.body.contains("No TEE Simulator generate-mode fingerprint observed.", ignoreCase = true)
+                it.body.contains("No TEE Simulator generate-mode fingerprint observed.", ignoreCase = true) &&
+                it.hiddenCopyText == "clean diagnostic"
         })
     }
 
@@ -166,6 +171,7 @@ class TeeReportReducerTest {
                 generateModeParcelFingerprint = Keystore2GenerateModeParcelFingerprintResult(
                     executed = false,
                     available = false,
+                    diagnosticCopyText = "unavailable diagnostic",
                     detail = "unavailable",
                 ),
             ),
@@ -174,7 +180,8 @@ class TeeReportReducerTest {
         assertEquals(0, report.supplementaryIndicatorCount)
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "TEE Simulator generate-mode fingerprint" &&
-                it.body.contains("probe unavailable", ignoreCase = true)
+                it.body.contains("probe unavailable", ignoreCase = true) &&
+                it.hiddenCopyText == "unavailable diagnostic"
         })
     }
 
@@ -859,7 +866,8 @@ class TeeReportReducerTest {
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "TEE Simulator generate-mode fingerprint" &&
                     it.body.contains("Matched TEE Simulator generate-mode fingerprint.") &&
-                    it.level == TeeSignalLevel.FAIL
+                    it.level == TeeSignalLevel.FAIL &&
+                    it.hiddenCopyText == null
         })
         assertFalse(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "Timing side-channel" && it.body.contains("Measurement unavailable")

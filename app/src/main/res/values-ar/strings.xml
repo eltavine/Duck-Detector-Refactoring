@@ -60,8 +60,8 @@ limitations under the License.
     <string name="about_clipboard_build_time_line">وقت البناء (UTC): %1$s UTC</string>
     <string name="about_clipboard_build_hash_line">مُعرف البناء: %1$s</string>
     <string name="about_copy_toast">تم نسخ معلومات البناء</string>
-    <string name="tee_timing_stack_clipboard_label">معلومات مكدس قناة التوقيت الجانبية</string>
-    <string name="tee_timing_stack_copied_toast">تم نسخ معلومات المكدس</string>
+    <string name="tee_diagnostic_clipboard_label">تفاصيل تشخيص TEE</string>
+    <string name="tee_diagnostic_copied_toast">تم نسخ تفاصيل التشخيص</string>
     <string name="author_summary_eltavine">ساهم في واجهة المستخدم و C++ و ASM و Kotlin.</string>
     <string name="author_summary_baka">TEE و Zygisk</string>
     <string name="author_summary_xiaotong">TEE ‏(C++، Kotlin)</string>

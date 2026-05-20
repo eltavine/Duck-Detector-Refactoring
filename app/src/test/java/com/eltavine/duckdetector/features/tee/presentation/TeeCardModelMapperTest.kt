@@ -331,6 +331,7 @@ class TeeCardModelMapperTest {
                                 "TEE Simulator generate-mode fingerprint",
                                 "Matched TEE Simulator generate-mode fingerprint.",
                                 TeeSignalLevel.FAIL,
+                                hiddenCopyText = "reply raw hex dump",
                             ),
                         ),
                     ),
@@ -341,6 +342,10 @@ class TeeCardModelMapperTest {
         )
 
         assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals(
+            "reply raw hex dump",
+            model.factGroups.single().rows.single().hiddenCopyText,
+        )
     }
 
     @Test

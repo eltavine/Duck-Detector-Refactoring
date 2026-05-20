@@ -390,11 +390,11 @@ private fun TeeFactRow(
     row: TeeFactRowModel,
 ) {
     val context = LocalContext.current
-    val clipboardLabel = stringResource(R.string.tee_timing_stack_clipboard_label)
-    val copiedToast = stringResource(R.string.tee_timing_stack_copied_toast)
+    val clipboardLabel = stringResource(R.string.tee_diagnostic_clipboard_label)
+    val copiedToast = stringResource(R.string.tee_diagnostic_copied_toast)
     val valueModifier = if (row.hiddenCopyText != null) {
-        // timing 栈复制是故意做成“无显式 affordance”的双击隐藏入口，避免把正常读卡 UI 变成调试工具面板。
-        // Timing stack copy is intentionally a no-affordance double-tap entry so the normal card UI does not turn into a visible debugging panel.
+        // 诊断复制是故意做成“无显式 affordance”的双击隐藏入口，避免把正常读卡 UI 变成调试工具面板。
+        // Diagnostic copy is intentionally a no-affordance double-tap entry so the normal card UI does not turn into a visible debugging panel.
         Modifier.combinedClickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null,

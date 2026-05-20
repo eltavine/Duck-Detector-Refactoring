@@ -60,8 +60,8 @@ limitations under the License.
     <string name="about_clipboard_build_time_line">Час збірки (UTC): %1$s UTC</string>
     <string name="about_clipboard_build_hash_line">Хеш збірки: %1$s</string>
     <string name="about_copy_toast">Інформацію про збірку скопійовано</string>
-    <string name="tee_timing_stack_clipboard_label">Інформація про стек синхронізації сторонніх каналів</string>
-    <string name="tee_timing_stack_copied_toast">Інформацію про стек скопійовано</string>
+    <string name="tee_diagnostic_clipboard_label">Діагностичні дані TEE</string>
+    <string name="tee_diagnostic_copied_toast">Діагностичні дані скопійовано</string>
 
     <string name="author_summary_eltavine">Зробив внесок в UI, C++, ASM та Kotlin.</string>
     <string name="author_summary_baka">TEE та Zygisk</string>

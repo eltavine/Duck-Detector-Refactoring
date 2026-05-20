@@ -266,6 +266,7 @@ class TeeReportReducer(
                         "TEE Simulator generate-mode fingerprint",
                         "Matched TEE Simulator generate-mode fingerprint.",
                         TeeSignalLevel.FAIL,
+                        hiddenCopyText = artifacts.generateModeParcelFingerprint.diagnosticCopyText,
                     )
                 )
             }
@@ -781,6 +782,7 @@ class TeeReportReducer(
                             "TEE Simulator generate-mode fingerprint",
                             generateModeAnomalyValue(artifacts),
                             generateModeAnomalyLevel(artifacts),
+                            hiddenCopyText = artifacts.generateModeParcelFingerprint.diagnosticCopyText,
                         )
                     )
                     add(fact("Keybox", keyboxValue(artifacts), keyboxLevel(artifacts)))

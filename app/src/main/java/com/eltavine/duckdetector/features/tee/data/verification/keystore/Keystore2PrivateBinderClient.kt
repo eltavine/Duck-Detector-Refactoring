@@ -226,12 +226,18 @@ class Keystore2PrivateBinderClient {
             when {
                 capture.rawReply != null -> GenerateKeyReplyCaptureResult(
                     available = true,
+                    rawRequest = capture.rawRequest,
+                    requestPrefix = capture.requestPrefix,
                     rawReply = capture.rawReply,
                     rawPrefix = capture.rawPrefix,
                     detail = buildString {
                         append("Captured generateKey reply via private binder proxy transact")
                         append("; bytes=")
                         append(capture.rawReply.size)
+                        capture.rawRequest?.let {
+                            append(", requestBytes=")
+                            append(it.size)
+                        }
                         capture.transactionCode?.let {
                             append(", code=")
                             append(it)
@@ -248,6 +254,8 @@ class Keystore2PrivateBinderClient {
                 )
                 else -> GenerateKeyReplyCaptureResult(
                     available = false,
+                    rawRequest = capture.rawRequest,
+                    requestPrefix = capture.requestPrefix,
                     detail = capture.failureReason
                         ?: capture.throwable?.let(::describeThrowable)
                         ?: "generateKey reply capture did not observe a marshalled reply.",
@@ -755,10 +763,11 @@ class Keystore2PrivateBinderClient {
                     "queryLocalInterface" -> null
                     "transact" -> {
                         val transactionCode = args[0] as Int
+                        val data = args[1] as Parcel
                         val reply = args[2] as? Parcel
                         val success = rawBinder.transact(
                             transactionCode,
-                            args[1] as Parcel,
+                            data,
                             reply,
                             args[3] as Int,
                         )
@@ -767,6 +776,7 @@ class Keystore2PrivateBinderClient {
                         if (captureGenerateKeyReplies) {
                             captureGenerateKeyReplyFromTransact(
                                 transactionCode = transactionCode,
+                                data = data,
                                 reply = reply,
                                 transactReturned = success,
                             )
@@ -854,6 +864,7 @@ class Keystore2PrivateBinderClient {
 
     private fun captureGenerateKeyReplyFromTransact(
         transactionCode: Int,
+        data: Parcel,
         reply: Parcel?,
         transactReturned: Boolean,
     ) {
@@ -866,12 +877,19 @@ class Keystore2PrivateBinderClient {
         }
         slot.transactionCode = transactionCode
         slot.transactReturned = transactReturned
+        runCatching { data.marshallPreservingPosition() }
+            .onSuccess { rawRequest ->
+                if (rawRequest.isNotEmpty() || data.dataSize() > 0) {
+                    slot.rawRequest = rawRequest
+                    slot.requestPrefix = rawReplyPrefix(rawRequest)
+                }
+            }
         if (reply == null) {
             slot.failureReason = "generateKey transact completed without a reply parcel."
             slot.completed = true
             return
         }
-        val rawReply = runCatching { reply.marshall() }.getOrElse { throwable ->
+        val rawReply = runCatching { reply.marshallPreservingPosition() }.getOrElse { throwable ->
             slot.failureReason = throwable.message ?: "generateKey reply marshalling failed."
             slot.completed = true
             return
@@ -884,6 +902,15 @@ class Keystore2PrivateBinderClient {
         slot.rawReply = rawReply
         slot.rawPrefix = rawReplyPrefix(rawReply)
         slot.completed = true
+    }
+
+    private fun Parcel.marshallPreservingPosition(): ByteArray {
+        val originalPosition = dataPosition()
+        return try {
+            marshall()
+        } finally {
+            setDataPosition(originalPosition)
+        }
     }
 
     private fun rawReplyPrefix(rawReply: ByteArray): String {
@@ -1012,6 +1039,8 @@ private data class HiddenMethodInvocation(
 )
 
 private data class GenerateKeyReplyCaptureSnapshot(
+    val rawRequest: ByteArray? = null,
+    val requestPrefix: String? = null,
     val rawReply: ByteArray? = null,
     val rawPrefix: String? = null,
     val transactionCode: Int? = null,
@@ -1021,6 +1050,8 @@ private data class GenerateKeyReplyCaptureSnapshot(
 )
 
 private class GenerateKeyReplyCaptureSlot {
+    var rawRequest: ByteArray? = null
+    var requestPrefix: String? = null
     var rawReply: ByteArray? = null
     var rawPrefix: String? = null
     var transactionCode: Int? = null
@@ -1033,6 +1064,8 @@ private class GenerateKeyReplyCaptureSlot {
         defaultFailureReason: String,
     ): GenerateKeyReplyCaptureSnapshot {
         return GenerateKeyReplyCaptureSnapshot(
+            rawRequest = rawRequest,
+            requestPrefix = requestPrefix,
             rawReply = rawReply,
             rawPrefix = rawPrefix,
             transactionCode = transactionCode,
@@ -1045,6 +1078,8 @@ private class GenerateKeyReplyCaptureSlot {
 
 data class GenerateKeyReplyCaptureResult(
     val available: Boolean,
+    val rawRequest: ByteArray? = null,
+    val requestPrefix: String? = null,
     val rawReply: ByteArray? = null,
     val rawPrefix: String? = null,
     val detail: String,
