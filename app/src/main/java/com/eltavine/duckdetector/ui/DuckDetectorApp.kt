@@ -520,13 +520,14 @@ private fun AppReadyShell(
     val isDashboardLoading = contributions.any { !it.ready }
     var dashboardScanStartedAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     var dashboardScanFinishedAt by remember { mutableStateOf<Long?>(null) }
-    var dashboardScanCompletedAtEpoch by remember { mutableLongStateOf(0L) }
+    var dashboardScanCompletedAtEpoch by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(isDashboardLoading) {
         if (isDashboardLoading) {
             if (dashboardScanFinishedAt != null) {
                 dashboardScanStartedAt = SystemClock.elapsedRealtime()
                 dashboardScanFinishedAt = null
+                dashboardScanCompletedAtEpoch = null
             }
         } else if (dashboardScanFinishedAt == null) {
             dashboardScanFinishedAt = SystemClock.elapsedRealtime()
@@ -537,7 +538,7 @@ private fun AppReadyShell(
     val dashboardScanDurationMillis = dashboardScanFinishedAt
         ?.minus(dashboardScanStartedAt)
         ?.coerceAtLeast(0L)
-    val dashboardScanCompletedAtEpochMillis = dashboardScanFinishedAt?.let { dashboardScanCompletedAtEpoch }
+    val dashboardScanCompletedAtEpochMillis = dashboardScanCompletedAtEpoch
 
     val dashboardState = remember(
         contributions,
