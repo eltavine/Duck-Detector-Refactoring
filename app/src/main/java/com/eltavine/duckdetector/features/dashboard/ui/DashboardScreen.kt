@@ -565,7 +565,7 @@ private fun DashboardOverviewCard(
                         WrapSafeText(
                             text = model.title,
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }

@@ -236,7 +236,7 @@ fun buildDashboardOverview(
 
     return DashboardOverviewModel(
         title = if (scanDurationMillis != null && scanCompletedAtEpochMillis != null && pendingCount == 0) {
-            "Detected ${formatDetectedTimeLocal(scanCompletedAtEpochMillis)}, total ${formatScanDuration(scanDurationMillis)}"
+            "Scanned at ${formatDetectedTimeLocal(scanCompletedAtEpochMillis)}\nTotal time ${formatScanDuration(scanDurationMillis)}"
         } else {
             "Security overview"
         },
