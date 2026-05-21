@@ -210,8 +210,8 @@ class TeeCardModelMapper {
         return sections.asSequence()
             .flatMap { it.items.asSequence() }
             .any { item ->
-                // 这里只把已经收敛成“恶意模块指纹”语义的强本地证据透传成 danger，普通 supplementary review 仍保持 warning。
-                // Only escalate locally conclusive malicious-module fingerprint findings to danger; ordinary supplementary review stays at warning.
+                // TEE card status is the only value the dashboard aggregates, so red-card local evidence must be recognized from reducer-built Checks rows here.
+                // Dashboard 只聚合 TEE card status；因此红卡级本地证据必须在这里从 reducer 生成的 Checks 行识别出来。
                 when (item.title) {
                     "Timing side-channel" -> item.level == TeeSignalLevel.FAIL && (
                         item.body.contains("Detected malicious-module fingerprint", ignoreCase = true)
@@ -223,11 +223,16 @@ class TeeCardModelMapper {
 
                     "ImportKey narrative" ->
                         item.level == TeeSignalLevel.FAIL &&
-                            item.body.contains("ImportKey retained attestation narrative detected.", ignoreCase = true)
+                            item.body.hasImportKeyRetainedNarrativeDangerKind()
 
                     else -> false
                 }
             }
+    }
+
+    private fun String.hasImportKeyRetainedNarrativeDangerKind(): Boolean {
+        return contains("kind=IMPORTED_RETAINED_PRIOR_CHAIN", ignoreCase = true) ||
+            contains("kind=STALE_GENERATED_AFTER_IMPORT", ignoreCase = true)
     }
 
     private fun TeeReport.tierStatus(): DetectorStatus = when (tier) {

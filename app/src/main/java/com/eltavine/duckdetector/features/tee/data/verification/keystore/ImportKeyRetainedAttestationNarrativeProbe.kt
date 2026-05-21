@@ -448,6 +448,8 @@ enum class ImportKeyRetainedAttestationAnomalyKind {
     NONE,
     IMPORT_UNSUPPORTED,
     IMPORTED_RETAINED_PRIOR_CHAIN,
+    // Import support was proven separately; GENERATED plus prior-chain overlap means a stale attestation narrative was replayed after overwrite.
+    // 已经单独证明 import 支持；GENERATED 且与旧链重叠表示覆盖后仍回放了陈旧认证叙事。
     STALE_GENERATED_AFTER_IMPORT,
     UNAVAILABLE,
 }

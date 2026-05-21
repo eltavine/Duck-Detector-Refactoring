@@ -377,7 +377,7 @@ class TeeCardModelMapperTest {
                         items = listOf(
                             TeeEvidenceItem(
                                 "ImportKey narrative",
-                                "ImportKey retained attestation narrative detected.",
+                                "Matched • kind=STALE_GENERATED_AFTER_IMPORT, origin=GENERATED, retained=3",
                                 TeeSignalLevel.FAIL,
                             ),
                         ),

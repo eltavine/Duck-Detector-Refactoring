@@ -196,6 +196,8 @@ class TeeRepository(
         val timing = async { timingProbe.inspect(useStrongBox = useStrongBox) }
         val oversizedChallenge = async { oversizedChallengeProbe.inspect(useStrongBox = useStrongBox) }
         val keyboxImport = async { keyboxImportProbe.inspect() }
+        // Run after keybox import fixtures are available, but keep it independent so unsupported importKey paths degrade to INFO only.
+        // 放在 keybox import fixture 可用之后独立执行；importKey 不可观测时只降级为 INFO，不影响主扫描。
         val importKeyRetainedAttestationNarrative = async {
             importKeyRetainedAttestationNarrativeProbe.inspect()
         }

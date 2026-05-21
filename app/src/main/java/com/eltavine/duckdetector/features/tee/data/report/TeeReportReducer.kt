@@ -1401,6 +1401,8 @@ class TeeReportReducer(
 
     private fun importKeyRetainedAttestationNarrativeValue(artifacts: TeeScanArtifacts): String {
         val result = artifacts.importKeyRetainedAttestationNarrative
+        // Keep the stable anomaly kind in the Checks row: the TEE card mapper uses it to propagate red-card state to the dashboard without exposing raw DER.
+        // 保留稳定 anomaly kind 在 Checks 行里：TEE card mapper 依赖它把红卡状态上传到 Dashboard，同时不暴露原始 DER。
         val status = when {
             result.anomalyKind == com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind.IMPORT_UNSUPPORTED -> "Unavailable"
             !result.executed -> "Unavailable"
