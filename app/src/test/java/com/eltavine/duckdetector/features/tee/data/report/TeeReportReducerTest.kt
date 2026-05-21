@@ -34,6 +34,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderC
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderHookBootstrapResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderPatchModeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataSemanticsResult
@@ -192,14 +193,17 @@ class TeeReportReducerTest {
             baseArtifacts(
                 importKeyRetainedAttestationNarrative = ImportKeyRetainedAttestationNarrativeResult(
                     executed = true,
+                    importSupported = true,
+                    markerImportBaselineClean = true,
                     originImported = true,
                     retainedNarrativeDetected = true,
                     priorChainLength = 3,
                     postImportChainLength = 2,
                     retainedCertificateCount = 2,
                     originLabel = "IMPORTED",
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.IMPORTED_RETAINED_PRIOR_CHAIN,
                     retainedFingerprint = "abc123def456",
-                    detail = "origin=IMPORTED, retained=2",
+                    detail = "kind=IMPORTED_RETAINED_PRIOR_CHAIN, origin=IMPORTED, retained=2",
                 ),
             ),
         )
@@ -210,6 +214,38 @@ class TeeReportReducerTest {
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "ImportKey narrative" &&
                 it.body.contains("Matched", ignoreCase = true) &&
+                it.level == TeeSignalLevel.FAIL
+        })
+    }
+
+    @Test
+    fun `stale generated importKey retained narrative becomes supplementary review`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                importKeyRetainedAttestationNarrative = ImportKeyRetainedAttestationNarrativeResult(
+                    executed = true,
+                    importSupported = true,
+                    markerImportBaselineClean = true,
+                    originImported = false,
+                    postImportLeafMatchesMarker = false,
+                    retainedNarrativeDetected = true,
+                    priorChainLength = 3,
+                    postImportChainLength = 3,
+                    retainedCertificateCount = 3,
+                    originLabel = "GENERATED",
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.STALE_GENERATED_AFTER_IMPORT,
+                    retainedFingerprint = "abc123def456",
+                    detail = "kind=STALE_GENERATED_AFTER_IMPORT, origin=GENERATED, retained=3",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "ImportKey narrative" &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("STALE_GENERATED_AFTER_IMPORT") &&
                 it.level == TeeSignalLevel.FAIL
         })
     }
@@ -229,6 +265,28 @@ class TeeReportReducerTest {
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "ImportKey narrative" &&
                 it.body.contains("Unavailable", ignoreCase = true) &&
+                it.level == TeeSignalLevel.INFO
+        })
+    }
+
+    @Test
+    fun `importKey unsupported state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                importKeyRetainedAttestationNarrative = ImportKeyRetainedAttestationNarrativeResult(
+                    executed = false,
+                    importSupported = false,
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.IMPORT_UNSUPPORTED,
+                    detail = "ImportKey support gate failed.",
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "ImportKey narrative" &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("ImportKey support gate failed") &&
                 it.level == TeeSignalLevel.INFO
         })
     }

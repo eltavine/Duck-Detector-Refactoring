@@ -221,6 +221,10 @@ class TeeCardModelMapper {
                         item.level == TeeSignalLevel.FAIL &&
                             item.body.contains("Matched TEE Simulator generate-mode fingerprint.", ignoreCase = true)
 
+                    "ImportKey narrative" ->
+                        item.level == TeeSignalLevel.FAIL &&
+                            item.body.contains("ImportKey retained attestation narrative detected.", ignoreCase = true)
+
                     else -> false
                 }
             }

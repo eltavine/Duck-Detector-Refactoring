@@ -1402,9 +1402,10 @@ class TeeReportReducer(
     private fun importKeyRetainedAttestationNarrativeValue(artifacts: TeeScanArtifacts): String {
         val result = artifacts.importKeyRetainedAttestationNarrative
         val status = when {
+            result.anomalyKind == com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind.IMPORT_UNSUPPORTED -> "Unavailable"
             !result.executed -> "Unavailable"
             result.retainedNarrativeDetected -> "Matched"
-            result.originImported -> "Clean"
+            result.importSupported && result.markerImportBaselineClean -> "Clean"
             else -> "Unavailable"
         }
         val detail = result.detail.takeIf { it.isNotBlank() } ?: return status
@@ -1675,7 +1676,7 @@ class TeeReportReducer(
         return when {
             !result.executed -> TeeSignalLevel.INFO
             result.retainedNarrativeDetected -> TeeSignalLevel.FAIL
-            result.originImported -> TeeSignalLevel.PASS
+            result.importSupported && result.markerImportBaselineClean -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
         }
     }

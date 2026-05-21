@@ -42,37 +42,69 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
         if (!runtime.supported) {
             return unavailable("ImportKey retained narrative probe requires Android 12 or newer.")
         }
-        val alias = aliasFactory()
+        val supportAlias = "${aliasFactory()}_support"
+        val attackAlias = "${aliasFactory()}_attack"
         return try {
-            val challenge = ByteArray(CHALLENGE_SIZE_BYTES).also(SecureRandom()::nextBytes)
-            val priorChain = runtime.generatePriorAttestedChain(alias, challenge)
-            if (priorChain.isEmpty()) {
-                return unavailable("Prior attested chain was unavailable for the importKey probe alias.")
+            // 防误报 gate：先证明本 ROM 对普通 APP alias 的 importKey 路径可用且可观测，再进入攻击态对比。
+            // False-positive gate: prove ordinary APP-alias importKey is supported and observable before comparing attack-state narratives.
+            val support = runtime.verifyImportSupport(supportAlias)
+            if (!support.supported) {
+                return unavailable(
+                    detail = support.detail,
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.IMPORT_UNSUPPORTED,
+                    importSupported = false,
+                    markerImportBaselineClean = false,
+                    postImportLeafMatchesMarker = support.leafMatchesMarker,
+                    originLabel = support.originLabel,
+                )
             }
-            runtime.importMarkerKey(alias)
-            val metadata = runtime.readPostImportMetadata(alias)
-                ?: return unavailable("Keystore2 getKeyEntry() metadata was unavailable after import.")
+            val challenge = ByteArray(CHALLENGE_SIZE_BYTES).also(SecureRandom()::nextBytes)
+            val priorChain = runtime.generatePriorAttestedChain(attackAlias, challenge)
+            if (priorChain.isEmpty()) {
+                return unavailable(
+                    detail = "Prior attested chain was unavailable for the importKey probe alias.",
+                    importSupported = true,
+                    markerImportBaselineClean = true,
+                )
+            }
+            runtime.importMarkerKey(attackAlias)
+            // TEES-RS may consume the first getKeyEntry() after framework updateSubcomponents(); read twice to observe the stable post-import state.
+            // TEES-RS 可能会在 framework updateSubcomponents() 之后吞掉第一次 getKeyEntry() patch；双读用于观测稳定的 import 后状态。
+            val snapshots = runtime.readPostImportMetadataSnapshots(attackAlias)
+            if (snapshots.isEmpty()) {
+                return unavailable(
+                    detail = "Keystore2 getKeyEntry() metadata was unavailable after import.",
+                    importSupported = true,
+                    markerImportBaselineClean = true,
+                    priorChainLength = priorChain.size,
+                )
+            }
             evaluatePostImportState(
                 priorChain = priorChain,
-                postImportChain = metadata.certificateChain,
-                originValue = metadata.originValue,
+                snapshots = snapshots,
                 importedOriginValues = runtime.importedOriginValues,
-                originLabel = runtime.originLabel(metadata.originValue),
+                generatedOriginValue = runtime.generatedOriginValue,
+                importSupported = true,
+                markerImportBaselineClean = true,
+                originLabel = { value -> runtime.originLabel(value) },
             )
         } catch (throwable: Throwable) {
             unavailable(runtime.describeThrowable(throwable))
         } finally {
-            runtime.cleanup(alias)
+            runtime.cleanup(supportAlias)
+            runtime.cleanup(attackAlias)
         }
     }
 
     internal interface Runtime {
         val supported: Boolean
         val importedOriginValues: Set<Int>
+        val generatedOriginValue: Int?
 
         fun generatePriorAttestedChain(alias: String, challenge: ByteArray): List<ByteArray>
         fun importMarkerKey(alias: String)
-        fun readPostImportMetadata(alias: String): PostImportMetadata?
+        fun verifyImportSupport(alias: String): ImportSupportResult
+        fun readPostImportMetadataSnapshots(alias: String): List<PostImportMetadata>
         fun cleanup(alias: String)
 
         fun originLabel(value: Int?): String = when (value) {
@@ -87,7 +119,16 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
 
     internal data class PostImportMetadata(
         val originValue: Int?,
-        val certificateChain: List<ByteArray>,
+        val fullChain: List<ByteArray>,
+        val leafMatchesMarker: Boolean,
+    )
+
+    internal data class ImportSupportResult(
+        val supported: Boolean,
+        val leafMatchesMarker: Boolean,
+        val originValue: Int?,
+        val originLabel: String,
+        val detail: String,
     )
 
     private class AndroidRuntime(
@@ -108,6 +149,9 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
                 ORIGIN_IMPORTED_FALLBACK,
                 ORIGIN_SECURELY_IMPORTED_FALLBACK,
             )
+
+        override val generatedOriginValue: Int?
+            get() = binderClient.getKeyOriginValue("GENERATED") ?: ORIGIN_GENERATED_FALLBACK
 
         override fun generatePriorAttestedChain(alias: String, challenge: ByteArray): List<ByteArray> {
             AndroidKeyStoreTools.generateSigningEcKey(
@@ -135,7 +179,33 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
             )
         }
 
-        override fun readPostImportMetadata(alias: String): PostImportMetadata? {
+        override fun verifyImportSupport(alias: String): ImportSupportResult {
+            importMarkerKey(alias)
+            val metadata = readPostImportMetadata(alias)
+            val originImported = metadata?.originValue in importedOriginValues
+            val leafMatchesMarker = metadata?.leafMatchesMarker == true
+            val supported = originImported && leafMatchesMarker
+            return ImportSupportResult(
+                supported = supported,
+                leafMatchesMarker = leafMatchesMarker,
+                originValue = metadata?.originValue,
+                originLabel = originLabel(metadata?.originValue),
+                detail = if (supported) {
+                    "origin=${originLabel(metadata.originValue)}, marker import baseline clean."
+                } else {
+                    "ImportKey support gate failed: origin=${originLabel(metadata?.originValue)}, leafMatchesMarker=$leafMatchesMarker."
+                },
+            )
+        }
+
+        override fun readPostImportMetadataSnapshots(alias: String): List<PostImportMetadata> {
+            return listOfNotNull(
+                readPostImportMetadata(alias),
+                readPostImportMetadata(alias),
+            )
+        }
+
+        private fun readPostImportMetadata(alias: String): PostImportMetadata? {
             val service = binderClient.getKeystoreService() ?: return null
             val response = binderClient.getKeyEntryResponse(service, binderClient.createKeyDescriptor(alias))
                 ?: return null
@@ -148,10 +218,15 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
                     }
                     ?.let { authorization -> binderClient.getAuthorizationIntValue(authorization) }
             }
+            val markerLeaf = KeyboxFixtureLoader(appContext).load().certificate.encoded
+            val leafBlob = binderClient.getCertificateBlob(response)
             val chainBlob = binderClient.getCertificateChainBlob(response)
             return PostImportMetadata(
                 originValue = originValue,
-                certificateChain = parseCertificates(chainBlob),
+                // Keystore2 stores the leaf separately from the remaining chain; compare the ordered full narrative, not only certificateChain.
+                // Keystore2 会把叶证书和剩余链分开放；这里必须比较有序完整叙事，而不是只比较 certificateChain。
+                fullChain = buildFullChain(leafBlob, chainBlob),
+                leafMatchesMarker = leafBlob?.contentEquals(markerLeaf) == true,
             )
         }
 
@@ -175,6 +250,10 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
             return binderClient.describeThrowable(throwable)
         }
 
+        private fun buildFullChain(leafBlob: ByteArray?, chainBlob: ByteArray?): List<ByteArray> {
+            return listOfNotNull(leafBlob?.takeIf { it.isNotEmpty() }) + parseCertificates(chainBlob)
+        }
+
         private fun parseCertificates(blob: ByteArray?): List<ByteArray> {
             if (blob == null || blob.isEmpty()) {
                 return emptyList()
@@ -189,79 +268,157 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
 
     companion object {
         private const val CHALLENGE_SIZE_BYTES = 32
+        private const val ORIGIN_GENERATED_FALLBACK = 0
         private const val ORIGIN_IMPORTED_FALLBACK = 2
         private const val ORIGIN_SECURELY_IMPORTED_FALLBACK = 4
 
         internal fun evaluatePostImportState(
             priorChain: List<ByteArray>,
-            postImportChain: List<ByteArray>,
-            originValue: Int?,
+            snapshots: List<PostImportMetadata>,
             importedOriginValues: Set<Int> = setOf(
                 ORIGIN_IMPORTED_FALLBACK,
                 ORIGIN_SECURELY_IMPORTED_FALLBACK,
             ),
-            originLabel: String = originValue?.toString() ?: "unknown",
+            generatedOriginValue: Int? = ORIGIN_GENERATED_FALLBACK,
+            importSupported: Boolean = true,
+            markerImportBaselineClean: Boolean = true,
+            originLabel: (Int?) -> String = { value -> value?.toString() ?: "unknown" },
         ): ImportKeyRetainedAttestationNarrativeResult {
-            val priorFingerprints = fingerprintChain(priorChain)
-            val postImportFingerprints = fingerprintChain(postImportChain)
-            if (originValue == null || originValue !in importedOriginValues) {
+            if (!importSupported) {
                 return unavailable(
-                    detail = "Imported key ORIGIN was not established after alias overwrite: origin=$originLabel.",
-                    priorChainLength = priorFingerprints.size,
-                    postImportChainLength = postImportFingerprints.size,
-                    originLabel = originLabel,
+                    detail = "ImportKey support gate failed before retained narrative comparison.",
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.IMPORT_UNSUPPORTED,
+                    importSupported = false,
+                    markerImportBaselineClean = false,
                 )
             }
-            if (postImportFingerprints.isEmpty()) {
+            val priorFingerprints = fingerprintChain(priorChain)
+            if (snapshots.isEmpty()) {
+                return unavailable(
+                    detail = "Keystore2 getKeyEntry() returned no post-import metadata snapshots.",
+                    importSupported = true,
+                    markerImportBaselineClean = markerImportBaselineClean,
+                    priorChainLength = priorFingerprints.size,
+                )
+            }
+            val evaluated = snapshots.map { snapshot ->
+                EvaluatedSnapshot(
+                    metadata = snapshot,
+                    fingerprints = fingerprintChain(snapshot.fullChain),
+                    retained = fingerprintChain(snapshot.fullChain).filter { post ->
+                        priorFingerprints.any { prior -> prior.sha256 == post.sha256 }
+                    },
+                )
+            }
+            val importedRetained = evaluated.firstOrNull { item ->
+                item.metadata.originValue in importedOriginValues && item.retained.isNotEmpty()
+            }
+            if (importedRetained != null) {
+                return matched(
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.IMPORTED_RETAINED_PRIOR_CHAIN,
+                    priorFingerprints = priorFingerprints,
+                    postImportFingerprints = importedRetained.fingerprints,
+                    retained = importedRetained.retained,
+                    originLabel = originLabel(importedRetained.metadata.originValue),
+                    postImportLeafMatchesMarker = importedRetained.metadata.leafMatchesMarker,
+                    detailPrefix = "kind=IMPORTED_RETAINED_PRIOR_CHAIN",
+                )
+            }
+            val staleGenerated = evaluated.firstOrNull { item ->
+                item.metadata.originValue == generatedOriginValue && item.retained.isNotEmpty()
+            }
+            if (staleGenerated != null) {
+                // TEES-RS stale-cache variant: import support was proven, but getKeyEntry still replays the previous GENERATED attestation story.
+                // TEES-RS stale-cache 变体：import 支持已被 gate 证明，但 getKeyEntry 仍回放旧 GENERATED 认证叙事。
+                return matched(
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.STALE_GENERATED_AFTER_IMPORT,
+                    priorFingerprints = priorFingerprints,
+                    postImportFingerprints = staleGenerated.fingerprints,
+                    retained = staleGenerated.retained,
+                    originLabel = originLabel(staleGenerated.metadata.originValue),
+                    postImportLeafMatchesMarker = staleGenerated.metadata.leafMatchesMarker,
+                    detailPrefix = "kind=STALE_GENERATED_AFTER_IMPORT",
+                )
+            }
+            val cleanImported = evaluated.firstOrNull { item ->
+                item.metadata.originValue in importedOriginValues && item.metadata.leafMatchesMarker
+            }
+            if (cleanImported != null) {
                 return ImportKeyRetainedAttestationNarrativeResult(
                     executed = true,
+                    importSupported = true,
+                    markerImportBaselineClean = markerImportBaselineClean,
                     originImported = true,
+                    postImportLeafMatchesMarker = true,
                     retainedNarrativeDetected = false,
                     priorChainLength = priorFingerprints.size,
-                    postImportChainLength = 0,
+                    postImportChainLength = cleanImported.fingerprints.size,
                     retainedCertificateCount = 0,
-                    originLabel = originLabel,
-                    detail = "origin=$originLabel, imported key returned no certificateChain after alias overwrite.",
+                    originLabel = originLabel(cleanImported.metadata.originValue),
+                    anomalyKind = ImportKeyRetainedAttestationAnomalyKind.NONE,
+                    detail = "kind=NONE, origin=${originLabel(cleanImported.metadata.originValue)}, imported marker leaf returned without retained prior narrative.",
                 )
             }
-            val retained = postImportFingerprints.filter { post ->
-                priorFingerprints.any { prior -> prior.sha256 == post.sha256 }
-            }
-            if (retained.isEmpty()) {
-                return unavailable(
-                    detail = "origin=$originLabel, post-import certificateChain was present but did not match the prior attestation narrative.",
-                    priorChainLength = priorFingerprints.size,
-                    postImportChainLength = postImportFingerprints.size,
-                    originLabel = originLabel,
-                )
-            }
+            val representative = evaluated.firstOrNull()
+            return unavailable(
+                detail = "Post-import metadata did not produce an imported marker baseline or retained prior narrative: origin=${originLabel(representative?.metadata?.originValue)}, leafMatchesMarker=${representative?.metadata?.leafMatchesMarker == true}.",
+                importSupported = true,
+                markerImportBaselineClean = markerImportBaselineClean,
+                priorChainLength = priorFingerprints.size,
+                postImportChainLength = representative?.fingerprints?.size ?: 0,
+                originLabel = originLabel(representative?.metadata?.originValue),
+                postImportLeafMatchesMarker = representative?.metadata?.leafMatchesMarker == true,
+            )
+        }
+
+        private fun matched(
+            anomalyKind: ImportKeyRetainedAttestationAnomalyKind,
+            priorFingerprints: List<CertificateFingerprint>,
+            postImportFingerprints: List<CertificateFingerprint>,
+            retained: List<CertificateFingerprint>,
+            originLabel: String,
+            postImportLeafMatchesMarker: Boolean,
+            detailPrefix: String,
+        ): ImportKeyRetainedAttestationNarrativeResult {
             return ImportKeyRetainedAttestationNarrativeResult(
                 executed = true,
-                originImported = true,
+                importSupported = true,
+                markerImportBaselineClean = true,
+                originImported = anomalyKind == ImportKeyRetainedAttestationAnomalyKind.IMPORTED_RETAINED_PRIOR_CHAIN,
+                postImportLeafMatchesMarker = postImportLeafMatchesMarker,
                 retainedNarrativeDetected = true,
                 priorChainLength = priorFingerprints.size,
                 postImportChainLength = postImportFingerprints.size,
                 retainedCertificateCount = retained.size,
                 originLabel = originLabel,
+                anomalyKind = anomalyKind,
                 retainedFingerprint = retained.first().shortSha256,
-                detail = "origin=$originLabel, retained=${retained.size}, priorChain=${priorFingerprints.size}, postImportChain=${postImportFingerprints.size}, firstRetained=${retained.first().shortSha256}.",
+                detail = "$detailPrefix, origin=$originLabel, retained=${retained.size}, priorChain=${priorFingerprints.size}, postImportChain=${postImportFingerprints.size}, leafMatchesMarker=$postImportLeafMatchesMarker, firstRetained=${retained.first().shortSha256}.",
             )
         }
 
         private fun unavailable(
             detail: String,
+            anomalyKind: ImportKeyRetainedAttestationAnomalyKind = ImportKeyRetainedAttestationAnomalyKind.UNAVAILABLE,
+            importSupported: Boolean = false,
+            markerImportBaselineClean: Boolean = false,
+            postImportLeafMatchesMarker: Boolean = false,
             priorChainLength: Int = 0,
             postImportChainLength: Int = 0,
             originLabel: String = "unknown",
         ): ImportKeyRetainedAttestationNarrativeResult {
             return ImportKeyRetainedAttestationNarrativeResult(
                 executed = false,
+                importSupported = importSupported,
+                markerImportBaselineClean = markerImportBaselineClean,
                 originImported = false,
+                postImportLeafMatchesMarker = postImportLeafMatchesMarker,
                 retainedNarrativeDetected = false,
                 priorChainLength = priorChainLength,
                 postImportChainLength = postImportChainLength,
                 retainedCertificateCount = 0,
                 originLabel = originLabel,
+                anomalyKind = anomalyKind,
                 detail = detail,
             )
         }
@@ -287,16 +444,34 @@ class ImportKeyRetainedAttestationNarrativeProbe internal constructor(
     }
 }
 
+enum class ImportKeyRetainedAttestationAnomalyKind {
+    NONE,
+    IMPORT_UNSUPPORTED,
+    IMPORTED_RETAINED_PRIOR_CHAIN,
+    STALE_GENERATED_AFTER_IMPORT,
+    UNAVAILABLE,
+}
+
 data class ImportKeyRetainedAttestationNarrativeResult(
     val executed: Boolean,
+    val importSupported: Boolean = false,
+    val markerImportBaselineClean: Boolean = false,
     val originImported: Boolean = false,
+    val postImportLeafMatchesMarker: Boolean = false,
     val retainedNarrativeDetected: Boolean = false,
     val priorChainLength: Int = 0,
     val postImportChainLength: Int = 0,
     val retainedCertificateCount: Int = 0,
     val originLabel: String = "unknown",
+    val anomalyKind: ImportKeyRetainedAttestationAnomalyKind = ImportKeyRetainedAttestationAnomalyKind.UNAVAILABLE,
     val retainedFingerprint: String? = null,
     val detail: String,
+)
+
+private data class EvaluatedSnapshot(
+    val metadata: ImportKeyRetainedAttestationNarrativeProbe.PostImportMetadata,
+    val fingerprints: List<CertificateFingerprint>,
+    val retained: List<CertificateFingerprint>,
 )
 
 private data class CertificateFingerprint(
