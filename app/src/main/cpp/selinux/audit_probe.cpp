@@ -15,6 +15,7 @@
  */
 
 #include "selinux/audit_probe.h"
+#include "nativeroot/common/io_utils.h"
 
 #include <algorithm>
 #include <atomic>
@@ -105,12 +106,10 @@ namespace duckdetector::selinux {
         }
 
         std::string read_process_context() {
-            std::ifstream input(kProcAttrCurrentPath);
-            if (!input) {
+            std::string context = duckdetector::nativeroot::read_text_file(kProcAttrCurrentPath, 256);
+            if (context.empty()) {
                 return {};
             }
-            std::string context;
-            std::getline(input, context, '\0');
             return trim(context);
         }
 
