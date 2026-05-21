@@ -36,6 +36,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderC
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderHookBootstrapProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderPatchModeProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataSemanticsProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataShapeProbe
@@ -85,6 +86,8 @@ class TeeRepository(
     private val timingSideChannelProbe = TimingSideChannelProbe()
     private val oversizedChallengeProbe = OversizedChallengeProbe()
     private val keyboxImportProbe = KeyboxImportProbe(appContext)
+    private val importKeyRetainedAttestationNarrativeProbe =
+        ImportKeyRetainedAttestationNarrativeProbe(appContext)
     private val keystore2HookProbe = Keystore2HookProbe()
     private val generateModeParcelFingerprintProbe = Keystore2GenerateModeParcelFingerprintProbe()
     private val legacyKeystorePathProbe = LegacyKeystorePathProbe()
@@ -147,6 +150,7 @@ class TeeRepository(
                     timingSideChannel = deepChecks.timingSideChannel,
                     oversizedChallenge = deepChecks.oversizedChallenge,
                     keyboxImport = deepChecks.keyboxImport,
+                    importKeyRetainedAttestationNarrative = deepChecks.importKeyRetainedAttestationNarrative,
                     keystore2Hook = deepChecks.keystore2Hook,
                     generateModeParcelFingerprint = deepChecks.generateModeParcelFingerprint,
                     legacyKeystorePath = deepChecks.legacyKeystorePath,
@@ -192,6 +196,9 @@ class TeeRepository(
         val timing = async { timingProbe.inspect(useStrongBox = useStrongBox) }
         val oversizedChallenge = async { oversizedChallengeProbe.inspect(useStrongBox = useStrongBox) }
         val keyboxImport = async { keyboxImportProbe.inspect() }
+        val importKeyRetainedAttestationNarrative = async {
+            importKeyRetainedAttestationNarrativeProbe.inspect()
+        }
         val keystore2Hook = async { keystore2HookProbe.inspect() }
         val listEntriesConsistency = async { listEntriesConsistencyProbe.inspect() }
         val listEntriesBatched = async { listEntriesBatchedProbe.inspect() }
@@ -215,6 +222,7 @@ class TeeRepository(
         val timingResult = timing.await()
         val oversizedChallengeResult = oversizedChallenge.await()
         val keyboxImportResult = keyboxImport.await()
+        val importKeyRetainedAttestationNarrativeResult = importKeyRetainedAttestationNarrative.await()
         val keystore2HookResult = keystore2Hook.await()
         val listEntriesConsistencyResult = listEntriesConsistency.await()
         val listEntriesBatchedResult = listEntriesBatched.await()
@@ -244,6 +252,7 @@ class TeeRepository(
             timingSideChannel = timingSideChannel,
             oversizedChallenge = oversizedChallengeResult,
             keyboxImport = keyboxImportResult,
+            importKeyRetainedAttestationNarrative = importKeyRetainedAttestationNarrativeResult,
             keystore2Hook = keystore2HookResult,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
             legacyKeystorePath = legacyKeystorePath,
@@ -276,6 +285,7 @@ private data class DeferredChecks(
     val timingSideChannel: com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult,
     val oversizedChallenge: com.eltavine.duckdetector.features.tee.data.verification.keystore.OversizedChallengeResult,
     val keyboxImport: com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyboxImportResult,
+    val importKeyRetainedAttestationNarrative: com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult,
     val keystore2Hook: com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2HookResult,
     val generateModeParcelFingerprint: com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2GenerateModeParcelFingerprintResult,
     val legacyKeystorePath: com.eltavine.duckdetector.features.tee.data.verification.keystore.LegacyKeystorePathResult,
@@ -332,6 +342,10 @@ private data class DeferredChecks(
                 markerPreserved = true,
                 marker = com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyboxImportProbe.FIXTURE_MARKER,
                 detail = "Keybox import probe skipped.",
+            ),
+            importKeyRetainedAttestationNarrative = com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult(
+                executed = false,
+                detail = "ImportKey retained attestation narrative probe skipped.",
             ),
             keystore2Hook = com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2HookResult(
                 available = false,

@@ -344,6 +344,17 @@ class TeeReportReducer(
                     )
                 )
             }
+            if (artifacts.importKeyRetainedAttestationNarrative.executed &&
+                artifacts.importKeyRetainedAttestationNarrative.retainedNarrativeDetected
+            ) {
+                add(
+                    fact(
+                        "ImportKey narrative",
+                        "ImportKey retained attestation narrative detected.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
+            }
             if (!artifacts.pairConsistency.keyMatchesCertificate) {
                 add(
                     fact(
@@ -786,6 +797,13 @@ class TeeReportReducer(
                         )
                     )
                     add(fact("Keybox", keyboxValue(artifacts), keyboxLevel(artifacts)))
+                    add(
+                        fact(
+                            "ImportKey narrative",
+                            importKeyRetainedAttestationNarrativeValue(artifacts),
+                            importKeyRetainedAttestationNarrativeLevel(artifacts)
+                        )
+                    )
                     add(
                         fact(
                             "Keystore2",
@@ -1381,6 +1399,18 @@ class TeeReportReducer(
         }
     }
 
+    private fun importKeyRetainedAttestationNarrativeValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.importKeyRetainedAttestationNarrative
+        val status = when {
+            !result.executed -> "Unavailable"
+            result.retainedNarrativeDetected -> "Matched"
+            result.originImported -> "Clean"
+            else -> "Unavailable"
+        }
+        val detail = result.detail.takeIf { it.isNotBlank() } ?: return status
+        return "$status • $detail"
+    }
+
     private fun oversizedChallengeValue(artifacts: TeeScanArtifacts): String {
         return if (artifacts.oversizedChallenge.acceptedOversizedChallenge) {
             "Accepted ${artifacts.oversizedChallenge.acceptedSizesLabel()}"
@@ -1637,6 +1667,16 @@ class TeeReportReducer(
             !result.executed -> TeeSignalLevel.INFO
             result.usesKeyIdDomain && result.aliasCleared -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.FAIL
+        }
+    }
+
+    private fun importKeyRetainedAttestationNarrativeLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
+        val result = artifacts.importKeyRetainedAttestationNarrative
+        return when {
+            !result.executed -> TeeSignalLevel.INFO
+            result.retainedNarrativeDetected -> TeeSignalLevel.FAIL
+            result.originImported -> TeeSignalLevel.PASS
+            else -> TeeSignalLevel.INFO
         }
     }
 

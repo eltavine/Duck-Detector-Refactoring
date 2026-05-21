@@ -34,6 +34,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderC
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderHookBootstrapResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderPatchModeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataSemanticsResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataShapeResult
@@ -181,7 +182,54 @@ class TeeReportReducerTest {
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
             it.title == "TEE Simulator generate-mode fingerprint" &&
                 it.body.contains("probe unavailable", ignoreCase = true) &&
-                it.hiddenCopyText == "unavailable diagnostic"
+            it.hiddenCopyText == "unavailable diagnostic"
+        })
+    }
+
+    @Test
+    fun `importKey retained narrative becomes supplementary review without changing attestation verdict`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                importKeyRetainedAttestationNarrative = ImportKeyRetainedAttestationNarrativeResult(
+                    executed = true,
+                    originImported = true,
+                    retainedNarrativeDetected = true,
+                    priorChainLength = 3,
+                    postImportChainLength = 2,
+                    retainedCertificateCount = 2,
+                    originLabel = "IMPORTED",
+                    retainedFingerprint = "abc123def456",
+                    detail = "origin=IMPORTED, retained=2",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("ImportKey retained attestation narrative", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "ImportKey narrative" &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.level == TeeSignalLevel.FAIL
+        })
+    }
+
+    @Test
+    fun `importKey retained narrative unavailable state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                importKeyRetainedAttestationNarrative = ImportKeyRetainedAttestationNarrativeResult(
+                    executed = false,
+                    detail = "Keystore2 getKeyEntry metadata unavailable.",
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "ImportKey narrative" &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.level == TeeSignalLevel.INFO
         })
     }
 
@@ -1502,6 +1550,11 @@ class TeeReportReducerTest {
             executed = false,
             detail = "skipped",
         ),
+        importKeyRetainedAttestationNarrative: ImportKeyRetainedAttestationNarrativeResult =
+            ImportKeyRetainedAttestationNarrativeResult(
+                executed = false,
+                detail = "skipped",
+            ),
         keyMetadataSemantics: KeyMetadataSemanticsResult = KeyMetadataSemanticsResult(
             executed = false,
             detail = "skipped",
@@ -1596,6 +1649,7 @@ class TeeReportReducerTest {
                 marker = KeyboxImportProbe.FIXTURE_MARKER,
                 detail = "skipped",
             ),
+            importKeyRetainedAttestationNarrative = importKeyRetainedAttestationNarrative,
             keystore2Hook = keystore2Hook,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
             legacyKeystorePath = legacyKeystorePath,
