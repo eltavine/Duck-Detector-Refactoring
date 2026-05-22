@@ -21,8 +21,10 @@
 #include "zygisk/probes/heap_entropy_probe.h"
 #include "zygisk/probes/linker_hook_probe.h"
 #include "zygisk/probes/namespace_probe.h"
+#include "zygisk/probes/seccomp_probe.h"
 #include "zygisk/probes/smaps_probe.h"
 #include "zygisk/probes/solist_probe.h"
+#include "zygisk/probes/stack_leak_probe.h"
 #include "zygisk/probes/thread_probe.h"
 #include "zygisk/probes/vmap_probe.h"
 
@@ -56,12 +58,14 @@ namespace duckdetector::zygisk {
         const auto smaps = collect_smaps_probe();
         const auto namespace_probe = collect_namespace_probe();
         const auto linker_hook = collect_linker_hook_probe();
+        const auto stack_leak = collect_stack_leak_probe();
+        const auto seccomp = collect_seccomp_probe();
         const auto heap = collect_heap_entropy_probe();
         const auto threads = collect_thread_probe();
         const auto fd = collect_fd_probe();
 
         snapshot.heap_available = heap.supported;
-        snapshot.seccomp_supported = false;
+        snapshot.seccomp_supported = seccomp.supported;
         snapshot.tracer_pid = threads.numeric_value;
 
         snapshot.solist_hits = solist.hit_count;
@@ -70,8 +74,8 @@ namespace duckdetector::zygisk {
         snapshot.smaps_hits = smaps.hit_count;
         snapshot.namespace_hits = namespace_probe.hit_count;
         snapshot.linker_hook_hits = linker_hook.hit_count;
-        snapshot.stack_leak_hits = 0;
-        snapshot.seccomp_hits = 0;
+        snapshot.stack_leak_hits = stack_leak.hit_count;
+        snapshot.seccomp_hits = seccomp.hit_count;
         snapshot.heap_hits = heap.hit_count;
         snapshot.thread_hits = threads.hit_count;
         snapshot.fd_hits = fd.hit_count;
@@ -82,6 +86,8 @@ namespace duckdetector::zygisk {
         merge_probe(snapshot, smaps);
         merge_probe(snapshot, namespace_probe);
         merge_probe(snapshot, linker_hook);
+        merge_probe(snapshot, stack_leak);
+        merge_probe(snapshot, seccomp);
         merge_probe(snapshot, heap);
         merge_probe(snapshot, threads);
         merge_probe(snapshot, fd);
