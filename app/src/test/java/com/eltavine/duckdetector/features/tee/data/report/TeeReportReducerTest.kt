@@ -36,6 +36,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderP
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
@@ -367,6 +369,56 @@ class TeeReportReducerTest {
             it.title == "Grant isolated-domain" &&
                 it.level == TeeSignalLevel.INFO &&
                 it.body.contains("Unavailable", ignoreCase = true)
+        })
+    }
+
+    @Test
+    fun `grant self-domain full-chain split becomes supplementary review without changing attestation verdict`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
+                    executed = true,
+                    available = true,
+                    splitDetected = true,
+                    ownerChainLength = 3,
+                    grantChainLength = 2,
+                    mismatchIndex = 2,
+                    grantIdPresent = true,
+                    anomalyKind = GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT,
+                    detail = "lengthMismatch owner=3 grantee=2",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant self-domain certificate-chain split", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant self-domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("kind=SELF_CHAIN_SPLIT") &&
+                it.body.contains("mismatchIndex=2")
+        })
+    }
+
+    @Test
+    fun `grant self-domain unavailable state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
+                    executed = false,
+                    detail = "self grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant self-domain" &&
+                it.level == TeeSignalLevel.INFO &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("No key found by the given alias")
         })
     }
 
@@ -1695,6 +1747,9 @@ class TeeReportReducerTest {
         grantDomainFullChainSplit: GrantDomainFullChainSplitResult = GrantDomainFullChainSplitResult(
             detail = "skipped",
         ),
+        grantSelfDomainFullChainSplit: GrantSelfDomainFullChainSplitResult = GrantSelfDomainFullChainSplitResult(
+            detail = "skipped",
+        ),
         keyMetadataSemantics: KeyMetadataSemanticsResult = KeyMetadataSemanticsResult(
             executed = false,
             detail = "skipped",
@@ -1793,6 +1848,7 @@ class TeeReportReducerTest {
             keystore2Hook = keystore2Hook,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
             grantDomainFullChainSplit = grantDomainFullChainSplit,
+            grantSelfDomainFullChainSplit = grantSelfDomainFullChainSplit,
             legacyKeystorePath = legacyKeystorePath,
             listEntriesConsistency = listEntriesConsistency,
             listEntriesBatched = listEntriesBatched,

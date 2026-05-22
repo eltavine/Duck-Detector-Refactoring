@@ -229,6 +229,10 @@ class TeeCardModelMapper {
                         item.level == TeeSignalLevel.FAIL &&
                             item.body.hasGrantIsolatedDomainDangerKind()
 
+                    "Grant self-domain" ->
+                        item.level == TeeSignalLevel.FAIL &&
+                            item.body.hasGrantSelfDomainDangerKind()
+
                     else -> false
                 }
             }
@@ -242,6 +246,10 @@ class TeeCardModelMapper {
     private fun String.hasGrantIsolatedDomainDangerKind(): Boolean {
         return contains("kind=ISOLATED_CHAIN_SPLIT", ignoreCase = true) ||
             contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
+    }
+
+    private fun String.hasGrantSelfDomainDangerKind(): Boolean {
+        return contains("kind=SELF_CHAIN_SPLIT", ignoreCase = true)
     }
 
     private fun TeeReport.tierStatus(): DetectorStatus = when (tier) {

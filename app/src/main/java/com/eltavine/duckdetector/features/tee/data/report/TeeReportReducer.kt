@@ -31,6 +31,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.timingSideChannelRatio
@@ -294,6 +295,15 @@ class TeeReportReducer(
 
                 GrantDomainAnomalyKind.NONE,
                 GrantDomainAnomalyKind.UNAVAILABLE -> Unit
+            }
+            if (artifacts.grantSelfDomainFullChainSplit.anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT) {
+                add(
+                    fact(
+                        "Grant self-domain",
+                        "Grant self-domain certificate-chain split detected.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
             }
             if (artifacts.keystore2Hook.javaHookDetected) {
                 add(
@@ -834,6 +844,13 @@ class TeeReportReducer(
                             "Grant isolated-domain",
                             grantDomainFullChainSplitValue(artifacts),
                             grantDomainFullChainSplitLevel(artifacts)
+                        )
+                    )
+                    add(
+                        fact(
+                            "Grant self-domain",
+                            grantSelfDomainFullChainSplitValue(artifacts),
+                            grantSelfDomainFullChainSplitLevel(artifacts)
                         )
                     )
                     add(
@@ -1510,6 +1527,43 @@ class TeeReportReducer(
         }
     }
 
+    private fun grantSelfDomainFullChainSplitValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.grantSelfDomainFullChainSplit
+        return when {
+            result.executed && result.splitDetected -> buildString {
+                append("Matched")
+                append(" kind=")
+                append(result.anomalyKind.name)
+                append(" owner=")
+                append(result.ownerChainLength)
+                append(" grant=")
+                append(result.grantChainLength)
+                result.mismatchIndex?.let { append(" mismatchIndex=$it") }
+                if (result.grantIdPresent) append(" grantId=true")
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+
+            result.executed && result.available -> buildString {
+                append("Clean")
+                append(" kind=")
+                append(result.anomalyKind.name)
+                append(" length=")
+                append(result.ownerChainLength)
+                if (result.grantIdPresent) append(" grantId=true")
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+
+            else -> buildString {
+                append("Unavailable")
+                append(" kind=")
+                append(result.anomalyKind.name)
+                result.ownerChainLength.takeIf { it > 0 }?.let { append(" owner=$it") }
+                if (result.grantIdPresent) append(" grantId=true")
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+        }
+    }
+
     private fun pureCertificateValue(artifacts: TeeScanArtifacts): String {
         return if (artifacts.pureCertificate.pureCertificateReturnsNullKey) {
             "Null key as expected"
@@ -1758,6 +1812,15 @@ class TeeReportReducer(
                 TeeSignalLevel.FAIL
 
             result.executed && result.splitDetected -> TeeSignalLevel.FAIL
+            result.executed && result.available -> TeeSignalLevel.PASS
+            else -> TeeSignalLevel.INFO
+        }
+    }
+
+    private fun grantSelfDomainFullChainSplitLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
+        val result = artifacts.grantSelfDomainFullChainSplit
+        return when {
+            result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT -> TeeSignalLevel.FAIL
             result.executed && result.available -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
         }

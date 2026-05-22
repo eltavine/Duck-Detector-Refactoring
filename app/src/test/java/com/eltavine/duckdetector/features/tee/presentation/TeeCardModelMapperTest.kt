@@ -478,6 +478,49 @@ class TeeCardModelMapperTest {
     }
 
     @Test
+    fun `matched grant self-domain split escalates aligned tee card to danger`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "Grant self-domain certificate-chain split detected. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                signals = listOf(
+                    TeeSignal(
+                        "Grant self-domain",
+                        "Matched",
+                        TeeSignalLevel.FAIL,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Grant self-domain",
+                                "Matched kind=SELF_CHAIN_SPLIT owner=3 grant=2 mismatchIndex=2",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
     fun `rkp badge is hidden when local trust chain needs review`() {
         val model = mapper.map(
             report = TeeReport(
