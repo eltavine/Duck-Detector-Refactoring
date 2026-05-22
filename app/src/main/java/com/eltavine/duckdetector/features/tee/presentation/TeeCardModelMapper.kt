@@ -225,9 +225,9 @@ class TeeCardModelMapper {
                         item.level == TeeSignalLevel.FAIL &&
                             item.body.hasImportKeyRetainedNarrativeDangerKind()
 
-                    "Grant domain" ->
+                    "Grant isolated-domain" ->
                         item.level == TeeSignalLevel.FAIL &&
-                            item.body.contains("Matched", ignoreCase = true)
+                            item.body.hasGrantIsolatedDomainDangerKind()
 
                     else -> false
                 }
@@ -237,6 +237,11 @@ class TeeCardModelMapper {
     private fun String.hasImportKeyRetainedNarrativeDangerKind(): Boolean {
         return contains("kind=IMPORTED_RETAINED_PRIOR_CHAIN", ignoreCase = true) ||
             contains("kind=STALE_GENERATED_AFTER_IMPORT", ignoreCase = true)
+    }
+
+    private fun String.hasGrantIsolatedDomainDangerKind(): Boolean {
+        return contains("kind=ISOLATED_CHAIN_SPLIT", ignoreCase = true) ||
+            contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
     }
 
     private fun TeeReport.tierStatus(): DetectorStatus = when (tier) {

@@ -392,14 +392,14 @@ class TeeCardModelMapperTest {
     }
 
     @Test
-    fun `matched grant domain split escalates aligned tee card to danger`() {
+    fun `matched grant isolated-domain split escalates aligned tee card to danger`() {
         val model = mapper.map(
             report = TeeReport(
                 stage = TeeScanStage.READY,
                 verdict = TeeVerdict.CONSISTENT,
                 tier = TeeTier.TEE,
                 headline = "Attestation aligned; local probes need review",
-                summary = "Grant-domain certificate-chain narrative split detected. Attestation and trust-path checks still aligned.",
+                summary = "Grant isolated-domain certificate-chain narrative split detected. Attestation and trust-path checks still aligned.",
                 collapsedSummary = "Aligned • local review",
                 trustRoot = TeeTrustRoot.GOOGLE,
                 trustSummary = "Local trust path",
@@ -409,7 +409,7 @@ class TeeCardModelMapperTest {
                 supplementaryReviewLevel = TeeSignalLevel.WARN,
                 signals = listOf(
                     TeeSignal(
-                        "Grant domain",
+                        "Grant isolated-domain",
                         "Matched",
                         TeeSignalLevel.FAIL,
                     ),
@@ -419,8 +419,51 @@ class TeeCardModelMapperTest {
                         title = "Checks",
                         items = listOf(
                             TeeEvidenceItem(
-                                "Grant domain",
-                                "Matched • mismatchIndex=2 • owner=3 grantee=2",
+                                "Grant isolated-domain",
+                                "Matched kind=ISOLATED_CHAIN_SPLIT • mismatchIndex=2 • owner=3 grantee=2",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
+    fun `grant isolated-domain key visibility divergence escalates aligned tee card to danger`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "Grant isolated-domain key visibility divergence detected. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                signals = listOf(
+                    TeeSignal(
+                        "Grant isolated-domain",
+                        "Unavailable",
+                        TeeSignalLevel.FAIL,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Grant isolated-domain",
+                                "Unavailable kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN • grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
                                 TeeSignalLevel.FAIL,
                             ),
                         ),

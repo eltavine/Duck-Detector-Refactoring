@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.tee.data.verification.keystore
 
+import java.security.UnrecoverableKeyException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -79,6 +80,25 @@ class GrantDomainFullChainSplitProbeTest {
 
         assertTrue(comparison.splitDetected)
         assertEquals(1, comparison.mismatchIndex)
+    }
+
+    @Test
+    fun `grant alias not found detection requires unrecoverable key exception wording`() {
+        assertTrue(
+            GrantDomainFullChainSplitProbe.isGrantAliasNotFound(
+                UnrecoverableKeyException("No key found by the given alias"),
+            ),
+        )
+        assertFalse(
+            GrantDomainFullChainSplitProbe.isGrantAliasNotFound(
+                UnrecoverableKeyException("Permission denied"),
+            ),
+        )
+        assertFalse(
+            GrantDomainFullChainSplitProbe.isGrantAliasNotFound(
+                IllegalStateException("No key found by the given alias"),
+            ),
+        )
     }
 
     private fun chain(vararg labels: String): GrantDomainCertificateChain {

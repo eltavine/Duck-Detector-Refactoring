@@ -34,6 +34,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderC
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderHookBootstrapResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderPatchModeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
@@ -293,7 +294,7 @@ class TeeReportReducerTest {
     }
 
     @Test
-    fun `grant domain full-chain split becomes supplementary review without changing attestation verdict`() {
+    fun `grant isolated-domain full-chain split becomes supplementary review without changing attestation verdict`() {
         val report = reducer.reduce(
             baseArtifacts(
                 grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
@@ -304,6 +305,7 @@ class TeeReportReducerTest {
                     granteeChainLength = 2,
                     mismatchIndex = 2,
                     granteeUid = 99001,
+                    anomalyKind = GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT,
                     detail = "lengthMismatch owner=3 grantee=2",
                 ),
             ),
@@ -311,17 +313,46 @@ class TeeReportReducerTest {
 
         assertEquals(TeeVerdict.CONSISTENT, report.verdict)
         assertEquals(1, report.supplementaryIndicatorCount)
-        assertTrue(report.summary.contains("Grant-domain", ignoreCase = true))
+        assertTrue(report.summary.contains("Grant isolated-domain", ignoreCase = true))
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
-            it.title == "Grant domain" &&
+            it.title == "Grant isolated-domain" &&
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("kind=ISOLATED_CHAIN_SPLIT") &&
                 it.body.contains("mismatchIndex=2")
         })
     }
 
     @Test
-    fun `grant domain unavailable state stays informational`() {
+    fun `grant isolated-domain key not found after owner chain becomes supplementary review`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
+                    executed = true,
+                    available = false,
+                    splitDetected = false,
+                    ownerChainLength = 3,
+                    granteeUid = 99001,
+                    anomalyKind = GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+                    detail = "grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant isolated-domain key visibility divergence", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant isolated-domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
+                it.body.contains("No key found by the given alias")
+        })
+    }
+
+    @Test
+    fun `grant isolated-domain unavailable state stays informational`() {
         val report = reducer.reduce(
             baseArtifacts(
                 grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
@@ -333,7 +364,7 @@ class TeeReportReducerTest {
 
         assertEquals(0, report.supplementaryIndicatorCount)
         assertTrue(report.sections.single { it.title == "Checks" }.items.any {
-            it.title == "Grant domain" &&
+            it.title == "Grant isolated-domain" &&
                 it.level == TeeSignalLevel.INFO &&
                 it.body.contains("Unavailable", ignoreCase = true)
         })

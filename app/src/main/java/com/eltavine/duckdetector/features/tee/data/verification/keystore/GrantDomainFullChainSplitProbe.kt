@@ -21,6 +21,7 @@ import android.os.Build
 import android.security.keystore.KeyStoreManager
 import com.eltavine.duckdetector.features.tee.data.keystore.AndroidKeyStoreTools
 import java.security.MessageDigest
+import java.security.UnrecoverableKeyException
 import java.security.cert.X509Certificate
 import java.nio.charset.StandardCharsets
 import java.util.Locale
@@ -77,9 +78,16 @@ class GrantDomainFullChainSplitProbe(
                 val grantId = runCatching {
                     keyStoreManager.grantKeyAccess(alias, session.uid)
                 }.getOrElse { throwable ->
+                    val anomalyKind = if (isGrantAliasNotFound(throwable)) {
+                        GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
+                    } else {
+                        GrantDomainAnomalyKind.UNAVAILABLE
+                    }
                     return GrantDomainFullChainSplitResult(
+                        executed = anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
                         ownerChainLength = ownerChain.certificates.size,
                         granteeUid = session.uid,
+                        anomalyKind = anomalyKind,
                         detail = "grantKeyAccess failed: ${describeThrowable(throwable)}",
                     )
                 }
@@ -112,6 +120,11 @@ class GrantDomainFullChainSplitProbe(
                     granteeChainLength = granteeChain.certificates.size,
                     mismatchIndex = comparison.mismatchIndex,
                     granteeUid = session.uid,
+                    anomalyKind = if (comparison.splitDetected) {
+                        GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT
+                    } else {
+                        GrantDomainAnomalyKind.NONE
+                    },
                     detail = comparison.detail,
                 )
             }
@@ -163,6 +176,11 @@ class GrantDomainFullChainSplitProbe(
             val message = throwable.message?.takeIf { it.isNotBlank() }
             return if (message == null) type else "$type: $message"
         }
+
+        internal fun isGrantAliasNotFound(throwable: Throwable): Boolean {
+            return throwable is UnrecoverableKeyException &&
+                throwable.message?.contains("No key found by the given alias", ignoreCase = true) == true
+        }
     }
 }
 
@@ -174,8 +192,16 @@ data class GrantDomainFullChainSplitResult(
     val granteeChainLength: Int = 0,
     val mismatchIndex: Int? = null,
     val granteeUid: Int? = null,
+    val anomalyKind: GrantDomainAnomalyKind = GrantDomainAnomalyKind.UNAVAILABLE,
     val detail: String = "",
 )
+
+enum class GrantDomainAnomalyKind {
+    NONE,
+    ISOLATED_CHAIN_SPLIT,
+    ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+    UNAVAILABLE,
+}
 
 data class GrantDomainFullChainComparison(
     val splitDetected: Boolean,

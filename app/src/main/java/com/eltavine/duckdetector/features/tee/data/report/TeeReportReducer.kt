@@ -30,6 +30,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeSignalLevel
 import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.timingSideChannelRatio
@@ -270,16 +271,29 @@ class TeeReportReducer(
                     )
                 )
             }
-            if (artifacts.grantDomainFullChainSplit.executed &&
-                artifacts.grantDomainFullChainSplit.splitDetected
-            ) {
-                add(
-                    fact(
-                        "Grant domain",
-                        "Grant-domain certificate-chain narrative split detected.",
-                        TeeSignalLevel.FAIL,
+            when (artifacts.grantDomainFullChainSplit.anomalyKind) {
+                GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT -> {
+                    add(
+                        fact(
+                            "Grant isolated-domain",
+                            "Grant isolated-domain certificate-chain narrative split detected.",
+                            TeeSignalLevel.FAIL,
+                        )
                     )
-                )
+                }
+
+                GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN -> {
+                    add(
+                        fact(
+                            "Grant isolated-domain",
+                            "Grant isolated-domain key visibility divergence detected.",
+                            TeeSignalLevel.FAIL,
+                        )
+                    )
+                }
+
+                GrantDomainAnomalyKind.NONE,
+                GrantDomainAnomalyKind.UNAVAILABLE -> Unit
             }
             if (artifacts.keystore2Hook.javaHookDetected) {
                 add(
@@ -817,7 +831,7 @@ class TeeReportReducer(
                     )
                     add(
                         fact(
-                            "Grant domain",
+                            "Grant isolated-domain",
                             grantDomainFullChainSplitValue(artifacts),
                             grantDomainFullChainSplitLevel(artifacts)
                         )
@@ -1466,6 +1480,8 @@ class TeeReportReducer(
         return when {
             result.executed && result.splitDetected -> buildString {
                 append("Matched")
+                append(" kind=")
+                append(result.anomalyKind.name)
                 append(" owner=")
                 append(result.ownerChainLength)
                 append(" grantee=")
@@ -1476,12 +1492,21 @@ class TeeReportReducer(
             }
             result.executed && result.available -> buildString {
                 append("Clean")
+                append(" kind=")
+                append(result.anomalyKind.name)
                 append(" length=")
                 append(result.ownerChainLength)
                 result.granteeUid?.let { append(" uid=$it") }
                 result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
             }
-            else -> "Unavailable${result.detail.takeIf { it.isNotBlank() }?.let { " • $it" }.orEmpty()}"
+            else -> buildString {
+                append("Unavailable")
+                append(" kind=")
+                append(result.anomalyKind.name)
+                result.ownerChainLength.takeIf { it > 0 }?.let { append(" owner=$it") }
+                result.granteeUid?.let { append(" uid=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
         }
     }
 
@@ -1728,6 +1753,10 @@ class TeeReportReducer(
     private fun grantDomainFullChainSplitLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
         val result = artifacts.grantDomainFullChainSplit
         return when {
+            result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT -> TeeSignalLevel.FAIL
+            result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN ->
+                TeeSignalLevel.FAIL
+
             result.executed && result.splitDetected -> TeeSignalLevel.FAIL
             result.executed && result.available -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
