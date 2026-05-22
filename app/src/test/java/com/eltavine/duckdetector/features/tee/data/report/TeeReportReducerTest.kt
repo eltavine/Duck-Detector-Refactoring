@@ -403,12 +403,37 @@ class TeeReportReducerTest {
     }
 
     @Test
-    fun `grant self-domain unavailable state stays informational`() {
+    fun `grant self-domain owner-visible key-not-found state becomes supplementary failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
+                    executed = true,
+                    ownerChainLength = 4,
+                    anomalyKind = GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+                    detail = "self grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                ),
+            ),
+        )
+
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant self-domain key visibility divergence", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant self-domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
+                it.body.contains("owner=4") &&
+                it.body.contains("No key found by the given alias")
+        })
+    }
+
+    @Test
+    fun `grant self-domain ordinary unavailable state stays informational`() {
         val report = reducer.reduce(
             baseArtifacts(
                 grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
                     executed = false,
-                    detail = "self grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                    detail = "self grantKeyAccess failed: IllegalStateException: transient service unavailable",
                 ),
             ),
         )
@@ -418,7 +443,7 @@ class TeeReportReducerTest {
             it.title == "Grant self-domain" &&
                 it.level == TeeSignalLevel.INFO &&
                 it.body.contains("Unavailable", ignoreCase = true) &&
-                it.body.contains("No key found by the given alias")
+                it.body.contains("transient service unavailable")
         })
     }
 

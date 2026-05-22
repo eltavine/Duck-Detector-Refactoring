@@ -67,8 +67,17 @@ class GrantSelfDomainFullChainSplitProbe(
             val grantId = runCatching {
                 keyStoreManager.grantKeyAccess(alias, selfUid)
             }.getOrElse { throwable ->
+                // owner 可见 alias 却被 grant path 报 key-not-found，说明 framework 叙事和 Keystore2 授权域发生断裂。
+                // If owner sees the alias but the grant path reports key-not-found, framework narrative and Keystore2 grant state diverged.
+                val anomalyKind = if (GrantDomainFullChainSplitProbe.isGrantAliasNotFound(throwable)) {
+                    GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
+                } else {
+                    GrantSelfDomainAnomalyKind.UNAVAILABLE
+                }
                 return GrantSelfDomainFullChainSplitResult(
+                    executed = anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
                     ownerChainLength = ownerChain.certificates.size,
+                    anomalyKind = anomalyKind,
                     detail = "self grantKeyAccess failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
                 )
             }
@@ -147,5 +156,6 @@ data class GrantSelfDomainFullChainSplitResult(
 enum class GrantSelfDomainAnomalyKind {
     NONE,
     SELF_CHAIN_SPLIT,
+    SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
     UNAVAILABLE,
 }

@@ -296,14 +296,29 @@ class TeeReportReducer(
                 GrantDomainAnomalyKind.NONE,
                 GrantDomainAnomalyKind.UNAVAILABLE -> Unit
             }
-            if (artifacts.grantSelfDomainFullChainSplit.anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT) {
-                add(
-                    fact(
-                        "Grant self-domain",
-                        "Grant self-domain certificate-chain split detected.",
-                        TeeSignalLevel.FAIL,
+            when (artifacts.grantSelfDomainFullChainSplit.anomalyKind) {
+                GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT -> {
+                    add(
+                        fact(
+                            "Grant self-domain",
+                            "Grant self-domain certificate-chain split detected.",
+                            TeeSignalLevel.FAIL,
+                        )
                     )
-                )
+                }
+
+                GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN -> {
+                    add(
+                        fact(
+                            "Grant self-domain",
+                            "Grant self-domain key visibility divergence detected.",
+                            TeeSignalLevel.FAIL,
+                        )
+                    )
+                }
+
+                GrantSelfDomainAnomalyKind.NONE,
+                GrantSelfDomainAnomalyKind.UNAVAILABLE -> Unit
             }
             if (artifacts.keystore2Hook.javaHookDetected) {
                 add(
@@ -1820,7 +1835,10 @@ class TeeReportReducer(
     private fun grantSelfDomainFullChainSplitLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
         val result = artifacts.grantSelfDomainFullChainSplit
         return when {
-            result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT -> TeeSignalLevel.FAIL
+            result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT ||
+                result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN -> {
+                TeeSignalLevel.FAIL
+            }
             result.executed && result.available -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
         }

@@ -249,7 +249,8 @@ class TeeCardModelMapper {
     }
 
     private fun String.hasGrantSelfDomainDangerKind(): Boolean {
-        return contains("kind=SELF_CHAIN_SPLIT", ignoreCase = true)
+        return contains("kind=SELF_CHAIN_SPLIT", ignoreCase = true) ||
+            contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
     }
 
     private fun TeeReport.tierStatus(): DetectorStatus = when (tier) {
