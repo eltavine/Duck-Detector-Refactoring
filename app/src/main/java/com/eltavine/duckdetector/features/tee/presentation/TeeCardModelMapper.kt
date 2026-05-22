@@ -244,11 +244,15 @@ class TeeCardModelMapper {
     }
 
     private fun String.hasGrantIsolatedDomainDangerKind(): Boolean {
+        // Dashboard only sees TeeCardModel.status, so reducer-level FAIL kinds must be mirrored here deliberately.
+        // Dashboard 只看到 TeeCardModel.status，因此 reducer 的 FAIL kind 必须在这里显式镜像。
         return contains("kind=ISOLATED_CHAIN_SPLIT", ignoreCase = true) ||
             contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
     }
 
     private fun String.hasGrantSelfDomainDangerKind(): Boolean {
+        // Match stable kind tokens, not prose; prose can change, but these tokens encode the reviewed root cause.
+        // 匹配稳定 kind token，而不是自然语言文案；文案可调整，kind 承载已审阅的根因。
         return contains("kind=SELF_CHAIN_SPLIT", ignoreCase = true) ||
             contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
     }

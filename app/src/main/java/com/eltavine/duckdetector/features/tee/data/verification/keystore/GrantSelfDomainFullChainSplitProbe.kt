@@ -64,11 +64,13 @@ class GrantSelfDomainFullChainSplitProbe(
                     detail = "Owner KeyStore certificate chain was empty.",
                 )
             }
+            // self-domain 是 isolated-domain 的去噪版本：同 UID grant 排除了 isolated_app SELinux/service 可达性变量。
+            // self-domain is the de-noised counterpart to isolated-domain: same-UID grant removes isolated_app SELinux/service reachability variables.
             val grantId = runCatching {
                 keyStoreManager.grantKeyAccess(alias, selfUid)
             }.getOrElse { throwable ->
-                // owner 可见 alias 却被 grant path 报 key-not-found，说明 framework 叙事和 Keystore2 授权域发生断裂。
-                // If owner sees the alias but the grant path reports key-not-found, framework narrative and Keystore2 grant state diverged.
+                // owner chain 已经证明 alias 在 Java KeyStore 视图中存在；同 UID grant 仍 key-not-found 指向 keystore2 alias 查找被 hook/缓存叙事污染。
+                // The owner chain proves the alias exists in Java KeyStore view; same-UID key-not-found points to hook/cache contamination in keystore2 alias lookup.
                 val anomalyKind = if (GrantDomainFullChainSplitProbe.isGrantAliasNotFound(throwable)) {
                     GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
                 } else {
@@ -82,6 +84,8 @@ class GrantSelfDomainFullChainSplitProbe(
                 )
             }
             grantCreated = true
+            // grant 成功后读取 Domain.GRANT 证书链，验证授权域叙事是否与 owner alias 的 attested chain 一致。
+            // Once grant succeeds, read Domain.GRANT chain to verify whether grant-domain narrative matches owner alias attested chain.
             val grantCertificates = runCatching {
                 keyStoreManager.getGrantedCertificateChainFromId(grantId)
                     .filterIsInstance<X509Certificate>()

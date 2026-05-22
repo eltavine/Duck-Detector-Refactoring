@@ -272,6 +272,12 @@ class TeeReportReducer(
                     )
                 )
             }
+            // Grant checks are supplementary, but these two kinds are strong local evidence:
+            // Grant 检测属于补充证据；但下面两类是强本地证据：
+            // 1) chain split means owner alias and Domain.GRANT return different ordered certificate narratives.
+            // 1) chain split 表示 owner alias 与 Domain.GRANT 返回了不同的有序证书叙事。
+            // 2) key-not-found after owner chain means the alias exists in owner view but not in grant lookup.
+            // 2) owner chain 后 key-not-found 表示 alias 存在于 owner 视图，却不存在于 grant 查找路径。
             when (artifacts.grantDomainFullChainSplit.anomalyKind) {
                 GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT -> {
                     add(
@@ -296,6 +302,8 @@ class TeeReportReducer(
                 GrantDomainAnomalyKind.NONE,
                 GrantDomainAnomalyKind.UNAVAILABLE -> Unit
             }
+            // self-domain removes the isolated-process policy variable; its key-not-found variant is treated like a visibility split.
+            // self-domain 排除了 isolated-process 策略变量；其 key-not-found 变体按可见性断裂处理。
             when (artifacts.grantSelfDomainFullChainSplit.anomalyKind) {
                 GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT -> {
                     add(
@@ -1822,6 +1830,8 @@ class TeeReportReducer(
     private fun grantDomainFullChainSplitLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
         val result = artifacts.grantDomainFullChainSplit
         return when {
+            // These anomaly kinds are already curated by the probe, so reducer can safely upgrade them without parsing detail text.
+            // 这些 anomaly kind 已由 probe 结构化归类，reducer 不需要解析 detail 文本即可升级。
             result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT -> TeeSignalLevel.FAIL
             result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN ->
                 TeeSignalLevel.FAIL
@@ -1835,6 +1845,8 @@ class TeeReportReducer(
     private fun grantSelfDomainFullChainSplitLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
         val result = artifacts.grantSelfDomainFullChainSplit
         return when {
+            // Same-UID key-not-found is not ordinary unavailability: the owner alias was proven readable before grant.
+            // 同 UID key-not-found 不是普通不可用：grant 之前 owner alias 已被证明可读。
             result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT ||
                 result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN -> {
                 TeeSignalLevel.FAIL
