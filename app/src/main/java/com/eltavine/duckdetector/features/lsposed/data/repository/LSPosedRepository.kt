@@ -17,6 +17,8 @@
 package com.eltavine.duckdetector.features.lsposed.data.repository
 
 import android.content.Context
+import com.eltavine.duckdetector.features.lsposed.data.art.ArtMethodIntegrityProbe
+import com.eltavine.duckdetector.features.lsposed.data.art.ArtMethodIntegrityResult
 import com.eltavine.duckdetector.features.lsposed.data.native.LSPosedNativeBridge
 import com.eltavine.duckdetector.features.lsposed.data.native.LSPosedNativeSnapshot
 import com.eltavine.duckdetector.features.lsposed.data.native.LSPosedNativeTrace
@@ -69,6 +71,7 @@ class LSPosedRepository(
     private val appContext = context.applicationContext
     private val dirtyPolicyCarrierManager =
         SelinuxContextValidityCarrierManager(appContext)
+    private val artMethodIntegrityProbe = ArtMethodIntegrityProbe(appContext)
 
     suspend fun scan(): LSPosedReport = withContext(Dispatchers.IO) {
         runCatching { scanInternal() }
@@ -90,6 +93,7 @@ class LSPosedRepository(
         val logcatResult = logcatProbe.run()
         val selinuxSnapshot = dirtyPolicyCarrierManager.collectSnapshot()
         val dirtyPolicyResult = dirtyPolicyProbe.run(selinuxSnapshot)
+        val artMethodResult = artMethodIntegrityProbe.run()
         val nativeSnapshot = nativeBridge.collectSnapshot()
         val nativeSignals = nativeSnapshot.traces.mapIndexed(::nativeSignal)
         val dirtyPolicySignals = dirtyPolicyResult.signals
@@ -106,6 +110,7 @@ class LSPosedRepository(
             addAll(runtimeArtifactResult.signals)
             addAll(logcatResult.signals)
             addAll(dirtyPolicySignals)
+            addAll(artMethodResult.signals)
             addAll(nativeSignals)
         }
 
@@ -133,6 +138,7 @@ class LSPosedRepository(
                 runtimeArtifactResult = runtimeArtifactResult,
                 logcatResult = logcatResult,
                 dirtyPolicyResult = dirtyPolicyResult,
+                artMethodResult = artMethodResult,
                 nativeSnapshot = nativeSnapshot,
                 signals = signals,
             ),
@@ -146,6 +152,8 @@ class LSPosedRepository(
             binderHitCount = binderResult.hitCount,
             runtimeArtifactHitCount = runtimeArtifactResult.hitCount,
             logcatHitCount = logcatResult.hitCount,
+            artMethodIntegrityAvailable = artMethodResult.available,
+            artMethodIntegrityHitCount = artMethodResult.hitCount,
             nativeMapsHitCount = nativeSnapshot.mapsHitCount,
             nativeHeapHitCount = nativeSnapshot.heapHitCount,
             nativeHeapScannedRegions = nativeSnapshot.heapScannedRegions,
@@ -166,6 +174,7 @@ class LSPosedRepository(
         runtimeArtifactResult: LSPosedRuntimeArtifactProbeResult,
         logcatResult: LSPosedLogcatProbeResult,
         dirtyPolicyResult: LSPosedDirtyPolicyProbeResult,
+        artMethodResult: ArtMethodIntegrityResult,
         nativeSnapshot: LSPosedNativeSnapshot,
         signals: List<LSPosedSignal>,
     ): List<LSPosedMethodResult> {
@@ -283,6 +292,14 @@ class LSPosedRepository(
                 summary = dirtyPolicyResult.summary,
                 outcome = dirtyPolicyResult.outcome,
                 detail = dirtyPolicyResult.detail,
+            ),
+            LSPosedMethodResult(
+                label = "ART entrypoints",
+                summary = artMethodResult.summary,
+                outcome = artMethodResult.outcome,
+                detail = artMethodResult.detail.ifBlank {
+                    "Compares local sentinel method ArtMethod executable-entry candidates between the app process and an isolated process."
+                },
             ),
             LSPosedMethodResult(
                 label = "Native maps",

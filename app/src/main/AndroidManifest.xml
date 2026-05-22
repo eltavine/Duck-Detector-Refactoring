@@ -81,6 +81,10 @@ limitations under the License.
             android:isolatedProcess="true"
             android:useAppZygote="true" />
         <service
+            android:name=".features.lsposed.data.art.ArtMethodProbeService"
+            android:exported="false"
+            android:isolatedProcess="true" />
+        <service
             android:name=".features.tee.data.verification.keystore.TeeGrantDomainGranteeService"
             android:exported="false"
             android:isolatedProcess="true"

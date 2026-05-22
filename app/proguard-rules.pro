@@ -30,3 +30,6 @@
 
 # Native preload launches MainActivity by explicit component name before Compose starts.
 -keepnames class com.eltavine.duckdetector.MainActivity
+
+# ART entrypoint integrity uses reflection against these local sentinel methods.
+-keep class com.eltavine.duckdetector.features.lsposed.data.art.ArtMethodSentinel { *; }

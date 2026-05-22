@@ -109,6 +109,7 @@ set(NATIVE_ROOT_SOURCES
 
 set(LSPOSED_SOURCES
     lsposed/common/codec.cpp
+    lsposed/art_method_probe.cpp
     lsposed/probes/maps_probe.cpp
     lsposed/probes/heap_probe.cpp
     lsposed/snapshot_builder.cpp

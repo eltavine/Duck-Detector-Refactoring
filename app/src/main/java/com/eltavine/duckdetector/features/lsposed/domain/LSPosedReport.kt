@@ -88,6 +88,8 @@ data class LSPosedReport(
     val binderHitCount: Int,
     val runtimeArtifactHitCount: Int,
     val logcatHitCount: Int,
+    val artMethodIntegrityAvailable: Boolean,
+    val artMethodIntegrityHitCount: Int,
     val nativeMapsHitCount: Int,
     val nativeHeapHitCount: Int,
     val nativeHeapScannedRegions: Int,
@@ -144,6 +146,8 @@ data class LSPosedReport(
                 binderHitCount = 0,
                 runtimeArtifactHitCount = 0,
                 logcatHitCount = 0,
+                artMethodIntegrityAvailable = true,
+                artMethodIntegrityHitCount = 0,
                 nativeMapsHitCount = 0,
                 nativeHeapHitCount = 0,
                 nativeHeapScannedRegions = 0,
@@ -157,6 +161,7 @@ data class LSPosedReport(
                 nativeHeapAvailable = false,
                 zygotePermissionAvailable = false,
                 dirtyPolicyAvailable = false,
+                artMethodIntegrityAvailable = false,
                 errorMessage = message,
             )
         }

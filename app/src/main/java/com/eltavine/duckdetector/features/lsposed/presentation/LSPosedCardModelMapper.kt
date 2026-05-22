@@ -54,7 +54,7 @@ class LSPosedCardModelMapper {
 
     private fun buildSubtitle(report: LSPosedReport): String {
         return when (report.stage) {
-            LSPosedStage.LOADING -> "class + classloader + bridge fields + callbacks + runtime + logcat + binder + zygote gids + policy + native"
+            LSPosedStage.LOADING -> "class + classloader + bridge fields + callbacks + runtime + logcat + binder + zygote gids + policy + ART + native"
             LSPosedStage.FAILED -> "local LSPosed/Xposed scan failed"
             LSPosedStage.READY -> {
                 buildList {
@@ -63,6 +63,9 @@ class LSPosedCardModelMapper {
                     add("${report.nativeTraceCount} native")
                     if (report.dirtyPolicyAvailable || report.policySignalCount > 0) {
                         add("${report.policySignalCount} policy")
+                    }
+                    if (report.artMethodIntegrityHitCount > 0) {
+                        add("${report.artMethodIntegrityHitCount} art")
                     }
                 }.joinToString(" · ")
             }
@@ -87,7 +90,7 @@ class LSPosedCardModelMapper {
     private fun buildSummary(report: LSPosedReport): String {
         return when (report.stage) {
             LSPosedStage.LOADING ->
-                "Class loading, ClassLoader chains, XposedBridge fields, callbacks, package metadata, stack traces, Binder bridges, zygote permission GID audits, runtime artifacts, logcat leaks, and LSPosed-specific native traces are collecting local evidence."
+                "Class loading, ClassLoader chains, XposedBridge fields, callbacks, package metadata, stack traces, Binder bridges, zygote permission GID audits, runtime artifacts, logcat leaks, ART entrypoint drift, and LSPosed-specific native traces are collecting local evidence."
 
             LSPosedStage.FAILED ->
                 report.errorMessage
@@ -95,7 +98,7 @@ class LSPosedCardModelMapper {
 
             LSPosedStage.READY -> when {
                 report.hasDangerSignals ->
-                    "Binder bridge replies, loaded Xposed classes, XposedBridge fields, callback handlers, runtime artifacts, logcat leaks, zygote permission GID mismatches, dirty SELinux policy rules, stack trace signatures, or native LSPosed keywords point to active hook-framework presence rather than passive install residue."
+                    "Binder bridge replies, loaded Xposed classes, XposedBridge fields, callback handlers, runtime artifacts, logcat leaks, zygote permission GID mismatches, dirty SELinux policy rules, ART entrypoint anomalies, stack trace signatures, or native LSPosed keywords point to active hook-framework presence rather than passive install residue."
 
                 report.hasWarningSignals ->
                     "Installed managers, deep ClassLoader chains, environment residue, dirty SELinux policy drift, or pattern-only logcat traces were found, but the current process did not expose enough stronger runtime evidence to treat the framework as confirmed active here."
@@ -317,6 +320,8 @@ class LSPosedCardModelMapper {
                     "Logcat availability",
                     "Dirty policy hits",
                     "Dirty policy availability",
+                    "ART entry hits",
+                    "ART entry availability",
                     "Manager packages",
                     "Module apps",
                     "Native maps",
@@ -343,6 +348,8 @@ class LSPosedCardModelMapper {
                     "Logcat availability",
                     "Dirty policy hits",
                     "Dirty policy availability",
+                    "ART entry hits",
+                    "ART entry availability",
                     "Manager packages",
                     "Module apps",
                     "Native maps",
@@ -474,6 +481,27 @@ class LSPosedCardModelMapper {
                     ),
                 ),
                 LSPosedDetailRowModel(
+                    label = "ART entry hits",
+                    value = report.artMethodIntegrityHitCount.toString(),
+                    status = when {
+                        report.signals.any {
+                            it.id.startsWith("art_") &&
+                                it.severity == LSPosedSignalSeverity.DANGER
+                        } -> DetectorStatus.danger()
+
+                        report.artMethodIntegrityHitCount > 0 -> DetectorStatus.warning()
+                        report.artMethodIntegrityAvailable -> DetectorStatus.allClear()
+                        else -> DetectorStatus.info(InfoKind.SUPPORT)
+                    },
+                ),
+                LSPosedDetailRowModel(
+                    label = "ART entry availability",
+                    value = if (report.artMethodIntegrityAvailable) "Checked" else "Unavailable",
+                    status = if (report.artMethodIntegrityAvailable) DetectorStatus.allClear() else DetectorStatus.info(
+                        InfoKind.SUPPORT
+                    ),
+                ),
+                LSPosedDetailRowModel(
                     label = "Manager packages",
                     value = report.managerPackageCount.toString(),
                     status = if (report.managerPackageCount > 0) DetectorStatus.warning() else DetectorStatus.allClear(),
@@ -575,6 +603,7 @@ class LSPosedCardModelMapper {
             "Runtime artifacts",
             "Logcat leaks",
             "Dirty sepolicy",
+            "ART entrypoints",
             "Native maps",
             "Native heap",
             "Native library",
@@ -642,6 +671,7 @@ class LSPosedCardModelMapper {
                 !runtimeArtifactAvailable ||
                 !logcatAvailable ||
                 !dirtyPolicyAvailable ||
+                !artMethodIntegrityAvailable ||
                 packageVisibility != LSPosedPackageVisibility.FULL
     }
 
@@ -649,7 +679,9 @@ class LSPosedCardModelMapper {
         return when (group) {
             LSPosedSignalGroup.NATIVE -> !nativeAvailable || !nativeHeapAvailable
             LSPosedSignalGroup.PACKAGES -> packageVisibility != LSPosedPackageVisibility.FULL
-            LSPosedSignalGroup.RUNTIME -> !runtimeArtifactAvailable || !logcatAvailable
+            LSPosedSignalGroup.RUNTIME -> !runtimeArtifactAvailable ||
+                    !logcatAvailable ||
+                    !artMethodIntegrityAvailable
             LSPosedSignalGroup.POLICY -> !dirtyPolicyAvailable
             LSPosedSignalGroup.BINDER -> false
         }
