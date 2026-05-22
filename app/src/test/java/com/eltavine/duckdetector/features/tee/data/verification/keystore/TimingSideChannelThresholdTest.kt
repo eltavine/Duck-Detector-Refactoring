@@ -67,4 +67,14 @@ class TimingSideChannelThresholdTest {
         assertFalse(isPositiveTimingSideChannelRatio(null, 1.00))
         assertFalse(isPositiveTimingSideChannelRatio(1.00, 0.0))
     }
+
+    @Test
+    fun `filtered sample count below minimum is not ratio eligible`() {
+        assertFalse(isTimingSideChannelRatioEligible(299))
+    }
+
+    @Test
+    fun `filtered sample count at minimum remains ratio eligible`() {
+        assertTrue(isTimingSideChannelRatioEligible(300))
+    }
 }

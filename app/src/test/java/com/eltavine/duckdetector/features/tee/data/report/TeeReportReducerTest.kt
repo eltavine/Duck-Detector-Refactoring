@@ -872,11 +872,16 @@ class TeeReportReducerTest {
                     measurementAvailable = true,
                     suspicious = true,
                     sampleCount = 18,
+                    attemptedPairCount = 20,
+                    successfulPairCount = 20,
+                    failedPairCount = 0,
+                    filteredOutlierCount = 2,
+                    ratioEligible = true,
                     warmupCount = 5,
                     avgAttestedMillis = 0.612,
                     avgNonAttestedMillis = 0.400,
                     diffMillis = 0.212,
-                    detail = "register timer source; avgAttested=0.612ms, avgNonAttested=0.400ms, diff=0.212ms partialFailure=filteredBadSamples=2/20",
+                    detail = "register timer source; avgAttested=0.612ms, avgNonAttested=0.400ms, diff=0.212ms",
                 ),
             ),
         )
@@ -892,10 +897,51 @@ class TeeReportReducerTest {
                     it.body.contains("attested 0.612ms") &&
                     it.body.contains("non-attested 0.400ms") &&
                     it.body.contains("diff 0.212ms") &&
-                    it.body.contains("filteredBadSamples=2/20") &&
+                    it.body.contains("failedPairs=0/20") &&
+                    it.body.contains("outlierFiltered=2/20") &&
+                    it.body.contains("samples=18") &&
                     it.body.contains("ratio 1.530x") &&
                     it.body.contains("threshold > 1.1x") &&
                     it.level == TeeSignalLevel.WARN
+        })
+    }
+
+    @Test
+    fun `timing side-channel insufficient samples skip ratio without supplementary review`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                timingSideChannel = TimingSideChannelResult(
+                    probeRan = true,
+                    measurementAvailable = true,
+                    suspicious = true,
+                    sampleCount = 299,
+                    attemptedPairCount = 500,
+                    successfulPairCount = 320,
+                    failedPairCount = 180,
+                    filteredOutlierCount = 21,
+                    ratioEligible = false,
+                    ratioSkipReason = "insufficientSamples=299/300",
+                    warmupCount = 5,
+                    avgAttestedMillis = 0.612,
+                    avgNonAttestedMillis = 0.400,
+                    diffMillis = 0.212,
+                    detail = "register timer source; insufficientSamples=299/300",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Timing side-channel" &&
+                    it.body.contains("ratio skipped") &&
+                    it.body.contains("failedPairs=180/500") &&
+                    it.body.contains("outlierFiltered=21/320") &&
+                    it.body.contains("samples=299") &&
+                    it.body.contains("insufficientSamples=299/300") &&
+                    it.body.contains("Ratio skipped") &&
+                    !it.body.contains("Positive") &&
+                    it.level == TeeSignalLevel.INFO
         })
     }
 

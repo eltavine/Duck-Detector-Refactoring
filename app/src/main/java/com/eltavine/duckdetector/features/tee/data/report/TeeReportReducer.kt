@@ -32,6 +32,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.MIN_RATIO_SAMPLE_COUNT
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.timingSideChannelRatio
@@ -253,7 +254,11 @@ class TeeReportReducer(
                         timingSideChannelSkipSignature.level,
                     )
                 )
-            } else if (artifacts.timingSideChannel.measurementAvailable && artifacts.timingSideChannel.suspicious) {
+            } else if (
+                artifacts.timingSideChannel.measurementAvailable &&
+                artifacts.timingSideChannel.ratioEligible &&
+                artifacts.timingSideChannel.suspicious
+            ) {
                 add(
                     fact(
                         "Timing side-channel",
@@ -1401,7 +1406,10 @@ class TeeReportReducer(
         val timerSource = timingSideChannelTimerSourceLabel(result.timerSource, result.detail)
         val thresholdRatio = String.format(Locale.US, "%.1fx", TIMING_SIDE_CHANNEL_THRESHOLD_RATIO)
         val ratio = timingSideChannelRatio(result.avgAttestedMillis, result.avgNonAttestedMillis)
-        val ratioLabel = ratio?.let { String.format(Locale.US, "%.3fx", it) } ?: "n/a"
+        val ratioLabel = when {
+            result.measurementAvailable && !result.ratioEligible -> "skipped"
+            else -> ratio?.let { String.format(Locale.US, "%.3fx", it) } ?: "n/a"
+        }
         val affinity = when {
             result.affinity.isBlank() || result.affinity == "unknown" -> "affinity unknown"
             else -> result.affinity
@@ -1419,16 +1427,18 @@ class TeeReportReducer(
         val state = when {
             !result.probeRan -> "Skipped"
             !result.measurementAvailable -> "Measurement unavailable"
+            !result.ratioEligible -> "Ratio skipped"
             result.suspicious -> "Positive"
             else -> "Not positive"
         }
-        val filtered = Regex("""filteredBadSamples=\d+/\d+""")
-            .find(result.detail)
-            ?.value
-            ?.let { " • $it" }
-            .orEmpty()
+        val attemptedPairs = result.attemptedPairCount.takeIf { it > 0 } ?: result.sampleCount
+        val successfulPairs = result.successfulPairCount.takeIf { it > 0 } ?: result.sampleCount
+        val failedPairs = " • failedPairs=${result.failedPairCount}/$attemptedPairs"
+        val outlierFiltered = " • outlierFiltered=${result.filteredOutlierCount}/$successfulPairs"
+        val samples = " • samples=${result.sampleCount}"
+        val ratioSkip = result.ratioSkipReason?.takeIf { it.isNotBlank() }?.let { " • $it" }.orEmpty()
         val reason = result.failureReason?.takeIf { it.isNotBlank() }?.let { " • reason $it" }.orEmpty()
-        return "$timerSource • $affinity • attested $avgAttested • non-attested $avgNonAttested • diff $diff • ratio $ratioLabel$filtered • threshold > $thresholdRatio • $state$reason"
+        return "$timerSource • $affinity • attested $avgAttested • non-attested $avgNonAttested • diff $diff • ratio $ratioLabel • threshold > $thresholdRatio$failedPairs$outlierFiltered$samples$ratioSkip • $state$reason"
     }
 
     private fun timingSideChannelSummary(artifacts: TeeScanArtifacts): String {
@@ -1438,6 +1448,9 @@ class TeeReportReducer(
         val thresholdRatio = String.format(Locale.US, "%.1fx", TIMING_SIDE_CHANNEL_THRESHOLD_RATIO)
         if (!result.measurementAvailable) {
             return "$timerSource timing side-channel could not finish measurement; ${result.failureReason ?: "reason unavailable"}."
+        }
+        if (!result.ratioEligible) {
+            return "$timerSource timing side-channel skipped ratio; ${result.ratioSkipReason ?: "insufficientSamples=${result.sampleCount}/$MIN_RATIO_SAMPLE_COUNT"}."
         }
         val ratio = timingSideChannelRatio(result.avgAttestedMillis, result.avgNonAttestedMillis)
         val thresholdDirection = ratio?.let { value ->
@@ -2185,6 +2198,7 @@ class TeeReportReducer(
             skipSignature != null -> skipSignature.level
             !artifacts.timingSideChannel.probeRan -> TeeSignalLevel.INFO
             !artifacts.timingSideChannel.measurementAvailable -> TeeSignalLevel.INFO
+            !artifacts.timingSideChannel.ratioEligible -> TeeSignalLevel.INFO
             artifacts.timingSideChannel.suspicious -> TeeSignalLevel.WARN
             else -> TeeSignalLevel.INFO
         }

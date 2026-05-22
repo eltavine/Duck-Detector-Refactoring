@@ -135,12 +135,18 @@ class TimingSideChannelProbe(
                 val avgAttested = filteredSeries.attestedSamples.averageOrNull()
                 val avgNonAttested = filteredSeries.nonAttestedSamples.averageOrNull()
                 val diff = if (avgAttested != null && avgNonAttested != null) avgAttested - avgNonAttested else null
-                val suspicious = isPositiveTimingSideChannelRatio(avgAttested, avgNonAttested)
-                val filteredCount = pairedSeries.pairedSampleCount - filteredSeries.pairedSampleCount
-                val filteringNote = if (filteredCount > 0) {
-                    "filteredBadSamples=$filteredCount/${pairedSeries.pairedSampleCount}"
-                } else {
+                val ratioEligible = isTimingSideChannelRatioEligible(filteredSeries.pairedSampleCount)
+                val ratioSkipReason = if (ratioEligible) {
                     null
+                } else {
+                    "insufficientSamples=${filteredSeries.pairedSampleCount}/$MIN_RATIO_SAMPLE_COUNT"
+                }
+                val suspicious = ratioEligible && isPositiveTimingSideChannelRatio(avgAttested, avgNonAttested)
+                val filteredOutlierCount = pairedSeries.pairedSampleCount - filteredSeries.pairedSampleCount
+                val samplingNotes = buildList {
+                    add("failedPairs=${pairedSeries.failedPairCount}/${pairedSeries.attemptedPairCount}")
+                    add("outlierFiltered=$filteredOutlierCount/${pairedSeries.pairedSampleCount}")
+                    ratioSkipReason?.let(::add)
                 }
 
                 TimingSideChannelResult(
@@ -148,6 +154,12 @@ class TimingSideChannelProbe(
                     measurementAvailable = true,
                     suspicious = suspicious,
                     sampleCount = filteredSeries.pairedSampleCount,
+                    attemptedPairCount = pairedSeries.attemptedPairCount,
+                    successfulPairCount = pairedSeries.pairedSampleCount,
+                    failedPairCount = pairedSeries.failedPairCount,
+                    filteredOutlierCount = filteredOutlierCount,
+                    ratioEligible = ratioEligible,
+                    ratioSkipReason = ratioSkipReason,
                     warmupCount = WARMUP_COUNT,
                     avgAttestedMillis = avgAttested,
                     avgNonAttestedMillis = avgNonAttested,
@@ -177,9 +189,8 @@ class TimingSideChannelProbe(
                         warmupCount = WARMUP_COUNT,
                         measurementDetail = measurement.detail,
                         timerFallbackReason = measurementContext.timerFallbackReason,
-                        partialFailureReason = listOfNotNull(partialFailureReason, filteringNote)
-                            .joinToString("; ")
-                            .takeIf { it.isNotBlank() },
+                        partialFailureReason = (listOfNotNull(partialFailureReason) + samplingNotes)
+                            .joinToString("; "),
                     ),
                 )
             } finally {
@@ -253,6 +264,7 @@ class TimingSideChannelProbe(
         val attestedSamples = mutableListOf<Double>()
         val nonAttestedSamples = mutableListOf<Double>()
         var firstFailure: String? = null
+        var failedPairCount = 0
         repeat(LOOP_COUNT) { index ->
             val attested = runCatching { measurement.measureMillis(attestedDescriptor, measurement.timerSource) }
             val nonAttested = runCatching { measurement.measureMillis(nonAttestedDescriptor, measurement.timerSource) }
@@ -267,13 +279,16 @@ class TimingSideChannelProbe(
                 if (firstFailure == null) {
                     firstFailure = failure
                 }
+                failedPairCount += 1
                 warnings += "sample.paired[$index]=$failure"
             }
             throttleSamplingLoop(index)
         }
         return PairedSampleSeries(
+            attemptedPairCount = LOOP_COUNT,
             attestedSamples = attestedSamples,
             nonAttestedSamples = nonAttestedSamples,
+            failedPairCount = failedPairCount,
             failureReason = firstFailure,
         )
     }
@@ -354,8 +369,10 @@ class TimingSideChannelProbe(
     )
 
     private data class PairedSampleSeries(
+        val attemptedPairCount: Int,
         val attestedSamples: List<Double>,
         val nonAttestedSamples: List<Double>,
+        val failedPairCount: Int,
         val failureReason: String? = null,
     ) {
         val pairedSampleCount: Int
@@ -379,8 +396,10 @@ class TimingSideChannelProbe(
                 return this
             }
             return PairedSampleSeries(
+                attemptedPairCount = attemptedPairCount,
                 attestedSamples = keepIndices.map { attestedSamples[it] },
                 nonAttestedSamples = keepIndices.map { nonAttestedSamples[it] },
+                failedPairCount = failedPairCount,
                 failureReason = failureReason,
             )
         }
@@ -396,8 +415,8 @@ class TimingSideChannelProbe(
     companion object {
         private const val WARMUP_COUNT = 5
         private const val LOOP_COUNT = 500
-        private const val SAMPLE_THROTTLE_EVERY_PAIRS = 25
-        private const val SAMPLE_THROTTLE_SLEEP_MS = 8L
+        private const val SAMPLE_THROTTLE_EVERY_PAIRS = 20
+        private const val SAMPLE_THROTTLE_SLEEP_MS = 25L
     }
 }
 
@@ -428,6 +447,10 @@ internal fun isPositiveTimingSideChannelRatio(
 ): Boolean {
     val ratio = timingSideChannelRatio(avgAttestedMillis, avgNonAttestedMillis) ?: return false
     return ratio > TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
+}
+
+internal fun isTimingSideChannelRatioEligible(sampleCount: Int): Boolean {
+    return sampleCount >= MIN_RATIO_SAMPLE_COUNT
 }
 
 internal fun timingSideChannelRatio(
@@ -546,6 +569,12 @@ data class TimingSideChannelResult(
     val measurementAvailable: Boolean = false,
     val suspicious: Boolean = false,
     val sampleCount: Int = 0,
+    val attemptedPairCount: Int = 0,
+    val successfulPairCount: Int = 0,
+    val failedPairCount: Int = 0,
+    val filteredOutlierCount: Int = 0,
+    val ratioEligible: Boolean = true,
+    val ratioSkipReason: String? = null,
     val warmupCount: Int = 0,
     val avgAttestedMillis: Double? = null,
     val avgNonAttestedMillis: Double? = null,
@@ -569,3 +598,4 @@ data class TimingSideChannelResult(
 
 // 阈值故意保持单点常量，避免 probe/reducer/test 三处漂移。 / Keep the threshold as a single source of truth so probe, reducer, and tests cannot drift.
 internal const val TIMING_SIDE_CHANNEL_THRESHOLD_RATIO = 1.1
+internal const val MIN_RATIO_SAMPLE_COUNT = 300
