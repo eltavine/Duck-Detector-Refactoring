@@ -34,6 +34,10 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderC
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderHookBootstrapResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderPatchModeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
@@ -288,6 +292,158 @@ class TeeReportReducerTest {
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("ImportKey support gate failed") &&
                 it.level == TeeSignalLevel.INFO
+        })
+    }
+
+    @Test
+    fun `grant isolated-domain full-chain split becomes supplementary review without changing attestation verdict`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
+                    executed = true,
+                    available = true,
+                    splitDetected = true,
+                    ownerChainLength = 3,
+                    granteeChainLength = 2,
+                    mismatchIndex = 2,
+                    granteeUid = 99001,
+                    anomalyKind = GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT,
+                    detail = "lengthMismatch owner=3 grantee=2",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant isolated-domain", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant isolated-domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("kind=ISOLATED_CHAIN_SPLIT") &&
+                it.body.contains("mismatchIndex=2")
+        })
+    }
+
+    @Test
+    fun `grant isolated-domain key not found after owner chain becomes supplementary review`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
+                    executed = true,
+                    available = false,
+                    splitDetected = false,
+                    ownerChainLength = 3,
+                    granteeUid = 99001,
+                    anomalyKind = GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+                    detail = "grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant isolated-domain key visibility divergence", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant isolated-domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
+                it.body.contains("No key found by the given alias")
+        })
+    }
+
+    @Test
+    fun `grant isolated-domain unavailable state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
+                    executed = false,
+                    detail = "Grant-domain full-chain split probe requires Android 16 or newer.",
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant isolated-domain" &&
+                it.level == TeeSignalLevel.INFO &&
+                it.body.contains("Unavailable", ignoreCase = true)
+        })
+    }
+
+    @Test
+    fun `grant self-domain full-chain split becomes supplementary review without changing attestation verdict`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
+                    executed = true,
+                    available = true,
+                    splitDetected = true,
+                    ownerChainLength = 3,
+                    grantChainLength = 2,
+                    mismatchIndex = 2,
+                    grantIdPresent = true,
+                    anomalyKind = GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT,
+                    detail = "lengthMismatch owner=3 grantee=2",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant self-domain certificate-chain split", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant self-domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("kind=SELF_CHAIN_SPLIT") &&
+                it.body.contains("mismatchIndex=2")
+        })
+    }
+
+    @Test
+    fun `grant self-domain owner-visible key-not-found state becomes supplementary failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
+                    executed = true,
+                    ownerChainLength = 4,
+                    anomalyKind = GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+                    detail = "self grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                ),
+            ),
+        )
+
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant self-domain key visibility divergence", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant self-domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
+                it.body.contains("owner=4") &&
+                it.body.contains("No key found by the given alias")
+        })
+    }
+
+    @Test
+    fun `grant self-domain ordinary unavailable state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
+                    executed = false,
+                    detail = "self grantKeyAccess failed: IllegalStateException: transient service unavailable",
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant self-domain" &&
+                it.level == TeeSignalLevel.INFO &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("transient service unavailable")
         })
     }
 
@@ -1613,6 +1769,12 @@ class TeeReportReducerTest {
                 executed = false,
                 detail = "skipped",
             ),
+        grantDomainFullChainSplit: GrantDomainFullChainSplitResult = GrantDomainFullChainSplitResult(
+            detail = "skipped",
+        ),
+        grantSelfDomainFullChainSplit: GrantSelfDomainFullChainSplitResult = GrantSelfDomainFullChainSplitResult(
+            detail = "skipped",
+        ),
         keyMetadataSemantics: KeyMetadataSemanticsResult = KeyMetadataSemanticsResult(
             executed = false,
             detail = "skipped",
@@ -1710,6 +1872,8 @@ class TeeReportReducerTest {
             importKeyRetainedAttestationNarrative = importKeyRetainedAttestationNarrative,
             keystore2Hook = keystore2Hook,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
+            grantDomainFullChainSplit = grantDomainFullChainSplit,
+            grantSelfDomainFullChainSplit = grantSelfDomainFullChainSplit,
             legacyKeystorePath = legacyKeystorePath,
             listEntriesConsistency = listEntriesConsistency,
             listEntriesBatched = listEntriesBatched,

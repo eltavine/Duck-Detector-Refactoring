@@ -34,6 +34,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyboxI
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2GenerateModeParcelFingerprintResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2HookResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.LegacyKeystorePathResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ListEntriesBatchedResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ListEntriesConsistencyResult
@@ -68,6 +70,8 @@ data class TeeScanArtifacts(
     val importKeyRetainedAttestationNarrative: ImportKeyRetainedAttestationNarrativeResult,
     val keystore2Hook: Keystore2HookResult,
     val generateModeParcelFingerprint: Keystore2GenerateModeParcelFingerprintResult,
+    val grantDomainFullChainSplit: GrantDomainFullChainSplitResult,
+    val grantSelfDomainFullChainSplit: GrantSelfDomainFullChainSplitResult,
     val legacyKeystorePath: LegacyKeystorePathResult,
     val listEntriesConsistency: ListEntriesConsistencyResult,
     val listEntriesBatched: ListEntriesBatchedResult,

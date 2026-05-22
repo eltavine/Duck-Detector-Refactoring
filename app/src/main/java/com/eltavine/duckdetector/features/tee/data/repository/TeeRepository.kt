@@ -44,6 +44,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyPair
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyboxImportProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2GenerateModeParcelFingerprintProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2HookProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.LegacyKeystorePathProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ListEntriesBatchedProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ListEntriesConsistencyProbe
@@ -90,6 +92,8 @@ class TeeRepository(
         ImportKeyRetainedAttestationNarrativeProbe(appContext)
     private val keystore2HookProbe = Keystore2HookProbe()
     private val generateModeParcelFingerprintProbe = Keystore2GenerateModeParcelFingerprintProbe()
+    private val grantDomainFullChainSplitProbe = GrantDomainFullChainSplitProbe(appContext)
+    private val grantSelfDomainFullChainSplitProbe = GrantSelfDomainFullChainSplitProbe(appContext)
     private val legacyKeystorePathProbe = LegacyKeystorePathProbe()
     private val listEntriesConsistencyProbe = ListEntriesConsistencyProbe()
     private val listEntriesBatchedProbe = ListEntriesBatchedProbe()
@@ -153,6 +157,8 @@ class TeeRepository(
                     importKeyRetainedAttestationNarrative = deepChecks.importKeyRetainedAttestationNarrative,
                     keystore2Hook = deepChecks.keystore2Hook,
                     generateModeParcelFingerprint = deepChecks.generateModeParcelFingerprint,
+                    grantDomainFullChainSplit = deepChecks.grantDomainFullChainSplit,
+                    grantSelfDomainFullChainSplit = deepChecks.grantSelfDomainFullChainSplit,
                     legacyKeystorePath = deepChecks.legacyKeystorePath,
                     listEntriesConsistency = deepChecks.listEntriesConsistency,
                     listEntriesBatched = deepChecks.listEntriesBatched,
@@ -241,6 +247,8 @@ class TeeRepository(
         val strongBoxResult = strongBox.await()
 
         val generateModeParcelFingerprint = generateModeParcelFingerprintProbe.inspect()
+        val grantDomainFullChainSplit = grantDomainFullChainSplitProbe.inspect(useStrongBox = useStrongBox)
+        val grantSelfDomainFullChainSplit = grantSelfDomainFullChainSplitProbe.inspect(useStrongBox = useStrongBox)
         val legacyKeystorePath = legacyKeystorePathProbe.inspect()
         val binderHookBootstrap = binderHookBootstrapProbe.inspect()
         val binderPatchMode = binderPatchModeProbe.inspect()
@@ -257,6 +265,8 @@ class TeeRepository(
             importKeyRetainedAttestationNarrative = importKeyRetainedAttestationNarrativeResult,
             keystore2Hook = keystore2HookResult,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
+            grantDomainFullChainSplit = grantDomainFullChainSplit,
+            grantSelfDomainFullChainSplit = grantSelfDomainFullChainSplit,
             legacyKeystorePath = legacyKeystorePath,
             listEntriesConsistency = listEntriesConsistencyResult,
             listEntriesBatched = listEntriesBatchedResult,
@@ -290,6 +300,8 @@ private data class DeferredChecks(
     val importKeyRetainedAttestationNarrative: com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult,
     val keystore2Hook: com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2HookResult,
     val generateModeParcelFingerprint: com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2GenerateModeParcelFingerprintResult,
+    val grantDomainFullChainSplit: com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult,
+    val grantSelfDomainFullChainSplit: com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult,
     val legacyKeystorePath: com.eltavine.duckdetector.features.tee.data.verification.keystore.LegacyKeystorePathResult,
     val listEntriesConsistency: com.eltavine.duckdetector.features.tee.data.verification.keystore.ListEntriesConsistencyResult,
     val listEntriesBatched: com.eltavine.duckdetector.features.tee.data.verification.keystore.ListEntriesBatchedResult,
@@ -356,6 +368,12 @@ private data class DeferredChecks(
             generateModeParcelFingerprint = com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2GenerateModeParcelFingerprintResult(
                 executed = false,
                 detail = "Keystore2 generate-mode parcel fingerprint probe skipped.",
+            ),
+            grantDomainFullChainSplit = com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult(
+                detail = "Grant-domain full-chain split probe skipped.",
+            ),
+            grantSelfDomainFullChainSplit = com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult(
+                detail = "Grant self-domain full-chain split probe skipped.",
             ),
             legacyKeystorePath = com.eltavine.duckdetector.features.tee.data.verification.keystore.LegacyKeystorePathResult(
                 executed = false,
