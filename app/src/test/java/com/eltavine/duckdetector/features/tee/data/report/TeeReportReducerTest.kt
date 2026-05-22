@@ -34,6 +34,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderC
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderHookBootstrapResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderPatchModeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
@@ -288,6 +289,53 @@ class TeeReportReducerTest {
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("ImportKey support gate failed") &&
                 it.level == TeeSignalLevel.INFO
+        })
+    }
+
+    @Test
+    fun `grant domain full-chain split becomes supplementary review without changing attestation verdict`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
+                    executed = true,
+                    available = true,
+                    splitDetected = true,
+                    ownerChainLength = 3,
+                    granteeChainLength = 2,
+                    mismatchIndex = 2,
+                    granteeUid = 99001,
+                    detail = "lengthMismatch owner=3 grantee=2",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("Grant-domain", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant domain" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("mismatchIndex=2")
+        })
+    }
+
+    @Test
+    fun `grant domain unavailable state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
+                    executed = false,
+                    detail = "Grant-domain full-chain split probe requires Android 16 or newer.",
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant domain" &&
+                it.level == TeeSignalLevel.INFO &&
+                it.body.contains("Unavailable", ignoreCase = true)
         })
     }
 
@@ -1613,6 +1661,9 @@ class TeeReportReducerTest {
                 executed = false,
                 detail = "skipped",
             ),
+        grantDomainFullChainSplit: GrantDomainFullChainSplitResult = GrantDomainFullChainSplitResult(
+            detail = "skipped",
+        ),
         keyMetadataSemantics: KeyMetadataSemanticsResult = KeyMetadataSemanticsResult(
             executed = false,
             detail = "skipped",
@@ -1710,6 +1761,7 @@ class TeeReportReducerTest {
             importKeyRetainedAttestationNarrative = importKeyRetainedAttestationNarrative,
             keystore2Hook = keystore2Hook,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
+            grantDomainFullChainSplit = grantDomainFullChainSplit,
             legacyKeystorePath = legacyKeystorePath,
             listEntriesConsistency = listEntriesConsistency,
             listEntriesBatched = listEntriesBatched,

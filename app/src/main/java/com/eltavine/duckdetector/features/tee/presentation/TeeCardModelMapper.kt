@@ -225,6 +225,10 @@ class TeeCardModelMapper {
                         item.level == TeeSignalLevel.FAIL &&
                             item.body.hasImportKeyRetainedNarrativeDangerKind()
 
+                    "Grant domain" ->
+                        item.level == TeeSignalLevel.FAIL &&
+                            item.body.contains("Matched", ignoreCase = true)
+
                     else -> false
                 }
             }

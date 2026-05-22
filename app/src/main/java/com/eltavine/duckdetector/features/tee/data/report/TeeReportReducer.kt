@@ -270,6 +270,17 @@ class TeeReportReducer(
                     )
                 )
             }
+            if (artifacts.grantDomainFullChainSplit.executed &&
+                artifacts.grantDomainFullChainSplit.splitDetected
+            ) {
+                add(
+                    fact(
+                        "Grant domain",
+                        "Grant-domain certificate-chain narrative split detected.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
+            }
             if (artifacts.keystore2Hook.javaHookDetected) {
                 add(
                     fact(
@@ -802,6 +813,13 @@ class TeeReportReducer(
                             "ImportKey narrative",
                             importKeyRetainedAttestationNarrativeValue(artifacts),
                             importKeyRetainedAttestationNarrativeLevel(artifacts)
+                        )
+                    )
+                    add(
+                        fact(
+                            "Grant domain",
+                            grantDomainFullChainSplitValue(artifacts),
+                            grantDomainFullChainSplitLevel(artifacts)
                         )
                     )
                     add(
@@ -1443,6 +1461,30 @@ class TeeReportReducer(
         }
     }
 
+    private fun grantDomainFullChainSplitValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.grantDomainFullChainSplit
+        return when {
+            result.executed && result.splitDetected -> buildString {
+                append("Matched")
+                append(" owner=")
+                append(result.ownerChainLength)
+                append(" grantee=")
+                append(result.granteeChainLength)
+                result.mismatchIndex?.let { append(" mismatchIndex=$it") }
+                result.granteeUid?.let { append(" uid=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+            result.executed && result.available -> buildString {
+                append("Clean")
+                append(" length=")
+                append(result.ownerChainLength)
+                result.granteeUid?.let { append(" uid=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+            else -> "Unavailable${result.detail.takeIf { it.isNotBlank() }?.let { " • $it" }.orEmpty()}"
+        }
+    }
+
     private fun pureCertificateValue(artifacts: TeeScanArtifacts): String {
         return if (artifacts.pureCertificate.pureCertificateReturnsNullKey) {
             "Null key as expected"
@@ -1679,6 +1721,15 @@ class TeeReportReducer(
             !result.executed -> TeeSignalLevel.INFO
             result.retainedNarrativeDetected -> TeeSignalLevel.FAIL
             result.importSupported && result.markerImportBaselineClean -> TeeSignalLevel.PASS
+            else -> TeeSignalLevel.INFO
+        }
+    }
+
+    private fun grantDomainFullChainSplitLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
+        val result = artifacts.grantDomainFullChainSplit
+        return when {
+            result.executed && result.splitDetected -> TeeSignalLevel.FAIL
+            result.executed && result.available -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
         }
     }
