@@ -84,6 +84,7 @@ import compose.icons.simpleicons.Tencentqq
 import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.core.ui.model.DetectionSeverity
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.ui.components.BlindWatermark
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.formatBuildTimeUtc
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
@@ -364,7 +365,55 @@ fun DashboardScreen(
                 onDismiss = { showQrDialog = false },
             )
         }
+
+        // Blind watermark — device identity overlaid at very low opacity
+        val watermarkLines = buildWatermarkLines(uiState.deviceInfoCard)
+        BlindWatermark(lines = watermarkLines)
     }
+}
+
+/**
+ * Builds the watermark text from device identity facts.
+ * Format: "Brand Model · Android Release · SDK · Fingerprint"
+ */
+private fun buildWatermarkLines(card: com.eltavine.duckdetector.features.deviceinfo.ui.model.DeviceInfoCardModel): List<String> {
+    val map = mutableMapOf<String, String>()
+    card.sections.forEach { section ->
+        section.rows.forEach { row ->
+            map[row.label] = row.value
+        }
+    }
+
+    val brand = map["Brand"]?.takeIf { it != "Unavailable" } ?: ""
+    val model = map["Model"]?.takeIf { it != "Unavailable" } ?: ""
+    val release = map["Release"]?.takeIf { it != "Unavailable" } ?: ""
+    val sdk = map["SDK"]?.takeIf { it != "Unavailable" } ?: ""
+    val fingerprint = map["Fingerprint"]?.takeIf { it != "Unavailable" }?.let {
+        // Truncate fingerprint to first 60 chars for watermark
+        if (it.length > 60) it.take(60) + "…" else it
+    } ?: ""
+    val soc = map["SOC Model"]?.takeIf { it != "Unavailable" }
+        ?: map["Board Platform"]?.takeIf { it != "Unavailable" } ?: ""
+    val kernel = map["Kernel"]?.takeIf { it != "Unavailable" }?.let {
+        it.substringBefore(" ").take(20)
+    } ?: ""
+
+    val parts = listOfNotNull(
+        brand.takeIf { it.isNotEmpty() },
+        model.takeIf { it.isNotEmpty() },
+    )
+    val line1 = if (parts.isNotEmpty()) parts.joinToString(" ") else "Duck Detector"
+
+    val line2 = listOfNotNull(
+        "Android $release".takeIf { release.isNotEmpty() },
+        "SDK $sdk".takeIf { sdk.isNotEmpty() },
+        soc.takeIf { it.isNotEmpty() },
+        kernel.takeIf { it.isNotEmpty() },
+    ).joinToString(" · ")
+
+    val line3 = fingerprint.takeIf { it.isNotEmpty() }
+
+    return listOfNotNull(line1, line2.takeIf { it.isNotEmpty() }, line3)
 }
 
 @Composable
