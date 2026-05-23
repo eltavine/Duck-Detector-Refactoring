@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
@@ -206,6 +207,7 @@ private fun sectionIcon(
 ): ImageVector {
     return when (title) {
         "Identity" -> Icons.Rounded.Badge
+        "SOC / Chipset" -> Icons.Rounded.Devices
         "Build" -> Icons.Rounded.Dns
         "Android" -> Icons.Rounded.Android
         "Runtime" -> Icons.Rounded.Memory

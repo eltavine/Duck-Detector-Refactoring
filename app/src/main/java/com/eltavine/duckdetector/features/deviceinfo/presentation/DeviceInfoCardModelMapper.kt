@@ -45,7 +45,7 @@ class DeviceInfoCardModelMapper {
 
     private fun buildSubtitle(report: DeviceInfoReport): String {
         return when (report.stage) {
-            DeviceInfoStage.LOADING -> "identity + build + android + runtime + display"
+            DeviceInfoStage.LOADING -> "identity + soc + build + android + runtime + display"
             DeviceInfoStage.FAILED -> "local device profile unavailable"
             DeviceInfoStage.READY -> "${report.totalCount} local device facts"
         }
@@ -92,6 +92,7 @@ class DeviceInfoCardModelMapper {
         return when (report.stage) {
             DeviceInfoStage.LOADING -> listOf(
                 placeholderSection("Identity"),
+                placeholderSection("SOC / Chipset"),
                 placeholderSection("Build"),
                 placeholderSection("Android"),
                 placeholderSection("Runtime"),

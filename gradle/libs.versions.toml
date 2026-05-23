@@ -19,6 +19,7 @@ soterWrapper = "2.0.7"
 coroutines = "1.11.0"
 composeIcons = "1.1.1"
 aboutLibraries = "14.2.0"
+zxing = "3.5.3"
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
@@ -47,6 +48,7 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 compose-icons-simple = { module = "br.com.devsrsouza.compose.icons:simple-icons-android", version.ref = "composeIcons" }
 aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 
 [bundles]
 app-compose = [

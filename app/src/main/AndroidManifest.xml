@@ -34,6 +34,7 @@ limitations under the License.
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
+        android:name=".DuckDetectorApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -45,6 +46,14 @@ limitations under the License.
         android:theme="@style/Theme.DuckDetector"
         android:zygotePreloadName="com.eltavine.duckdetector.features.selinux.data.service.AppZygotePreload"
         tools:targetApi="tiramisu">
+
+        <!-- Crash handler installed at earliest possible moment (before Application.onCreate) -->
+        <provider
+            android:name=".features.crashreport.data.CrashInitProvider"
+            android:authorities="${applicationId}.crashinit"
+            android:exported="false"
+            android:initOrder="2147483647" />
+
         <activity
             android:name="android.app.NativeActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
