@@ -28,30 +28,49 @@ class SceneLoopbackProbe(
 ) {
 
     fun probe(): SceneLoopbackProbeResult {
-        val httpGet = transport.exchange(
-            port = HTTP_PORT,
-            payload = HTTP_GET_PAYLOAD,
+        var lastResult: SceneLoopbackProbeResult? = null
+        for ((httpPort, sidecarPort) in PORT_PAIRS) {
+            val httpGet = transport.exchange(
+                port = httpPort,
+                payload = HTTP_GET_PAYLOAD,
+            )
+            val invalidPayload = transport.exchange(
+                port = httpPort,
+                payload = JSON_PING_PAYLOAD,
+            )
+            val sideChannel =
+                if (matchesHttpStatus(httpGet, 404) && matchesHttpStatus(invalidPayload, 400)) {
+                    transport.exchange(
+                        port = sidecarPort,
+                        payload = JSON_PING_PAYLOAD,
+                    )
+                } else {
+                    ProbeExchange.unavailable()
+                }
+            val result = evaluate(
+                httpGet = httpGet,
+                invalidPayload = invalidPayload,
+                sideChannel = sideChannel,
+                httpPort = httpPort,
+                sidecarPort = sidecarPort,
+            )
+            if (result.detected) return result
+            lastResult = result
+        }
+        return lastResult ?: SceneLoopbackProbeResult(
+            detected = false,
+            get404Matched = false,
+            invalid400Matched = false,
+            sideChannelClosed = false,
         )
-        val invalidPayload = transport.exchange(
-            port = HTTP_PORT,
-            payload = JSON_PING_PAYLOAD,
-        )
-        val sideChannel =
-            if (matchesHttpStatus(httpGet, 404) && matchesHttpStatus(invalidPayload, 400)) {
-                transport.exchange(
-                    port = SIDECAR_PORT,
-                    payload = JSON_PING_PAYLOAD,
-                )
-            } else {
-                ProbeExchange.unavailable()
-            }
-        return evaluate(httpGet, invalidPayload, sideChannel)
     }
 
     internal fun evaluate(
         httpGet: ProbeExchange,
         invalidPayload: ProbeExchange,
         sideChannel: ProbeExchange,
+        httpPort: Int,
+        sidecarPort: Int,
     ): SceneLoopbackProbeResult {
         val get404Matched = matchesHttpStatus(httpGet, 404)
         val invalid400Matched = matchesHttpStatus(invalidPayload, 400)
@@ -65,13 +84,13 @@ class SceneLoopbackProbe(
         }
 
         val details = mutableListOf(
-            "127.0.0.1:$HTTP_PORT GET->404",
-            "127.0.0.1:$HTTP_PORT invalid payload->400",
+            "127.0.0.1:$httpPort GET->404",
+            "127.0.0.1:$httpPort invalid payload->400",
         )
         val sideChannelClosed =
             sideChannel.connected && sideChannel.firstLine == null && !sideChannel.timedOut
         if (sideChannelClosed) {
-            details += "127.0.0.1:$SIDECAR_PORT invalid payload closed immediately"
+            details += "127.0.0.1:$sidecarPort invalid payload closed immediately"
         }
 
         return SceneLoopbackProbeResult(
@@ -164,8 +183,13 @@ class SceneLoopbackProbe(
 
     private companion object {
         private const val LOOPBACK_HOST = "127.0.0.1"
-        private const val HTTP_PORT = 8765
-        private const val SIDECAR_PORT = 8788
+        // Scene 8.x:           HTTP_PORT=8765,  SIDECAR_PORT=8788
+        // Scene 9.3.0 Alpha13: HTTP_PORT=14731, SIDECAR_PORT=14754
+        // Probe both port pairs for backward compatibility.
+        private val PORT_PAIRS = listOf(
+            8765 to 8788,
+            14731 to 14754,
+        )
         private const val CONNECT_TIMEOUT_MS = 350
         private const val READ_TIMEOUT_MS = 350
         private const val HTTP_STATUS_PATTERN = "^HTTP/\\d(?:\\.\\d)?\\s+%d(?:\\s+.*)?$"
