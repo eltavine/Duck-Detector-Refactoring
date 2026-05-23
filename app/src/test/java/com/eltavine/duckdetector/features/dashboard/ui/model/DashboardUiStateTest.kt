@@ -77,4 +77,26 @@ class DashboardUiStateTest {
         assertEquals("Danger", overview.headline)
         assertEquals("1", overview.metrics.single { it.label == "Danger" }.value)
     }
+
+    @Test
+    fun `top findings use compact finding detail when detector provides one`() {
+        val findings = buildDashboardFindings(
+            contributions = listOf(
+                DashboardDetectorContribution(
+                    id = "tee",
+                    title = "TEE",
+                    status = DetectorStatus.danger(),
+                    headline = "Attestation aligned; local probes need review",
+                    summary = "Grant self-domain certificate-chain split detected. Public: clean | Hidden: clean | Private: split.",
+                    findingDetail = "Grant self-domain certificate chain diverged; open TEE details for stage diagnostics.",
+                    ready = true,
+                ),
+            ),
+        )
+
+        assertEquals(
+            "Grant self-domain certificate chain diverged; open TEE details for stage diagnostics.",
+            findings.single().detail,
+        )
+    }
 }

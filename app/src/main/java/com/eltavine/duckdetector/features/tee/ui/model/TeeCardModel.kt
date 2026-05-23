@@ -96,6 +96,9 @@ data class TeeCardModel(
     val status: DetectorStatus,
     val verdict: String,
     val summary: String,
+    // Compact top-finding copy only; the TEE card keeps the full reducer summary and hidden diagnostics.
+    // 仅用于 Dashboard 顶层 finding 的短文案；TEE 卡片保留完整 reducer 摘要和隐藏诊断。
+    val findingDetail: String? = null,
     val isExpanded: Boolean,
     val headerFacts: List<TeeHeaderFactModel>,
     val highlightSignals: List<TeeHighlightSignalModel>,

@@ -69,6 +69,9 @@ data class DashboardDetectorContribution(
     val headline: String,
     val summary: String,
     val ready: Boolean,
+    // Optional summary override for compact Dashboard findings; detector cards keep their full detail.
+    // Dashboard 顶层 findings 的可选短摘要；detector 卡片仍保留完整细节。
+    val findingDetail: String? = null,
 )
 
 sealed interface DashboardDetectorCardEntry {
@@ -306,7 +309,7 @@ fun buildDashboardFindings(
             DashboardFindingModel(
                 detectorTitle = contribution.title,
                 headline = contribution.headline,
-                detail = contribution.summary,
+                detail = contribution.findingDetail ?: contribution.summary,
                 status = contribution.status,
             )
         }

@@ -479,13 +479,17 @@ class TeeCardModelMapperTest {
 
     @Test
     fun `matched grant self-domain split escalates aligned tee card to danger`() {
+        val longGrantSummary =
+            "Grant self-domain certificate-chain split detected. " +
+                "Public: clean | Hidden: clean | Private: owner=3 grant=2 mismatchIndex=2. " +
+                "Attestation and trust-path checks still aligned."
         val model = mapper.map(
             report = TeeReport(
                 stage = TeeScanStage.READY,
                 verdict = TeeVerdict.CONSISTENT,
                 tier = TeeTier.TEE,
                 headline = "Attestation aligned; local probes need review",
-                summary = "Grant self-domain certificate-chain split detected. Attestation and trust-path checks still aligned.",
+                summary = longGrantSummary,
                 collapsedSummary = "Aligned • local review",
                 trustRoot = TeeTrustRoot.GOOGLE,
                 trustSummary = "Local trust path",
@@ -518,6 +522,11 @@ class TeeCardModelMapperTest {
         )
 
         assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals(longGrantSummary, model.summary)
+        assertEquals(
+            "Grant self-domain certificate chain diverged; open TEE details for stage diagnostics.",
+            model.findingDetail,
+        )
     }
 
     @Test

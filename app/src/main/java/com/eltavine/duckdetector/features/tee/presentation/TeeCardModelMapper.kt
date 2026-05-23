@@ -47,6 +47,7 @@ class TeeCardModelMapper {
             status = status,
             verdict = report.headline,
             summary = report.summary,
+            findingDetail = report.topFindingDetail(),
             rkpBadgeLabel = rkpBadgeLabel(report),
             isExpanded = isExpanded,
             headerFacts = buildHeaderFacts(report, status),
@@ -146,6 +147,41 @@ class TeeCardModelMapper {
         } else {
             null
         }
+
+    private fun TeeReport.topFindingDetail(): String? {
+        if (!summary.contains("Grant self-domain") && !summary.contains("Grant isolated-domain")) {
+            return null
+        }
+        // Grant stage details can include Java/hidden/private summaries. Keep that audit text inside
+        // the TEE card; Dashboard top findings should be a short routing hint, not a diagnostic dump.
+        // Grant 阶段细节可能包含 Java/hidden/private 摘要。审计文本留在 TEE 卡片内；Dashboard 顶层 finding 只给短路由提示，不承载诊断 dump。
+        val grantFailure = sections
+            .asSequence()
+            .flatMap { section -> section.items.asSequence() }
+            .firstOrNull { item ->
+                item.level == TeeSignalLevel.FAIL &&
+                    (item.title == "Grant self-domain" || item.title == "Grant isolated-domain")
+            }
+            ?: return null
+
+        val keyVisibilityDiverged =
+            summary.contains("key visibility", ignoreCase = true) ||
+                grantFailure.body.contains("key visibility", ignoreCase = true) ||
+                grantFailure.body.contains("KEY_NOT_FOUND", ignoreCase = true)
+        return when (grantFailure.title) {
+            "Grant self-domain" -> if (keyVisibilityDiverged) {
+                "Grant self-domain key visibility diverged; open TEE details for stage diagnostics."
+            } else {
+                "Grant self-domain certificate chain diverged; open TEE details for stage diagnostics."
+            }
+            "Grant isolated-domain" -> if (keyVisibilityDiverged) {
+                "Grant isolated-domain key visibility diverged; open TEE details for stage diagnostics."
+            } else {
+                "Grant isolated-domain certificate chain diverged; open TEE details for stage diagnostics."
+            }
+            else -> null
+        }
+    }
 
     private fun trustRootValue(report: TeeReport): String = when (report.trustRoot) {
         TeeTrustRoot.GOOGLE_RKP -> "Google"
