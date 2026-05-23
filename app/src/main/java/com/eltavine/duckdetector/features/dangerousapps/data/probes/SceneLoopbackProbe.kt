@@ -28,6 +28,7 @@ class SceneLoopbackProbe(
 ) {
 
     fun probe(): SceneLoopbackProbeResult {
+        var lastResult: SceneLoopbackProbeResult? = null
         for ((httpPort, sidecarPort) in PORT_PAIRS) {
             val httpGet = transport.exchange(
                 port = httpPort,
@@ -49,8 +50,9 @@ class SceneLoopbackProbe(
             val result = evaluate(httpGet, invalidPayload, sideChannel,
                 httpPort = httpPort, sidecarPort = sidecarPort)
             if (result.detected) return result
+            lastResult = result
         }
-        return SceneLoopbackProbeResult(
+        return lastResult ?: SceneLoopbackProbeResult(
             detected = false,
             get404Matched = false,
             invalid400Matched = false,
