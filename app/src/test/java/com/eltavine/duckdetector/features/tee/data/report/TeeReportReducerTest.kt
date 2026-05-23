@@ -310,7 +310,8 @@ class TeeReportReducerTest {
                     mismatchIndex = 2,
                     granteeUid = 99001,
                     anomalyKind = GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT,
-                    detail = "lengthMismatch owner=3 grantee=2",
+                    detail = "Public: clean • Private: matched lengthMismatch owner=3 grantee=2",
+                    diagnosticCopyText = "isolated diagnostic\nat com.example.Grant.probe(Grant.kt:1)",
                 ),
             ),
         )
@@ -323,7 +324,9 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("Matched", ignoreCase = true) &&
                 it.body.contains("kind=ISOLATED_CHAIN_SPLIT") &&
-                it.body.contains("mismatchIndex=2")
+                it.body.contains("mismatchIndex=2") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.probe") == true
         })
     }
 
@@ -338,7 +341,8 @@ class TeeReportReducerTest {
                     ownerChainLength = 3,
                     granteeUid = 99001,
                     anomalyKind = GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                    detail = "private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
+                    detail = "Public: clean • Private: private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
+                    diagnosticCopyText = "isolated key-not-found\nat com.example.Grant.keyNotFound(Grant.kt:2)",
                 ),
             ),
         )
@@ -351,7 +355,9 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
-                it.body.contains("No key found by the given alias")
+                it.body.contains("No key found by the given alias") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.keyNotFound") == true
         })
     }
 
@@ -387,7 +393,8 @@ class TeeReportReducerTest {
                     mismatchIndex = 2,
                     grantIdPresent = true,
                     anomalyKind = GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT,
-                    detail = "lengthMismatch owner=3 grantee=2",
+                    detail = "Public: clean • Private: matched lengthMismatch owner=3 grantee=2",
+                    diagnosticCopyText = "self diagnostic\nat com.example.Grant.selfSplit(Grant.kt:3)",
                 ),
             ),
         )
@@ -400,7 +407,9 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("Matched", ignoreCase = true) &&
                 it.body.contains("kind=SELF_CHAIN_SPLIT") &&
-                it.body.contains("mismatchIndex=2")
+                it.body.contains("mismatchIndex=2") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.selfSplit") == true
         })
     }
 
@@ -412,7 +421,8 @@ class TeeReportReducerTest {
                     executed = true,
                     ownerChainLength = 4,
                     anomalyKind = GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                    detail = "private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
+                    detail = "Public: clean • Private: private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
+                    diagnosticCopyText = "self key-not-found\nat com.example.Grant.selfKeyNotFound(Grant.kt:4)",
                 ),
             ),
         )
@@ -425,7 +435,9 @@ class TeeReportReducerTest {
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
                 it.body.contains("owner=4") &&
-                it.body.contains("No key found by the given alias")
+                it.body.contains("No key found by the given alias") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.selfKeyNotFound") == true
         })
     }
 

@@ -161,6 +161,18 @@ class TeeGrantDomainGranteeSession(
     private var bound: Boolean,
 ) : AutoCloseable {
 
+    fun readGrantedCertificateChainPublic(grantId: Long): TeeGrantDomainGranteeChainResult {
+        return runCatching {
+            proxy.readGrantedCertificateChainPublic(grantId)
+        }.getOrElse { throwable ->
+            TeeGrantDomainGranteeChainResult(
+                available = false,
+                detail = "public isolated binder call failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                diagnosticCopyText = throwable.stackTraceToString().trim(),
+            )
+        }
+    }
+
     fun readGrantedCertificateChain(
         grantId: Long,
         keystore2Binder: IBinder,
@@ -171,6 +183,7 @@ class TeeGrantDomainGranteeSession(
             TeeGrantDomainGranteeChainResult(
                 available = false,
                 detail = "isolated binder call blocked: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                diagnosticCopyText = throwable.stackTraceToString().trim(),
             )
         }
     }

@@ -101,6 +101,50 @@ class GrantDomainFullChainSplitProbeTest {
         )
     }
 
+    @Test
+    fun `private isolated fallback danger outranks public clean`() {
+        val publicResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            ownerChainLength = 3,
+            granteeChainLength = 3,
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Public: clean",
+        )
+        val privateResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            splitDetected = true,
+            ownerChainLength = 3,
+            granteeChainLength = 2,
+            mismatchIndex = 2,
+            anomalyKind = GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT,
+            detail = "Private: matched lengthMismatch owner=3 grantee=2",
+        )
+
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(publicResult, privateResult)
+
+        assertEquals(GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT, result.anomalyKind)
+        assertTrue(result.detail.contains("Public: Public: clean"))
+        assertTrue(result.detail.contains("Private: Private: matched"))
+    }
+
+    @Test
+    fun `public isolated danger remains final when private is unavailable`() {
+        val publicResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            anomalyKind = GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+            detail = "Public: grant failed",
+        )
+        val privateResult = GrantDomainFullChainSplitResult(
+            detail = "Private: should not execute",
+        )
+
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(publicResult, privateResult)
+
+        assertEquals(GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN, result.anomalyKind)
+    }
+
     private fun chain(vararg labels: String): GrantDomainCertificateChain {
         return GrantDomainCertificateChain(
             labels.map { label ->

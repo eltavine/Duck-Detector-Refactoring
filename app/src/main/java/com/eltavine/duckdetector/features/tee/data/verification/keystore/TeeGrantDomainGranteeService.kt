@@ -22,6 +22,8 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.Process
+import android.security.keystore.KeyStoreManager
+import java.security.cert.X509Certificate
 
 class TeeGrantDomainGranteeService : Service() {
 
@@ -55,6 +57,15 @@ class TeeGrantDomainGranteeService : Service() {
                     true
                 }
 
+                TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN_PUBLIC -> {
+                    data.enforceInterface(TeeGrantDomainGranteeProtocol.DESCRIPTOR)
+                    val grantId = data.readLong()
+                    val result = readGrantedCertificateChainPublic(grantId)
+                    reply?.writeNoException()
+                    result.writeToParcel(reply)
+                    true
+                }
+
                 else -> super.onTransact(code, data, reply, flags)
             }
         }
@@ -78,11 +89,40 @@ class TeeGrantDomainGranteeService : Service() {
                 available = result.available,
                 chain = result.chain,
                 detail = result.detail.ifBlank { "isolated private binder readback blocked." },
+                diagnosticCopyText = result.throwable
+                    ?.stackTraceToString()
+                    ?.trim()
+                    .orEmpty(),
             )
         }.getOrElse { throwable ->
             TeeGrantDomainGranteeChainResult(
                 available = false,
                 detail = "isolated binder call blocked: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                diagnosticCopyText = throwable.stackTraceToString().trim(),
+            )
+        }
+    }
+
+    private fun readGrantedCertificateChainPublic(grantId: Long): TeeGrantDomainGranteeChainResult {
+        val keyStoreManager = runCatching {
+            getSystemService(KeyStoreManager::class.java)
+        }.getOrNull() ?: return TeeGrantDomainGranteeChainResult(
+            available = false,
+            detail = "public isolated readback unavailable: KeyStoreManager missing.",
+        )
+        return runCatching {
+            val chain = keyStoreManager.getGrantedCertificateChainFromId(grantId)
+                .filterIsInstance<X509Certificate>()
+            TeeGrantDomainGranteeChainResult(
+                available = true,
+                chain = GrantDomainCertificateChain.fromCertificates(chain),
+                detail = "public isolated readback chainLength=${chain.size}",
+            )
+        }.getOrElse { throwable ->
+            TeeGrantDomainGranteeChainResult(
+                available = false,
+                detail = "public isolated readback failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                diagnosticCopyText = throwable.stackTraceToString().trim(),
             )
         }
     }
@@ -92,12 +132,14 @@ object TeeGrantDomainGranteeProtocol {
     const val DESCRIPTOR = "com.eltavine.duckdetector.features.tee.data.verification.keystore.ITeeGrantDomainGrantee"
     const val TRANSACTION_GET_UID = IBinder.FIRST_CALL_TRANSACTION
     const val TRANSACTION_READ_GRANTED_CHAIN = IBinder.FIRST_CALL_TRANSACTION + 1
+    const val TRANSACTION_READ_GRANTED_CHAIN_PUBLIC = IBinder.FIRST_CALL_TRANSACTION + 2
 }
 
 data class TeeGrantDomainGranteeChainResult(
     val available: Boolean = false,
     val chain: GrantDomainCertificateChain = GrantDomainCertificateChain(),
     val detail: String = "",
+    val diagnosticCopyText: String = "",
 ) {
     fun writeToParcel(reply: Parcel?) {
         reply ?: return
@@ -108,6 +150,7 @@ data class TeeGrantDomainGranteeChainResult(
             reply.writeString(certificate.sha256)
         }
         reply.writeString(detail)
+        reply.writeString(diagnosticCopyText)
     }
 
     companion object {
@@ -128,6 +171,7 @@ data class TeeGrantDomainGranteeChainResult(
                 available = available,
                 chain = GrantDomainCertificateChain(certificates),
                 detail = reply.readString().orEmpty(),
+                diagnosticCopyText = reply.readString().orEmpty(),
             )
         }
     }

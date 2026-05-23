@@ -67,6 +67,50 @@ class GrantSelfDomainFullChainSplitProbeTest {
         assertEquals(2, comparison.mismatchIndex)
     }
 
+    @Test
+    fun `private fallback danger outranks public clean`() {
+        val publicResult = GrantSelfDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            ownerChainLength = 3,
+            grantChainLength = 3,
+            anomalyKind = GrantSelfDomainAnomalyKind.NONE,
+            detail = "Public: clean",
+        )
+        val privateResult = GrantSelfDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            splitDetected = true,
+            ownerChainLength = 3,
+            grantChainLength = 2,
+            mismatchIndex = 2,
+            anomalyKind = GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT,
+            detail = "Private: matched lengthMismatch owner=3 grantee=2",
+        )
+
+        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(publicResult, privateResult)
+
+        assertEquals(GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT, result.anomalyKind)
+        assertTrue(result.detail.contains("Public: Public: clean"))
+        assertTrue(result.detail.contains("Private: Private: matched"))
+    }
+
+    @Test
+    fun `public danger suppresses private fallback selection`() {
+        val publicResult = GrantSelfDomainFullChainSplitResult(
+            executed = true,
+            anomalyKind = GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+            detail = "Public: grant failed",
+        )
+        val privateResult = GrantSelfDomainFullChainSplitResult(
+            detail = "Private: should not execute",
+        )
+
+        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(publicResult, privateResult)
+
+        assertEquals(GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN, result.anomalyKind)
+    }
+
     private fun chain(vararg labels: String): GrantDomainCertificateChain {
         return GrantDomainCertificateChain(
             labels.map { label ->

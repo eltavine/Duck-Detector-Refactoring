@@ -289,8 +289,11 @@ class TeeReportReducer(
                     add(
                         fact(
                             "Grant isolated-domain",
-                            "Grant isolated-domain certificate-chain narrative split detected.",
+                            "Grant isolated-domain certificate-chain narrative split detected. " +
+                                grantDomainFullChainSplitValue(artifacts),
                             TeeSignalLevel.FAIL,
+                            hiddenCopyText = artifacts.grantDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
                         )
                     )
                 }
@@ -299,8 +302,11 @@ class TeeReportReducer(
                     add(
                         fact(
                             "Grant isolated-domain",
-                            "Grant isolated-domain key visibility divergence detected.",
+                            "Grant isolated-domain key visibility divergence detected. " +
+                                grantDomainFullChainSplitValue(artifacts),
                             TeeSignalLevel.FAIL,
+                            hiddenCopyText = artifacts.grantDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
                         )
                     )
                 }
@@ -315,8 +321,11 @@ class TeeReportReducer(
                     add(
                         fact(
                             "Grant self-domain",
-                            "Grant self-domain certificate-chain split detected.",
+                            "Grant self-domain certificate-chain split detected. " +
+                                grantSelfDomainFullChainSplitValue(artifacts),
                             TeeSignalLevel.FAIL,
+                            hiddenCopyText = artifacts.grantSelfDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
                         )
                     )
                 }
@@ -325,8 +334,11 @@ class TeeReportReducer(
                     add(
                         fact(
                             "Grant self-domain",
-                            "Grant self-domain key visibility divergence detected.",
+                            "Grant self-domain key visibility divergence detected. " +
+                                grantSelfDomainFullChainSplitValue(artifacts),
                             TeeSignalLevel.FAIL,
+                            hiddenCopyText = artifacts.grantSelfDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
                         )
                     )
                 }
@@ -884,14 +896,18 @@ class TeeReportReducer(
                         fact(
                             "Grant isolated-domain",
                             grantDomainFullChainSplitValue(artifacts),
-                            grantDomainFullChainSplitLevel(artifacts)
+                            grantDomainFullChainSplitLevel(artifacts),
+                            hiddenCopyText = artifacts.grantDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
                         )
                     )
                     add(
                         fact(
                             "Grant self-domain",
                             grantSelfDomainFullChainSplitValue(artifacts),
-                            grantSelfDomainFullChainSplitLevel(artifacts)
+                            grantSelfDomainFullChainSplitLevel(artifacts),
+                            hiddenCopyText = artifacts.grantSelfDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
                         )
                     )
                     add(
