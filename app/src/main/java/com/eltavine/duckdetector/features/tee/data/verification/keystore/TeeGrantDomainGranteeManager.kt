@@ -161,15 +161,19 @@ class TeeGrantDomainGranteeSession(
     private var bound: Boolean,
 ) : AutoCloseable {
 
-    fun readGrantedCertificateChainPublic(grantId: Long): TeeGrantDomainGranteeChainResult {
+    fun readGrantedCertificateChainJavaApi(
+        grantId: Long,
+        hiddenApi: Boolean = false,
+    ): TeeGrantDomainGranteeChainResult {
+        val stage = if (hiddenApi) "hidden" else "public"
         return runCatching {
-            proxy.readGrantedCertificateChainPublic(grantId)
+            proxy.readGrantedCertificateChainJavaApi(grantId, hiddenApi)
         }.getOrElse { throwable ->
             // Keep IPC crashes inspectable but non-visual: detail is one line, stack is hidden-copy only.
             // IPC 崩溃需要可审计但不能直接上屏：detail 保持单行，堆栈仅供隐藏复制。
             TeeGrantDomainGranteeChainResult(
                 available = false,
-                detail = "public isolated binder call failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                detail = "$stage isolated binder call failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
                 diagnosticCopyText = throwable.stackTraceToString().trim(),
             )
         }

@@ -22,8 +22,6 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.Process
-import android.security.keystore.KeyStoreManager
-import java.security.cert.X509Certificate
 
 class TeeGrantDomainGranteeService : Service() {
 
@@ -60,7 +58,16 @@ class TeeGrantDomainGranteeService : Service() {
                 TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN_PUBLIC -> {
                     data.enforceInterface(TeeGrantDomainGranteeProtocol.DESCRIPTOR)
                     val grantId = data.readLong()
-                    val result = readGrantedCertificateChainPublic(grantId)
+                    val result = readGrantedCertificateChainJavaApi(grantId, hiddenApi = false)
+                    reply?.writeNoException()
+                    result.writeToParcel(reply)
+                    true
+                }
+
+                TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN_HIDDEN -> {
+                    data.enforceInterface(TeeGrantDomainGranteeProtocol.DESCRIPTOR)
+                    val grantId = data.readLong()
+                    val result = readGrantedCertificateChainJavaApi(grantId, hiddenApi = true)
                     reply?.writeNoException()
                     result.writeToParcel(reply)
                     true
@@ -106,28 +113,41 @@ class TeeGrantDomainGranteeService : Service() {
         }
     }
 
-    private fun readGrantedCertificateChainPublic(grantId: Long): TeeGrantDomainGranteeChainResult {
-        // Public API readback stays separate from private Binder readback so reducer can surface both
-        // stage summaries while keeping full stack traces in diagnosticCopyText only.
-        // public API 回读与 private Binder 回读保持分离，reducer 可展示两阶段摘要，同时完整堆栈只进入 diagnosticCopyText。
-        val keyStoreManager = runCatching {
-            getSystemService(KeyStoreManager::class.java)
-        }.getOrNull() ?: return TeeGrantDomainGranteeChainResult(
+    private fun readGrantedCertificateChainJavaApi(
+        grantId: Long,
+        hiddenApi: Boolean,
+    ): TeeGrantDomainGranteeChainResult {
+        // Public and hidden readback both stay on KeyStoreManager semantics; hidden only changes how
+        // the isolated process reaches methods that may be hidden below Android 16.
+        // public 与 hidden 回读都保持 KeyStoreManager 语义；hidden 只改变 isolated 进程访问 Android 16 以下隐藏方法的方式。
+        val apiResult = if (hiddenApi) {
+            KeyStoreGrantJavaApis.hiddenApi(this)
+        } else {
+            KeyStoreGrantJavaApis.publicApi(this)
+        }
+        apiResult.throwable?.let { throwable ->
+            return TeeGrantDomainGranteeChainResult(
+                available = false,
+                detail = apiResult.detail,
+                diagnosticCopyText = throwable.stackTraceToString().trim(),
+            )
+        }
+        val api = apiResult.api ?: return TeeGrantDomainGranteeChainResult(
             available = false,
-            detail = "public isolated readback unavailable: KeyStoreManager missing.",
+            detail = apiResult.detail,
         )
+        val stage = api.stageLabel.lowercase()
         return runCatching {
-            val chain = keyStoreManager.getGrantedCertificateChainFromId(grantId)
-                .filterIsInstance<X509Certificate>()
+            val chain = api.getGrantedCertificateChainFromId(grantId)
             TeeGrantDomainGranteeChainResult(
                 available = true,
                 chain = GrantDomainCertificateChain.fromCertificates(chain),
-                detail = "public isolated readback chainLength=${chain.size}",
+                detail = "$stage isolated readback chainLength=${chain.size}",
             )
         }.getOrElse { throwable ->
             TeeGrantDomainGranteeChainResult(
                 available = false,
-                detail = "public isolated readback failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                detail = "$stage isolated readback failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
                 diagnosticCopyText = throwable.stackTraceToString().trim(),
             )
         }
@@ -139,6 +159,7 @@ object TeeGrantDomainGranteeProtocol {
     const val TRANSACTION_GET_UID = IBinder.FIRST_CALL_TRANSACTION
     const val TRANSACTION_READ_GRANTED_CHAIN = IBinder.FIRST_CALL_TRANSACTION + 1
     const val TRANSACTION_READ_GRANTED_CHAIN_PUBLIC = IBinder.FIRST_CALL_TRANSACTION + 2
+    const val TRANSACTION_READ_GRANTED_CHAIN_HIDDEN = IBinder.FIRST_CALL_TRANSACTION + 3
 }
 
 data class TeeGrantDomainGranteeChainResult(

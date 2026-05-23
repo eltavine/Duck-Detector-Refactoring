@@ -70,11 +70,12 @@ internal fun appendGrantDetail(detail: String, extra: String): String {
 
 internal fun combineGrantStageDetails(
     publicDetail: String,
-    privateDetail: String?,
+    fallbackLabel: String,
+    fallbackDetail: String?,
 ): String {
     return buildList {
         add("Public: ${publicDetail.ifBlank { "not executed" }}")
-        privateDetail?.let { add("Private: ${it.ifBlank { "not executed" }}") }
+        fallbackDetail?.let { add("$fallbackLabel: ${it.ifBlank { "not executed" }}") }
     }.joinToString(separator = " • ")
 }
 

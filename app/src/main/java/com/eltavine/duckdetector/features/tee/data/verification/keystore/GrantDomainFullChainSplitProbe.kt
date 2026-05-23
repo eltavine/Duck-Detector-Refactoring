@@ -18,8 +18,6 @@ package com.eltavine.duckdetector.features.tee.data.verification.keystore
 
 import android.content.Context
 import android.os.Build
-import android.os.IBinder
-import android.security.keystore.KeyStoreManager
 import com.eltavine.duckdetector.features.tee.data.keystore.AndroidKeyStoreTools
 import java.security.MessageDigest
 import java.security.cert.X509Certificate
@@ -29,7 +27,6 @@ import java.util.Locale
 class GrantDomainFullChainSplitProbe(
     context: Context,
     private val granteeManager: TeeGrantDomainGranteeManager = TeeGrantDomainGranteeManager(context),
-    private val privateGrantClient: Keystore2PrivateGrantClient = Keystore2PrivateGrantClient(),
 ) {
 
     private val appContext = context.applicationContext
@@ -62,16 +59,24 @@ class GrantDomainFullChainSplitProbe(
                     diagnosticCopyText = diagnostics.text(),
                 )
             } else {
-                // Run the public isolated-domain path first when the OS exposes it, then use private
-                // Binder as an incremental readback path unless public already proved a red-card anomaly.
-                // OS 暴露 public API 时先跑 isolated-domain 公共路径；除非 public 已证明红卡异常，否则再用 private Binder 做增量回读。
-                val publicResult = inspectPublic(alias, diagnostics)
+                // Run the standard Java API first, then retry through HiddenApiBypass when the same
+                // KeyStoreManager grant methods exist below the public SDK surface.
+                // 先走标准 Java API；若同一组 KeyStoreManager grant 方法存在但低于公开 SDK 表面，再通过 HiddenApiBypass 重试。
+                val publicResult = inspectJavaApi(
+                    apiResult = KeyStoreGrantJavaApis.publicApi(appContext),
+                    alias = alias,
+                    diagnostics = diagnostics,
+                )
                 diagnostics.add("public-final", publicResult.detail)
                 result = publicResult
-                if (publicResult.shouldRunPrivateFallback()) {
-                    val privateResult = inspectPrivate(alias, diagnostics)
-                    diagnostics.add("private-final", privateResult.detail)
-                    result = selectFinalResult(publicResult, privateResult)
+                if (publicResult.shouldRunHiddenFallback()) {
+                    val hiddenResult = inspectJavaApi(
+                        apiResult = KeyStoreGrantJavaApis.hiddenApi(appContext),
+                        alias = alias,
+                        diagnostics = diagnostics,
+                    )
+                    diagnostics.add("hidden-final", hiddenResult.detail)
+                    result = selectFinalResult(publicResult, hiddenResult)
                 }
                 result = result.copy(diagnosticCopyText = diagnostics.text())
             }
@@ -87,47 +92,37 @@ class GrantDomainFullChainSplitProbe(
         return result
     }
 
-    private suspend fun inspectPublic(
+    private suspend fun inspectJavaApi(
+        apiResult: KeyStoreGrantJavaApiResult,
         alias: String,
         diagnostics: GrantDetectionDiagnosticLog,
     ): GrantDomainFullChainSplitResult {
-        // Android 16 is the first platform level with public grant APIs. Returning an explicit
-        // unsupported stage lets the private Binder pass still produce a meaningful Android 12+ result.
-        // Android 16 才首次提供 public grant API；这里显式返回 unsupported，方便 Android 12+ private Binder 阶段继续产出有效结果。
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            return GrantDomainFullChainSplitResult(
-                detail = "Public: unsupported (Android < 16).",
-            )
-        }
-        val keyStoreManager = runCatching {
-            appContext.getSystemService(KeyStoreManager::class.java)
-        }.getOrElse { throwable ->
-            diagnostics.addThrowable("public-get-service", throwable)
-            null
-        } ?: return GrantDomainFullChainSplitResult(
-            detail = "Public: unavailable (KeyStoreManager grant API missing).",
+        apiResult.throwable?.let { diagnostics.addThrowable("${apiResult.stage.lowercase()}-get-service", it) }
+        val api = apiResult.api ?: return GrantDomainFullChainSplitResult(
+            detail = apiResult.detail,
         )
+        val stage = api.stageLabel
         val keyStore = AndroidKeyStoreTools.loadKeyStore()
         val ownerCertificates = runCatching {
             AndroidKeyStoreTools.readCertificateChain(keyStore, alias)
         }.getOrElse { throwable ->
-            diagnostics.addThrowable("public-owner-chain", throwable)
+            diagnostics.addThrowable("${stage.lowercase()}-owner-chain", throwable)
             return GrantDomainFullChainSplitResult(
-                detail = "Public: owner chain unavailable (${describeThrowable(throwable)}).",
+                detail = "$stage: owner chain unavailable (${describeThrowable(throwable)}).",
             )
         }
         val ownerChain = GrantDomainCertificateChain.fromCertificates(ownerCertificates)
         if (ownerChain.certificates.isEmpty()) {
             return GrantDomainFullChainSplitResult(
-                detail = "Public: owner chain empty.",
+                detail = "$stage: owner chain empty.",
             )
         }
         val sessionResult = granteeManager.openSession()
         if (!sessionResult.available || sessionResult.session == null) {
-            diagnostics.add("public-session", sessionResult.detail)
+            diagnostics.add("${stage.lowercase()}-session", sessionResult.detail)
             return GrantDomainFullChainSplitResult(
                 ownerChainLength = ownerChain.certificates.size,
-                detail = "Public: isolated grantee unavailable.",
+                detail = "$stage: isolated grantee unavailable.",
             )
         }
         var grantCreated = false
@@ -137,9 +132,9 @@ class GrantDomainFullChainSplitProbe(
                 // plane disagrees with the owner plane; keep that as FAIL, not availability noise.
                 // owner alias 已有证书链后，grant 阶段 key-not-found 表示授权查找平面与 owner 平面不一致；应保留为 FAIL，而不是可用性噪声。
                 val grantId = runCatching {
-                    keyStoreManager.grantKeyAccess(alias, session.uid)
+                    api.grantKeyAccess(alias, session.uid)
                 }.getOrElse { throwable ->
-                    diagnostics.addThrowable("public-grant", throwable)
+                    diagnostics.addThrowable("${stage.lowercase()}-grant", throwable)
                     val anomalyKind = if (isGrantAliasNotFound(throwable)) {
                         GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
                     } else {
@@ -150,17 +145,17 @@ class GrantDomainFullChainSplitProbe(
                         ownerChainLength = ownerChain.certificates.size,
                         granteeUid = session.uid,
                         anomalyKind = anomalyKind,
-                        detail = "Public: grant failed (${describeThrowable(throwable)}).",
+                        detail = "$stage: grant failed (${describeThrowable(throwable)}).",
                     )
                 }
                 grantCreated = true
-                val granteeResult = session.readGrantedCertificateChainPublic(grantId)
+                val granteeResult = session.readGrantedCertificateChainJavaApi(grantId, hiddenApi = stage == "Hidden")
                 granteeResult.diagnosticCopyText.takeIf { it.isNotBlank() }?.let(diagnostics::addRaw)
                 if (!granteeResult.available) {
                     return@use GrantDomainFullChainSplitResult(
                         ownerChainLength = ownerChain.certificates.size,
                         granteeUid = session.uid,
-                        detail = "Public: readback failed (${visibleGrantDetail(granteeResult.detail)}).",
+                        detail = "$stage: readback failed (${visibleGrantDetail(granteeResult.detail)}).",
                     )
                 }
                 val granteeChain = granteeResult.chain
@@ -169,7 +164,7 @@ class GrantDomainFullChainSplitProbe(
                         ownerChainLength = ownerChain.certificates.size,
                         granteeChainLength = 0,
                         granteeUid = session.uid,
-                        detail = "Public: Domain.GRANT certificate chain empty.",
+                        detail = "$stage: Domain.GRANT certificate chain empty.",
                     )
                 }
                 val comparison = compareChains(ownerChain, granteeChain)
@@ -187,124 +182,17 @@ class GrantDomainFullChainSplitProbe(
                         GrantDomainAnomalyKind.NONE
                     },
                     detail = if (comparison.splitDetected) {
-                        "Public: matched ${comparison.detail}"
+                        "$stage: matched ${comparison.detail}"
                     } else {
-                        "Public: clean (${comparison.detail})"
+                        "$stage: clean (${comparison.detail})"
                     },
                 )
             } finally {
                 if (grantCreated) {
                     runCatching {
-                        keyStoreManager.revokeKeyAccess(alias, session.uid)
+                        api.revokeKeyAccess(alias, session.uid)
                     }.onFailure { throwable ->
-                        diagnostics.addThrowable("public-revoke", throwable)
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun inspectPrivate(
-        alias: String,
-        diagnostics: GrantDetectionDiagnosticLog,
-    ): GrantDomainFullChainSplitResult {
-        // The owner process resolves the Keystore2 binder and passes it into the isolated grantee.
-        // That makes SELinux/binder denial visible as an isolated readback block instead of silently
-        // downgrading the check or falling back to framework state.
-        // owner 进程解析 Keystore2 binder 并传给 isolated grantee；SELinux/binder 拒绝会成为 isolated readback blocked，而不是静默降级或回到 framework 状态。
-        val keystore2Binder = privateGrantClient.lookupBinder()
-            ?: return GrantDomainFullChainSplitResult(
-                detail = "Private: keystore2 binder unavailable.",
-            )
-        val ownerChainResult = privateGrantClient.readOwnerChain(alias)
-        ownerChainResult.throwable?.let { diagnostics.addThrowable("private-owner-chain", it) }
-        if (!ownerChainResult.available) {
-            return GrantDomainFullChainSplitResult(
-                detail = "Private: ${visibleGrantDetail(ownerChainResult.detail).ifBlank { "owner chain unavailable." }}",
-            )
-        }
-        val ownerChain = ownerChainResult.chain
-        if (ownerChain.certificates.isEmpty()) {
-            return GrantDomainFullChainSplitResult(
-                detail = "Private: owner chain empty.",
-            )
-        }
-        val sessionResult = granteeManager.openSession()
-        if (!sessionResult.available || sessionResult.session == null) {
-            diagnostics.add("private-session", sessionResult.detail)
-            return GrantDomainFullChainSplitResult(
-                ownerChainLength = ownerChain.certificates.size,
-                detail = "Private: isolated grantee unavailable.",
-            )
-        }
-        var grantCreated = false
-        return sessionResult.session.use { session ->
-            try {
-                val grantResult = privateGrantClient.grantAliasToUid(alias, session.uid)
-                grantResult.throwable?.let { diagnostics.addThrowable("private-grant", it) }
-                if (!grantResult.available || grantResult.grantId == null) {
-                    val anomalyKind = if (grantResult.errorKind == Keystore2PrivateGrantErrorKind.KEY_NOT_FOUND) {
-                        GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
-                    } else {
-                        GrantDomainAnomalyKind.UNAVAILABLE
-                    }
-                    return@use GrantDomainFullChainSplitResult(
-                        executed = anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                        ownerChainLength = ownerChain.certificates.size,
-                        granteeUid = session.uid,
-                        anomalyKind = anomalyKind,
-                        detail = "Private: ${visibleGrantDetail(grantResult.detail).ifBlank { "isolated grant failed." }}",
-                    )
-                }
-                val grantId = grantResult.grantId
-                grantCreated = true
-                val granteeResult = session.readGrantedCertificateChain(grantId, keystore2Binder)
-                granteeResult.diagnosticCopyText.takeIf { it.isNotBlank() }?.let(diagnostics::addRaw)
-                if (!granteeResult.available) {
-                    return@use GrantDomainFullChainSplitResult(
-                        ownerChainLength = ownerChain.certificates.size,
-                        granteeUid = session.uid,
-                        detail = "Private: ${visibleGrantDetail(granteeResult.detail).ifBlank { "isolated readback blocked." }}",
-                    )
-                }
-                val granteeChain = granteeResult.chain
-                if (granteeChain.certificates.isEmpty()) {
-                    return@use GrantDomainFullChainSplitResult(
-                        ownerChainLength = ownerChain.certificates.size,
-                        granteeChainLength = 0,
-                        granteeUid = session.uid,
-                        detail = "Private: Domain.GRANT certificate chain empty.",
-                    )
-                }
-                val comparison = compareChains(ownerChain, granteeChain)
-                GrantDomainFullChainSplitResult(
-                    executed = true,
-                    available = true,
-                    splitDetected = comparison.splitDetected,
-                    ownerChainLength = ownerChain.certificates.size,
-                    granteeChainLength = granteeChain.certificates.size,
-                    mismatchIndex = comparison.mismatchIndex,
-                    granteeUid = session.uid,
-                    anomalyKind = if (comparison.splitDetected) {
-                        GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT
-                    } else {
-                        GrantDomainAnomalyKind.NONE
-                    },
-                    detail = if (comparison.splitDetected) {
-                        "Private: matched ${comparison.detail}"
-                    } else {
-                        "Private: clean (${comparison.detail})"
-                    },
-                )
-            } finally {
-                if (grantCreated) {
-                    val cleanupResult = privateGrantClient.revokeAliasGrant(alias, session.uid)
-                    cleanupResult.throwable?.let { diagnostics.addThrowable("private-ungrant", it) }
-                    if (!cleanupResult.available) {
-                        diagnostics.add(
-                            "private-ungrant",
-                            cleanupResult.detail.ifBlank { "private ungrant failed." },
-                        )
+                        diagnostics.addThrowable("${stage.lowercase()}-revoke", throwable)
                     }
                 }
             }
@@ -356,30 +244,30 @@ class GrantDomainFullChainSplitProbe(
 
         internal fun selectFinalResult(
             publicResult: GrantDomainFullChainSplitResult,
-            privateResult: GrantDomainFullChainSplitResult,
+            hiddenResult: GrantDomainFullChainSplitResult,
         ): GrantDomainFullChainSplitResult {
-            // Private danger wins because it is an additional Keystore2 plane observation. If neither
-            // stage proves danger, keep the private result when it actually executed, but preserve both
-            // stage summaries in detail for UI/debug parity.
-            // private danger 优先，因为它是额外的 Keystore2 平面观测；若两阶段都未证明 danger，则保留已执行的 private 结果，并在 detail 中保留两阶段摘要。
+            // Hidden Java API is the only fallback for this grant probe; private Binder remains a
+            // lower-level tool, but this path intentionally stays at KeyStoreManager semantics.
+            // Hidden Java API 是此 grant probe 唯一回退路径；private Binder 仍是底层工具，但这里刻意保持 KeyStoreManager 语义。
             val selected = when {
-                privateResult.isDanger() -> privateResult
+                hiddenResult.isDanger() -> hiddenResult
                 publicResult.isDanger() -> publicResult
-                privateResult.executed || privateResult.available -> privateResult
+                hiddenResult.executed || hiddenResult.available -> hiddenResult
                 else -> publicResult
             }
             return selected.copy(
                 detail = combineGrantStageDetails(
                     publicDetail = publicResult.detail,
-                    privateDetail = privateResult.detail,
+                    fallbackLabel = "Hidden",
+                    fallbackDetail = hiddenResult.detail,
                 ),
             )
         }
     }
 }
 
-private fun GrantDomainFullChainSplitResult.shouldRunPrivateFallback(): Boolean {
-    return !isDanger()
+private fun GrantDomainFullChainSplitResult.shouldRunHiddenFallback(): Boolean {
+    return !isDanger() && !(executed && available)
 }
 
 private fun GrantDomainFullChainSplitResult.isDanger(): Boolean {

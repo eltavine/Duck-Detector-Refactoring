@@ -53,9 +53,16 @@ class TeeGrantDomainGranteeProxy(
         )
     }
 
-    fun readGrantedCertificateChainPublic(grantId: Long): TeeGrantDomainGranteeChainResult {
+    fun readGrantedCertificateChainJavaApi(
+        grantId: Long,
+        hiddenApi: Boolean,
+    ): TeeGrantDomainGranteeChainResult {
         return readGrantedCertificateChainInternal(
-            transactionCode = TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN_PUBLIC,
+            transactionCode = if (hiddenApi) {
+                TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN_HIDDEN
+            } else {
+                TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN_PUBLIC
+            },
             grantId = grantId,
             keystore2Binder = null,
         )
@@ -66,9 +73,9 @@ class TeeGrantDomainGranteeProxy(
         grantId: Long,
         keystore2Binder: IBinder?,
     ): TeeGrantDomainGranteeChainResult {
-        // Public readback sends only the grant id. Private readback also sends the owner-resolved
-        // Keystore2 binder so the isolated process can test the same private service plane.
-        // public 回读只发送 grant id；private 回读额外发送 owner 解析出的 Keystore2 binder，让 isolated 进程验证同一个私有 service 平面。
+        // Java-layer readback sends only the grant id. The private Binder transaction remains separate
+        // for lower-level experiments and is no longer part of the public/hidden grant probe fallback.
+        // Java 层回读只发送 grant id；private Binder transaction 保持独立，用于更底层实验，不再参与 public/hidden grant probe fallback。
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {
