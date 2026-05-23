@@ -229,7 +229,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "Signals",
@@ -272,7 +272,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "Signals",
@@ -315,7 +315,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "TEE Simulator generate-mode fingerprint",
@@ -363,7 +363,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "ImportKey narrative",
@@ -406,7 +406,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "Grant isolated-domain",
@@ -449,7 +449,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "Grant isolated-domain",
@@ -492,7 +492,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "Grant self-domain",
@@ -535,7 +535,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "Grant self-domain",
@@ -578,7 +578,7 @@ class TeeCardModelMapperTest {
                 tamperScore = 10,
                 evidenceCount = 1,
                 supplementaryIndicatorCount = 1,
-                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
                 signals = listOf(
                     TeeSignal(
                         "Update persistence",
@@ -593,6 +593,54 @@ class TeeCardModelMapperTest {
                             TeeEvidenceItem(
                                 "Update persistence",
                                 "Matched kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE retained=1 prior=3 post=2",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
+    fun `structured supplementary failure drives danger even when warning row appears first`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "UpdateSubcomponent stale TEE response persistence detected. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 2,
+                supplementaryIndicatorCount = 2,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
+                signals = listOf(
+                    TeeSignal(
+                        "Signals",
+                        "0 policy hard • 0 policy review • 2 local",
+                        TeeSignalLevel.FAIL,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Soter",
+                                "Review abnormal Soter environment.",
+                                TeeSignalLevel.WARN,
+                            ),
+                            TeeEvidenceItem(
+                                "Update persistence",
+                                "Matched kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE retained=1",
                                 TeeSignalLevel.FAIL,
                             ),
                         ),

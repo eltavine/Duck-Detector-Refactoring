@@ -1087,7 +1087,7 @@ class TeeReportReducer(
         policySoftIndicators: List<TeeEvidenceItem>,
         supplementaryIndicators: List<TeeEvidenceItem>,
     ): String = when (verdict) {
-        TeeVerdict.CONSISTENT -> supplementaryIndicators.firstOrNull()?.let { item ->
+        TeeVerdict.CONSISTENT -> supplementaryIndicators.highestPriority()?.let { item ->
             "${item.body} Attestation and trust-path checks still aligned."
         } ?: "Attestation, trust path, and revocation checks line up."
 
@@ -2386,7 +2386,9 @@ class TeeReportReducer(
         supplementaryIndicators: List<TeeEvidenceItem>,
     ): TeeSignalLevel = when {
         policyHardIndicators.isNotEmpty() -> TeeSignalLevel.FAIL
-        policySoftIndicators.isNotEmpty() || supplementaryIndicators.isNotEmpty() -> TeeSignalLevel.WARN
+        supplementaryIndicators.any { it.level == TeeSignalLevel.FAIL } -> TeeSignalLevel.FAIL
+        policySoftIndicators.isNotEmpty() ||
+            supplementaryIndicators.any { it.level == TeeSignalLevel.WARN } -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.PASS
     }
 
@@ -2423,10 +2425,19 @@ class TeeReportReducer(
     }
 
     private fun supplementaryReviewLevel(indicators: List<TeeEvidenceItem>): TeeSignalLevel = when {
-        indicators.any { it.level == TeeSignalLevel.FAIL || it.level == TeeSignalLevel.WARN } ->
-            TeeSignalLevel.WARN
-
+        // UI propagation is severity-first: a later FAIL must still outrank an earlier WARN.
+        // UI 传播按严重级别优先：后出现的 FAIL 必须压过先出现的 WARN。
+        indicators.any { it.level == TeeSignalLevel.FAIL } -> TeeSignalLevel.FAIL
+        indicators.any { it.level == TeeSignalLevel.WARN } -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.INFO
+    }
+
+    private fun List<TeeEvidenceItem>.highestPriority(): TeeEvidenceItem? {
+        // Summary copy follows the same severity contract so WARN prose cannot hide red-card evidence.
+        // 摘要文案遵循同一严重级别契约，避免 WARN 文案遮住红卡级证据。
+        return firstOrNull { it.level == TeeSignalLevel.FAIL }
+            ?: firstOrNull { it.level == TeeSignalLevel.WARN }
+            ?: firstOrNull()
     }
 
     private fun syscallMismatchExplanation(): String {

@@ -195,76 +195,16 @@ class TeeCardModelMapper {
     private fun TeeReport.toDetectorStatus(): DetectorStatus = when (verdict) {
         TeeVerdict.LOADING -> DetectorStatus.info(InfoKind.SUPPORT)
         TeeVerdict.CONSISTENT -> when {
-            // 这些本地信号虽然还挂在 CONSISTENT verdict 之下，但安全语义已经达到红卡级别，所以卡片状态要透传为 danger。
-            // These local signals still live under a CONSISTENT verdict, but their security meaning is red-card level, so the card status must escalate to danger.
-            hasDangerLocalEscalation() -> DetectorStatus.danger()
+            // Dashboard aggregates only TeeCardModel.status; consume reducer structure, not prose or row titles.
+            // Dashboard 只聚合 TeeCardModel.status；这里消费 reducer 的结构化级别，不解析文案或行标题。
+            supplementaryReviewLevel == TeeSignalLevel.FAIL -> DetectorStatus.danger()
+            supplementaryReviewLevel == TeeSignalLevel.WARN -> DetectorStatus.warning()
             supplementaryIndicatorCount > 0 -> DetectorStatus.warning()
             else -> DetectorStatus.allClear()
         }
         TeeVerdict.SUSPICIOUS -> DetectorStatus.warning()
         TeeVerdict.TAMPERED, TeeVerdict.BROKEN -> DetectorStatus.danger()
         TeeVerdict.INCONCLUSIVE -> DetectorStatus.info(InfoKind.ERROR)
-    }
-
-    private fun TeeReport.hasDangerLocalEscalation(): Boolean {
-        return sections.asSequence()
-            .flatMap { it.items.asSequence() }
-            .any { item ->
-                // TEE card status is the only value the dashboard aggregates, so red-card local evidence must be recognized from reducer-built Checks rows here.
-                // Dashboard 只聚合 TEE card status；因此红卡级本地证据必须在这里从 reducer 生成的 Checks 行识别出来。
-                when (item.title) {
-                    "Timing side-channel" -> item.level == TeeSignalLevel.FAIL && (
-                        item.body.contains("Detected malicious-module fingerprint", ignoreCase = true)
-                        )
-
-                    "TEE Simulator generate-mode fingerprint" ->
-                        item.level == TeeSignalLevel.FAIL &&
-                            item.body.contains("Matched TEE Simulator generate-mode fingerprint.", ignoreCase = true)
-
-                    "ImportKey narrative" ->
-                        item.level == TeeSignalLevel.FAIL &&
-                            item.body.hasImportKeyRetainedNarrativeDangerKind()
-
-                    "Grant isolated-domain" ->
-                        item.level == TeeSignalLevel.FAIL &&
-                            item.body.hasGrantIsolatedDomainDangerKind()
-
-                    "Grant self-domain" ->
-                        item.level == TeeSignalLevel.FAIL &&
-                            item.body.hasGrantSelfDomainDangerKind()
-
-                    "Update persistence" ->
-                        item.level == TeeSignalLevel.FAIL &&
-                            item.body.hasUpdatePersistenceDangerKind()
-
-                    else -> false
-                }
-            }
-    }
-
-    private fun String.hasImportKeyRetainedNarrativeDangerKind(): Boolean {
-        return contains("kind=IMPORTED_RETAINED_PRIOR_CHAIN", ignoreCase = true) ||
-            contains("kind=STALE_GENERATED_AFTER_IMPORT", ignoreCase = true)
-    }
-
-    private fun String.hasGrantIsolatedDomainDangerKind(): Boolean {
-        // Dashboard only sees TeeCardModel.status, so reducer-level FAIL kinds must be mirrored here deliberately.
-        // Dashboard 只看到 TeeCardModel.status，因此 reducer 的 FAIL kind 必须在这里显式镜像。
-        return contains("kind=ISOLATED_CHAIN_SPLIT", ignoreCase = true) ||
-            contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
-    }
-
-    private fun String.hasGrantSelfDomainDangerKind(): Boolean {
-        // Match stable kind tokens, not prose; prose can change, but these tokens encode the reviewed root cause.
-        // 匹配稳定 kind token，而不是自然语言文案；文案可调整，kind 承载已审阅的根因。
-        return contains("kind=SELF_CHAIN_SPLIT", ignoreCase = true) ||
-            contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
-    }
-
-    private fun String.hasUpdatePersistenceDangerKind(): Boolean {
-        // This kind means a KEY_ID update succeeded, but getKeyEntry still replayed the previous certificate narrative.
-        // 该 kind 表示 KEY_ID update 已成功，但 getKeyEntry 仍回放旧证书叙事。
-        return contains("kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE", ignoreCase = true)
     }
 
     private fun TeeReport.tierStatus(): DetectorStatus = when (tier) {

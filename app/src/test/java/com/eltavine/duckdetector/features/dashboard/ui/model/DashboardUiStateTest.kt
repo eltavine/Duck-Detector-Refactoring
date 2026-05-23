@@ -49,4 +49,32 @@ class DashboardUiStateTest {
         assertEquals("Danger", overview.headline)
         assertEquals("1", overview.metrics.single { it.label == "Danger" }.value)
     }
+
+    @Test
+    fun `danger contribution after warning still dominates dashboard overview`() {
+        val overview = buildDashboardOverview(
+            contributions = listOf(
+                DashboardDetectorContribution(
+                    id = "soter",
+                    title = "Soter",
+                    status = DetectorStatus.warning(),
+                    headline = "Local review",
+                    summary = "Soter local environment needs review.",
+                    ready = true,
+                ),
+                DashboardDetectorContribution(
+                    id = "tee",
+                    title = "TEE",
+                    status = DetectorStatus.danger(),
+                    headline = "Attestation aligned; local probes need review",
+                    summary = "UpdateSubcomponent stale TEE response persistence detected.",
+                    ready = true,
+                ),
+            ),
+        )
+
+        assertEquals(DetectorStatus.danger(), overview.status)
+        assertEquals("Danger", overview.headline)
+        assertEquals("1", overview.metrics.single { it.label == "Danger" }.value)
+    }
 }
