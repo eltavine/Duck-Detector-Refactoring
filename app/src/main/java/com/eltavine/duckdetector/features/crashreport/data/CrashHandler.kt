@@ -19,6 +19,8 @@ package com.eltavine.duckdetector.features.crashreport.data
 import android.content.Context
 import android.util.Log
 import com.eltavine.duckdetector.BuildConfig
+import com.eltavine.duckdetector.features.crashreport.domain.CrashDeviceEntry
+import com.eltavine.duckdetector.features.crashreport.domain.CrashDeviceSection
 import com.eltavine.duckdetector.features.crashreport.domain.CrashReport
 import java.io.File
 import java.text.SimpleDateFormat

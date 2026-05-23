@@ -18,7 +18,7 @@ package com.eltavine.duckdetector.features.crashreport.data
 
 import android.content.Context
 import android.os.Build
-import android.os.Process
+import android.os.Process as AndroidProcess
 import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.core.ui.presentation.formatBuildTimeUtc
 import com.eltavine.duckdetector.features.crashreport.domain.CrashDeviceEntry
@@ -53,7 +53,7 @@ internal object CrashCollector {
             crashTimeUtcMillis = now,
             crashTimeIso = isoFormat.format(Date(now)),
             appVersionName = safeString { BuildConfig.VERSION_NAME },
-            appVersionCode = safeLong { BuildConfig.VERSION_CODE },
+            appVersionCode = BuildConfig.VERSION_CODE.toLong(),
             appBuildHash = safeString { BuildConfig.BUILD_HASH },
             appBuildTimeUtc = safeString { formatBuildTimeUtc(BuildConfig.BUILD_TIME_UTC) },
             deviceSections = collectDeviceSections(),
@@ -62,7 +62,7 @@ internal object CrashCollector {
             stackTrace = stackTraceToString(throwable),
             threadName = safeString { Thread.currentThread().name },
             processName = safeString { getProcessName() },
-            pid = Process.myPid(),
+            pid = AndroidProcess.myPid(),
             causeChain = collectCauseChain(throwable),
         )
     }
@@ -217,7 +217,7 @@ internal object CrashCollector {
     }
 
     private fun readViaGetprop(name: String): String? {
-        var process: Process? = null
+        var process: java.lang.Process? = null
         return try {
             process = ProcessBuilder("getprop", name)
                 .redirectErrorStream(true)
@@ -241,8 +241,8 @@ internal object CrashCollector {
             runCatching {
                 val method = Class.forName("android.os.Process")
                     .getMethod("getProcessName")
-                method.invoke(null) as? String
-            }.getOrNull()
+                (method.invoke(null) as? String) ?: "Unknown"
+            }.getOrNull() ?: "Unknown"
         }
     }
 
@@ -254,9 +254,5 @@ internal object CrashCollector {
 
     private fun safeString(block: () -> String): String {
         return runCatching { block() }.getOrDefault("Unavailable")
-    }
-
-    private fun safeLong(block: () -> Long): Long {
-        return runCatching { block() }.getOrDefault(-1L)
     }
 }
