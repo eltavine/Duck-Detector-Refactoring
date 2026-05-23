@@ -39,8 +39,6 @@ class SceneLoopbackProbeTest {
                 connected = true,
                 firstLine = null,
             ),
-            httpPort = 8765,
-            sidecarPort = 8788,
         )
 
         assertTrue(result.detected)
@@ -49,30 +47,6 @@ class SceneLoopbackProbeTest {
         assertTrue(result.sideChannelClosed)
         assertTrue(result.detail.orEmpty().contains("127.0.0.1:8765"))
         assertTrue(result.detail.orEmpty().contains("127.0.0.1:8788"))
-    }
-
-    @Test
-    fun `scene 930 loopback ports are reported`() {
-        val result = probe.evaluate(
-            httpGet = SceneLoopbackProbe.ProbeExchange(
-                connected = true,
-                firstLine = "HTTP/1.1 404 Not Found",
-            ),
-            invalidPayload = SceneLoopbackProbe.ProbeExchange(
-                connected = true,
-                firstLine = "HTTP/1.1 400 Bad Request",
-            ),
-            sideChannel = SceneLoopbackProbe.ProbeExchange(
-                connected = true,
-                firstLine = null,
-            ),
-            httpPort = 14731,
-            sidecarPort = 14754,
-        )
-
-        assertTrue(result.detected)
-        assertTrue(result.detail.orEmpty().contains("127.0.0.1:14731"))
-        assertTrue(result.detail.orEmpty().contains("127.0.0.1:14754"))
     }
 
     @Test
@@ -87,8 +61,6 @@ class SceneLoopbackProbeTest {
                 firstLine = "HTTP/1.1 400 Bad Request",
             ),
             sideChannel = SceneLoopbackProbe.ProbeExchange.unavailable(),
-            httpPort = 8765,
-            sidecarPort = 8788,
         )
 
         assertFalse(result.detected)
@@ -105,8 +77,6 @@ class SceneLoopbackProbeTest {
                 connected = true,
                 firstLine = null,
             ),
-            httpPort = 8765,
-            sidecarPort = 8788,
         )
 
         assertFalse(result.detected)

@@ -47,13 +47,8 @@ class SceneLoopbackProbe(
                 } else {
                     ProbeExchange.unavailable()
                 }
-            val result = evaluate(
-                httpGet = httpGet,
-                invalidPayload = invalidPayload,
-                sideChannel = sideChannel,
-                httpPort = httpPort,
-                sidecarPort = sidecarPort,
-            )
+            val result = evaluate(httpGet, invalidPayload, sideChannel,
+                httpPort = httpPort, sidecarPort = sidecarPort)
             if (result.detected) return result
             lastResult = result
         }

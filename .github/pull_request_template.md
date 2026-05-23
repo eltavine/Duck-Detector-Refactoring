@@ -2,8 +2,8 @@
 
 <!-- What changed, and why? Keep this focused on the user-visible or detector-visible outcome. -->
 
--
--
+- 
+- 
 
 ## Change Type
 
@@ -44,7 +44,7 @@
 
 <!-- Explain why touched modules need to change together. Especially important for native payload + Kotlin parser + reducer + UI changes. -->
 
--
+- 
 
 ## Validation
 
@@ -57,15 +57,15 @@
   - What was tested:
   - Result:
 - [ ] Unit tests:
-  -
+  - 
 - [ ] `:app:assembleDebug`:
-  -
+  - 
 - [ ] Native build / JNI validation:
-  -
+  - 
 - [ ] Release / workflow validation, if build or CI changed:
-  -
+  - 
 - [ ] Manual app smoke test:
-  -
+  - 
 
 ## Device / Runtime Testing
 
@@ -79,7 +79,7 @@ Tested on:
 
 Not tested on real device because:
 
--
+- 
 
 Optional comparison testing:
 
@@ -101,10 +101,10 @@ Optional comparison testing:
 
 Reason:
 
--
+- 
 
 ## Revert / Rollback Plan
 
 <!-- What is the smallest safe rollback if this causes crashes, false positives, broken builds, or release issues? -->
 
--
+- 
