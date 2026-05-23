@@ -655,6 +655,59 @@ class TeeCardModelMapperTest {
     }
 
     @Test
+    fun `structured supplementary failure drives danger even under suspicious verdict`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.SUSPICIOUS,
+                tier = TeeTier.TEE,
+                headline = "Policy-backed attestation evidence needs review",
+                summary = "Provisioning info was not adjacent to the trusted attestation certificate.",
+                collapsedSummary = "1 policy review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Google root, chain needs review",
+                tamperScore = 18,
+                evidenceCount = 2,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
+                signals = listOf(
+                    TeeSignal(
+                        "Signals",
+                        "0 policy hard • 1 policy review • 1 local",
+                        TeeSignalLevel.FAIL,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Trust",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Chain layout",
+                                "Provisioning info was not adjacent to the trusted attestation certificate.",
+                                TeeSignalLevel.WARN,
+                            ),
+                        ),
+                    ),
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Update persistence",
+                                "Matched kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE retained=1",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
     fun `rkp badge is hidden when local trust chain needs review`() {
         val model = mapper.map(
             report = TeeReport(

@@ -2425,8 +2425,8 @@ class TeeReportReducer(
     }
 
     private fun supplementaryReviewLevel(indicators: List<TeeEvidenceItem>): TeeSignalLevel = when {
-        // UI propagation is severity-first: a later FAIL must still outrank an earlier WARN.
-        // UI 传播按严重级别优先：后出现的 FAIL 必须压过先出现的 WARN。
+        // Report aggregation is severity-first: a later FAIL must still outrank an earlier WARN.
+        // Report 聚合按严重级别优先：后出现的 FAIL 必须压过先出现的 WARN。
         indicators.any { it.level == TeeSignalLevel.FAIL } -> TeeSignalLevel.FAIL
         indicators.any { it.level == TeeSignalLevel.WARN } -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.INFO
