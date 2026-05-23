@@ -465,8 +465,8 @@ class DangerousAppsRepository(
      * Returns the marker path if detected, null otherwise.
      */
     private fun detectSceneDebugfsMount(): String? {
-        // Hash dir regex: 8 lowercase letters, or _ + 7 lowercase letters
-        val hashRegex = Regex("^/([a-z]{8}|_[a-z]{7})/debug$")
+        // Hash dir regex: 8 characters consisting of lowercase letters and underscores
+        val hashRegex = Regex("^/([a-z_]{8})/debug$")
 
         // 1. Find the hash directory from mountinfo (preferred)
         val hashDir = try {
@@ -505,7 +505,7 @@ class DangerousAppsRepository(
         val hashDir3 = hashDir2 ?: run {
             var process: Process? = null
             try {
-                val mountRegex = Regex("debugfs on /dev/([a-z]{8}|_[a-z]{7})/debug")
+                val mountRegex = Regex("debugfs on /dev/([a-z_]{8})/debug")
                 process = ProcessBuilder("mount").redirectErrorStream(true).start()
                 var matchedHash: String? = null
                 process.inputStream.bufferedReader().useLines { lines ->
