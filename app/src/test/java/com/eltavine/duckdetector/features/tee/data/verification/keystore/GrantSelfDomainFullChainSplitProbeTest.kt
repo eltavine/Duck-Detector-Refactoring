@@ -68,10 +68,18 @@ class GrantSelfDomainFullChainSplitProbeTest {
     }
 
     @Test
-    fun `hidden fallback danger outranks public unavailable`() {
+    fun `private danger outranks clean Java stages`() {
         val publicResult = GrantSelfDomainFullChainSplitResult(
+            executed = true,
+            available = true,
             anomalyKind = GrantSelfDomainAnomalyKind.NONE,
-            detail = "Public: unsupported",
+            detail = "Public: clean",
+        )
+        val hiddenResult = GrantSelfDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantSelfDomainAnomalyKind.NONE,
+            detail = "Hidden: clean",
         )
         val privateResult = GrantSelfDomainFullChainSplitResult(
             executed = true,
@@ -81,14 +89,80 @@ class GrantSelfDomainFullChainSplitProbeTest {
             grantChainLength = 2,
             mismatchIndex = 2,
             anomalyKind = GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT,
-            detail = "Hidden: matched lengthMismatch owner=3 grantee=2",
+            detail = "Private: matched lengthMismatch owner=3 grantee=2",
         )
 
-        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(publicResult, privateResult)
+        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
 
         assertEquals(GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT, result.anomalyKind)
-        assertTrue(result.detail.contains("Public: Public: unsupported"))
-        assertTrue(result.detail.contains("Hidden: Hidden: matched"))
+        assertTrue(result.detail.contains("Public: clean"))
+        assertTrue(result.detail.contains("Hidden: clean"))
+        assertTrue(result.detail.contains("Private: matched"))
+    }
+
+    @Test
+    fun `private clean is selected after unsupported Java stages`() {
+        val publicResult = GrantSelfDomainFullChainSplitResult(
+            anomalyKind = GrantSelfDomainAnomalyKind.UNAVAILABLE,
+            detail = "Public: unsupported",
+        )
+        val hiddenResult = GrantSelfDomainFullChainSplitResult(
+            anomalyKind = GrantSelfDomainAnomalyKind.UNAVAILABLE,
+            detail = "Hidden: unavailable",
+        )
+        val privateResult = GrantSelfDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantSelfDomainAnomalyKind.NONE,
+            detail = "Private: clean",
+        )
+
+        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
+
+        assertEquals(GrantSelfDomainAnomalyKind.NONE, result.anomalyKind)
+        assertTrue(result.detail.contains("Public: unsupported"))
+        assertTrue(result.detail.contains("Hidden: unavailable"))
+        assertTrue(result.detail.contains("Private: clean"))
+    }
+
+    @Test
+    fun `hidden fallback danger outranks public unavailable and private skip`() {
+        val publicResult = GrantSelfDomainFullChainSplitResult(
+            anomalyKind = GrantSelfDomainAnomalyKind.NONE,
+            detail = "Public: unsupported",
+        )
+        val hiddenResult = GrantSelfDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            splitDetected = true,
+            ownerChainLength = 3,
+            grantChainLength = 2,
+            mismatchIndex = 2,
+            anomalyKind = GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT,
+            detail = "Hidden: matched lengthMismatch owner=3 grantee=2",
+        )
+        val privateResult = GrantSelfDomainFullChainSplitResult(
+            detail = "skipped because Java grant stage already detected danger",
+        )
+
+        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
+
+        assertEquals(GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT, result.anomalyKind)
+        assertTrue(result.detail.contains("Public: unsupported"))
+        assertTrue(result.detail.contains("Hidden: matched"))
+        assertTrue(result.detail.contains("Private: skipped"))
     }
 
     @Test
@@ -101,8 +175,15 @@ class GrantSelfDomainFullChainSplitProbeTest {
         val hiddenResult = GrantSelfDomainFullChainSplitResult(
             detail = "Hidden: should not execute",
         )
+        val privateResult = GrantSelfDomainFullChainSplitResult(
+            detail = "Private: should not execute",
+        )
 
-        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(publicResult, hiddenResult)
+        val result = GrantSelfDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
 
         assertEquals(GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN, result.anomalyKind)
     }

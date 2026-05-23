@@ -70,13 +70,29 @@ internal fun appendGrantDetail(detail: String, extra: String): String {
 
 internal fun combineGrantStageDetails(
     publicDetail: String,
-    fallbackLabel: String,
-    fallbackDetail: String?,
+    hiddenDetail: String?,
+    privateDetail: String? = null,
 ): String {
+    // Keep visible detail compact and stage-scoped. Full exception stacks stay in
+    // GrantDetectionDiagnosticLog for hidden-copy diagnostics.
+    // 可见 detail 保持紧凑并按阶段归档；完整异常堆栈保留在 GrantDetectionDiagnosticLog，供隐藏复制诊断使用。
     return buildList {
-        add("Public: ${publicDetail.ifBlank { "not executed" }}")
-        fallbackDetail?.let { add("$fallbackLabel: ${it.ifBlank { "not executed" }}") }
-    }.joinToString(separator = " • ")
+        add(formatGrantStageDetail("Public", publicDetail))
+        hiddenDetail?.let { add(formatGrantStageDetail("Hidden", it)) }
+        privateDetail?.let { add(formatGrantStageDetail("Private", it)) }
+    }.joinToString(separator = " | ")
+}
+
+private fun formatGrantStageDetail(
+    label: String,
+    detail: String,
+): String {
+    val text = detail.ifBlank { "not executed" }
+    return if (text.startsWith("$label:")) {
+        text
+    } else {
+        "$label: $text"
+    }
 }
 
 internal fun visibleGrantDetail(detail: String): String {

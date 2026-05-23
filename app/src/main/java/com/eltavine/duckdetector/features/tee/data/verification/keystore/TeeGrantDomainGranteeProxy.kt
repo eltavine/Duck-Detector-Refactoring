@@ -73,9 +73,9 @@ class TeeGrantDomainGranteeProxy(
         grantId: Long,
         keystore2Binder: IBinder?,
     ): TeeGrantDomainGranteeChainResult {
-        // Java-layer readback sends only the grant id. The private Binder transaction remains separate
-        // for lower-level experiments and is no longer part of the public/hidden grant probe fallback.
-        // Java 层回读只发送 grant id；private Binder transaction 保持独立，用于更底层实验，不再参与 public/hidden grant probe fallback。
+        // Java-layer readback sends only the grant id. The private Binder transaction additionally
+        // carries the owner-resolved Keystore2 binder for the incremental isolated plane check.
+        // Java 层回读只发送 grant id；private Binder transaction 额外携带 owner 解析到的 Keystore2 binder，用于增量 isolated 平面检测。
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {

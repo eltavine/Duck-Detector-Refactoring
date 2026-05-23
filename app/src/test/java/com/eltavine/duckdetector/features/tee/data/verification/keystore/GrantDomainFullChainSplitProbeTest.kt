@@ -102,10 +102,18 @@ class GrantDomainFullChainSplitProbeTest {
     }
 
     @Test
-    fun `hidden isolated fallback danger outranks public unavailable`() {
+    fun `private isolated danger outranks clean Java stages`() {
         val publicResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
             anomalyKind = GrantDomainAnomalyKind.NONE,
-            detail = "Public: unsupported",
+            detail = "Public: clean",
+        )
+        val hiddenResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Hidden: clean",
         )
         val privateResult = GrantDomainFullChainSplitResult(
             executed = true,
@@ -115,14 +123,110 @@ class GrantDomainFullChainSplitProbeTest {
             granteeChainLength = 2,
             mismatchIndex = 2,
             anomalyKind = GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT,
-            detail = "Hidden: matched lengthMismatch owner=3 grantee=2",
+            detail = "Private: matched lengthMismatch owner=3 grantee=2",
         )
 
-        val result = GrantDomainFullChainSplitProbe.selectFinalResult(publicResult, privateResult)
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
 
         assertEquals(GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT, result.anomalyKind)
-        assertTrue(result.detail.contains("Public: Public: unsupported"))
-        assertTrue(result.detail.contains("Hidden: Hidden: matched"))
+        assertTrue(result.detail.contains("Public: clean"))
+        assertTrue(result.detail.contains("Hidden: clean"))
+        assertTrue(result.detail.contains("Private: matched"))
+    }
+
+    @Test
+    fun `private isolated clean is selected after unsupported Java stages`() {
+        val publicResult = GrantDomainFullChainSplitResult(
+            anomalyKind = GrantDomainAnomalyKind.UNAVAILABLE,
+            detail = "Public: unsupported",
+        )
+        val hiddenResult = GrantDomainFullChainSplitResult(
+            anomalyKind = GrantDomainAnomalyKind.UNAVAILABLE,
+            detail = "Hidden: unavailable",
+        )
+        val privateResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Private: clean",
+        )
+
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
+
+        assertEquals(GrantDomainAnomalyKind.NONE, result.anomalyKind)
+        assertTrue(result.detail.contains("Public: unsupported"))
+        assertTrue(result.detail.contains("Hidden: unavailable"))
+        assertTrue(result.detail.contains("Private: clean"))
+    }
+
+    @Test
+    fun `private isolated readback blocked stays unavailable`() {
+        val publicResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Public: clean",
+        )
+        val hiddenResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Hidden: clean",
+        )
+        val privateResult = GrantDomainFullChainSplitResult(
+            ownerChainLength = 3,
+            anomalyKind = GrantDomainAnomalyKind.UNAVAILABLE,
+            detail = "Private: readback failed (isolated binder call blocked: permission denied).",
+        )
+
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
+
+        assertEquals(GrantDomainAnomalyKind.NONE, result.anomalyKind)
+        assertTrue(result.detail.contains("Private: readback failed"))
+    }
+
+    @Test
+    fun `hidden isolated fallback danger outranks public unavailable and private skip`() {
+        val publicResult = GrantDomainFullChainSplitResult(
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Public: unsupported",
+        )
+        val hiddenResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            splitDetected = true,
+            ownerChainLength = 3,
+            granteeChainLength = 2,
+            mismatchIndex = 2,
+            anomalyKind = GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT,
+            detail = "Hidden: matched lengthMismatch owner=3 grantee=2",
+        )
+        val privateResult = GrantDomainFullChainSplitResult(
+            detail = "skipped because Java grant stage already detected danger",
+        )
+
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
+
+        assertEquals(GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT, result.anomalyKind)
+        assertTrue(result.detail.contains("Public: unsupported"))
+        assertTrue(result.detail.contains("Hidden: matched"))
+        assertTrue(result.detail.contains("Private: skipped"))
     }
 
     @Test
@@ -135,8 +239,15 @@ class GrantDomainFullChainSplitProbeTest {
         val hiddenResult = GrantDomainFullChainSplitResult(
             detail = "Hidden: should not execute",
         )
+        val privateResult = GrantDomainFullChainSplitResult(
+            detail = "Private: should not execute",
+        )
 
-        val result = GrantDomainFullChainSplitProbe.selectFinalResult(publicResult, hiddenResult)
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
 
         assertEquals(GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN, result.anomalyKind)
     }
