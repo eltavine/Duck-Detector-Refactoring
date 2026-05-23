@@ -64,8 +64,8 @@ class SceneLoopbackProbe(
         httpGet: ProbeExchange,
         invalidPayload: ProbeExchange,
         sideChannel: ProbeExchange,
-        httpPort: Int,
-        sidecarPort: Int,
+        httpPort: Int = 8765,
+        sidecarPort: Int = 8788,
     ): SceneLoopbackProbeResult {
         val get404Matched = matchesHttpStatus(httpGet, 404)
         val invalid400Matched = matchesHttpStatus(invalidPayload, 400)
