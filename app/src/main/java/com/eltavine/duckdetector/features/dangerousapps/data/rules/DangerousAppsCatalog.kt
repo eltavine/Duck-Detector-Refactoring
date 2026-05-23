@@ -180,10 +180,12 @@ object DangerousAppsCatalog {
     val targetByPackage: Map<String, DangerousAppTarget> = targets.associateBy { it.packageName }
 
     val specialPathDetection: Map<String, String> = linkedMapOf(
+        // Scene 8.x (original)
         "/dev/cpuset/scene-daemon" to "com.omarea.vtools",
         "/dev/memcg/scene_active" to "com.omarea.vtools",
         "/dev/memcg/scene_idle" to "com.omarea.vtools",
         "/dev/scene" to "com.omarea.vtools",
+        // Other apps
         "/sdcard/MT2" to "bin.mt.termex",
         "/sdcard/NP" to "com.wn.app.np",
         "/sdcard/xinhao" to "com.termux",

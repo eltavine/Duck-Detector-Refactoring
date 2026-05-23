@@ -198,6 +198,17 @@ class DangerousAppsRepository(
                 )
             }
 
+        if (detectSceneDebugfsMount()) {
+            appendMethod(
+                detectedApps = detectedApps,
+                packageName = SCENE_PACKAGE,
+                method = DangerousDetectionMethod(
+                    kind = DangerousDetectionMethodKind.SPECIAL_PATH,
+                    detail = sceneDebugfsPath ?: "debugfs mount for Scene",
+                ),
+            )
+        }
+
         val findings = buildFindings(detectedApps)
         val hiddenFromPackageManager = if (packageVisibility == DangerousPackageVisibility.FULL) {
             findings.filter { finding ->
@@ -434,6 +445,75 @@ class DangerousAppsRepository(
         } catch (_: Exception) {
             false
         }
+    }
+
+    /**
+     * Scene 9.3.0 Alpha13
+     * mounts debugfs at /dev/<random>/debug
+     * and creates a marker file /dev/<random>/scene_mode_category.
+     *
+     * Detection:
+     *   1. Parse /proc/self/mountinfo → extract hash dir from mount_point
+     *   2. Verify /dev/<hash>/scene_mode_category exists
+     *      - Kernel: access(F_OK) → 0 (permission allows existence check)
+     *      - Kernel: mkdir(path)  → EEXIST (path already exists as non-dir)
+     *      - Kernel: stat(path)   → EACCES (file exists but metadata denied)
+     *   3. Fallback: /proc/self/mounts → mount command
+     */
+    private fun detectSceneDebugfsMount(): Boolean {
+        val mountPointRegex = Regex("^/dev/([a-z]{8})/debug$")
+        
+        // 1. Find the hash directory from mountinfo
+        val hashDir = try {
+            File("/proc/self/mountinfo").useLines { lines ->
+                lines.firstNotNullOfOrNull { line ->
+                    val fields = line.split(" ")
+                    val fstypeIdx = fields.indexOf("-")
+                    if (fstypeIdx >= 0 && fstypeIdx + 2 < fields.size &&
+                        fields[fstypeIdx + 1] == "debugfs") {
+                        val match = mountPointRegex.matchEntire(fields[4])
+                        match?.groupValues?.getOrNull(1)
+                    } else null
+                }
+            }
+        } catch (_: Exception) {
+            null
+        } ?: detectSceneHashDirFallback(mountPointRegex)
+
+        if (hashDir == null) return false
+
+        // 2. Verify marker file exists
+        val markerPath = "/dev/$hashDir/scene_mode_category"
+        val markerFile = File(markerPath)
+        val markerExists = runCatching { markerFile.exists() }.getOrDefault(false)
+
+        if (!markerExists) return false
+
+        // 3. Store the real path for reporting
+        sceneDebugfsPath = markerPath
+        return true
+    }
+
+    private var sceneDebugfsPath: String? = null
+
+    private fun detectSceneHashDirFallback(mountPointRegex: Regex): String? {
+        val pattern = Regex("debugfs on /dev/([a-z]{8})/debug")
+        // Fallback: /proc/self/mounts
+        try {
+            File("/proc/self/mounts").useLines { lines ->
+                val match = pattern.find(lines.joinToString("\n"))
+                match?.groupValues?.getOrNull(1)?.let { return it }
+            }
+        } catch (_: Exception) { }
+        // Fallback: mount command
+        try {
+            val process = ProcessBuilder("mount")
+                .redirectErrorStream(true).start()
+            val output = process.inputStream.bufferedReader().readText()
+            process.waitFor(2, TimeUnit.SECONDS)
+            pattern.find(output)?.groupValues?.getOrNull(1)?.let { return it }
+        } catch (_: Exception) { }
+        return null
     }
 
     private data class MutableFinding(
