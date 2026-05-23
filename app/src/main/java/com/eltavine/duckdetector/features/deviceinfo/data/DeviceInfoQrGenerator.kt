@@ -30,32 +30,44 @@ object DeviceInfoQrGenerator {
     private const val DEFAULT_QR_SIZE = 512
     private const val MARGIN = 1
 
-    // Default brand gradient colours – warm teal → deep indigo
+    /** 16-colour palette — all dark enough for reliable scanning. */
     @ColorInt
-    private val DEFAULT_GRADIENT_START = Color.rgb(0x00, 0x96, 0x88) // teal 500
-    @ColorInt
-    private val DEFAULT_GRADIENT_END = Color.rgb(0x3F, 0x51, 0xB5)   // indigo 500
+    private val PALETTE_16 = intArrayOf(
+        Color.rgb(0xC6, 0x28, 0x28), // red 800
+        Color.rgb(0xAD, 0x14, 0x57), // pink 800
+        Color.rgb(0x6A, 0x1B, 0x9A), // purple 800
+        Color.rgb(0x28, 0x35, 0x93), // indigo 800
+        Color.rgb(0x15, 0x65, 0xC0), // blue 800
+        Color.rgb(0x00, 0x83, 0x8F), // teal 800
+        Color.rgb(0x00, 0x69, 0x5C), // teal 900
+        Color.rgb(0x2E, 0x7D, 0x32), // green 800
+        Color.rgb(0x55, 0x8B, 0x2F), // light-green 800
+        Color.rgb(0xEF, 0x6C, 0x00), // orange 800
+        Color.rgb(0xE6, 0x51, 0x00), // orange 900
+        Color.rgb(0xBF, 0x36, 0x0C), // deep-orange 900
+        Color.rgb(0x4E, 0x34, 0x2E), // brown 800
+        Color.rgb(0x37, 0x47, 0x4F), // blue-grey 800
+        Color.rgb(0x42, 0x42, 0x42), // grey 800
+        Color.rgb(0x21, 0x21, 0x21), // grey 900
+    )
+
     @ColorInt
     private val BACKGROUND_COLOR = Color.WHITE
 
     /**
-     * Generate a colourful QR code bitmap from the given text content.
+     * Generates a 16-colour tiled QR code.
      *
-     * The dark ("on") modules are drawn with a horizontal gradient; the
-     * light modules remain white so scanners can still read the code
-     * reliably.
+     * The QR code area (excluding quiet zone) is divided into a 4×4 grid.
+     * Each cell uses one discrete colour from [PALETTE_16], giving the code
+     * a distinctive high-density aesthetic while keeping every dark module
+     * well below the scanner's luminance threshold.
      *
-     * @param content       The text to encode in the QR code.
-     * @param sizePx        Output bitmap size in pixels (square). Defaults to 512.
-     * @param gradientStart Start colour of the foreground gradient (top-left).
-     * @param gradientEnd   End colour of the foreground gradient (bottom-right).
-     * @return A colourful QR code bitmap, or null if the content is too large.
+     * *Note: standard QR is binary (dark/light). The 16 colours are visual
+     * only — the per-module data density is unchanged.*
      */
     fun generate(
         content: String,
         sizePx: Int = DEFAULT_QR_SIZE,
-        @ColorInt gradientStart: Int = DEFAULT_GRADIENT_START,
-        @ColorInt gradientEnd: Int = DEFAULT_GRADIENT_END,
     ): Bitmap? {
         val hints: MutableMap<EncodeHintType, Any> = EnumMap(EncodeHintType::class.java)
         hints[EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.M
@@ -76,29 +88,22 @@ object DeviceInfoQrGenerator {
         val height = bitMatrix.height
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
 
-        val sr = Color.red(gradientStart)
-        val sg = Color.green(gradientStart)
-        val sb = Color.blue(gradientStart)
-        val er = Color.red(gradientEnd)
-        val eg = Color.green(gradientEnd)
-        val eb = Color.blue(gradientEnd)
-
-        // Pre-compute per-row gradient colours so we only interpolate once per row
-        val rowColors = IntArray(height) { y ->
-            val ratio = height.takeIf { it > 1 }?.let { y.toFloat() / (it - 1) } ?: 0f
-            val r = (sr + (er - sr) * ratio).toInt().coerceIn(0, 255)
-            val g = (sg + (eg - sg) * ratio).toInt().coerceIn(0, 255)
-            val b = (sb + (eb - sb) * ratio).toInt().coerceIn(0, 255)
-            Color.rgb(r, g, b)
-        }
+        // 4×4 colour grid overlay
+        val cols = 4
+        val rows = 4
+        val cellW = width.toFloat() / cols
+        val cellH = height.toFloat() / rows
 
         for (x in 0 until width) {
+            val cellX = (x.toFloat() / cellW).toInt().coerceIn(0, cols - 1)
             for (y in 0 until height) {
-                bitmap.setPixel(
-                    x,
-                    y,
-                    if (bitMatrix[x, y]) rowColors[y] else BACKGROUND_COLOR,
-                )
+                if (bitMatrix[x, y]) {
+                    val cellY = (y.toFloat() / cellH).toInt().coerceIn(0, rows - 1)
+                    val colorIndex = (cellY * cols + cellX) % PALETTE_16.size
+                    bitmap.setPixel(x, y, PALETTE_16[colorIndex])
+                } else {
+                    bitmap.setPixel(x, y, BACKGROUND_COLOR)
+                }
             }
         }
 
