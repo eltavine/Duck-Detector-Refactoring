@@ -26,8 +26,8 @@ import java.util.Locale
 object DeviceInfoExportFormatter {
 
     /**
-     * Format device info into a compact single-line summary suitable for QR code encoding.
-     * QR codes have limited capacity, so this format is concise.
+     * Format device info into a compact summary suitable for clipboard copy.
+     * Human-readable with section headers.
      */
     fun formatCompact(model: DeviceInfoCardModel): String = buildString {
         val facts = extractFactMap(model)
@@ -86,6 +86,66 @@ object DeviceInfoExportFormatter {
         append("TZ: ${facts["Time zone"]}\n")
 
         append("=== End ===\n")
+    }
+
+    /**
+     * Format device info into an ultra-compact pipe-delimited blob for QR codes.
+     *
+     * Uses short keys, no section headers, no whitespace — optimised for
+     * QR alphanumeric mode (~4.3 KB capacity). Skips "Unavailable" values.
+     *
+     * Format:  DD|t=yyMMddHHmm|av=1.0|br=Xiaomi|mo=...|fp=...
+     */
+    fun formatUltraCompact(model: DeviceInfoCardModel): String {
+        val f = extractFactMap(model)
+        val time = SimpleDateFormat("yyMMddHHmm", Locale.US).format(Date())
+
+        return buildString {
+            append("DD|")
+            append("t=$time|")
+            append("av=${BuildConfig.VERSION_NAME}|")
+
+            // Identity
+            f["Brand"]?.takeIf { it != "Unavailable" }?.let { append("br=$it|") }
+            f["Manufacturer"]?.takeIf { it != "Unavailable" }?.let { append("mfr=$it|") }
+            f["Model"]?.takeIf { it != "Unavailable" }?.let { append("mo=$it|") }
+            f["Device"]?.takeIf { it != "Unavailable" }?.let { append("de=$it|") }
+            f["Product"]?.takeIf { it != "Unavailable" }?.let { append("pr=$it|") }
+            f["Board"]?.takeIf { it != "Unavailable" }?.let { append("bd=$it|") }
+
+            // SOC
+            f["SOC Manufacturer"]?.takeIf { it != "Unavailable" }?.let { append("sm=$it|") }
+            f["SOC Model"]?.takeIf { it != "Unavailable" }?.let { append("sc=$it|") }
+            f["CPU Hardware"]?.takeIf { it != "Unavailable" }?.let { append("ch=$it|") }
+            f["Board Platform"]?.takeIf { it != "Unavailable" }?.let { append("bp=$it|") }
+            f["Chip Name"]?.takeIf { it != "Unavailable" }?.let { append("cn=$it|") }
+            f["CPU Cores"]?.takeIf { it != "Unavailable" && it != "0" }?.let { append("co=$it|") }
+            f["CPU Architecture"]?.takeIf { it != "Unavailable" }?.let { append("ca=$it|") }
+
+            // Build
+            f["Hardware"]?.takeIf { it != "Unavailable" }?.let { append("hw=$it|") }
+            f["Bootloader"]?.takeIf { it != "Unavailable" }?.let { append("bl=$it|") }
+            f["Fingerprint"]?.takeIf { it != "Unavailable" }?.let { append("fp=$it|") }
+            f["Build ID"]?.takeIf { it != "Unavailable" }?.let { append("bi=$it|") }
+            f["Build type"]?.takeIf { it != "Unavailable" }?.let { append("bt=$it|") }
+            f["Incremental"]?.takeIf { it != "Unavailable" }?.let { append("in=$it|") }
+
+            // Android
+            f["SDK"]?.takeIf { it != "Unavailable" }?.let { append("sk=$it|") }
+            f["Release"]?.takeIf { it != "Unavailable" }?.let { append("re=$it|") }
+            f["Security patch"]?.takeIf { it != "Unavailable" }?.let { append("sp=$it|") }
+            f["Tags"]?.takeIf { it != "Unavailable" }?.let { append("tg=$it|") }
+            f["Build user"]?.takeIf { it != "Unavailable" }?.let { append("bu=$it|") }
+            f["Build host"]?.takeIf { it != "Unavailable" }?.let { append("bh=$it|") }
+
+            // Runtime
+            f["Primary ABI"]?.takeIf { it != "Unavailable" }?.let { append("ab=$it|") }
+            f["Kernel"]?.takeIf { it != "Unavailable" }?.let { append("kn=$it|") }
+            f["Locale"]?.takeIf { it != "Unavailable" }?.let { append("lo=$it|") }
+            f["Time zone"]?.takeIf { it != "Unavailable" }?.let { append("tz=$it|") }
+
+            if (endsWith('|')) setLength(length - 1)
+        }
     }
 
     /**

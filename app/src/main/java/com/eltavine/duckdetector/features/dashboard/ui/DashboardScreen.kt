@@ -186,10 +186,11 @@ fun DashboardScreen(
     var showQrDialog by remember { mutableStateOf(false) }
     val qrBitmap = remember(uiState.deviceInfoCard, showQrDialog) {
         if (showQrDialog) {
-            val compactText = DeviceInfoExportFormatter.formatCompact(uiState.deviceInfoCard)
-            val bitmap = DeviceInfoQrGenerator.generate(compactText)
+            val qrText = DeviceInfoExportFormatter.formatUltraCompact(uiState.deviceInfoCard)
+            val readableText = DeviceInfoExportFormatter.formatCompact(uiState.deviceInfoCard)
+            val bitmap = DeviceInfoQrGenerator.generate(qrText)
             if (bitmap != null) {
-                bitmap to compactText
+                Triple(bitmap, qrText, readableText)
             } else {
                 null
             }
@@ -356,10 +357,10 @@ fun DashboardScreen(
 
         // QR Code Dialog
         if (showQrDialog && qrBitmap != null) {
-            val (bitmap, compactText) = qrBitmap!!
+            val (bitmap, _, readableText) = qrBitmap!!
             DeviceInfoQrDialog(
                 bitmap = bitmap,
-                compactText = compactText,
+                compactText = readableText,
                 onDismiss = { showQrDialog = false },
             )
         }
