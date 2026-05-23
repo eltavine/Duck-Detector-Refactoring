@@ -502,15 +502,24 @@ class DangerousAppsRepository(
         }
 
         // 3. Fallback: mount command (format: "debugfs on /dev/<hash>/debug type debugfs ...")
-        val hashDir3 = hashDir2 ?: try {
-            val mountRegex = Regex("debugfs on /dev/([a-z]{8}|_[a-z]{7})/debug")
-            val process = ProcessBuilder("mount")
-                .redirectErrorStream(true).start()
-            val output = process.inputStream.bufferedReader().use { it.readText() }
-            process.waitFor(2, TimeUnit.SECONDS)
-            mountRegex.find(output)?.groupValues?.getOrNull(1)
-        } catch (_: Exception) {
-            null
+        val hashDir3 = hashDir2 ?: run {
+            var process: Process? = null
+            try {
+                val mountRegex = Regex("debugfs on /dev/([a-z]{8}|_[a-z]{7})/debug")
+                process = ProcessBuilder("mount").redirectErrorStream(true).start()
+                var matchedHash: String? = null
+                process.inputStream.bufferedReader().useLines { lines ->
+                    matchedHash = lines.firstNotNullOfOrNull { line ->
+                        mountRegex.find(line)?.groupValues?.getOrNull(1)
+                    }
+                }
+                process.waitFor(2, TimeUnit.SECONDS)
+                matchedHash
+            } catch (_: Exception) {
+                null
+            } finally {
+                process?.destroy()
+            }
         }
 
         val finalHash = hashDir3 ?: return null
