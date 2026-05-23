@@ -143,6 +143,21 @@ internal object SelinuxContextValidityPayloadCodec {
                     .append(if (it) '1' else '0')
                     .append('\n')
             }
+            snapshot.dirtyPolicyMagiskDroidspacesdTransitionAllowed?.let {
+                append("DIRTY_POLICY_MAGISK_DROIDSPACESD_TRANSITION_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.dirtyPolicySuDroidspacesdTransitionAllowed?.let {
+                append("DIRTY_POLICY_SU_DROIDSPACESD_TRANSITION_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.dirtyPolicySystemServerDroidspacesdBinderCallAllowed?.let {
+                append("DIRTY_POLICY_SYSTEM_SERVER_DROIDSPACESD_BINDER_CALL_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
             snapshot.dirtyPolicyMsdAppDaemonConnectAllowed?.let {
                 append("DIRTY_POLICY_MSD_APP_DAEMON_CONNECT_ALLOWED=")
                     .append(if (it) '1' else '0')
@@ -247,6 +262,21 @@ internal object SelinuxContextValidityPayloadCodec {
             }
             snapshot.javaDirtyPolicyLsposedFileReadAllowed?.let {
                 append("JAVA_DIRTY_POLICY_LSPOSED_FILE_READ_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed?.let {
+                append("JAVA_DIRTY_POLICY_MAGISK_DROIDSPACESD_TRANSITION_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.javaDirtyPolicySuDroidspacesdTransitionAllowed?.let {
+                append("JAVA_DIRTY_POLICY_SU_DROIDSPACESD_TRANSITION_ALLOWED=")
+                    .append(if (it) '1' else '0')
+                    .append('\n')
+            }
+            snapshot.javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed?.let {
+                append("JAVA_DIRTY_POLICY_SYSTEM_SERVER_DROIDSPACESD_BINDER_CALL_ALLOWED=")
                     .append(if (it) '1' else '0')
                     .append('\n')
             }

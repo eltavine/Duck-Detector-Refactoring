@@ -163,6 +163,18 @@ namespace {
             output << "DIRTY_POLICY_LSPOSED_FILE_READ_ALLOWED="
                    << (*snapshot.dirty_policy.lsposed_file_read_allowed ? '1' : '0') << '\n';
         }
+        if (snapshot.dirty_policy.magisk_droidspacesd_transition_allowed.has_value()) {
+            output << "DIRTY_POLICY_MAGISK_DROIDSPACESD_TRANSITION_ALLOWED="
+                   << (*snapshot.dirty_policy.magisk_droidspacesd_transition_allowed ? '1' : '0') << '\n';
+        }
+        if (snapshot.dirty_policy.su_droidspacesd_transition_allowed.has_value()) {
+            output << "DIRTY_POLICY_SU_DROIDSPACESD_TRANSITION_ALLOWED="
+                   << (*snapshot.dirty_policy.su_droidspacesd_transition_allowed ? '1' : '0') << '\n';
+        }
+        if (snapshot.dirty_policy.system_server_droidspacesd_binder_call_allowed.has_value()) {
+            output << "DIRTY_POLICY_SYSTEM_SERVER_DROIDSPACESD_BINDER_CALL_ALLOWED="
+                   << (*snapshot.dirty_policy.system_server_droidspacesd_binder_call_allowed ? '1' : '0') << '\n';
+        }
         if (snapshot.dirty_policy.msd_app_daemon_connect_allowed.has_value()) {
             output << "DIRTY_POLICY_MSD_APP_DAEMON_CONNECT_ALLOWED="
                    << (*snapshot.dirty_policy.msd_app_daemon_connect_allowed ? '1' : '0') << '\n';

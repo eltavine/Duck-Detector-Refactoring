@@ -67,6 +67,7 @@ namespace duckdetector::selinux {
         constexpr const char *kAdbrootContext = "u:r:adbroot:s0";
         constexpr const char *kUntrustedAppContext = "u:r:untrusted_app:s0";
         constexpr const char *kMagiskContext = "u:r:magisk:s0";
+        constexpr const char *kDroidspacesdContext = "u:r:droidspacesd:s0";
         constexpr const char *kLsposedFileContext = "u:object_r:lsposed_file:s0";
         constexpr const char *kMsdAppContext = "u:r:msd_app:s0";
         constexpr const char *kMsdDaemonContext = "u:r:msd_daemon:s0";
@@ -592,6 +593,9 @@ namespace duckdetector::selinux {
             const AccessPairResult magisk_binder_call = check_access_rule_pair(symbols, kUntrustedAppContext, kMagiskContext, kBinderClass, kCallPermission);
             const AccessPairResult ksu_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kKsuFileContext, kFileClass, kReadPermission);
             const AccessPairResult lsposed_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kLsposedFileContext, kFileClass, kReadPermission);
+            const AccessPairResult magisk_droidspacesd_transition = check_access_rule_pair(symbols, kMagiskContext, kDroidspacesdContext, kProcessClass, kDyntransitionPermission);
+            const AccessPairResult su_droidspacesd_transition = check_access_rule_pair(symbols, kSuContext, kDroidspacesdContext, kProcessClass, kDyntransitionPermission);
+            const AccessPairResult system_server_droidspacesd_binder_call = check_access_rule_pair(symbols, kSystemServerContext, kDroidspacesdContext, kBinderClass, kCallPermission);
             const AccessPairResult msd_app_daemon_connect = check_access_rule_pair(symbols, kMsdAppContext, kMsdDaemonContext, kUnixStreamSocketClass, kConnectToPermission);
             const AccessPairResult msd_daemon_self_connect = check_access_rule_pair(symbols, kMsdDaemonContext, kMsdDaemonContext, kUnixStreamSocketClass, kConnectToPermission);
             const AccessPairResult msd_daemon_selinuxfs_read = check_access_rule_pair(symbols, kMsdDaemonContext, kSelinuxfsContext, kFileClass, kReadPermission);
@@ -609,6 +613,9 @@ namespace duckdetector::selinux {
             snapshot.magisk_binder_call_allowed = pair_allowed_value(magisk_binder_call);
             snapshot.ksu_file_read_allowed = pair_allowed_value(ksu_file_read);
             snapshot.lsposed_file_read_allowed = pair_allowed_value(lsposed_file_read);
+            snapshot.magisk_droidspacesd_transition_allowed = pair_allowed_value(magisk_droidspacesd_transition);
+            snapshot.su_droidspacesd_transition_allowed = pair_allowed_value(su_droidspacesd_transition);
+            snapshot.system_server_droidspacesd_binder_call_allowed = pair_allowed_value(system_server_droidspacesd_binder_call);
             snapshot.msd_app_daemon_connect_allowed = pair_allowed_value(msd_app_daemon_connect);
             snapshot.msd_daemon_self_connect_allowed = pair_allowed_value(msd_daemon_self_connect);
             snapshot.msd_daemon_selinuxfs_read_allowed = pair_allowed_value(msd_daemon_selinuxfs_read);
@@ -624,6 +631,9 @@ namespace duckdetector::selinux {
                               magisk_binder_call.stable &&
                               ksu_file_read.stable &&
                               lsposed_file_read.stable &&
+                              magisk_droidspacesd_transition.stable &&
+                              su_droidspacesd_transition.stable &&
+                              system_server_droidspacesd_binder_call.stable &&
                               msd_app_daemon_connect.stable &&
                               msd_daemon_self_connect.stable &&
                               msd_daemon_selinuxfs_read.stable &&
@@ -644,6 +654,9 @@ namespace duckdetector::selinux {
             append_access_note(snapshot, "untrusted_app -> magisk binder", magisk_binder_call);
             append_access_note(snapshot, "untrusted_app -> ksu_file read", ksu_file_read);
             append_access_note(snapshot, "untrusted_app -> lsposed_file read", lsposed_file_read);
+            append_access_note(snapshot, "magisk -> droidspacesd dyntransition", magisk_droidspacesd_transition);
+            append_access_note(snapshot, "su -> droidspacesd dyntransition", su_droidspacesd_transition);
+            append_access_note(snapshot, "system_server -> droidspacesd binder", system_server_droidspacesd_binder_call);
             append_access_note(snapshot, "msd_app -> msd_daemon connectto", msd_app_daemon_connect);
             append_access_note(snapshot, "msd_daemon -> msd_daemon connectto", msd_daemon_self_connect);
             append_access_note(snapshot, "msd_daemon -> selinuxfs read", msd_daemon_selinuxfs_read);

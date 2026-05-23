@@ -65,6 +65,9 @@ class SelinuxContextValidityBridgeTest {
                 DIRTY_POLICY_MAGISK_BINDER_CALL_ALLOWED=1
                 DIRTY_POLICY_KSU_FILE_READ_ALLOWED=0
                 DIRTY_POLICY_LSPOSED_FILE_READ_ALLOWED=1
+                DIRTY_POLICY_MAGISK_DROIDSPACESD_TRANSITION_ALLOWED=1
+                DIRTY_POLICY_SU_DROIDSPACESD_TRANSITION_ALLOWED=1
+                DIRTY_POLICY_SYSTEM_SERVER_DROIDSPACESD_BINDER_CALL_ALLOWED=1
                 DIRTY_POLICY_XPOSED_DATA_FILE_READ_ALLOWED=0
                 DIRTY_POLICY_ZYGOTE_ADB_DATA_SEARCH_ALLOWED=1
                 DIRTY_POLICY_FAILURE_REASON=Dirty policy oracle self-test failed.
@@ -79,6 +82,7 @@ class SelinuxContextValidityBridgeTest {
                 JAVA_DIRTY_POLICY_ACCESS_CONTROL_ALLOWED=1
                 JAVA_DIRTY_POLICY_NEGATIVE_CONTROL_REJECTED=1
                 JAVA_DIRTY_POLICY_LSPOSED_FILE_READ_ALLOWED=1
+                JAVA_DIRTY_POLICY_MAGISK_DROIDSPACESD_TRANSITION_ALLOWED=1
                 JAVA_DIRTY_POLICY_FAILURE_REASON=Java dirty policy oracle self-test failed.
                 JAVA_DIRTY_POLICY_NOTE=java system_server execmem=allowed
                 PROC_ATTR_CURRENT_PROBE_ATTEMPTED=1
@@ -126,6 +130,9 @@ class SelinuxContextValidityBridgeTest {
         assertEquals(true, snapshot.dirtyPolicyMagiskBinderCallAllowed)
         assertEquals(false, snapshot.dirtyPolicyKsuFileReadAllowed)
         assertEquals(true, snapshot.dirtyPolicyLsposedFileReadAllowed)
+        assertEquals(true, snapshot.dirtyPolicyMagiskDroidspacesdTransitionAllowed)
+        assertEquals(true, snapshot.dirtyPolicySuDroidspacesdTransitionAllowed)
+        assertEquals(true, snapshot.dirtyPolicySystemServerDroidspacesdBinderCallAllowed)
         assertEquals(false, snapshot.dirtyPolicyXposedDataFileReadAllowed)
         assertEquals(true, snapshot.dirtyPolicyZygoteAdbDataSearchAllowed)
         assertEquals("Dirty policy oracle self-test failed.", snapshot.dirtyPolicyFailureReason)
@@ -140,6 +147,7 @@ class SelinuxContextValidityBridgeTest {
         assertEquals(true, snapshot.javaDirtyPolicyAccessControlAllowed)
         assertEquals(true, snapshot.javaDirtyPolicyNegativeControlRejected)
         assertEquals(true, snapshot.javaDirtyPolicyLsposedFileReadAllowed)
+        assertEquals(true, snapshot.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed)
         assertEquals("Java dirty policy oracle self-test failed.", snapshot.javaDirtyPolicyFailureReason)
         assertEquals(listOf("java system_server execmem=allowed"), snapshot.javaDirtyPolicyNotes)
         assertEquals(true, snapshot.procAttrCurrentProbeAttempted)

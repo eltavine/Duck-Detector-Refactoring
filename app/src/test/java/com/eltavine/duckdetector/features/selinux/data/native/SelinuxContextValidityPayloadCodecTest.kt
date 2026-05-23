@@ -63,9 +63,23 @@ class SelinuxContextValidityPayloadCodecTest {
             dirtyPolicyMagiskBinderCallAllowed = true,
             dirtyPolicyKsuFileReadAllowed = false,
             dirtyPolicyLsposedFileReadAllowed = true,
+            dirtyPolicyMagiskDroidspacesdTransitionAllowed = true,
+            dirtyPolicySuDroidspacesdTransitionAllowed = true,
+            dirtyPolicySystemServerDroidspacesdBinderCallAllowed = true,
             dirtyPolicyXposedDataFileReadAllowed = false,
             dirtyPolicyZygoteAdbDataSearchAllowed = true,
             dirtyPolicyFailureReason = "Dirty policy oracle self-test failed.",
+            javaDirtyPolicyAvailable = true,
+            javaDirtyPolicyProbeAttempted = true,
+            javaDirtyPolicyCarrierContext = "u:r:app_zygote:s0:c1,c2",
+            javaDirtyPolicyCarrierMatchesExpected = true,
+            javaDirtyPolicyControlsPassed = true,
+            javaDirtyPolicyStable = true,
+            javaDirtyPolicyQueryMethod = "android.os.SELinux.checkSELinuxAccess",
+            javaDirtyPolicyAccessControlAllowed = true,
+            javaDirtyPolicyNegativeControlRejected = true,
+            javaDirtyPolicyMagiskDroidspacesdTransitionAllowed = true,
+            javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed = true,
             dirtyPolicyNotes = listOf("system_server execmem=allowed"),
             procAttrCurrentProbeAttempted = true,
             procAttrCurrentResults = listOf(
@@ -127,10 +141,17 @@ class SelinuxContextValidityPayloadCodecTest {
         assertEquals(snapshot.dirtyPolicyMagiskBinderCallAllowed, parsed.dirtyPolicyMagiskBinderCallAllowed)
         assertEquals(snapshot.dirtyPolicyKsuFileReadAllowed, parsed.dirtyPolicyKsuFileReadAllowed)
         assertEquals(snapshot.dirtyPolicyLsposedFileReadAllowed, parsed.dirtyPolicyLsposedFileReadAllowed)
+        assertEquals(snapshot.dirtyPolicyMagiskDroidspacesdTransitionAllowed, parsed.dirtyPolicyMagiskDroidspacesdTransitionAllowed)
+        assertEquals(snapshot.dirtyPolicySuDroidspacesdTransitionAllowed, parsed.dirtyPolicySuDroidspacesdTransitionAllowed)
+        assertEquals(snapshot.dirtyPolicySystemServerDroidspacesdBinderCallAllowed, parsed.dirtyPolicySystemServerDroidspacesdBinderCallAllowed)
         assertEquals(snapshot.dirtyPolicyXposedDataFileReadAllowed, parsed.dirtyPolicyXposedDataFileReadAllowed)
         assertEquals(snapshot.dirtyPolicyZygoteAdbDataSearchAllowed, parsed.dirtyPolicyZygoteAdbDataSearchAllowed)
         assertEquals(snapshot.dirtyPolicyFailureReason, parsed.dirtyPolicyFailureReason)
         assertEquals(snapshot.dirtyPolicyNotes, parsed.dirtyPolicyNotes)
+        assertTrue(parsed.javaDirtyPolicyAvailable)
+        assertTrue(parsed.javaDirtyPolicyProbeAttempted)
+        assertEquals(snapshot.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed, parsed.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed)
+        assertEquals(snapshot.javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed, parsed.javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed)
         assertTrue(parsed.procAttrCurrentProbeAttempted)
         assertEquals(snapshot.procAttrCurrentResults, parsed.procAttrCurrentResults)
         assertEquals(snapshot.procAttrCurrentFailureReason, parsed.procAttrCurrentFailureReason)

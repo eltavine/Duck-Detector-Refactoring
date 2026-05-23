@@ -38,6 +38,9 @@ namespace duckdetector::selinux {
         std::optional<bool> magisk_binder_call_allowed;
         std::optional<bool> ksu_file_read_allowed;
         std::optional<bool> lsposed_file_read_allowed;
+        std::optional<bool> magisk_droidspacesd_transition_allowed;
+        std::optional<bool> su_droidspacesd_transition_allowed;
+        std::optional<bool> system_server_droidspacesd_binder_call_allowed;
         std::optional<bool> msd_app_daemon_connect_allowed;
         std::optional<bool> msd_daemon_self_connect_allowed;
         std::optional<bool> msd_daemon_selinuxfs_read_allowed;

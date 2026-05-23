@@ -45,6 +45,9 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
                 dirtyPolicyMagiskBinderCallAllowed = true,
                 dirtyPolicyKsuFileReadAllowed = false,
                 dirtyPolicyLsposedFileReadAllowed = true,
+                dirtyPolicyMagiskDroidspacesdTransitionAllowed = true,
+                dirtyPolicySuDroidspacesdTransitionAllowed = true,
+                dirtyPolicySystemServerDroidspacesdBinderCallAllowed = true,
                 dirtyPolicyMsdAppDaemonConnectAllowed = true,
                 dirtyPolicyMsdDaemonSelfConnectAllowed = false,
                 dirtyPolicyMsdDaemonSelinuxfsReadAllowed = true,
@@ -65,6 +68,9 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
                 javaDirtyPolicySystemServerExecmemAllowed = true,
                 javaDirtyPolicyMagiskBinderCallAllowed = true,
                 javaDirtyPolicyLsposedFileReadAllowed = true,
+                javaDirtyPolicyMagiskDroidspacesdTransitionAllowed = true,
+                javaDirtyPolicySuDroidspacesdTransitionAllowed = true,
+                javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed = true,
                 javaDirtyPolicyMsdAppDaemonConnectAllowed = true,
                 javaDirtyPolicyMsdDaemonSelfConnectAllowed = false,
                 javaDirtyPolicyMsdDaemonSelinuxfsReadAllowed = true,
@@ -73,7 +79,7 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
             ),
         )
 
-        assertEquals(14, methods.size)
+        assertEquals(17, methods.size)
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: system_server execmem" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: system_server execmem" && it.dirtyPolicyTrusted })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: fsck_untrusted sys_admin" && it.status == "Denied" && it.isSecure == true })
@@ -82,6 +88,9 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: untrusted_app -> magisk binder" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: untrusted_app -> ksu_file read" && it.status == "Denied" && it.isSecure == true })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: untrusted_app -> lsposed_file read" && it.status == "Allowed" && it.isSecure == false })
+        assertTrue(methods.any { it.method == "Droidspaces checker: magisk -> droidspacesd dyntransition" && it.status == "Allowed" && it.isSecure == false })
+        assertTrue(methods.any { it.method == "Droidspaces checker: su -> droidspacesd dyntransition" && it.status == "Allowed" && it.isSecure == false })
+        assertTrue(methods.any { it.method == "Droidspaces checker: system_server -> droidspacesd binder" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: untrusted_app -> xposed_data read" && it.status == "Denied" && it.isSecure == true })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: zygote -> adb_data_file search" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.any { it.method == "MSD checker: msd_app -> msd_daemon connectto" && it.status == "Allowed" && it.isSecure == false })
@@ -124,13 +133,16 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
                 dirtyPolicyMagiskBinderCallAllowed = true,
                 dirtyPolicyKsuFileReadAllowed = true,
                 dirtyPolicyLsposedFileReadAllowed = true,
+                dirtyPolicyMagiskDroidspacesdTransitionAllowed = true,
+                dirtyPolicySuDroidspacesdTransitionAllowed = true,
+                dirtyPolicySystemServerDroidspacesdBinderCallAllowed = true,
                 dirtyPolicyXposedDataFileReadAllowed = true,
                 dirtyPolicyZygoteAdbDataSearchAllowed = true,
                 dirtyPolicyFailureReason = "Dirty policy oracle self-test failed.",
             ),
         )
 
-        assertEquals(14, methods.size)
+        assertEquals(17, methods.size)
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: system_server execmem" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: untrusted_app -> lsposed_file read" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.none { it.dirtyPolicyTrusted })
@@ -156,6 +168,7 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
                 dirtyPolicyMagiskBinderCallAllowed = true,
                 dirtyPolicyKsuFileReadAllowed = true,
                 dirtyPolicyLsposedFileReadAllowed = false,
+                dirtyPolicyMagiskDroidspacesdTransitionAllowed = true,
                 dirtyPolicyXposedDataFileReadAllowed = false,
                 dirtyPolicyZygoteAdbDataSearchAllowed = true,
                 dirtyPolicyFailureReason = "Dirty policy oracle self-test failed.",
@@ -164,6 +177,7 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
 
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: system_server execmem" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: fsck_untrusted sys_admin" && it.status == "Denied" && it.isSecure == true })
+        assertTrue(methods.any { it.method == "Droidspaces checker: magisk -> droidspacesd dyntransition" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.none { it.dirtyPolicyTrusted })
         assertTrue(methods.any { it.details.orEmpty().contains("reason=Dirty policy oracle self-test failed.") })
     }
