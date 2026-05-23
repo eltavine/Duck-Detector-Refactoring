@@ -20,6 +20,9 @@ import android.content.Context
 import android.os.IBinder
 import android.os.Parcel
 import android.provider.Settings
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
 import android.text.TextUtils
 import com.eltavine.duckdetector.features.dangerousapps.data.native.DangerousAppsNativeBridge
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.CreatePackageContextZipProbe
@@ -512,10 +515,45 @@ class DangerousAppsRepository(
 
         val finalHash = hashDir3 ?: return null
 
-        // Verify marker file exists
+        // Verify marker using kernel-level syscall evidence chain:
+        //   access(F_OK) → 0        (File exists)
+        //   mkdir(path)  → EEXIST   (Path already exists as non-directory)
+        //   stat(path)   → EACCES   (File exists but metadata denied)
         val markerPath = "/dev/$finalHash/scene_mode_category"
-        val markerExists = runCatching { File(markerPath).exists() }.getOrDefault(false)
-        return if (markerExists) markerPath else null
+
+        // 1. Precise existence check: distinguish ENOENT from EACCES
+        try {
+            Os.access(markerPath, OsConstants.F_OK)
+        } catch (e: ErrnoException) {
+            if (e.errno == OsConstants.ENOENT) {
+                // File truly does not exist — must short-circuit to avoid
+                // creating a spurious directory via mkdir below.
+                return null
+            }
+            // EACCES or other: file may exist but access denied.
+            // Do NOT short-circuit — fall through to mkdir side-channel.
+        }
+
+        // 2. mkdir side-channel: kernel prioritises EEXIST over EACCES
+        val mkdirEexist = try {
+            Os.mkdir(markerPath, 0)
+            // mkdir succeeded → file did not exist, we just created a
+            // spurious directory. Clean it up immediately.
+            runCatching { Os.remove(markerPath) }
+            false
+        } catch (e: ErrnoException) {
+            e.errno == OsConstants.EEXIST
+        }
+        if (!mkdirEexist) return null
+
+        // 3. stat metadata denial
+        val statDenied = try {
+            Os.stat(markerPath)
+            false // stat succeeded → regular accessible file
+        } catch (e: ErrnoException) {
+            e.errno == OsConstants.EACCES
+        }
+        return if (statDenied) markerPath else null
     }
 
     private data class MutableFinding(
