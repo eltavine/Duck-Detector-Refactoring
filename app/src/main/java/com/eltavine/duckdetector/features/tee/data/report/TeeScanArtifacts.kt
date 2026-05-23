@@ -50,6 +50,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCer
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceResult
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorResult
 import com.eltavine.duckdetector.features.tee.domain.TeeRkpState
 import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
@@ -85,6 +86,7 @@ data class TeeScanArtifacts(
     val binderPatchMode: BinderPatchModeResult,
     val binderChainConsistency: BinderChainConsistencyResult,
     val updateSubcomponent: UpdateSubcomponentResult,
+    val updateSubcomponentStaleResponsePersistence: UpdateSubcomponentStaleResponsePersistenceResult,
     val pruning: OperationPruningResult,
     val dualAlgorithm: DualAlgorithmChainResult,
     val idAttestation: IdAttestationResult,

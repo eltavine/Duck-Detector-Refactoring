@@ -57,6 +57,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCer
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceProbe
 import com.eltavine.duckdetector.features.tee.data.verification.rkp.RkpExtensionAnalyzer
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorProbeSuite
 import com.eltavine.duckdetector.features.tee.domain.TeeReport
@@ -107,6 +108,8 @@ class TeeRepository(
     private val binderPatchModeProbe = BinderPatchModeProbe()
     private val binderChainConsistencyProbe = BinderChainConsistencyProbe()
     private val updateSubcomponentProbe = UpdateSubcomponentProbe()
+    private val updateSubcomponentStaleResponsePersistenceProbe =
+        UpdateSubcomponentStaleResponsePersistenceProbe(appContext)
     private val operationPruningProbe = OperationPruningProbe()
     private val dualAlgorithmProbe = DualAlgorithmChainProbe(trustAnalyzer)
     private val idAttestationProbe = IdAttestationProbe()
@@ -172,6 +175,8 @@ class TeeRepository(
                     binderPatchMode = deepChecks.binderPatchMode,
                     binderChainConsistency = deepChecks.binderChainConsistency,
                     updateSubcomponent = deepChecks.updateSubcomponent,
+                    updateSubcomponentStaleResponsePersistence =
+                        deepChecks.updateSubcomponentStaleResponsePersistence,
                     pruning = deepChecks.pruning,
                     dualAlgorithm = deepChecks.dualAlgorithm,
                     idAttestation = deepChecks.idAttestation,
@@ -253,6 +258,10 @@ class TeeRepository(
         val binderHookBootstrap = binderHookBootstrapProbe.inspect()
         val binderPatchMode = binderPatchModeProbe.inspect()
         val binderChainConsistency = binderChainConsistencyProbe.inspect()
+        // Run after the basic update failure probe: this one judges successful KEY_ID update persistence, not update failure itself.
+        // 放在基础 update 失败探针之后：此探针判断成功 KEY_ID update 后的持久叙事，而不是 update 失败本身。
+        val updateSubcomponentStaleResponsePersistence =
+            updateSubcomponentStaleResponsePersistenceProbe.inspect(useStrongBox = useStrongBox)
 
         DeferredChecks(
             pairConsistency = pairConsistencyResult,
@@ -280,6 +289,7 @@ class TeeRepository(
             binderPatchMode = binderPatchMode,
             binderChainConsistency = binderChainConsistency,
             updateSubcomponent = updateSubcomponentResult,
+            updateSubcomponentStaleResponsePersistence = updateSubcomponentStaleResponsePersistence,
             pruning = pruningResult,
             dualAlgorithm = dualAlgorithmResult,
             idAttestation = idAttestationResult,
@@ -315,6 +325,7 @@ private data class DeferredChecks(
     val binderPatchMode: com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderPatchModeResult,
     val binderChainConsistency: com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderChainConsistencyResult,
     val updateSubcomponent: com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult,
+    val updateSubcomponentStaleResponsePersistence: com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceResult,
     val pruning: com.eltavine.duckdetector.features.tee.data.verification.keystore.OperationPruningResult,
     val dualAlgorithm: com.eltavine.duckdetector.features.tee.data.verification.certificate.DualAlgorithmChainResult,
     val idAttestation: com.eltavine.duckdetector.features.tee.data.verification.keystore.IdAttestationResult,
@@ -428,6 +439,10 @@ private data class DeferredChecks(
                 keyNotFoundStyleFailure = false,
                 detail = "Update subcomponent probe skipped.",
             ),
+            updateSubcomponentStaleResponsePersistence =
+                com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceResult(
+                    detail = "UpdateSubcomponent stale response persistence probe skipped.",
+                ),
             pruning = com.eltavine.duckdetector.features.tee.data.verification.keystore.OperationPruningResult(
                 suspicious = false,
                 operationsCreated = 0,

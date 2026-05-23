@@ -59,6 +59,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCer
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponseAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceResult
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorResult
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkMode
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkState
@@ -444,6 +446,93 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.INFO &&
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("transient service unavailable")
+            })
+    }
+
+    @Test
+    fun `updateSubcomponent stale response persistence becomes supplementary failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                updateSubcomponentStaleResponsePersistence =
+                    UpdateSubcomponentStaleResponsePersistenceResult(
+                        executed = true,
+                        available = true,
+                        supportGateClean = true,
+                        updateSucceeded = true,
+                        staleNarrativeDetected = true,
+                        priorChainLength = 3,
+                        postChainLength = 2,
+                        retainedCertificateCount = 1,
+                        postLeafMatchesMarker = false,
+                        anomalyKind =
+                            UpdateSubcomponentStaleResponseAnomalyKind.STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE,
+                        retainedFingerprint = "abc123def456",
+                        detail = "kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE, retained=1",
+                    ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.summary.contains("UpdateSubcomponent stale TEE response", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Update persistence" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE") &&
+                it.body.contains("retained=1")
+        })
+    }
+
+    @Test
+    fun `updateSubcomponent stale response clean state stays pass`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                updateSubcomponentStaleResponsePersistence =
+                    UpdateSubcomponentStaleResponsePersistenceResult(
+                        executed = true,
+                        available = true,
+                        supportGateClean = true,
+                        updateSucceeded = true,
+                        staleNarrativeDetected = false,
+                        priorChainLength = 3,
+                        postChainLength = 1,
+                        postLeafMatchesMarker = true,
+                        anomalyKind = UpdateSubcomponentStaleResponseAnomalyKind.NONE,
+                        detail = "kind=NONE, marker leaf returned.",
+                    ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Update persistence" &&
+                it.level == TeeSignalLevel.PASS &&
+                it.body.contains("Clean", ignoreCase = true) &&
+                it.body.contains("kind=NONE")
+        })
+    }
+
+    @Test
+    fun `updateSubcomponent stale response unavailable state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                updateSubcomponentStaleResponsePersistence =
+                    UpdateSubcomponentStaleResponsePersistenceResult(
+                        executed = false,
+                        supportGateClean = false,
+                        anomalyKind = UpdateSubcomponentStaleResponseAnomalyKind.UPDATE_SUBCOMPONENT_UNOBSERVABLE,
+                        detail = "UpdateSubcomponent support gate failed.",
+                    ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Update persistence" &&
+                it.level == TeeSignalLevel.INFO &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("kind=UPDATE_SUBCOMPONENT_UNOBSERVABLE")
         })
     }
 
@@ -1853,6 +1942,10 @@ class TeeReportReducerTest {
             executed = false,
             detail = "skipped",
         ),
+        updateSubcomponentStaleResponsePersistence: UpdateSubcomponentStaleResponsePersistenceResult =
+            UpdateSubcomponentStaleResponsePersistenceResult(
+                detail = "skipped",
+            ),
     ): TeeScanArtifacts {
         return TeeScanArtifacts(
             snapshot = AttestationSnapshot(
@@ -1940,6 +2033,7 @@ class TeeReportReducerTest {
                 keyNotFoundStyleFailure = false,
                 detail = "ok",
             ),
+            updateSubcomponentStaleResponsePersistence = updateSubcomponentStaleResponsePersistence,
             pruning = OperationPruningResult(
                 suspicious = false,
                 operationsCreated = 18,

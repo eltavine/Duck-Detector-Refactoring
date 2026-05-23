@@ -35,6 +35,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.MIN_RATIO_SAMPLE_COUNT
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponseAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.timingSideChannelRatio
 import java.time.LocalDate
 import java.time.Period
@@ -414,6 +415,18 @@ class TeeReportReducer(
                     fact(
                         "ImportKey narrative",
                         "ImportKey retained attestation narrative detected.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
+            }
+            if (
+                artifacts.updateSubcomponentStaleResponsePersistence.anomalyKind ==
+                UpdateSubcomponentStaleResponseAnomalyKind.STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE
+            ) {
+                add(
+                    fact(
+                        "Update persistence",
+                        "UpdateSubcomponent stale TEE response persistence detected.",
                         TeeSignalLevel.FAIL,
                     )
                 )
@@ -984,6 +997,13 @@ class TeeReportReducer(
                             "Update path",
                             updateSubcomponentValue(artifacts),
                             if (artifacts.updateSubcomponent.keyNotFoundStyleFailure) TeeSignalLevel.FAIL else TeeSignalLevel.PASS
+                        )
+                    )
+                    add(
+                        fact(
+                            "Update persistence",
+                            updateSubcomponentStaleResponsePersistenceValue(artifacts),
+                            updateSubcomponentStaleResponsePersistenceLevel(artifacts)
                         )
                     )
                     add(
@@ -1665,6 +1685,50 @@ class TeeReportReducer(
         }
     }
 
+    private fun updateSubcomponentStaleResponsePersistenceValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.updateSubcomponentStaleResponsePersistence
+        return when {
+            result.staleNarrativeDetected -> buildString {
+                append("Matched kind=")
+                append(result.anomalyKind.name)
+                append(" retained=")
+                append(result.retainedCertificateCount)
+                append(" prior=")
+                append(result.priorChainLength)
+                append(" post=")
+                append(result.postChainLength)
+                append(" leafMatchesMarker=")
+                append(result.postLeafMatchesMarker)
+                result.retainedFingerprint?.let { append(" retainedSha=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+
+            result.executed && result.available -> buildString {
+                append("Clean kind=")
+                append(result.anomalyKind.name)
+                append(" prior=")
+                append(result.priorChainLength)
+                append(" post=")
+                append(result.postChainLength)
+                append(" leafMatchesMarker=")
+                append(result.postLeafMatchesMarker)
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+
+            else -> buildString {
+                append("Unavailable kind=")
+                append(result.anomalyKind.name)
+                result.priorChainLength.takeIf { it > 0 }?.let { append(" prior=$it") }
+                result.postChainLength.takeIf { it > 0 }?.let { append(" post=$it") }
+                append(" supportGate=")
+                append(result.supportGateClean)
+                append(" updateSucceeded=")
+                append(result.updateSucceeded)
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+        }
+    }
+
     private fun pruningValue(artifacts: TeeScanArtifacts): String {
         return if (artifacts.pruning.operationsCreated == 0) {
             "Skipped"
@@ -1866,6 +1930,21 @@ class TeeReportReducer(
             }
             result.executed && result.available -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
+        }
+    }
+
+    private fun updateSubcomponentStaleResponsePersistenceLevel(
+        artifacts: TeeScanArtifacts,
+    ): TeeSignalLevel {
+        val result = artifacts.updateSubcomponentStaleResponsePersistence
+        return when (result.anomalyKind) {
+            UpdateSubcomponentStaleResponseAnomalyKind.STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE ->
+                TeeSignalLevel.FAIL
+
+            UpdateSubcomponentStaleResponseAnomalyKind.NONE -> TeeSignalLevel.PASS
+            UpdateSubcomponentStaleResponseAnomalyKind.UPDATE_SUBCOMPONENT_UNOBSERVABLE,
+            UpdateSubcomponentStaleResponseAnomalyKind.UPDATE_FAILED,
+            UpdateSubcomponentStaleResponseAnomalyKind.UNAVAILABLE -> TeeSignalLevel.INFO
         }
     }
 

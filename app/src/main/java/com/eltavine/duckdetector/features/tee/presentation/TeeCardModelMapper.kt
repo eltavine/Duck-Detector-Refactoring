@@ -233,6 +233,10 @@ class TeeCardModelMapper {
                         item.level == TeeSignalLevel.FAIL &&
                             item.body.hasGrantSelfDomainDangerKind()
 
+                    "Update persistence" ->
+                        item.level == TeeSignalLevel.FAIL &&
+                            item.body.hasUpdatePersistenceDangerKind()
+
                     else -> false
                 }
             }
@@ -255,6 +259,12 @@ class TeeCardModelMapper {
         // 匹配稳定 kind token，而不是自然语言文案；文案可调整，kind 承载已审阅的根因。
         return contains("kind=SELF_CHAIN_SPLIT", ignoreCase = true) ||
             contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN", ignoreCase = true)
+    }
+
+    private fun String.hasUpdatePersistenceDangerKind(): Boolean {
+        // This kind means a KEY_ID update succeeded, but getKeyEntry still replayed the previous certificate narrative.
+        // 该 kind 表示 KEY_ID update 已成功，但 getKeyEntry 仍回放旧证书叙事。
+        return contains("kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE", ignoreCase = true)
     }
 
     private fun TeeReport.tierStatus(): DetectorStatus = when (tier) {

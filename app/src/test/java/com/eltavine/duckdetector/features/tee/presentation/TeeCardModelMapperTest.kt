@@ -564,6 +564,49 @@ class TeeCardModelMapperTest {
     }
 
     @Test
+    fun `matched update persistence stale narrative escalates aligned tee card to danger`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "UpdateSubcomponent stale TEE response persistence detected. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                signals = listOf(
+                    TeeSignal(
+                        "Update persistence",
+                        "Matched",
+                        TeeSignalLevel.FAIL,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Update persistence",
+                                "Matched kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE retained=1 prior=3 post=2",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
     fun `rkp badge is hidden when local trust chain needs review`() {
         val model = mapper.map(
             report = TeeReport(
