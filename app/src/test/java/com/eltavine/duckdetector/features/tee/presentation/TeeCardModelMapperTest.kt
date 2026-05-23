@@ -463,7 +463,7 @@ class TeeCardModelMapperTest {
                         items = listOf(
                             TeeEvidenceItem(
                                 "Grant isolated-domain",
-                                "Unavailable kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN • grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                                "Unavailable kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN • private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
                                 TeeSignalLevel.FAIL,
                             ),
                         ),
@@ -549,7 +549,7 @@ class TeeCardModelMapperTest {
                         items = listOf(
                             TeeEvidenceItem(
                                 "Grant self-domain",
-                                "Unavailable kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN owner=4 • self grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                                "Unavailable kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN owner=4 • private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
                                 TeeSignalLevel.FAIL,
                             ),
                         ),

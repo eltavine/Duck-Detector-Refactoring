@@ -19,14 +19,10 @@ package com.eltavine.duckdetector.features.tee.data.verification.keystore
 import android.app.Service
 import android.content.Intent
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
 import android.os.Parcel
 import android.os.Process
-import android.security.keystore.KeyStoreManager
-import androidx.annotation.RequiresApi
 
-@RequiresApi(Build.VERSION_CODES.BAKLAVA)
 class TeeGrantDomainGranteeService : Service() {
 
     private val binder = object : Binder() {
@@ -52,7 +48,8 @@ class TeeGrantDomainGranteeService : Service() {
                 TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN -> {
                     data.enforceInterface(TeeGrantDomainGranteeProtocol.DESCRIPTOR)
                     val grantId = data.readLong()
-                    val result = readGrantedCertificateChain(grantId)
+                    val keystore2Binder = data.readStrongBinder()
+                    val result = readGrantedCertificateChain(grantId, keystore2Binder)
                     reply?.writeNoException()
                     result.writeToParcel(reply)
                     true
@@ -65,25 +62,27 @@ class TeeGrantDomainGranteeService : Service() {
 
     override fun onBind(intent: Intent?): IBinder = binder
 
-    @RequiresApi(Build.VERSION_CODES.BAKLAVA)
-    private fun readGrantedCertificateChain(grantId: Long): TeeGrantDomainGranteeChainResult {
-        val keyStoreManager = getSystemService(KeyStoreManager::class.java)
-            ?: return TeeGrantDomainGranteeChainResult(
+    private fun readGrantedCertificateChain(
+        grantId: Long,
+        keystore2Binder: IBinder?,
+    ): TeeGrantDomainGranteeChainResult {
+        if (keystore2Binder == null) {
+            return TeeGrantDomainGranteeChainResult(
                 available = false,
-                detail = "KeyStoreManager unavailable in isolated grantee.",
+                detail = "isolated binder call blocked: owner did not pass keystore2 binder.",
             )
+        }
         return runCatching {
-            val chain = keyStoreManager.getGrantedCertificateChainFromId(grantId)
-                .filterIsInstance<java.security.cert.X509Certificate>()
+            val result = Keystore2PrivateGrantClient().readGrantChain(keystore2Binder, grantId)
             TeeGrantDomainGranteeChainResult(
-                available = true,
-                chain = GrantDomainCertificateChain.fromCertificates(chain),
-                detail = "granteeChainLength=${chain.size}",
+                available = result.available,
+                chain = result.chain,
+                detail = result.detail.ifBlank { "isolated private binder readback blocked." },
             )
         }.getOrElse { throwable ->
             TeeGrantDomainGranteeChainResult(
                 available = false,
-                detail = "getGrantedCertificateChainFromId failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                detail = "isolated binder call blocked: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
             )
         }
     }

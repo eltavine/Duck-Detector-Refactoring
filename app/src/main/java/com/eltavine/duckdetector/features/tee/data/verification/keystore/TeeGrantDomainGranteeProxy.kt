@@ -42,12 +42,16 @@ class TeeGrantDomainGranteeProxy(
         }
     }
 
-    fun readGrantedCertificateChain(grantId: Long): TeeGrantDomainGranteeChainResult {
+    fun readGrantedCertificateChain(
+        grantId: Long,
+        keystore2Binder: IBinder,
+    ): TeeGrantDomainGranteeChainResult {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {
             data.writeInterfaceToken(TeeGrantDomainGranteeProtocol.DESCRIPTOR)
             data.writeLong(grantId)
+            data.writeStrongBinder(keystore2Binder)
             remote.transact(
                 TeeGrantDomainGranteeProtocol.TRANSACTION_READ_GRANTED_CHAIN,
                 data,

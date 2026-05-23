@@ -18,7 +18,7 @@ package com.eltavine.duckdetector.features.tee.data.verification.keystore
 
 import android.content.Context
 import android.os.Build
-import android.security.keystore.KeyStoreManager
+import android.os.IBinder
 import com.eltavine.duckdetector.features.tee.data.keystore.AndroidKeyStoreTools
 import java.security.MessageDigest
 import java.security.UnrecoverableKeyException
@@ -29,125 +29,151 @@ import java.util.Locale
 class GrantDomainFullChainSplitProbe(
     context: Context,
     private val granteeManager: TeeGrantDomainGranteeManager = TeeGrantDomainGranteeManager(context),
+    private val privateGrantClient: Keystore2PrivateGrantClient = Keystore2PrivateGrantClient(),
 ) {
 
-    private val appContext = context.applicationContext
-
     suspend fun inspect(useStrongBox: Boolean): GrantDomainFullChainSplitResult {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return GrantDomainFullChainSplitResult(
-                detail = "Grant-domain full-chain split probe requires Android 16 or newer.",
+                detail = "Grant-domain private binder probe requires Android 12 or newer.",
             )
         }
-        val keyStoreManager = runCatching {
-            appContext.getSystemService(KeyStoreManager::class.java)
-        }.getOrNull() ?: return GrantDomainFullChainSplitResult(
-            detail = "KeyStoreManager grant API was unavailable.",
-        )
         val keyStore = AndroidKeyStoreTools.loadKeyStore()
         val alias = "duck_grant_domain_${System.nanoTime()}"
         var granteeUid: Int? = null
         var grantCreated = false
-        return try {
-            val ownerCertificates = runCatching {
+        var result = GrantDomainFullChainSplitResult()
+        var keystore2Binder: IBinder? = null
+        try {
+            val generationFailure = runCatching {
                 AndroidKeyStoreTools.generateAttestedEcChain(
                     keyStore = keyStore,
                     alias = alias,
                     challenge = "duck_grant_domain_${System.nanoTime()}".toByteArray(StandardCharsets.UTF_8),
                     useStrongBox = useStrongBox,
                 )
-            }.getOrElse { throwable ->
-                return GrantDomainFullChainSplitResult(
-                    detail = "Owner attested key generation failed: ${describeThrowable(throwable)}",
+            }.exceptionOrNull()
+            if (generationFailure != null) {
+                result = GrantDomainFullChainSplitResult(
+                    detail = "Owner attested key generation failed: ${describeThrowable(generationFailure)}",
                 )
-            }
-            val ownerChain = GrantDomainCertificateChain.fromCertificates(ownerCertificates)
-            if (ownerChain.certificates.isEmpty()) {
-                return GrantDomainFullChainSplitResult(
-                    detail = "Owner KeyStore certificate chain was empty.",
-                )
-            }
-            // isolated-domain 特意跨 UID / process 验证 Domain.GRANT；grantee 侧不可达可能只是 SELinux/app_zygote 策略噪声。
-            // isolated-domain intentionally crosses UID/process boundaries; grantee failures can reflect SELinux/app_zygote policy noise.
-            val sessionResult = granteeManager.openSession()
-            if (!sessionResult.available || sessionResult.session == null) {
-                return GrantDomainFullChainSplitResult(
-                    detail = sessionResult.detail.ifBlank { "Isolated grant-domain grantee was unavailable." },
-                )
-            }
-            sessionResult.session.use { session ->
-                granteeUid = session.uid
-                val grantId = runCatching {
-                    keyStoreManager.grantKeyAccess(alias, session.uid)
-                }.getOrElse { throwable ->
-                    // 这里 owner 已通过 Java KeyStore 读到 alias 的真实证书链；AOSP grant path 应能解析同一 alias 再创建 Domain.GRANT。
-                    // Owner has already read a concrete chain for alias; AOSP grant path should resolve the same alias before creating Domain.GRANT.
-                    // key-not-found 因此表示 owner 视图和 keystore2 授权查找断裂，而不是普通 isolated service 兼容性失败。
-                    // key-not-found therefore means owner visibility and keystore2 grant lookup diverged, not a generic isolated-service failure.
-                    val anomalyKind = if (isGrantAliasNotFound(throwable)) {
-                        GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
+            } else {
+                keystore2Binder = privateGrantClient.lookupBinder()
+                if (keystore2Binder == null) {
+                    result = GrantDomainFullChainSplitResult(
+                        detail = "private keystore2 binder unavailable.",
+                    )
+                } else {
+                    val ownerChainResult = privateGrantClient.readOwnerChain(alias)
+                    if (!ownerChainResult.available) {
+                        result = GrantDomainFullChainSplitResult(
+                            detail = ownerChainResult.detail.ifBlank { "private getKeyEntry(APP) owner chain unavailable." },
+                        )
                     } else {
-                        GrantDomainAnomalyKind.UNAVAILABLE
+                        val ownerChain = ownerChainResult.chain
+                        if (ownerChain.certificates.isEmpty()) {
+                            result = GrantDomainFullChainSplitResult(
+                                detail = "private getKeyEntry(APP) owner chain was empty.",
+                            )
+                        } else {
+                            // isolated-domain 特意跨 UID / process 验证 Domain.GRANT；grantee 侧不可达可能只是 SELinux/app_zygote 策略噪声。
+                            // isolated-domain intentionally crosses UID/process boundaries; grantee failures can reflect SELinux/app_zygote policy noise.
+                            val sessionResult = granteeManager.openSession()
+                            if (!sessionResult.available || sessionResult.session == null) {
+                                result = GrantDomainFullChainSplitResult(
+                                    detail = sessionResult.detail.ifBlank { "Isolated grant-domain grantee was unavailable." },
+                                )
+                            } else {
+                                sessionResult.session.use { session ->
+                                    granteeUid = session.uid
+                                    val grantResult = privateGrantClient.grantAliasToUid(alias, session.uid)
+                                    if (!grantResult.available || grantResult.grantId == null) {
+                                        // 这里 owner 已通过私有 getKeyEntry(APP) 读到 alias 的真实证书链；AOSP grant path 应能解析同一 alias 再创建 Domain.GRANT。
+                                        // Owner has already read a concrete chain through private getKeyEntry(APP); AOSP grant path should resolve the same alias before creating Domain.GRANT.
+                                        // key-not-found 因此表示 owner 视图和 keystore2 授权查找断裂，而不是普通 isolated service 兼容性失败。
+                                        // key-not-found therefore means owner visibility and keystore2 grant lookup diverged, not a generic isolated-service failure.
+                                        val anomalyKind = if (grantResult.errorKind == Keystore2PrivateGrantErrorKind.KEY_NOT_FOUND) {
+                                            GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
+                                        } else {
+                                            GrantDomainAnomalyKind.UNAVAILABLE
+                                        }
+                                        result = GrantDomainFullChainSplitResult(
+                                            executed = anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+                                            ownerChainLength = ownerChain.certificates.size,
+                                            granteeUid = session.uid,
+                                            anomalyKind = anomalyKind,
+                                            detail = grantResult.detail.ifBlank { "private isolated grant failed." },
+                                        )
+                                    } else {
+                                        val grantId = grantResult.grantId
+                                        grantCreated = true
+                                        val granteeResult = session.readGrantedCertificateChain(grantId, keystore2Binder)
+                                        // grant 创建后的 grantee 读取失败保持 INFO：isolated_app 访问 keystore2 的策略差异不是证书叙事 split 证据。
+                                        // After grant creation, grantee read failures stay INFO: isolated_app keystore2 access policy is not certificate narrative split evidence.
+                                        result = if (!granteeResult.available) {
+                                            GrantDomainFullChainSplitResult(
+                                                ownerChainLength = ownerChain.certificates.size,
+                                                granteeUid = session.uid,
+                                                detail = granteeResult.detail.ifBlank {
+                                                    "isolated private binder readback blocked."
+                                                },
+                                            )
+                                        } else {
+                                            val granteeChain = granteeResult.chain
+                                            if (granteeChain.certificates.isEmpty()) {
+                                                GrantDomainFullChainSplitResult(
+                                                    ownerChainLength = ownerChain.certificates.size,
+                                                    granteeChainLength = 0,
+                                                    granteeUid = session.uid,
+                                                    detail = "Isolated private Domain.GRANT certificate chain was empty.",
+                                                )
+                                            } else {
+                                                // 比较 ordered full-chain，而不是只看 leaf；部分 hook 可能只替换叶证书或只回放中间链。
+                                                // Compare the ordered full chain, not only the leaf; hooks may rewrite only the leaf or replay only intermediates.
+                                                val comparison = compareChains(ownerChain, granteeChain)
+                                                GrantDomainFullChainSplitResult(
+                                                    executed = true,
+                                                    available = true,
+                                                    splitDetected = comparison.splitDetected,
+                                                    ownerChainLength = ownerChain.certificates.size,
+                                                    granteeChainLength = granteeChain.certificates.size,
+                                                    mismatchIndex = comparison.mismatchIndex,
+                                                    granteeUid = session.uid,
+                                                    anomalyKind = if (comparison.splitDetected) {
+                                                        GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT
+                                                    } else {
+                                                        GrantDomainAnomalyKind.NONE
+                                                    },
+                                                    detail = comparison.detail,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                    return GrantDomainFullChainSplitResult(
-                        executed = anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                        ownerChainLength = ownerChain.certificates.size,
-                        granteeUid = session.uid,
-                        anomalyKind = anomalyKind,
-                        detail = "grantKeyAccess failed: ${describeThrowable(throwable)}",
-                    )
                 }
-                grantCreated = true
-                val granteeResult = session.readGrantedCertificateChain(grantId)
-                // grant 创建后的 grantee 读取失败保持 INFO：isolated_app 访问 keystore2 的策略差异不是证书叙事 split 证据。
-                // After grant creation, grantee read failures stay INFO: isolated_app keystore2 access policy is not certificate narrative split evidence.
-                if (!granteeResult.available) {
-                    return GrantDomainFullChainSplitResult(
-                        ownerChainLength = ownerChain.certificates.size,
-                        granteeUid = session.uid,
-                        detail = granteeResult.detail.ifBlank {
-                            "Grantee getGrantedCertificateChainFromId() was unavailable."
-                        },
-                    )
-                }
-                val granteeChain = granteeResult.chain
-                if (granteeChain.certificates.isEmpty()) {
-                    return GrantDomainFullChainSplitResult(
-                        ownerChainLength = ownerChain.certificates.size,
-                        granteeChainLength = 0,
-                        granteeUid = session.uid,
-                        detail = "Grantee granted certificate chain was empty.",
-                    )
-                }
-                // 比较 ordered full-chain，而不是只看 leaf；部分 hook 可能只替换叶证书或只回放中间链。
-                // Compare the ordered full chain, not only the leaf; hooks may rewrite only the leaf or replay only intermediates.
-                val comparison = compareChains(ownerChain, granteeChain)
-                GrantDomainFullChainSplitResult(
-                    executed = true,
-                    available = true,
-                    splitDetected = comparison.splitDetected,
-                    ownerChainLength = ownerChain.certificates.size,
-                    granteeChainLength = granteeChain.certificates.size,
-                    mismatchIndex = comparison.mismatchIndex,
-                    granteeUid = session.uid,
-                    anomalyKind = if (comparison.splitDetected) {
-                        GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT
-                    } else {
-                        GrantDomainAnomalyKind.NONE
-                    },
-                    detail = comparison.detail,
-                )
             }
         } catch (throwable: Throwable) {
-            GrantDomainFullChainSplitResult(
+            result = GrantDomainFullChainSplitResult(
                 detail = "Grant-domain full-chain split probe failed: ${describeThrowable(throwable)}",
             )
         } finally {
             granteeUid?.takeIf { grantCreated }?.let { uid ->
-                runCatching { keyStoreManager.revokeKeyAccess(alias, uid) }
+                val cleanupResult = privateGrantClient.revokeAliasGrant(alias, uid)
+                if (!cleanupResult.available) {
+                    result = result.copy(
+                        detail = appendDetail(
+                            result.detail,
+                            cleanupResult.detail.ifBlank { "private ungrant failed." },
+                        ),
+                    )
+                }
             }
             AndroidKeyStoreTools.safeDelete(keyStore, alias)
         }
+        return result
     }
 
     companion object {
@@ -192,6 +218,10 @@ class GrantDomainFullChainSplitProbe(
             // Keep both exception type and AOSP-style message strict to avoid treating OEM/transient grant failures as domain divergence.
             return throwable is UnrecoverableKeyException &&
                 throwable.message?.contains("No key found by the given alias", ignoreCase = true) == true
+        }
+
+        internal fun appendDetail(detail: String, extra: String): String {
+            return GrantSelfDomainFullChainSplitProbe.appendDetail(detail, extra)
         }
     }
 }

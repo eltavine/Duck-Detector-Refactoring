@@ -161,13 +161,16 @@ class TeeGrantDomainGranteeSession(
     private var bound: Boolean,
 ) : AutoCloseable {
 
-    fun readGrantedCertificateChain(grantId: Long): TeeGrantDomainGranteeChainResult {
+    fun readGrantedCertificateChain(
+        grantId: Long,
+        keystore2Binder: IBinder,
+    ): TeeGrantDomainGranteeChainResult {
         return runCatching {
-            proxy.readGrantedCertificateChain(grantId)
+            proxy.readGrantedCertificateChain(grantId, keystore2Binder)
         }.getOrElse { throwable ->
             TeeGrantDomainGranteeChainResult(
                 available = false,
-                detail = "Grant-domain grantee binder call failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                detail = "isolated binder call blocked: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
             )
         }
     }

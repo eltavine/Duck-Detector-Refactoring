@@ -338,7 +338,7 @@ class TeeReportReducerTest {
                     ownerChainLength = 3,
                     granteeUid = 99001,
                     anomalyKind = GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                    detail = "grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                    detail = "private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
                 ),
             ),
         )
@@ -412,7 +412,7 @@ class TeeReportReducerTest {
                     executed = true,
                     ownerChainLength = 4,
                     anomalyKind = GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                    detail = "self grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                    detail = "private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
                 ),
             ),
         )
@@ -435,7 +435,7 @@ class TeeReportReducerTest {
             baseArtifacts(
                 grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
                     executed = false,
-                    detail = "self grantKeyAccess failed: IllegalStateException: transient service unavailable",
+                    detail = "private grant failed: IllegalStateException: transient service unavailable",
                 ),
             ),
         )
