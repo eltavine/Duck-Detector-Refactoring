@@ -77,6 +77,9 @@ class TeeGrantDomainGranteeService : Service() {
         grantId: Long,
         keystore2Binder: IBinder?,
     ): TeeGrantDomainGranteeChainResult {
+        // The isolated service must not resolve Keystore2 on its own: owner-passed binder is the
+        // explicit capability under test, and denial here is reported as blocked/unavailable.
+        // isolated service 不自行解析 Keystore2：owner 传入的 binder 才是本检测验证的能力；这里被拒绝时按 blocked/unavailable 上报。
         if (keystore2Binder == null) {
             return TeeGrantDomainGranteeChainResult(
                 available = false,
@@ -104,6 +107,9 @@ class TeeGrantDomainGranteeService : Service() {
     }
 
     private fun readGrantedCertificateChainPublic(grantId: Long): TeeGrantDomainGranteeChainResult {
+        // Public API readback stays separate from private Binder readback so reducer can surface both
+        // stage summaries while keeping full stack traces in diagnosticCopyText only.
+        // public API 回读与 private Binder 回读保持分离，reducer 可展示两阶段摘要，同时完整堆栈只进入 diagnosticCopyText。
         val keyStoreManager = runCatching {
             getSystemService(KeyStoreManager::class.java)
         }.getOrNull() ?: return TeeGrantDomainGranteeChainResult(

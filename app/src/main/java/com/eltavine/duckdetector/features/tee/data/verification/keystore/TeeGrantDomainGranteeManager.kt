@@ -165,6 +165,8 @@ class TeeGrantDomainGranteeSession(
         return runCatching {
             proxy.readGrantedCertificateChainPublic(grantId)
         }.getOrElse { throwable ->
+            // Keep IPC crashes inspectable but non-visual: detail is one line, stack is hidden-copy only.
+            // IPC 崩溃需要可审计但不能直接上屏：detail 保持单行，堆栈仅供隐藏复制。
             TeeGrantDomainGranteeChainResult(
                 available = false,
                 detail = "public isolated binder call failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
@@ -180,6 +182,8 @@ class TeeGrantDomainGranteeSession(
         return runCatching {
             proxy.readGrantedCertificateChain(grantId, keystore2Binder)
         }.getOrElse { throwable ->
+            // A failed isolated private call is a transport/permission boundary, not a split by itself.
+            // isolated private 调用失败只是传输/权限边界问题，本身不等价于证书链 split。
             TeeGrantDomainGranteeChainResult(
                 available = false,
                 detail = "isolated binder call blocked: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",

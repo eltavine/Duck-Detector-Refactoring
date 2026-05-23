@@ -60,6 +60,9 @@ class GrantSelfDomainFullChainSplitProbe(
                     diagnosticCopyText = diagnostics.text(),
                 )
             } else {
+                // Public grant is the platform contract on Android 16+; private Binder is an independent
+                // incremental pass, so a public clean/skip must not hide a private-plane split.
+                // Android 16+ 的 public grant 是平台契约；private Binder 是独立增量检测，因此 public 绿卡/跳过不能掩盖 private 平面的 split。
                 val publicResult = inspectPublic(alias, selfUid, diagnostics)
                 diagnostics.add("public-final", publicResult.detail)
                 result = publicResult
@@ -87,6 +90,9 @@ class GrantSelfDomainFullChainSplitProbe(
         selfUid: Int,
         diagnostics: GrantDetectionDiagnosticLog,
     ): GrantSelfDomainFullChainSplitResult {
+        // Keep Android <16 as an explicit public-stage skip, then let the caller run the Android 12+
+        // private Binder stage. This preserves one result object while documenting both planes.
+        // Android 16 以下明确记为 public 阶段跳过，再由调用方执行 Android 12+ private Binder 阶段；一个结果里保留两个平面的语义。
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             return GrantSelfDomainFullChainSplitResult(
                 detail = "Public: unsupported (Android < 16).",
@@ -117,6 +123,9 @@ class GrantSelfDomainFullChainSplitProbe(
         }
         var grantCreated = false
         return try {
+            // The owner chain was already readable. A key-not-found at grant time is therefore a
+            // visibility divergence, not ordinary probe unavailability.
+            // owner chain 已经可读；grant 时 key-not-found 是可见性分歧，不是普通不可用。
             val grantId = runCatching {
                 keyStoreManager.grantKeyAccess(alias, selfUid)
             }.getOrElse { throwable ->
@@ -190,6 +199,9 @@ class GrantSelfDomainFullChainSplitProbe(
         selfUid: Int,
         diagnostics: GrantDetectionDiagnosticLog,
     ): GrantSelfDomainFullChainSplitResult {
+        // Private fallback talks to the same Keystore2 service through hidden Binder transactions.
+        // Visible detail stays short; full throwables are routed through diagnostics/hidden copy only.
+        // private fallback 通过 hidden Binder transaction 访问同一个 Keystore2 service；UI 只显示短 detail，完整异常只进入隐藏复制诊断。
         val ownerChainResult = privateGrantClient.readOwnerChain(alias)
         ownerChainResult.throwable?.let { diagnostics.addThrowable("private-owner-chain", it) }
         if (!ownerChainResult.available) {
@@ -290,6 +302,9 @@ class GrantSelfDomainFullChainSplitProbe(
             publicResult: GrantSelfDomainFullChainSplitResult,
             privateResult: GrantSelfDomainFullChainSplitResult,
         ): GrantSelfDomainFullChainSplitResult {
+            // Prefer whichever stage proves danger; otherwise prefer an executed private stage because
+            // it is the incremental signal the public API cannot provide on older or hooked devices.
+            // 优先保留能证明 danger 的阶段；否则优先保留已执行的 private 阶段，因为这是 public API 在旧系统或 hook 设备上无法提供的增量信号。
             val selected = when {
                 privateResult.isDanger() -> privateResult
                 publicResult.isDanger() -> publicResult

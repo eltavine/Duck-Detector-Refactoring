@@ -32,6 +32,9 @@ internal class GrantDetectionDiagnosticLog(
     }
 
     fun addThrowable(stage: String, throwable: Throwable) {
+        // UI detail intentionally receives only describe(throwable). The full stack stays in this
+        // diagnostic payload, which is reachable through the existing hidden double-click copy path.
+        // UI detail 只接收 describe(throwable)；完整堆栈仅保存在诊断 payload 中，通过既有隐藏双击复制入口获取。
         add(stage, GrantThrowableFormatter.describe(throwable))
         throwable.stackTraceToString()
             .trim()
@@ -76,6 +79,9 @@ internal fun combineGrantStageDetails(
 }
 
 internal fun visibleGrantDetail(detail: String): String {
+    // Isolated grantee failures may carry stack traces for hidden copy. Strip stack-frame lines before
+    // composing visible card text so detector UI never renders raw exception traces.
+    // isolated grantee 失败可能携带供隐藏复制使用的堆栈；拼接可见卡片文案前剥离 stack-frame 行，避免 UI 直接展示原始异常堆栈。
     return detail
         .lineSequence()
         .firstOrNull { line -> line.isNotBlank() && !line.trimStart().startsWith("at ") }

@@ -66,6 +66,9 @@ class TeeGrantDomainGranteeProxy(
         grantId: Long,
         keystore2Binder: IBinder?,
     ): TeeGrantDomainGranteeChainResult {
+        // Public readback sends only the grant id. Private readback also sends the owner-resolved
+        // Keystore2 binder so the isolated process can test the same private service plane.
+        // public 回读只发送 grant id；private 回读额外发送 owner 解析出的 Keystore2 binder，让 isolated 进程验证同一个私有 service 平面。
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {

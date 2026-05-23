@@ -62,6 +62,9 @@ class GrantDomainFullChainSplitProbe(
                     diagnosticCopyText = diagnostics.text(),
                 )
             } else {
+                // Run the public isolated-domain path first when the OS exposes it, then use private
+                // Binder as an incremental readback path unless public already proved a red-card anomaly.
+                // OS 暴露 public API 时先跑 isolated-domain 公共路径；除非 public 已证明红卡异常，否则再用 private Binder 做增量回读。
                 val publicResult = inspectPublic(alias, diagnostics)
                 diagnostics.add("public-final", publicResult.detail)
                 result = publicResult
@@ -88,6 +91,9 @@ class GrantDomainFullChainSplitProbe(
         alias: String,
         diagnostics: GrantDetectionDiagnosticLog,
     ): GrantDomainFullChainSplitResult {
+        // Android 16 is the first platform level with public grant APIs. Returning an explicit
+        // unsupported stage lets the private Binder pass still produce a meaningful Android 12+ result.
+        // Android 16 才首次提供 public grant API；这里显式返回 unsupported，方便 Android 12+ private Binder 阶段继续产出有效结果。
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             return GrantDomainFullChainSplitResult(
                 detail = "Public: unsupported (Android < 16).",
@@ -127,6 +133,9 @@ class GrantDomainFullChainSplitProbe(
         var grantCreated = false
         return sessionResult.session.use { session ->
             try {
+                // Once the owner alias has a chain, key-not-found during grant means the grant lookup
+                // plane disagrees with the owner plane; keep that as FAIL, not availability noise.
+                // owner alias 已有证书链后，grant 阶段 key-not-found 表示授权查找平面与 owner 平面不一致；应保留为 FAIL，而不是可用性噪声。
                 val grantId = runCatching {
                     keyStoreManager.grantKeyAccess(alias, session.uid)
                 }.getOrElse { throwable ->
@@ -199,6 +208,10 @@ class GrantDomainFullChainSplitProbe(
         alias: String,
         diagnostics: GrantDetectionDiagnosticLog,
     ): GrantDomainFullChainSplitResult {
+        // The owner process resolves the Keystore2 binder and passes it into the isolated grantee.
+        // That makes SELinux/binder denial visible as an isolated readback block instead of silently
+        // downgrading the check or falling back to framework state.
+        // owner 进程解析 Keystore2 binder 并传给 isolated grantee；SELinux/binder 拒绝会成为 isolated readback blocked，而不是静默降级或回到 framework 状态。
         val keystore2Binder = privateGrantClient.lookupBinder()
             ?: return GrantDomainFullChainSplitResult(
                 detail = "Private: keystore2 binder unavailable.",
@@ -345,6 +358,10 @@ class GrantDomainFullChainSplitProbe(
             publicResult: GrantDomainFullChainSplitResult,
             privateResult: GrantDomainFullChainSplitResult,
         ): GrantDomainFullChainSplitResult {
+            // Private danger wins because it is an additional Keystore2 plane observation. If neither
+            // stage proves danger, keep the private result when it actually executed, but preserve both
+            // stage summaries in detail for UI/debug parity.
+            // private danger 优先，因为它是额外的 Keystore2 平面观测；若两阶段都未证明 danger，则保留已执行的 private 结果，并在 detail 中保留两阶段摘要。
             val selected = when {
                 privateResult.isDanger() -> privateResult
                 publicResult.isDanger() -> publicResult
