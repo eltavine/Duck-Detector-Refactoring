@@ -1,6 +1,6 @@
 # DuckDetector
 
-<img src="https://raw.githubusercontent.com/Hybrid-Mount/meta-hybrid_mount/main/icon.svg" align="right" width="120" />
+<img src="https://github.com/947409161/Duck-Detector-Refactoring/blob/master/DuckDetector.jpg" align="right" width="120" />
 
 
 ![Android][badge-android]
