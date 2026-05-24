@@ -2,7 +2,7 @@
 <p align="center">
   <img src="logo.png" alt="DuckDetector Logo" width="600px">
 </p>
-<h1 align="center">DuckDetector (Refactoring)</h1>
+<h1 align="center">DuckDetector</h1>
 <p align="center">
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square" alt="Android"></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square" alt="targetSdk"></a>
