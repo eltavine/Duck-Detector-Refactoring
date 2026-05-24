@@ -1,15 +1,16 @@
 <p align="center">
-<img src="logo.png" alt="DuckDetector Logo" width="600px">
+  <img src="logo.png" alt="DuckDetector Logo" width="600px">
 </p>
 <h1 align="center">DuckDetector</h1>
 <p align="center">
-<a href="[https://developer.android.com](https://developer.android.com)"><img src="[https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square](https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square)" alt="Android"></a>
-<a href="[https://developer.android.com](https://developer.android.com)"><img src="[https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square](https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square)" alt="targetSdk"></a>
-<a href="[https://kotlinlang.org](https://kotlinlang.org)"><img src="[https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square)" alt="Kotlin"></a>
-<a href="[https://developer.android.com/jetpack/compose](https://developer.android.com/jetpack/compose)"><img src="[https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white&style=flat-square](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white&style=flat-square)" alt="Jetpack Compose"></a>
-<img src="[https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square](https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square)" alt="NDK">
-<a href="[https://github.com/eltavine/Duck-Detector-Refactoring/releases](https://github.com/eltavine/Duck-Detector-Refactoring/releases)"><img src="[https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square](https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square)" alt="Downloads"></a>
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square" alt="Android"></a>
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square" alt="targetSdk"></a>
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square" alt="Kotlin"></a>
+  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white&style=flat-square" alt="Jetpack Compose"></a>
+  <img src="https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square" alt="NDK">
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
 </p>
+---
 
 **[English](README.MD)** &nbsp; **[简体中文](README_ZH.MD)**
 
@@ -105,7 +106,6 @@ security detection is at your own risk.
 ## 📄 License
 This project is open-sourced under the **Apache License 2.0**.
 ## 👥 Contributors
-Thanks to the following developers who have contributed to DuckDetector!
-<a href="[https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors](https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors)">
-<img src="[https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring](https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring)" />
+<a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors">
+<img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" />
 </a>
