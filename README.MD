@@ -2,12 +2,10 @@
   <img src="logo.png" alt="DuckDetector Logo" width="600px">
 </p>
 <h1 align="center">DuckDetector</h1>
-<p align="center">
 
 [![Build][badge-build]][workflow-build]
 [![Release][badge-release]][workflow-release]
-[![Latest release][badge-latest-release]
- [releases]
+[![Latest release][badge-latest-release]][releases]
 [![Downloads][badge-downloads]][releases]
 [![Stars][badge-stars]][stargazers]
 [![Forks][badge-forks]][forks]
@@ -21,8 +19,6 @@
 ![Kotlin][badge-kotlin]
 ![Jetpack Compose][badge-compose]
 ![NDK][badge-ndk]
-
-**[English](README.MD)** &nbsp; **[简体中文](README_ZH.MD)**
 
 **DuckDetector** is an Android security detection application focusing on **local, on-device** evidence collection. It is designed to identify Root-related tampering, runtime Hooks, Mount operations, KeyStore integrity (Attestation Trust), and virtualized execution environments.
 This application combines a **Jetpack Compose UI** interface, **modular Kotlin detection packages**, and **low-level C++ / assembly probes** to present detailed detection results, method coverage, and scanning status summaries through structured cards.
