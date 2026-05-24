@@ -118,5 +118,3 @@ security detection is at your own risk.
 <a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" />
 </a>
-```
-```
