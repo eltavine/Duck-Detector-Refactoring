@@ -3,14 +3,23 @@
 </p>
 <h1 align="center">DuckDetector</h1>
 <p align="center">
-  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square" alt="Android"></a>
-  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square" alt="targetSdk"></a>
-  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square" alt="Kotlin"></a>
-  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white&style=flat-square" alt="Jetpack Compose"></a>
-  <img src="https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square" alt="NDK">
-  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
-</p>
 
+[![Build][badge-build]][workflow-build]
+[![Release][badge-release]][workflow-release]
+[![Latest release][badge-latest-release]][releases]
+[![Downloads][badge-downloads]][releases]
+[![Stars][badge-stars]][stargazers]
+[![Forks][badge-forks]][forks]
+[![Issues][badge-issues]][issues]
+[![Pull requests][badge-pulls]][pulls]
+[![Last commit][badge-last-commit]][commits]
+[![License][badge-license]][license]
+
+![Android][badge-android]
+![targetSdk][badge-target-sdk]
+![Kotlin][badge-kotlin]
+![Jetpack Compose][badge-compose]
+![NDK][badge-ndk]
 
 **[English](README.MD)** &nbsp; **[简体中文](README_ZH.MD)**
 
