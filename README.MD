@@ -11,10 +11,13 @@
   <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
 </p>
 
+**[English](README.MD)** &nbsp; **[简体中文](README_ZH.MD)**
+
 **DuckDetector** is an Android security detection application focusing on **local, on-device** evidence collection. It is designed to identify Root-related tampering, runtime Hooks, Mount operations, KeyStore integrity (Attestation Trust), and virtualized execution environments.
 This application combines a **Jetpack Compose UI** interface, **modular Kotlin detection packages**, and **low-level C++ / assembly probes** to present detailed detection results, method coverage, and scanning status summaries through structured cards.
 # ⚠️ **Development Rules**
-Please read CODING_STANDARDS.md carefully before changing code, workflows, or commit history.
+read [CODING_STANDARDS.md](./CODING_STANDARDS.md) before
+> changing code, workflows, or commit history.
 # ✨ Highlights
  * **Modular Architecture**: Features independent modules with specific functions; each module includes its own exclusive Repository, Mapper, ViewModel, and card UI.
  * **Native Preload**: Implements low-level early preloading via a transparent NativeActivity launcher to capture extremely early mount points and virtualization traces.
