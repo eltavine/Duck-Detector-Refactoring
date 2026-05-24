@@ -6,7 +6,8 @@
 
 [![Build][badge-build]][workflow-build]
 [![Release][badge-release]][workflow-release]
-[![Latest release][badge-latest-release]][releases]
+[![Latest release][badge-latest-release]
+ [releases]
 [![Downloads][badge-downloads]][releases]
 [![Stars][badge-stars]][stargazers]
 [![Forks][badge-forks]][forks]
