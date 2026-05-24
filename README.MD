@@ -14,24 +14,25 @@
 ---
 **DuckDetector** 是一个专注于**本地端、设备侧**证据收集的 Android 安全检测应用程序。它旨在识别 Root 相关的篡改、运行时 Hook、挂载操作（Mount）、密钥库可信度（Attestation Trust）以及虚拟化执行环境。
 本应用结合了 **Jetpack Compose UI** 界面、**模块化 Kotlin 检测包** 以及 **底层 C++ / 汇编探针**，通过结构化的卡片形式展示详细的检测结果、方法覆盖范围及扫描状态摘要。
-> ⚠️ **开发规范 / Development Rules**
-> 
-> 在修改代码、工作流或提交历史之前，请务必仔细阅读 [CODING_STANDARDS.md](CODING_STANDARDS.md)。
-> Please read [CODING_STANDARDS.md](CODING_STANDARDS.md) carefully before changing code, workflows, or commit history.
----
-## ✨ 项目亮点 / Highlights
+
+# ⚠️ **开发规范 / Development Rules**
+
+在修改代码、工作流或提交历史之前，请务必仔细阅读 [CODING_STANDARDS.md](CODING_STANDARDS.md)。
+Please read [CODING_STANDARDS.md](CODING_STANDARDS.md) carefully before changing code, workflows, or commit history.
+
+# ✨ 项目亮点 / Highlights
 - 🧩 **模块化检测架构 (Modular Architecture)**：具有特定功能的独立模块，各模块均包含其专属的 Repository、Mapper、ViewModel 和卡片 UI。
 - ⚡ **原生启动预载 (Native Preload)**：通过透明的 `NativeActivity` 启动器实现底层及早预载，以捕捉极早期的挂载（Mount）和虚拟化痕迹。
 - 🛡️ **底层 C++ 与汇编探针 (Native Probes)**：利用 C++ 和汇编实现的系统调用（Syscall）级别、时间敏感型、挂载和运行时可见性检查。
 - 🔄 **跨进程与隔离进程验证 (Cross-Process Validation)**：通过多进程、隔离进程（Isolated Process）协同校验，降低对单一信号的依赖。
 - 🔒 **纯本地离线优先 (Local & Privacy-First)**：默认情况下，TEE 吊销检查使用内置的静态快照。仅在用户手动于设置中开启“在线刷新”时才会访问网络。
 ---
-## 🔍 检测覆盖范围 / Detector Coverage
+# 🔍 检测覆盖范围 / Detector Coverage
 目前应用已支持以下安全领域的启发式检测：
 > `Bootloader` · `Custom ROM` · `Dangerous Apps` · `Kernel Check` · `LSPosed` · `Memory` · `Mount` · `Native Root` · `Play Integrity Fix` · `SELinux` · `SU` · `System Properties` · `TEE` · `Virtualization` · `Zygisk`
 此外，项目内置 `dashboard`（仪表盘）、`settings`（设置）和 `deviceinfo`（设备信息）等辅助模块，提供数据聚合、用户控制和设备上下文展示。
 ---
-## 📱 兼容性 / Compatibility
+# 📱 兼容性 / Compatibility
 
 | 维度 / Target | 详情与说明 / Notes |
 | :--- | :--- |
