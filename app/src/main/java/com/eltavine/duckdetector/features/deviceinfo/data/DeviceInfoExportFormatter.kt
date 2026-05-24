@@ -84,6 +84,7 @@ object DeviceInfoExportFormatter {
         append("Kernel: ${facts["Kernel"]}\n")
         append("Locale: ${facts["Locale"]}\n")
         append("TZ: ${facts["Time zone"]}\n")
+        append("Isolated: ${facts["Isolated process"]}\n")
 
         append("=== End ===\n")
     }
@@ -143,6 +144,7 @@ object DeviceInfoExportFormatter {
             f["Kernel"]?.takeIf { it != "Unavailable" }?.let { append("kn=$it|") }
             f["Locale"]?.takeIf { it != "Unavailable" }?.let { append("lo=$it|") }
             f["Time zone"]?.takeIf { it != "Unavailable" }?.let { append("tz=$it|") }
+            f["Isolated process"]?.takeIf { it != "Unavailable" }?.let { append("ip=$it|") }
 
             if (endsWith('|')) setLength(length - 1)
         }

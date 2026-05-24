@@ -16,7 +16,9 @@
 
 package com.eltavine.duckdetector.features.deviceinfo.data.repository
 
+import android.app.ActivityManager
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.view.Display
@@ -68,6 +70,8 @@ class DeviceInfoRepository(
         val cpuCores = Runtime.getRuntime().availableProcessors().toString()
         val cpuArch = System.getProperty("os.arch").orUnavailable()
         val cpuAbiList = Build.SUPPORTED_ABIS.joinToString()
+
+        val isolatedProcessSupport = checkIsolatedProcessSupport()
 
         val sections = listOf(
             DeviceInfoSection(
@@ -183,6 +187,7 @@ class DeviceInfoRepository(
                     DeviceInfoEntry("Resolution", resolution),
                     DeviceInfoEntry("Density", density),
                     DeviceInfoEntry("Refresh rate", refreshRate),
+                    DeviceInfoEntry("Isolated process", isolatedProcessSupport),
                 ),
             ),
         )
@@ -273,6 +278,37 @@ class DeviceInfoRepository(
         } finally {
             process?.destroy()
         }
+    }
+
+    private fun checkIsolatedProcessSupport(): String {
+        // Isolated processes were introduced in API 16 (Android 4.1).
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+            return "Unsupported (API < 16)"
+        }
+
+        // Verify the platform recognizes the FLAG_ISOLATED_PROCESS constant.
+        val flagDefined = runCatching {
+            ServiceInfo::class.java.getDeclaredField("FLAG_ISOLATED_PROCESS")
+        }.isSuccess
+
+        if (!flagDefined) {
+            return "Unavailable (flag missing)"
+        }
+
+        // Check if the ActivityManager can enumerate isolated processes.
+        val activityManager =
+            appContext.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        if (activityManager != null) {
+            val canList = runCatching {
+                // Some restricted environments block getRunningAppProcesses.
+                activityManager.runningAppProcesses
+            }.isSuccess
+            if (!canList) {
+                return "Supported (restricted visibility)"
+            }
+        }
+
+        return "Supported"
     }
 
     private companion object {
