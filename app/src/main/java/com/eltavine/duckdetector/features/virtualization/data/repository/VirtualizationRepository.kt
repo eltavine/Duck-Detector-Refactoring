@@ -376,6 +376,54 @@ class VirtualizationRepository(
         val isolatedSignals = mutableListOf<VirtualizationSignal>()
         var mountAnchorDriftCount = 0
 
+        // Check: can the isolated process be reached at all?
+        if (!isolatedSnapshot.available) {
+            val isolatedBlocked = remoteSnapshot.available
+            isolatedSignals += VirtualizationSignal(
+                id = "virt_isolated_connectivity",
+                label = "Isolated process unreachable",
+                value = if (isolatedBlocked) "Danger" else "Warning",
+                group = VirtualizationSignalGroup.CONSISTENCY,
+                severity = if (isolatedBlocked) {
+                    VirtualizationSignalSeverity.DANGER
+                } else {
+                    VirtualizationSignalSeverity.WARNING
+                },
+                detail = buildString {
+                    append("The isolated probe process could not be reached.")
+                    if (isolatedBlocked) {
+                        append(" The regular helper process connected successfully, so the isolated process may be actively blocked.")
+                    } else {
+                        append(" The regular helper process also could not connect, which may indicate a general system restriction.")
+                    }
+                    isolatedSnapshot.errorDetail.takeIf { it.isNotBlank() }?.let {
+                        append("\nerror=")
+                        append(it)
+                    }
+                },
+                detailMonospace = true,
+            )
+        }
+
+        // Check: can the regular cross-process helper be reached?
+        if (!remoteSnapshot.available) {
+            crossSignals += VirtualizationSignal(
+                id = "virt_connectivity_helper",
+                label = "Helper process unreachable",
+                value = "Warning",
+                group = VirtualizationSignalGroup.CONSISTENCY,
+                severity = VirtualizationSignalSeverity.WARNING,
+                detail = buildString {
+                    append("The regular cross-process helper could not be reached.")
+                    remoteSnapshot.errorDetail.takeIf { it.isNotBlank() }?.let {
+                        append("\nerror=")
+                        append(it)
+                    }
+                },
+                detailMonospace = true,
+            )
+        }
+
         if (remoteSnapshot.available && remoteSnapshot.profile == VirtualizationRemoteProfile.REGULAR) {
             val pathMismatches = buildList {
                 if (

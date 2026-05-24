@@ -145,13 +145,32 @@ class MountNamespaceDriftProbe(
             !isolatedSnapshot.available ||
             isolatedSnapshot.profile != VirtualizationRemoteProfile.ISOLATED
         ) {
+            val findings = buildList {
+                add(
+                    NativeRootFinding(
+                        id = "mount_isolated_connectivity",
+                        label = "Isolated process unreachable",
+                        value = "Warning",
+                        detail = buildString {
+                            append("The isolated helper process required for mount-namespace comparison could not be reached.")
+                            isolatedSnapshot.errorDetail.takeIf { it.isNotBlank() }?.let {
+                                append("\nerror=")
+                                append(it)
+                            }
+                        },
+                        group = NativeRootGroup.PROCESS,
+                        severity = NativeRootFindingSeverity.WARNING,
+                        detailMonospace = true,
+                    ),
+                )
+            }
             return MountNamespaceDriftProbeResult(
                 available = true,
                 isolatedProcessAvailable = false,
                 mainNamespaceInode = localSnapshot.namespaceInode,
                 isolatedNamespaceInode = isolatedSnapshot.mountNamespaceInode,
                 mountAnchorDriftCount = 0,
-                findings = emptyList(),
+                findings = findings,
                 detail = isolatedSnapshot.errorDetail.ifBlank {
                     "The isolated helper process did not return mount namespace data."
                 },
