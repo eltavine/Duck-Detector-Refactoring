@@ -3,8 +3,7 @@
 </p>
 <h1 align="center">DuckDetector</h1>
 
-#
-[![Build][badge-build]][workflow-build]
+#[![Build][badge-build]][workflow-build]
 [![Release][badge-release]][workflow-release]
 [![Latest release][badge-latest-release]][releases]
 [![Downloads][badge-downloads]][releases]
