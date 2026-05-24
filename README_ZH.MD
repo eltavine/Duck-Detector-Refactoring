@@ -14,8 +14,9 @@
 
 # ⚠️ **开发规范 / Development Rules**
 
-在修改代码、工作流或提交历史之前，请务必仔细阅读 [CODING_STANDARDS.md](CODING_STANDARDS.md)。
-Please read [CODING_STANDARDS.md](CODING_STANDARDS.md) carefully before changing code, workflows, or commit history.
+在更改代码、工作流程或提交历史记录之前，请阅读 [CODING_STANDARDS.md](./CODING_STANDARDS.md)。
+> changing code, workflows, or commit history.
+
 
 # ✨ 项目亮点 / Highlights
 - 🧩 **模块化检测架构 (Modular Architecture)**：具有特定功能的独立模块，各模块均包含其专属的 Repository、Mapper、ViewModel 和卡片 UI。
