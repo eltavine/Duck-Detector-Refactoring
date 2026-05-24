@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square" alt="NDK">
   <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
 </p>
----
+
 
 **[English](README.MD)** &nbsp; **[简体中文](README_ZH.MD)**
 
