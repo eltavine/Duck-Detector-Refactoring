@@ -1,6 +1,5 @@
-# DuckDetector
-
-<img src="https://github.com/947409161/Duck-Detector-Refactoring/blob/master/DuckDetector.jpg" align="right" width="120" />
+# 🌸 DuckDetector 
+<img align='right' src='logo.png' width='200px' alt="Duck logo">
 
 
 ![Android][badge-android]
