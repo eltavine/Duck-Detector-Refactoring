@@ -1,6 +1,7 @@
-# 🌸 DuckDetector 
+# DuckDetector 
 
-<img align='right' src='logo.png' width='200px' alt="Duck logo">
+<img align='right' src='logo.png' width='800px' alt="Duck logo">
+
 
 
 ![Android][badge-android]
