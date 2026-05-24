@@ -8,7 +8,7 @@
 ![Kotlin][badge-kotlin]
 ![Jetpack Compose][badge-compose]
 ![NDK][badge-ndk]
-
+[![Downloads][badge-downloads]][releases]
 DuckDetector is an Android security inspection app focused on local, device-side
 evidence collection for root-related tampering, runtime hooking, mount
 manipulation, attestation trust, and virtualized execution environments.
