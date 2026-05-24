@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square" alt="NDK">
   <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
 </p>
----
+
 **DuckDetector** 是一个专注于**本地端、设备侧**证据收集的 Android 安全检测应用程序。它旨在识别 Root 相关的篡改、运行时 Hook、挂载操作（Mount）、密钥库可信度（Attestation Trust）以及虚拟化执行环境。
 本应用结合了 **Jetpack Compose UI** 界面、**模块化 Kotlin 检测包** 以及 **底层 C++ / 汇编探针**，通过结构化的卡片形式展示详细的检测结果、方法覆盖范围及扫描状态摘要。
 
