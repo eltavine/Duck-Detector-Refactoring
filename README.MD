@@ -1,20 +1,16 @@
+
 <p align="center">
   <img src="logo.png" alt="DuckDetector Logo" width="600px">
 </p>
 <h1 align="center">DuckDetector</h1>
-
-# DuckDetector
-
-[![Build][badge-build]][workflow-build]
-[![Release][badge-release]][workflow-release]
-[![Latest release][badge-latest-release]][releases]
-[![Downloads][badge-downloads]][releases]
-[![Stars][badge-stars]][stargazers]
-[![Forks][badge-forks]][forks]
-[![Issues][badge-issues]][issues]
-[![Pull requests][badge-pulls]][pulls]
-[![Last commit][badge-last-commit]][commits]
-[![License][badge-license]][license]
+<p align="center">
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square" alt="Android"></a>
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square" alt="targetSdk"></a>
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square" alt="Kotlin"></a>
+  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white&style=flat-square" alt="Jetpack Compose"></a>
+  <img src="https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square" alt="NDK">
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
+</p>
 
 **DuckDetector** is an Android security detection application focusing on **local, on-device** evidence collection. It is designed to identify Root-related tampering, runtime Hooks, Mount operations, KeyStore integrity (Attestation Trust), and virtualized execution environments.
 This application combines a **Jetpack Compose UI** interface, **modular Kotlin detection packages**, and **low-level C++ / assembly probes** to present detailed detection results, method coverage, and scanning status summaries through structured cards.
