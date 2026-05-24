@@ -1,9 +1,6 @@
 
-<p align="center">
   <img src="logo.png" alt="DuckDetector Logo" width="600px">
-</p>
-<h1 align="center">DuckDetector</h1>
-<p align="center">
+
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square" alt="Android"></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square" alt="targetSdk"></a>
   <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square" alt="Kotlin"></a>
