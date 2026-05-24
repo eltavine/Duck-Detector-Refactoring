@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="logo.png" alt="DuckDetector Logo" width="180px">
+  <img src="logo.png" alt="DuckDetector Logo" width="200px">
 </p>
 <h1 align="center">DuckDetector (Refactoring)</h1>
 <p align="center">
