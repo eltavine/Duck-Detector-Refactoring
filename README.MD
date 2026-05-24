@@ -2,16 +2,6 @@
 
 <img src="https://raw.githubusercontent.com/Hybrid-Mount/meta-hybrid_mount/main/icon.svg" align="right" width="120" />
 
-[![Build][badge-build]][workflow-build]
-[![Release][badge-release]][workflow-release]
-[![Latest release][badge-latest-release]][releases]
-[![Downloads][badge-downloads]][releases]
-[![Stars][badge-stars]][stargazers]
-[![Forks][badge-forks]][forks]
-[![Issues][badge-issues]][issues]
-[![Pull requests][badge-pulls]][pulls]
-[![Last commit][badge-last-commit]][commits]
-[![License][badge-license]][license]
 
 ![Android][badge-android]
 ![targetSdk][badge-target-sdk]
