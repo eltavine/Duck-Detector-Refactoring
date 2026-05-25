@@ -362,6 +362,41 @@ class TeeReportReducerTest {
     }
 
     @Test
+    fun `grant isolated-domain private readback crash becomes warning supplementary review`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                grantDomainFullChainSplit = GrantDomainFullChainSplitResult(
+                    executed = true,
+                    available = false,
+                    ownerChainLength = 3,
+                    granteeUid = 99001,
+                    anomalyKind = GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH,
+                    detail = "Private: isolated readback crashed after grant succeeded.",
+                    diagnosticCopyText = """
+                        java.lang.reflect.InvocationTargetException
+                        Caused by: android.os.ServiceSpecificException: system/security/keystore2/src/service.rs:157: while trying to load key info.
+
+                        Caused by:
+                            0: No legacy keys for key descriptor.
+                            1: Error::Rc(r#KEY_NOT_FOUND) (code 7)
+                    """.trimIndent(),
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.WARN, report.supplementaryReviewLevel)
+        assertTrue(report.summary.contains("Grant isolated-domain", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant isolated-domain" &&
+                it.level == TeeSignalLevel.WARN &&
+                it.body.contains("isolated readback crashed", ignoreCase = true) &&
+                it.hiddenCopyText?.contains("No legacy keys for key descriptor") == true
+        })
+    }
+
+    @Test
     fun `grant isolated-domain unavailable state stays informational`() {
         val report = reducer.reduce(
             baseArtifacts(

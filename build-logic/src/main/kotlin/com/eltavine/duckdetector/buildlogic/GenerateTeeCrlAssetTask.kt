@@ -81,7 +81,7 @@ abstract class GenerateTeeCrlAssetTask : DefaultTask() {
             null
         }
 
-        val json = refreshed ?: readFallbackAsset()
+        val json = refreshed?.let(::mergeFallbackEntries) ?: readFallbackAsset()
         outputFile.writeText(json, Charsets.UTF_8)
     }
 
@@ -154,7 +154,36 @@ abstract class GenerateTeeCrlAssetTask : DefaultTask() {
         return fallback.readText(Charsets.UTF_8).also(::validateStatusJson)
     }
 
+    private fun mergeFallbackEntries(json: String): String {
+        val fallback = fallbackAsset.orNull?.asFile ?: return json
+        if (!fallback.isFile) {
+            return json
+        }
+        val remoteRoot = validatedStatusJson(json)
+        val remoteEntries = remoteRoot.optJSONObject("entries")
+            ?: throw GradleException("TEE CRL snapshot does not look like an attestation status feed.")
+        val fallbackRoot = validatedStatusJson(fallback.readText(Charsets.UTF_8))
+        val fallbackEntries = fallbackRoot.optJSONObject("entries")
+            ?: throw GradleException("TEE CRL fallback asset does not look like an attestation status feed.")
+
+        // The checked-in fallback asset is the repository-pinned revocation floor. Start from it,
+        // then add remote-only entries so CI refresh strengthens the floor without weakening it.
+        // 已入库的 fallback asset 是仓库固定的吊销下限；先以它为基线，再追加远端独有条目，确保 CI 刷新只增量强化。
+        val remoteKeys = remoteEntries.keys()
+        while (remoteKeys.hasNext()) {
+            val key = remoteKeys.next()
+            if (!fallbackEntries.has(key)) {
+                fallbackEntries.put(key, remoteEntries.get(key))
+            }
+        }
+        return fallbackRoot.toString(2)
+    }
+
     private fun validateStatusJson(json: String) {
+        validatedStatusJson(json)
+    }
+
+    private fun validatedStatusJson(json: String): JSONObject {
         val root = try {
             JSONObject(json)
         } catch (exception: JSONException) {
@@ -163,5 +192,6 @@ abstract class GenerateTeeCrlAssetTask : DefaultTask() {
         if (root.optJSONObject("entries") == null) {
             throw GradleException("TEE CRL snapshot does not look like an attestation status feed.")
         }
+        return root
     }
 }

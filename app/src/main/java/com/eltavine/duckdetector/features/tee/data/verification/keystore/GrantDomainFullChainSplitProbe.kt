@@ -284,10 +284,23 @@ class GrantDomainFullChainSplitProbe(
                     val granteeResult = session.readGrantedCertificateChain(grantId, keystore2Binder)
                     granteeResult.diagnosticCopyText.takeIf { it.isNotBlank() }?.let(diagnostics::addRaw)
                     if (!granteeResult.available) {
+                        val stackPayload = diagnostics.text()
+                        val crashDetected = matchesPrivateIsolatedCrashSignature(stackPayload)
                         stageResult = GrantDomainFullChainSplitResult(
+                            executed = crashDetected,
                             ownerChainLength = ownerChain.certificates.size,
                             granteeUid = session.uid,
-                            detail = "Private: readback failed (${visibleGrantDetail(granteeResult.detail)}).",
+                            anomalyKind = if (crashDetected) {
+                                GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH
+                            } else {
+                                GrantDomainAnomalyKind.UNAVAILABLE
+                            },
+                            detail = if (crashDetected) {
+                                "Private: isolated readback crashed after grant succeeded."
+                            } else {
+                                "Private: readback failed (${visibleGrantDetail(granteeResult.detail)})."
+                            },
+                            diagnosticCopyText = if (crashDetected) stackPayload else granteeResult.diagnosticCopyText,
                         )
                     } else if (granteeResult.chain.certificates.isEmpty()) {
                         stageResult = GrantDomainFullChainSplitResult(
@@ -340,6 +353,24 @@ class GrantDomainFullChainSplitProbe(
     }
 
     companion object {
+        internal fun matchesPrivateIsolatedCrashSignature(
+            stackPayload: String,
+        ): Boolean {
+            // This matcher promotes a very specific isolated readback crash into WARN only when the
+            // grant path already proved usable. It is a defense signal, not a generic binder failure.
+            // 只有在 grant 路径已证明可用时，这个 matcher 才把特定的 isolated 回读崩溃提升为 WARN；它是防御信号，不是泛化的 binder 失败。
+            val payload = stackPayload
+                .replace("\r\n", "\n")
+                .trim()
+            if (payload.isBlank()) {
+                return false
+            }
+            return payload.contains("No legacy keys for key descriptor") &&
+                payload.contains("Error::Rc(r#KEY_NOT_FOUND) (code 7)") &&
+                payload.contains("Caused by: android.os.ServiceSpecificException") &&
+                payload.contains("while trying to load key info.")
+        }
+
         internal fun compareChains(
             ownerChain: GrantDomainCertificateChain,
             granteeChain: GrantDomainCertificateChain,
@@ -394,6 +425,7 @@ class GrantDomainFullChainSplitProbe(
                 privateResult.isDanger() -> privateResult
                 hiddenResult.isDanger() -> hiddenResult
                 publicResult.isDanger() -> publicResult
+                privateResult.anomalyKind == GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH -> privateResult
                 privateResult.executed || privateResult.available -> privateResult
                 hiddenResult.executed || hiddenResult.available -> hiddenResult
                 else -> publicResult
@@ -431,6 +463,7 @@ enum class GrantDomainAnomalyKind {
     NONE,
     ISOLATED_CHAIN_SPLIT,
     ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+    ISOLATED_PRIVATE_READBACK_CRASH,
     UNAVAILABLE,
 }
 

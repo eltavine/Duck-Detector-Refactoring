@@ -162,7 +162,14 @@ class TeeCardModelMapper {
                 item.level == TeeSignalLevel.FAIL &&
                     (item.title == "Grant self-domain" || item.title == "Grant isolated-domain")
             }
-            ?: return null
+            ?: sections
+                .asSequence()
+                .flatMap { section -> section.items.asSequence() }
+                .firstOrNull { item ->
+                    item.level == TeeSignalLevel.WARN &&
+                        (item.title == "Grant self-domain" || item.title == "Grant isolated-domain")
+                }
+                ?: return null
 
         val keyVisibilityDiverged =
             summary.contains("key visibility", ignoreCase = true) ||
@@ -176,6 +183,8 @@ class TeeCardModelMapper {
             }
             "Grant isolated-domain" -> if (keyVisibilityDiverged) {
                 "Grant isolated-domain key visibility diverged; open TEE details for stage diagnostics."
+            } else if (grantFailure.level == TeeSignalLevel.WARN) {
+                "Grant isolated-domain runtime crash; open TEE details for stage diagnostics."
             } else {
                 "Grant isolated-domain certificate chain diverged; open TEE details for stage diagnostics."
             }
