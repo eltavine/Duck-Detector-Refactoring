@@ -1,23 +1,28 @@
-
-
-  <img src="logo.png" alt="DuckDetector Logo" width="600px">
-
-
-  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square" alt="Android"></a>
-  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square" alt="targetSdk"></a>
-  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square" alt="Kotlin"></a>
-  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white&style=flat-square" alt="Jetpack Compose"></a>
-  <img src="https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square" alt="NDK">
-  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
+<p align="center">
+  <img src="Banner2.png" alt="DuckDetector Logo" width="600px">
 </p>
 
-**[English](README.MD)** &nbsp; **[简体中文](README_ZH.MD)**
+<p align="center">
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/stargazers"><img src="https://img.shields.io/github/stars/eltavine/Duck-Detector-Refactoring?style=flat-square&logo=github" alt="Stars"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/v/release/eltavine/Duck-Detector-Refactoring?style=flat-square&logo=github" alt="Releases"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
+  <a href="https://t.me/duck_detector"><img src="https://img.shields.io/badge/Telegram-Channel-2CA5E0?logo=telegram&logoColor=white&style=flat-square" alt="Telegram"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/blob/main/LICENSE"><img src="https://img.shields.io/github/license/eltavine/Duck-Detector-Refactoring?style=flat-square" alt="License"></a>
+</p>
 
-**DuckDetector** is an Android security detection application focusing on **local, on-device** evidence collection. It is designed to identify Root-related tampering, runtime Hooks, Mount operations, KeyStore integrity (Attestation Trust), and virtualized execution environments.
-This application combines a **Jetpack Compose UI** interface, **modular Kotlin detection packages**, and **low-level C++ / assembly probes** to present detailed detection results, method coverage, and scanning status summaries through structured cards.
-# ⚠️ **Development Rules**
-read [CODING_STANDARDS.md](./CODING_STANDARDS.md) before
-> changing code, workflows, or commit history.
+<p align="center">
+  <strong><a href="README.MD">English</a></strong> &nbsp; <strong><a href="README_ZH.MD">简体中文</a></strong>
+</p>
+
+<h4 align="center">
+  <strong>DuckDetector is the ultimate open-source, on-device Android security tool for auditing Bootloader, Root, SU, and KeyStore Attestation.</strong>
+</h4>
+
+DuckDetector is an Android security detection application focusing on local, on-device evidence collection. It is designed to identify Root-related tampering, runtime Hooks, Mount operations, KeyStore integrity (Attestation Trust), and virtualized execution environments. This application combines a Jetpack Compose UI interface, modular Kotlin detection packages, and low-level C++ / assembly probes to present detailed detection results, method coverage, and scanning status summaries through structured cards.
+
+# ⚠️ Development Rules
+> Please read the [DuckDetector coding standards](./CODING_STANDARDS.md) before submitting changes to the codebase, workflows, or git history.
+
 # ✨ Highlights
  * **Modular Architecture**: Features independent modules with specific functions; each module includes its own exclusive Repository, Mapper, ViewModel, and card UI.
  * **Native Preload**: Implements low-level early preloading via a transparent NativeActivity launcher to capture extremely early mount points and virtualization traces.
@@ -94,23 +99,29 @@ gradlew.bat :app:assembleDebug
  * **Hardware & Vendor Restrictions**: Due to OEM policies or sandbox rules, some probes may report downgraded statuses on specific models. Certain low-level checks rely strictly on the arm64-v8a ABI architecture.
 ## 📈 Status & Stars
 
-![star-history-chart]
-
-## ⚖️ Disclaimer
-```text
-This software is provided "as is", without warranty of any kind. It is designed
-for educational, diagnostic, and security research purposes only. The developers
-assume no liability for direct or indirect damage, data loss, or system
-instability resulting from use of this application. Relying on heuristic
-security detection is at your own risk.
-```
-## 📄 License
-This project is open-sourced under the **Apache License 2.0**.
-## 👥 Contributors
 <p>
-  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors"><img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" alt="Contributors"></a>
-  <a href="https://github.com/aviraxp" title="SELinux and LSPosed false-positive report"><img src="https://github.com/aviraxp.png?size=64" width="64" alt="aviraxp"></a>
-  <a href="https://github.com/5ec1cff" title="SELinux and LSPosed false-positive finding"><img src="https://github.com/5ec1cff.png?size=64" width="64" alt="5ec1cff"></a>
+  <img src="https://api.star-history.com/svg?repos=eltavine/Duck-Detector-Refactoring&type=Date" alt="Star History Chart" width="600">
 </p>
 
-[star-history-chart]: https://api.star-history.com/svg?repos=eltavine/Duck-Detector-Refactoring&type=Date
+## ⚖️ Disclaimer
+This software is provided "as is", without warranty of any kind. It is designed for educational, diagnostic, and security research purposes only. The developers assume no liability for direct or indirect damage, data loss, or system instability resulting from use of this application. Relying on heuristic security detection is at your own risk.
+
+## 📄 License
+This project is open-sourced under the Apache License 2.0.
+
+## 👥 Contributors
+
+### Code Contributors
+
+<a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" alt="Contributors" />
+</a>
+
+### Special Thanks
+
+<p>
+  <a href="https://github.com/aviraxp" title="aviraxp"><img src="https://github.com/aviraxp.png" width="64" height="64" style="border-radius: 50%;" alt="aviraxp"></a>
+  &nbsp;
+  <a href="https://github.com/5ec1cff" title="5ec1cff"><img src="https://github.com/5ec1cff.png" width="64" height="64" style="border-radius: 50%;" alt="5ec1cff"></a>
+</p>
+
