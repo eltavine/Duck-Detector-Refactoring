@@ -117,5 +117,9 @@ security detection is at your own risk.
 <a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" />
 </a>
+<p>
+  <a href="https://github.com/aviraxp" title="SELinux 与 LSPosed 误报反馈"><img src="https://github.com/aviraxp.png?size=64" width="64" alt="aviraxp"></a>
+  <a href="https://github.com/5ec1cff" title="SELinux 与 LSPosed 误报发现"><img src="https://github.com/5ec1cff.png?size=64" width="64" alt="5ec1cff"></a>
+</p>
 
 [star-history-chart]: https://api.star-history.com/svg?repos=eltavine/Duck-Detector-Refactoring&type=Date

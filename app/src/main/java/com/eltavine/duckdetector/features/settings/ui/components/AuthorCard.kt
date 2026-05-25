@@ -38,6 +38,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Swipe
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -196,6 +197,22 @@ fun AuthorCard(
             contributionSummary = stringResource(R.string.author_summary_mirin),
             contributions = listOf(
                 AuthorContribution.Ui,
+            ),
+        ),
+        AuthorProfile(
+            name = "aviraxp",
+            avatarRes = R.drawable.author_aviraxp,
+            contributionSummary = stringResource(R.string.author_summary_aviraxp),
+            contributions = listOf(
+                AuthorContribution.Security,
+            ),
+        ),
+        AuthorProfile(
+            name = "5ec1cff",
+            avatarRes = R.drawable.author_5ec1cff,
+            contributionSummary = stringResource(R.string.author_summary_5ec1cff),
+            contributions = listOf(
+                AuthorContribution.Security,
             ),
         ),
     )
@@ -458,5 +475,11 @@ private sealed class AuthorContribution(
         label = "Kotlin",
         icon = SimpleIcons.Kotlin,
         tint = Color(0xFF7F52FF),
+    )
+
+    data object Security : AuthorContribution(
+        label = "Security",
+        icon = Icons.Rounded.BugReport,
+        tint = Color(0xFFD32F2F),
     )
 }

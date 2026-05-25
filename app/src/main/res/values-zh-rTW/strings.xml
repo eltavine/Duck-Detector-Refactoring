@@ -64,6 +64,8 @@ limitations under the License.
     <string name="author_summary_baka">TEE 與 Zygisk</string>
     <string name="author_summary_xiaotong">TEE（C++、Kotlin）</string>
     <string name="author_summary_wxx">CI（Kotlin）</string>
+    <string name="author_summary_aviraxp">SELinux 與 LSPosed 誤報回報</string>
+    <string name="author_summary_5ec1cff">SELinux 與 LSPosed 誤報發現</string>
     <string name="author_swipe_hint_single">左右滑動以瀏覽作者。</string>
     <string name="author_swipe_hint_paged">左右滑動以瀏覽作者。%1$d/%2$d</string>
     <string name="author_boundary_toast">終點</string>
