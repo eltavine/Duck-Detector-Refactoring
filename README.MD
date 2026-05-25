@@ -19,6 +19,7 @@
   <strong>DuckDetector is the ultimate open-source, on-device Android security tool for auditing Bootloader, Root, SU, and KeyStore Attestation.</strong>
 </h4>
 
+# 📖 Description
 DuckDetector is an Android security detection application focusing on local, on-device evidence collection. It is designed to identify Root-related tampering, runtime Hooks, Mount operations, KeyStore integrity (Attestation Trust), and virtualized execution environments. This application combines a Jetpack Compose UI interface, modular Kotlin detection packages, and low-level C++ / assembly probes to present detailed detection results, method coverage, and scanning status summaries through structured cards.
 
 # ⚠️ Development Rules
