@@ -56,7 +56,7 @@ class CrlStatusServiceTest {
                 """{"entries":{"1":{"status":"REVOKED","reason":"keyCompromise"}}}"""
             },
             embeddedStatusProvider = embeddedStatusProvider(
-                """{"entries":{"1":{"status":"GOOD"}}}"""
+                """{"entries":{}}"""
             ),
         )
 
@@ -137,7 +137,7 @@ class CrlStatusServiceTest {
     }
 
     @Test
-    fun `reported offline does not block successful direct fetch`() = runBlocking {
+    fun `online refresh does not downgrade built in revocations`() = runBlocking {
         val store = FakeTeeNetworkPrefsStore(
             TeeNetworkPrefs(
                 consentAsked = true,
@@ -163,11 +163,12 @@ class CrlStatusServiceTest {
 
         assertEquals(TeeNetworkMode.ACTIVE, result.networkState.mode)
         assertEquals(1, fetchCount)
-        assertTrue(result.networkState.summary.contains("not present in the revocation feed"))
+        assertTrue(result.networkState.summary.contains("matched 1 revoked/suspended entry"))
         assertTrue(
             result.networkState.detail.orEmpty().contains("Direct HTTPS fetch still succeeded")
         )
-        assertTrue(result.revokedCertificates.isEmpty())
+        assertEquals(1, result.revokedCertificates.size)
+        assertEquals("embedded", result.revokedCertificates.single().reason)
     }
 
     @Test

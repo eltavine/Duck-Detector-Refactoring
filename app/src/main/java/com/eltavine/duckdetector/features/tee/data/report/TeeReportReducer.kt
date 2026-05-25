@@ -311,6 +311,19 @@ class TeeReportReducer(
                     )
                 }
 
+                GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH -> {
+                    add(
+                        fact(
+                            "Grant isolated-domain",
+                            "Grant isolated-domain isolated private readback crashed after grant succeeded. " +
+                                grantDomainFullChainSplitValue(artifacts),
+                            TeeSignalLevel.WARN,
+                            hiddenCopyText = artifacts.grantDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
+                        )
+                    )
+                }
+
                 GrantDomainAnomalyKind.NONE,
                 GrantDomainAnomalyKind.UNAVAILABLE -> Unit
             }
@@ -1929,6 +1942,7 @@ class TeeReportReducer(
             result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT -> TeeSignalLevel.FAIL
             result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN ->
                 TeeSignalLevel.FAIL
+            result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH -> TeeSignalLevel.WARN
 
             result.executed && result.splitDetected -> TeeSignalLevel.FAIL
             result.executed && result.available -> TeeSignalLevel.PASS

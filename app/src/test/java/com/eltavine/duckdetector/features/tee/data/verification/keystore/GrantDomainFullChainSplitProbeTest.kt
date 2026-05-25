@@ -102,6 +102,27 @@ class GrantDomainFullChainSplitProbeTest {
     }
 
     @Test
+    fun `private isolated crash matcher requires the full keystore service stack signature`() {
+        assertTrue(
+            GrantDomainFullChainSplitProbe.matchesPrivateIsolatedCrashSignature(
+                """
+                java.lang.reflect.InvocationTargetException
+                Caused by: android.os.ServiceSpecificException: system/security/keystore2/src/service.rs:157: while trying to load key info.
+
+                Caused by:
+                    0: No legacy keys for key descriptor.
+                    1: Error::Rc(r#KEY_NOT_FOUND) (code 7)
+                """.trimIndent(),
+            ),
+        )
+        assertFalse(
+            GrantDomainFullChainSplitProbe.matchesPrivateIsolatedCrashSignature(
+                "ServiceSpecificException(code 7): partial stack only",
+            ),
+        )
+    }
+
+    @Test
     fun `private isolated danger outranks clean Java stages`() {
         val publicResult = GrantDomainFullChainSplitResult(
             executed = true,
@@ -227,6 +248,49 @@ class GrantDomainFullChainSplitProbeTest {
         assertTrue(result.detail.contains("Public: unsupported"))
         assertTrue(result.detail.contains("Hidden: matched"))
         assertTrue(result.detail.contains("Private: skipped"))
+    }
+
+    @Test
+    fun `private isolated crash outranks clean Java stages`() {
+        val publicResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Public: clean",
+        )
+        val hiddenResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = true,
+            anomalyKind = GrantDomainAnomalyKind.NONE,
+            detail = "Hidden: clean",
+        )
+        val privateResult = GrantDomainFullChainSplitResult(
+            executed = true,
+            available = false,
+            ownerChainLength = 3,
+            granteeUid = 99001,
+            anomalyKind = GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH,
+            detail = "Private: isolated readback crashed after grant succeeded.",
+            diagnosticCopyText = """
+                java.lang.reflect.InvocationTargetException
+                Caused by: android.os.ServiceSpecificException: system/security/keystore2/src/service.rs:157: while trying to load key info.
+
+                Caused by:
+                    0: No legacy keys for key descriptor.
+                    1: Error::Rc(r#KEY_NOT_FOUND) (code 7)
+            """.trimIndent(),
+        )
+
+        val result = GrantDomainFullChainSplitProbe.selectFinalResult(
+            publicResult,
+            hiddenResult,
+            privateResult,
+        )
+
+        assertEquals(GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH, result.anomalyKind)
+        assertTrue(result.detail.contains("Public: clean"))
+        assertTrue(result.detail.contains("Hidden: clean"))
+        assertTrue(result.detail.contains("Private: isolated readback crashed"))
     }
 
     @Test

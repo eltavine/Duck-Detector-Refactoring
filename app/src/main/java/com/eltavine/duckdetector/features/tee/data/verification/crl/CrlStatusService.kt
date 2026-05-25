@@ -128,7 +128,10 @@ class CrlStatusService(
         return when (downloadResult) {
             is CrlSnapshotResult.Success -> buildResult(
                 chain = chain,
-                entries = downloadResult.entries,
+                entries = mergeOnlineEntries(
+                    embeddedEntries = embeddedEntries,
+                    onlineEntries = downloadResult.entries,
+                ),
                 networkState = TeeNetworkState(
                     mode = TeeNetworkMode.ACTIVE,
                     summary = "Online revocation data refreshed successfully.",
@@ -180,6 +183,23 @@ class CrlStatusService(
                 CrlSnapshotResult.Success(entries)
             }.getOrElse { throwable ->
                 CrlSnapshotResult.Failure(classifyFailure(throwable))
+            }
+        }
+    }
+
+    private fun mergeOnlineEntries(
+        embeddedEntries: Map<String, CrlEntry>,
+        onlineEntries: Map<String, CrlEntry>,
+    ): Map<String, CrlEntry> {
+        if (onlineEntries.isEmpty()) {
+            return embeddedEntries
+        }
+        // Built-in revocations are the local trust floor; online data can add entries but cannot
+        // downgrade a serial that the repository already marks revoked or suspended.
+        // 内置吊销是本地信任下限；在线数据可以追加条目，但不能降级仓库已标记吊销/暂停的序列号。
+        return LinkedHashMap<String, CrlEntry>(embeddedEntries).apply {
+            onlineEntries.forEach { (serial, entry) ->
+                putIfAbsent(serial, entry)
             }
         }
     }

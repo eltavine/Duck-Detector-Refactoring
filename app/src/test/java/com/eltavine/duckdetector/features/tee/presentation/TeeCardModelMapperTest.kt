@@ -482,6 +482,58 @@ class TeeCardModelMapperTest {
     }
 
     @Test
+    fun `grant isolated-domain private readback crash shows warning card and compact finding detail`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "Grant isolated-domain isolated private readback crashed after grant succeeded. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.WARN,
+                signals = listOf(
+                    TeeSignal(
+                        "Grant isolated-domain",
+                        "Warn",
+                        TeeSignalLevel.WARN,
+                    ),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Grant isolated-domain",
+                                "Grant isolated-domain isolated private readback crashed after grant succeeded. kind=ISOLATED_PRIVATE_READBACK_CRASH owner=3 uid=99001",
+                                TeeSignalLevel.WARN,
+                                hiddenCopyText = "java.lang.reflect.InvocationTargetException\nCaused by: android.os.ServiceSpecificException: system/security/keystore2/src/service.rs:157: while trying to load key info.\n\nCaused by:\n    0: No legacy keys for key descriptor.\n    1: Error::Rc(r#KEY_NOT_FOUND) (code 7)",
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals(
+            "Grant isolated-domain runtime crash; open TEE details for stage diagnostics.",
+            model.findingDetail,
+        )
+        assertEquals(
+            "java.lang.reflect.InvocationTargetException\nCaused by: android.os.ServiceSpecificException: system/security/keystore2/src/service.rs:157: while trying to load key info.\n\nCaused by:\n    0: No legacy keys for key descriptor.\n    1: Error::Rc(r#KEY_NOT_FOUND) (code 7)",
+            model.factGroups.single().rows.single().hiddenCopyText,
+        )
+    }
+
+    @Test
     fun `matched grant self-domain split escalates aligned tee card to danger`() {
         val longGrantSummary =
             "Grant self-domain certificate-chain split detected. " +
