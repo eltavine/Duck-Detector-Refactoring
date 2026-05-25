@@ -120,8 +120,8 @@ This project is open-sourced under the Apache License 2.0.
 ### Special Thanks
 
 <p>
-  <a href="https://github.com/aviraxp" title="aviraxp"><img src="https://github.com/aviraxp.png" width="64" height="64" style="border-radius: 50%;" alt="aviraxp"></a>
+  <a href="https://github.com/aviraxp" title="aviraxp"><img src="https://images.weserv.nl/?url=https://github.com/aviraxp.png&w=64&h=64&mask=circle" width="64" height="64" alt="aviraxp"></a>
   &nbsp;
-  <a href="https://github.com/5ec1cff" title="5ec1cff"><img src="https://github.com/5ec1cff.png" width="64" height="64" style="border-radius: 50%;" alt="5ec1cff"></a>
+  <a href="https://github.com/5ec1cff" title="5ec1cff"><img src="https://images.weserv.nl/?url=https://github.com/5ec1cff.png&w=64&h=64&mask=circle" width="64" height="64" alt="5ec1cff"></a>
 </p>
 
