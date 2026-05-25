@@ -27,9 +27,9 @@ limitations under the License.
     <string name="user_agreement_title">اتفاقية المستخدم</string>
     <string name="user_agreement_content" formatted="false">باستخدام Duck Detector فإنك توافق على الشروط التالية:&#10;&#10;1. غرض الاستخدام&#10;تم تصميم هذا التطبيق لأغراض تعليمية وللتقييم الأمني الشخصي فقط، وهو يساعد المستخدمين على فهم الحالة الأمنية لأجهزتهم الخاصة.&#10;&#10;2. عدم وجود ضمان&#10;يتم توفير هذا التطبيق كما هو دون أي ضمانات صريحة أو ضمنية. لا يضمن المطورون دقة نتائج الكشف أو اكتمالها أو موثوقيتها.&#10;&#10;3. مسؤولية المستخدم&#10;أنت المسؤول وحدك عن كيفية استخدام هذا التطبيق وعن أي عواقب قد تنشأ عن ذلك الاستخدام.&#10;&#10;4. الامتثال للقوانين&#10;توافق على استخدام هذا التطبيق بما يتوافق مع جميع القوانين واللوائح المحلية والوطنية والدولية المعمول بها.</string>
     <string name="disclaimer_title">إخلاء المسؤولية</string>
-    <string name="disclaimer_content" formatted="false">إشعار مهم:&#10;&#10;1. حدود الكشف&#10;يستخدم Duck Detector عدة أساليب لاكتشاف الحالة الأمنية للجهاز، لكن لا توجد أي طريقة دقيقة بنسبة 100&#37;. يجب التعامل مع النتائج على أنها مؤشرات إرشادية وليست أحكامًا نهائية.&#10;&#10;2. الإيجابيات والسلبيات الخاطئة&#10;قد ينتج التطبيق نتائج إيجابية خاطئة أو يفوّت بعض الحالات. استخدم دائمًا أدوات أمنية احترافية وتحققك الشخصي للحصول على تقييم أشمل.&#10;&#10;3. عدم تحمل المسؤولية&#10;لا يتحمل مطورو Duck Detector أو المساهمون فيه أو موزعوه أي مسؤولية عن أي أضرار مباشرة أو غير مباشرة أو عرضية أو خاصة أو تبعية تنشأ عن استخدام هذا التطبيق أو عدم القدرة على استخدامه.&#10;&#10;4. خدمات الجهات الخارجية&#10;إذا سمحت بفحوصات الإبطال عبر الإنترنت، فقد يتصل التطبيق بـ Google attestation revocation endpoint. تظل عمليات الفحص الأمنية نفسها محلية على جهازك، ولا يتم تحميل نتائج الكاشف عمدًا كقياسات تتبع لعملية الفحص.</string>
+    <string name="disclaimer_content" formatted="false">إشعار مهم:&#10;&#10;1. حدود الكشف&#10;يستخدم Duck Detector عدة أساليب لاكتشاف الحالة الأمنية للجهاز، لكن لا توجد أي طريقة دقيقة بنسبة 100&#37;. يجب التعامل مع النتائج على أنها مؤشرات إرشادية وليست أحكامًا نهائية.&#10;&#10;2. الإيجابيات والسلبيات الخاطئة&#10;قد ينتج التطبيق نتائج إيجابية خاطئة أو يفوّت بعض الحالات. استخدم دائمًا أدوات أمنية احترافية وتحققك الشخصي للحصول على تقييم أشمل.&#10;&#10;3. عدم تحمل المسؤولية&#10;لا يتحمل مطورو Duck Detector أو المساهمون فيه أو موزعوه أي مسؤولية عن أي أضرار مباشرة أو غير مباشرة أو عرضية أو خاصة أو تبعية تنشأ عن استخدام هذا التطبيق أو عدم القدرة على استخدامه.&#10;&#10;4. خدمات الجهات الخارجية&#10;تستخدم فحوصات إبطال TEE افتراضيًا لقطة مدمجة داخل التطبيق. إذا سمحت بتحديث بيانات الإبطال عبر الإنترنت، فقد يتصل التطبيق بـ Google attestation revocation endpoint. تظل عمليات الفحص الأمنية نفسها محلية على جهازك، ولا يتم تحميل نتائج الكاشف عمدًا كقياسات تتبع لعملية الفحص.</string>
     <string name="privacy_notice_title">إشعار الخصوصية</string>
-    <string name="privacy_notice_content" formatted="false">ملخص الخصوصية: تعمل الفحوصات الأمنية محليًا على جهازك. لا يتم تحميل نتائج الكاشف عمدًا كقياسات تتبع لعملية الفحص. وإذا سمحت بفحوصات الإبطال عبر الإنترنت، فقد يتصل التطبيق بـ Google attestation revocation endpoint.</string>
+    <string name="privacy_notice_content" formatted="false">ملخص الخصوصية: تعمل الفحوصات الأمنية محليًا على جهازك. لا يتم تحميل نتائج الكاشف عمدًا كقياسات تتبع لعملية الفحص. تستخدم فحوصات إبطال TEE افتراضيًا لقطة مدمجة؛ وإذا سمحت بتحديث بيانات الإبطال عبر الإنترنت، فقد يتصل التطبيق بـ Google attestation revocation endpoint.</string>
     <string name="timer_elapsed">انقضت 30 ثانية</string>
     <string name="timer_waiting">يرجى الانتظار %1$d ثانية</string>
     <string name="fully_reviewed">تمت المراجعة بالكامل</string>
@@ -39,9 +39,9 @@ limitations under the License.
     <string name="agreement_acknowledgement">بمتابعتك، فإنك تقر بأنك قرأت هذه الشروط ووافقت عليها.</string>
     <string name="settings_title">الإعدادات</string>
     <string name="settings_subtitle">عناصر تحكم وقت التشغيل لمسارات التحقق عبر الإنترنت.</string>
-    <string name="settings_crl_title">السماح بفحوصات CRL عبر الإنترنت</string>
-    <string name="settings_crl_summary">الاستعلام عن Google attestation revocation feed أثناء التحقق من TEE.</string>
-    <string name="settings_crl_footer">تُطبَّق التغييرات فورًا على كاشف TEE. وتبقى الوحدات الأخرى دون تغيير.</string>
+    <string name="settings_crl_title">السماح بتحديث CRL عبر الإنترنت</string>
+    <string name="settings_crl_summary">تستخدم فحوصات إبطال TEE دائمًا لقطة مدمجة؛ يسمح هذا الخيار فقط بجلب أحدث Google attestation revocation feed.</string>
+    <string name="settings_crl_footer">تُطبَّق التغييرات فورًا على سلوك التحديث عبر الإنترنت. تبقى فحوصات إبطال TEE المدمجة مفعلة.</string>
     <string name="about_title">حول</string>
     <string name="about_subtitle">روابط المشروع وبيانات البناء.</string>
     <string name="about_label_version">الإصدار</string>
@@ -52,7 +52,7 @@ limitations under the License.
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_label_build_hash">مُعرف البناء</string>
     <string name="about_label_privacy">الخصوصية / استخدام البيانات</string>
-    <string name="about_privacy_summary">تعمل الفحوصات محليًا على الجهاز. ويظل البحث عن CRL عبر الإنترنت اختياريًا ولا يحدث إلا إذا قمت بتمكينه من الإعدادات.</string>
+    <string name="about_privacy_summary">تعمل الفحوصات محليًا على الجهاز. تُضمَّن بيانات إبطال TEE داخل التطبيق؛ ويظل تحديث CRL عبر الإنترنت اختياريًا ولا يحدث إلا إذا قمت بتمكينه من الإعدادات.</string>
     <string name="about_label_copy_build_info">نسخ معلومات البناء</string>
     <string name="about_copy_build_info_summary">نسخ الإصدار ووقت البناء ومُعرف البناء</string>
     <string name="about_clipboard_label">معلومات بناء Duck Detector</string>
@@ -111,7 +111,7 @@ limitations under the License.
     <string name="startup_preparing_title">جارٍ تجهيز بدء التشغيل</string>
     <string name="startup_before_scan_title">قبل الفحص</string>
     <string name="startup_loading_detail">لا تزال التفضيلات وإمكانية رؤية PackageManager قيد التحميل. وتبقى Detector ViewModels متوقفة حتى يكتمل ذلك.</string>
-    <string name="startup_intro_detail">أكمل الاختيارات المطلوبة قبل بدء عمليات فحص detector. تتم مراجعة الإشعارات ومسار التحديث المباشر وشبكات CRL وإمكانية رؤية PackageManager هنا في مكان واحد. يظل مسار detector محجوبًا حتى تتم تسوية كل بطاقة مطلوبة أدناه.</string>
+    <string name="startup_intro_detail">أكمل الاختيارات المطلوبة قبل بدء عمليات فحص detector. تتم مراجعة الإشعارات ومسار التحديث المباشر وتحديث CRL عبر الإنترنت وإمكانية رؤية PackageManager هنا في مكان واحد. يظل مسار detector محجوبًا حتى تتم تسوية كل بطاقة مطلوبة أدناه.</string>
     <string name="startup_loading_state">جارٍ تحميل حالة بدء التشغيل…</string>
     <string name="startup_progress_resolved">تمت تسوية %1$d من أصل %2$d من بطاقات بدء التشغيل</string>
     <string name="startup_loading_dependencies_title">جارٍ تحميل تبعيات بدء التشغيل</string>
@@ -123,6 +123,7 @@ limitations under the License.
     <string name="startup_status_waiting">قيد الانتظار</string>
     <string name="startup_status_regular">عادي</string>
     <string name="startup_status_local">محلي</string>
+    <string name="startup_status_optional">اختياري</string>
     <string name="startup_status_acknowledged">تم الإقرار</string>
     <string name="startup_status_review_later">راجع لاحقًا</string>
     <string name="startup_notifications_title">الإشعارات</string>
@@ -148,15 +149,15 @@ limitations under the License.
     <string name="startup_live_update_use_regular">استخدام الإشعار العادي</string>
     <string name="startup_live_update_regular_headline">تم اختيار الإشعارات العادية.</string>
     <string name="startup_live_update_regular_detail">تبقى ميزة الإشعار المباشر معطلة. وسيستخدم تقدم الفحص مسار الإشعارات العادي بدلًا من ذلك.</string>
-    <string name="startup_crl_title">اتصال CRL</string>
-    <string name="startup_crl_prompt_headline">اختر ما إذا كان يمكن لفحوصات TEE استخدام الشبكة.</string>
-    <string name="startup_crl_prompt_detail">يتيح السماح بالشبكة لـ Duck Detector الاستعلام عن قائمة جوجل لحظر التصديقات أثناء التحقق من TEE. ويتجاوز الوضع المحلي فقط التحديث عبر الإنترنت.</string>
-    <string name="startup_crl_allow_network">السماح بالشبكة</string>
-    <string name="startup_crl_local_only">محلي فقط</string>
+    <string name="startup_crl_title">تحديث CRL عبر الإنترنت</string>
+    <string name="startup_crl_prompt_headline">اختر ما إذا كان يمكن لفحوصات إبطال TEE جلب تحديثات عبر الإنترنت.</string>
+    <string name="startup_crl_prompt_detail">يفحص Duck Detector دائمًا لقطة الإبطال المدمجة. يتيح السماح بالشبكة جلب أحدث Google attestation revocation feed أثناء التحقق من TEE.</string>
+    <string name="startup_crl_allow_network">السماح بالتحديث</string>
+    <string name="startup_crl_local_only">المدمج فقط</string>
     <string name="startup_crl_ready_headline">تم السماح بتحديث CRL عبر الإنترنت.</string>
-    <string name="startup_crl_ready_detail">قد يقوم التحقق من TEE بتحديث قائمة جوجل لحظر التصديقات كلما سمحت ظروف الشبكة.</string>
-    <string name="startup_crl_local_headline">فحوصات TEE محلية فقط.</string>
-    <string name="startup_crl_local_detail">لن ينفذ Duck Detector تحديث CRL عبر الإنترنت حتى تعيد تمكينه من الإعدادات.</string>
+    <string name="startup_crl_ready_detail">يفحص التحقق من TEE اللقطة المدمجة وقد يحدث Google attestation revocation feed عندما تسمح ظروف الشبكة.</string>
+    <string name="startup_crl_local_headline">تستخدم فحوصات إبطال TEE اللقطة المدمجة.</string>
+    <string name="startup_crl_local_detail">لن ينفذ Duck Detector تحديث CRL عبر الإنترنت حتى تعيد تمكينه من الإعدادات. تبقى فحوصات الإبطال المدمجة مفعلة.</string>
     <string name="startup_package_manager_title">PackageManager</string>
     <string name="startup_package_restricted_headline">يبدو أن فهرس الحزم مقيّد أو تمت تصفيته.</string>
     <string name="startup_package_restricted_detail">كشف PackageManager عن %1$d حزمة مثبتة فقط. وقد تقلل التطبيقات الخطرة والمجسات ذات الصلة من الإبلاغ عن الأدوات المثبتة في ظل الرؤية المقيّدة أو الفهرسة المحددة النطاق أو التصفية بأسلوب HMA.</string>

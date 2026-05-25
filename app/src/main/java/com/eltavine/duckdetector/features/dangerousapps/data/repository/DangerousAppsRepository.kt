@@ -20,6 +20,9 @@ import android.content.Context
 import android.os.IBinder
 import android.os.Parcel
 import android.provider.Settings
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
 import android.text.TextUtils
 import com.eltavine.duckdetector.features.dangerousapps.data.native.DangerousAppsNativeBridge
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.CreatePackageContextZipProbe
@@ -197,6 +200,17 @@ class DangerousAppsRepository(
                     ),
                 )
             }
+
+        detectSceneDebugfsMount()?.let { markerPath ->
+            appendMethod(
+                detectedApps = detectedApps,
+                packageName = SCENE_PACKAGE,
+                method = DangerousDetectionMethod(
+                    kind = DangerousDetectionMethodKind.SPECIAL_PATH,
+                    detail = markerPath,
+                ),
+            )
+        }
 
         val findings = buildFindings(detectedApps)
         val hiddenFromPackageManager = if (packageVisibility == DangerousPackageVisibility.FULL) {
@@ -434,6 +448,121 @@ class DangerousAppsRepository(
         } catch (_: Exception) {
             false
         }
+    }
+
+    /**
+     * Scene 9.3.0 Alpha13 mounts debugfs at /dev/<random>/debug
+     * and creates a marker file /dev/<random>/scene_mode_category.
+     *
+     * Detection:
+     *   1. Parse /proc/self/mountinfo → extract hash dir from mount_point
+     *   2. Verify /dev/<hash>/scene_mode_category exists
+     *      - access(F_OK) → 0 (permission allows existence check)
+     *      - mkdir(path)  → EEXIST (path already exists as non-dir)
+     *      - stat(path)   → EACCES (file exists but metadata denied)
+     *   3. Fallback: /proc/self/mounts → mount command
+     *
+     * Returns the marker path if detected, null otherwise.
+     */
+    private fun detectSceneDebugfsMount(): String? {
+        // Hash dir regex: 8 characters consisting of lowercase letters and underscores
+        val hashRegex = Regex("^/([a-z_]{8})/debug$")
+
+        // 1. Find the hash directory from mountinfo (preferred)
+        val hashDir = try {
+            File("/proc/self/mountinfo").useLines { lines ->
+                lines.firstNotNullOfOrNull { line ->
+                    val fields = line.split(" ")
+                    val fstypeIdx = fields.indexOf("-")
+                    if (fstypeIdx >= 0 && fstypeIdx + 2 < fields.size &&
+                        fields[fstypeIdx + 1] == "debugfs") {
+                        val match = hashRegex.matchEntire(fields[4].removePrefix("/dev"))
+                        match?.groupValues?.getOrNull(1)
+                    } else null
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+        // 2. Fallback: /proc/self/mounts (format: device mount_point fstype options ...)
+        val hashDir2 = hashDir ?: try {
+            File("/proc/self/mounts").useLines { lines ->
+                lines.firstNotNullOfOrNull { line ->
+                    val parts = line.split(" ").filter { it.isNotEmpty() }
+                    if (parts.size >= 3 && parts[2] == "debugfs") {
+                        val mountPoint = parts[1].removePrefix("/dev")
+                        val match = hashRegex.matchEntire(mountPoint)
+                        match?.groupValues?.getOrNull(1)
+                    } else null
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+        // 3. Fallback: mount command (format: "debugfs on /dev/<hash>/debug type debugfs ...")
+        val hashDir3 = hashDir2 ?: run {
+            var process: Process? = null
+            try {
+                val mountRegex = Regex("debugfs on /dev/([a-z_]{8})/debug")
+                process = ProcessBuilder("mount").redirectErrorStream(true).start()
+                var matchedHash: String? = null
+                process.inputStream.bufferedReader().useLines { lines ->
+                    matchedHash = lines.firstNotNullOfOrNull { line ->
+                        mountRegex.find(line)?.groupValues?.getOrNull(1)
+                    }
+                }
+                process.waitFor(2, TimeUnit.SECONDS)
+                matchedHash
+            } catch (_: Exception) {
+                null
+            } finally {
+                process?.destroy()
+            }
+        }
+
+        val finalHash = hashDir3 ?: return null
+
+        // Verify marker using kernel-level syscall evidence chain:
+        //   access(F_OK) → 0        (File exists)
+        //   mkdir(path)  → EEXIST   (Path already exists as non-directory)
+        //   stat(path)   → EACCES   (File exists but metadata denied)
+        val markerPath = "/dev/$finalHash/scene_mode_category"
+
+        // 1. Precise existence check: distinguish ENOENT from EACCES
+        try {
+            Os.access(markerPath, OsConstants.F_OK)
+        } catch (e: ErrnoException) {
+            if (e.errno == OsConstants.ENOENT) {
+                // File truly does not exist — must short-circuit to avoid
+                // creating a spurious directory via mkdir below.
+                return null
+            }
+            // EACCES or other: file may exist but access denied.
+            // Do NOT short-circuit — fall through to mkdir side-channel.
+        }
+
+        // 2. mkdir side-channel: kernel prioritises EEXIST over EACCES
+        val mkdirEexist = try {
+            Os.mkdir(markerPath, 0)
+            // mkdir succeeded → file did not exist, we just created a
+            // spurious directory. Clean it up immediately.
+            runCatching { Os.remove(markerPath) }
+            false
+        } catch (e: ErrnoException) {
+            e.errno == OsConstants.EEXIST
+        }
+        if (!mkdirEexist) return null
+
+        // 3. stat metadata denial
+        val statDenied = try {
+            Os.stat(markerPath)
+            false // stat succeeded → regular accessible file
+        } catch (e: ErrnoException) {
+            e.errno == OsConstants.EACCES
+        }
+        return if (statDenied) markerPath else null
     }
 
     private data class MutableFinding(

@@ -54,7 +54,6 @@ fun resolveStartupGateState(
                 !notificationPrefs.liveUpdatesPrompted ->
             StartupGateState.REQUIRES_POLICY_REVIEW
 
-        !teePrefs.consentAsked -> StartupGateState.REQUIRES_POLICY_REVIEW
         packageVisibility == InstalledPackageVisibility.RESTRICTED &&
                 !packageVisibilityReviewAcknowledged ->
             StartupGateState.REQUIRES_POLICY_REVIEW

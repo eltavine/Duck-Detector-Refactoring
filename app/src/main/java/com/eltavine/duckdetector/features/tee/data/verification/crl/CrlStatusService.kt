@@ -45,11 +45,16 @@ fun interface CrlFeedFetcher {
     fun fetch(): String
 }
 
+fun interface CrlEmbeddedStatusProvider {
+    @Throws(Exception::class)
+    fun load(): String
+}
+
 class CrlStatusService(
     private val consentStore: TeeNetworkPrefsStore,
     private val networkStatusProvider: CrlNetworkStatusProvider,
     private val feedFetcher: CrlFeedFetcher,
-    private val clock: () -> Long = System::currentTimeMillis,
+    private val embeddedStatusProvider: CrlEmbeddedStatusProvider,
 ) {
 
     constructor(
@@ -59,6 +64,7 @@ class CrlStatusService(
         consentStore = consentStore,
         networkStatusProvider = AndroidCrlNetworkStatusProvider(context.applicationContext),
         feedFetcher = HttpCrlFeedFetcher(),
+        embeddedStatusProvider = AssetsCrlEmbeddedStatusProvider(context.applicationContext),
     )
 
     suspend fun inspect(chain: List<X509Certificate>): CrlStatusResult {
@@ -74,20 +80,40 @@ class CrlStatusService(
         val prefs = consentStore.prefs.first()
         clearLegacyCacheIfNeeded(prefs)
 
-        if (!prefs.consentAsked) {
+        val embeddedResult = loadEmbeddedSnapshot()
+        if (embeddedResult is CrlSnapshotResult.Failure) {
             return CrlStatusResult(
                 networkState = TeeNetworkState(
+                    mode = TeeNetworkMode.ERROR,
+                    summary = embeddedResult.failure.summary,
+                    detail = embeddedResult.failure.detail,
+                ),
+            )
+        }
+        val embeddedEntries = (embeddedResult as CrlSnapshotResult.Success).entries
+
+        if (!prefs.consentAsked) {
+            return buildResult(
+                chain = chain,
+                entries = embeddedEntries,
+                networkState = TeeNetworkState(
                     mode = TeeNetworkMode.CONSENT_REQUIRED,
-                    summary = "Online CRL check is awaiting startup consent.",
+                    summary = "Built-in revocation snapshot is active; online refresh is awaiting startup consent.",
+                    cacheEntries = embeddedEntries.size,
+                    usedCache = true,
                 ),
             )
         }
 
         if (!prefs.consentGranted) {
-            return CrlStatusResult(
+            return buildResult(
+                chain = chain,
+                entries = embeddedEntries,
                 networkState = TeeNetworkState(
                     mode = TeeNetworkMode.SKIPPED,
-                    summary = "Online CRL disabled in Settings.",
+                    summary = "Built-in revocation snapshot is active; online refresh is disabled in Settings.",
+                    cacheEntries = embeddedEntries.size,
+                    usedCache = true,
                 ),
             )
         }
@@ -98,9 +124,9 @@ class CrlStatusService(
             "ConnectivityManager reported no active network path."
         }
 
-        val downloadResult = downloadAndCache()
+        val downloadResult = downloadSnapshot()
         return when (downloadResult) {
-            is CrlDownloadResult.Success -> buildResult(
+            is CrlSnapshotResult.Success -> buildResult(
                 chain = chain,
                 entries = downloadResult.entries,
                 networkState = TeeNetworkState(
@@ -113,36 +139,49 @@ class CrlStatusService(
                 ),
             )
 
-            is CrlDownloadResult.Failure -> buildFailureResult(
-                chain = chain,
-                failure = downloadResult.failure.withPreflightDetail(preflightDetail),
-            )
-        }
-    }
-
-    private suspend fun downloadAndCache(): CrlDownloadResult {
-        return withContext(Dispatchers.IO) {
-            runCatching {
-                val json = feedFetcher.fetch()
-                val entries = parseStatusJson(json)
-                CrlDownloadResult.Success(entries)
-            }.getOrElse { throwable ->
-                CrlDownloadResult.Failure(classifyFailure(throwable))
+            is CrlSnapshotResult.Failure -> {
+                val failure = downloadResult.failure.withPreflightDetail(preflightDetail)
+                buildResult(
+                    chain = chain,
+                    entries = embeddedEntries,
+                    networkState = TeeNetworkState(
+                        mode = TeeNetworkMode.ERROR,
+                        summary = "Online CRL refresh failed; built-in revocation snapshot was used.",
+                        detail = joinDetails(
+                            failure.summary,
+                            failure.detail,
+                        ),
+                        cacheEntries = embeddedEntries.size,
+                        usedCache = true,
+                        usingCacheFallback = true,
+                    ),
+                )
             }
         }
     }
 
-    private fun buildFailureResult(
-        chain: List<X509Certificate>,
-        failure: CrlFailure,
-    ): CrlStatusResult {
-        return CrlStatusResult(
-            networkState = TeeNetworkState(
-                mode = TeeNetworkMode.ERROR,
-                summary = failure.summary,
-                detail = failure.detail,
-            ),
-        )
+    private suspend fun loadEmbeddedSnapshot(): CrlSnapshotResult {
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val json = embeddedStatusProvider.load()
+                val entries = parseStatusJson(json)
+                CrlSnapshotResult.Success(entries)
+            }.getOrElse { throwable ->
+                CrlSnapshotResult.Failure(classifyEmbeddedFailure(throwable))
+            }
+        }
+    }
+
+    private suspend fun downloadSnapshot(): CrlSnapshotResult {
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val json = feedFetcher.fetch()
+                val entries = parseStatusJson(json)
+                CrlSnapshotResult.Success(entries)
+            }.getOrElse { throwable ->
+                CrlSnapshotResult.Failure(classifyFailure(throwable))
+            }
+        }
     }
 
     private fun buildResult(
@@ -193,7 +232,8 @@ class CrlStatusService(
 
     private fun parseStatusJson(json: String): Map<String, CrlEntry> {
         val root = JSONObject(json)
-        val entries = root.optJSONObject("entries") ?: root
+        val entries = root.optJSONObject("entries")
+            ?: throw JSONException("Attestation status feed is missing an entries object.")
         val result = linkedMapOf<String, CrlEntry>()
         val keys = entries.keys()
         while (keys.hasNext()) {
@@ -249,6 +289,25 @@ class CrlStatusService(
         }
     }
 
+    private fun classifyEmbeddedFailure(throwable: Throwable): CrlFailure {
+        return when (throwable) {
+            is JSONException -> CrlFailure(
+                summary = "Built-in CRL snapshot could not be parsed.",
+                detail = throwable.message,
+            )
+
+            is IOException -> CrlFailure(
+                summary = "Built-in CRL snapshot could not be loaded.",
+                detail = throwable.message,
+            )
+
+            else -> CrlFailure(
+                summary = "Built-in CRL snapshot failed.",
+                detail = throwable.message,
+            )
+        }
+    }
+
     private fun joinDetails(
         vararg parts: String?,
     ): String? {
@@ -267,7 +326,6 @@ class CrlStatusService(
     }
 
     companion object {
-        private const val STATUS_URL = "https://android.googleapis.com/attestation/status"
         private const val NETWORK_TIMEOUT_MS = 5_000
         private const val STATUS_REVOKED = "REVOKED"
         private const val STATUS_SUSPENDED = "SUSPENDED"
@@ -335,10 +393,32 @@ data class RevokedCertificate(
     val reason: String,
 )
 
-private sealed interface CrlDownloadResult {
-    data class Success(val entries: Map<String, CrlEntry>) : CrlDownloadResult
+internal class AssetsCrlEmbeddedStatusProvider(
+    private val context: Context,
+) : CrlEmbeddedStatusProvider {
 
-    data class Failure(val failure: CrlFailure) : CrlDownloadResult
+    override fun load(): String {
+        val assetManager = context.assets
+        val assetName = if (assetManager.list("").orEmpty().contains(GENERATED_ASSET_FILE_NAME)) {
+            GENERATED_ASSET_FILE_NAME
+        } else {
+            FALLBACK_ASSET_FILE_NAME
+        }
+        return assetManager.open(assetName).bufferedReader(Charsets.UTF_8).use { reader ->
+            reader.readText()
+        }
+    }
+
+    private companion object {
+        private const val GENERATED_ASSET_FILE_NAME = "tee_attestation_status.generated.json"
+        private const val FALLBACK_ASSET_FILE_NAME = "tee_attestation_status.json"
+    }
+}
+
+private sealed interface CrlSnapshotResult {
+    data class Success(val entries: Map<String, CrlEntry>) : CrlSnapshotResult
+
+    data class Failure(val failure: CrlFailure) : CrlSnapshotResult
 }
 
 private data class CrlFailure(

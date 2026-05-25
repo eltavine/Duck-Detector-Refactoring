@@ -207,7 +207,10 @@ jobs:
 
           start_time=$(date +%s)
           build_time_utc=$(date -u +%Y%m%d%H%M%S)
-          ./gradlew -Pduckdetector.buildTimeUtc="${build_time_utc}" :app:assembleRelease
+          ./gradlew \
+            -Pduckdetector.buildTimeUtc="${build_time_utc}" \
+            -Pduckdetector.teeCrl.refresh=true \
+            :app:assembleRelease
           end_time=$(date +%s)
 
           duration_seconds=$((end_time - start_time))

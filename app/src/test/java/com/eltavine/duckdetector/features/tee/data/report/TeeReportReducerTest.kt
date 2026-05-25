@@ -1703,20 +1703,22 @@ class TeeReportReducerTest {
     }
 
     @Test
-    fun `disabled crl state uses settings wording`() {
+    fun `disabled online crl refresh still reports built in snapshot`() {
         val report = reducer.reduce(
             baseArtifacts(
                 networkState = TeeNetworkState(
                     mode = TeeNetworkMode.SKIPPED,
-                    summary = "Online CRL disabled in Settings.",
+                    summary = "Built-in revocation snapshot is active; online refresh is disabled in Settings.",
+                    cacheEntries = 1,
+                    usedCache = true,
                 ),
             ),
         )
 
         assertTrue(report.sections.single { it.title == "Trust" }.items.any {
-            it.title == "CRL" && it.body.contains("Disabled in Settings")
+            it.title == "CRL" && it.body.contains("Built-in snapshot")
         })
-        assertTrue(report.signals.any { it.label == "CRL" && it.value == "Disabled" })
+        assertTrue(report.signals.any { it.label == "CRL" && it.value == "Built-in" })
     }
 
     @Test
@@ -1725,18 +1727,21 @@ class TeeReportReducerTest {
             baseArtifacts(
                 networkState = TeeNetworkState(
                     mode = TeeNetworkMode.ERROR,
-                    summary = "CRL refresh timed out.",
+                    summary = "Online CRL refresh failed; built-in revocation snapshot was used.",
                     detail = "CRL refresh timed out.",
+                    cacheEntries = 1,
+                    usedCache = true,
+                    usingCacheFallback = true,
                 ),
             ),
         )
 
         assertTrue(report.sections.single { it.title == "Trust" }.items.any {
             it.title == "CRL" &&
-                    it.body.contains("Refresh failed") &&
+                    it.body.contains("Built-in snapshot") &&
                     it.body.contains("timed out")
         })
-        assertTrue(report.signals.any { it.label == "CRL" && it.value == "Error" && it.level == TeeSignalLevel.WARN })
+        assertTrue(report.signals.any { it.label == "CRL" && it.value == "Built-in" && it.level == TeeSignalLevel.WARN })
     }
 
     @Test

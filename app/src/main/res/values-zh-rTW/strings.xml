@@ -27,9 +27,9 @@ limitations under the License.
     <string name="user_agreement_title">使用者協議</string>
     <string name="user_agreement_content" formatted="false">使用 Duck Detector 即表示您同意以下條款：&#10;&#10;1. 使用目的&#10;本應用僅用於教育用途及個人安全評估，幫助使用者了解其本人裝置的安全狀態。&#10;&#10;2. 不提供保證&#10;本應用按「現況」提供，不附帶任何明示或暗示保證。開發者不保證檢測結果的準確性、完整性或可靠性。&#10;&#10;3. 使用者責任&#10;您需自行對本應用的使用方式及由此產生的任何後果負責。&#10;&#10;4. 法律遵循&#10;您同意依照所有適用的地方法律、國家法律及國際法規使用本應用。</string>
     <string name="disclaimer_title">免責聲明</string>
-    <string name="disclaimer_content" formatted="false">重要提示：&#10;&#10;1. 檢測侷限性&#10;Duck Detector 使用多種方法檢測裝置安全狀態，但沒有任何檢測方法能做到 100&#37; 準確。結果應視為提示資訊，而非最終定論。&#10;&#10;2. 誤報與漏報&#10;本應用可能出現誤報或漏報。請務必結合專業安全工具與您自己的核驗進行全面判斷。&#10;&#10;3. 免責條款&#10;對於因使用或無法使用本應用而導致的任何直接、間接、附帶、特殊或後果性損失，Duck Detector 的開發者、貢獻者和散佈者概不承擔責任。&#10;&#10;4. 第三方服務&#10;如果您允許線上吊銷檢查，應用可能會存取 Google 的 attestation revocation endpoint。安全掃描本身仍在您的裝置本地執行，檢測結果也不會被刻意上傳為掃描遙測。</string>
+    <string name="disclaimer_content" formatted="false">重要提示：&#10;&#10;1. 檢測侷限性&#10;Duck Detector 使用多種方法檢測裝置安全狀態，但沒有任何檢測方法能做到 100&#37; 準確。結果應視為提示資訊，而非最終定論。&#10;&#10;2. 誤報與漏報&#10;本應用可能出現誤報或漏報。請務必結合專業安全工具與您自己的核驗進行全面判斷。&#10;&#10;3. 免責條款&#10;對於因使用或無法使用本應用而導致的任何直接、間接、附帶、特殊或後果性損失，Duck Detector 的開發者、貢獻者和散佈者概不承擔責任。&#10;&#10;4. 第三方服務&#10;TEE 吊銷檢查預設使用應用內建快照。如果您允許線上吊銷庫更新，應用可能會存取 Google 的 attestation revocation endpoint。安全掃描本身仍在您的裝置本地執行，檢測結果也不會被刻意上傳為掃描遙測。</string>
     <string name="privacy_notice_title">隱私說明</string>
-    <string name="privacy_notice_content" formatted="false">隱私摘要：安全檢查在您的裝置本地執行。檢測結果不會被刻意上傳為掃描遙測。如果您允許線上吊銷檢查，應用可能會存取 Google 的 attestation revocation endpoint。</string>
+    <string name="privacy_notice_content" formatted="false">隱私摘要：安全檢查在您的裝置本地執行。檢測結果不會被刻意上傳為掃描遙測。TEE 吊銷檢查預設使用應用內建快照；如果您允許線上吊銷庫更新，應用可能會存取 Google 的 attestation revocation endpoint。</string>
     <string name="timer_elapsed">已等待 30 秒</string>
     <string name="timer_waiting">請等待 %1$d 秒</string>
     <string name="fully_reviewed">已完整閱讀</string>
@@ -39,9 +39,9 @@ limitations under the License.
     <string name="agreement_acknowledgement">繼續即表示您已閱讀並同意這些條款。</string>
     <string name="settings_title">設定</string>
     <string name="settings_subtitle">線上驗證路徑的執行階段控制。</string>
-    <string name="settings_crl_title">允許線上 CRL 檢查</string>
-    <string name="settings_crl_summary">在 TEE 驗證期間查詢 Google 的 attestation revocation feed。</string>
-    <string name="settings_crl_footer">變更會立即套用到 TEE 偵測器，其他模組不受影響。</string>
+    <string name="settings_crl_title">允許線上重新整理 CRL</string>
+    <string name="settings_crl_summary">TEE 吊銷檢查始終使用內建快照；此開關只允許取得 Google 最新 attestation revocation feed。</string>
+    <string name="settings_crl_footer">變更會立即套用到線上重新整理行為。內建 TEE 吊銷檢查始終保持啟用。</string>
     <string name="about_title">關於</string>
     <string name="about_subtitle">專案連結與建置中繼資料。</string>
     <string name="about_label_version">版本</string>
@@ -52,7 +52,7 @@ limitations under the License.
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_label_build_hash">建置雜湊</string>
     <string name="about_label_privacy">隱私 / 資料使用</string>
-    <string name="about_privacy_summary">檢查在裝置本地執行。線上 CRL 查詢為可選功能，只有在您於設定中啟用後才會執行。</string>
+    <string name="about_privacy_summary">檢查在裝置本地執行。應用會內建 TEE 吊銷快照；線上 CRL 重新整理為可選功能，只有在您於設定中啟用後才會執行。</string>
     <string name="about_label_copy_build_info">複製建置資訊</string>
     <string name="about_copy_build_info_summary">複製版本、建置時間與建置雜湊</string>
     <string name="about_clipboard_label">Duck Detector 建置資訊</string>
@@ -64,6 +64,8 @@ limitations under the License.
     <string name="author_summary_baka">TEE 與 Zygisk</string>
     <string name="author_summary_xiaotong">TEE（C++、Kotlin）</string>
     <string name="author_summary_wxx">CI（Kotlin）</string>
+    <string name="author_summary_aviraxp">SELinux 與 LSPosed 誤報回報</string>
+    <string name="author_summary_5ec1cff">SELinux 與 LSPosed 誤報發現</string>
     <string name="author_swipe_hint_single">左右滑動以瀏覽作者。</string>
     <string name="author_swipe_hint_paged">左右滑動以瀏覽作者。%1$d/%2$d</string>
     <string name="author_boundary_toast">終點</string>
@@ -104,7 +106,7 @@ limitations under the License.
     <string name="startup_preparing_title">正在準備啟動</string>
     <string name="startup_before_scan_title">掃描之前</string>
     <string name="startup_loading_detail">偏好設定與 PackageManager 可見性仍在載入中。在此完成前，偵測器 ViewModel 會保持暫停。</string>
-    <string name="startup_intro_detail">請在偵測開始前完成必要選項。通知、Live Update 路由、CRL 連線與 PackageManager 可見性會在這裡一併檢查。在下方所有必要卡片都處理完成前，偵測流程會持續被阻擋。</string>
+    <string name="startup_intro_detail">請在偵測開始前完成必要選項。通知、Live Update 路由、CRL 線上重新整理與 PackageManager 可見性會在這裡一併檢查。在下方所有必要卡片都處理完成前，偵測流程會持續被阻擋。</string>
     <string name="startup_loading_state">正在載入啟動狀態…</string>
     <string name="startup_progress_resolved">已完成 %1$d / %2$d 個啟動卡片</string>
     <string name="startup_loading_dependencies_title">正在載入啟動相依項</string>
@@ -116,6 +118,7 @@ limitations under the License.
     <string name="startup_status_waiting">等待中</string>
     <string name="startup_status_regular">一般</string>
     <string name="startup_status_local">本地</string>
+    <string name="startup_status_optional">可選</string>
     <string name="startup_status_acknowledged">已確認</string>
     <string name="startup_status_review_later">稍後檢查</string>
     <string name="startup_notifications_title">通知</string>
@@ -141,15 +144,15 @@ limitations under the License.
     <string name="startup_live_update_use_regular">使用一般通知</string>
     <string name="startup_live_update_regular_headline">已選擇一般通知。</string>
     <string name="startup_live_update_regular_detail">提升型持續通知將保持停用，掃描進度會改用一般通知路徑。</string>
-    <string name="startup_crl_title">CRL 連線</string>
-    <string name="startup_crl_prompt_headline">請選擇是否允許 TEE 吊銷檢查使用網路。</string>
-    <string name="startup_crl_prompt_detail">允許連線後，Duck Detector 可在 TEE 驗證期間查詢 Google 的 attestation revocation feed。本地模式會略過線上重新整理。</string>
-    <string name="startup_crl_allow_network">允許連線</string>
-    <string name="startup_crl_local_only">僅本地</string>
+    <string name="startup_crl_title">CRL 線上重新整理</string>
+    <string name="startup_crl_prompt_headline">請選擇是否允許 TEE 吊銷檢查取得線上更新。</string>
+    <string name="startup_crl_prompt_detail">Duck Detector 始終會檢查內建吊銷快照。允許連線後，可在 TEE 驗證期間取得 Google 最新 attestation revocation feed。</string>
+    <string name="startup_crl_allow_network">允許重新整理</string>
+    <string name="startup_crl_local_only">僅內建庫</string>
     <string name="startup_crl_ready_headline">已允許線上 CRL 重新整理。</string>
-    <string name="startup_crl_ready_detail">在網路條件允許時，TEE 驗證可重新整理 Google 的 attestation revocation feed。</string>
-    <string name="startup_crl_local_headline">TEE 吊銷檢查僅限本地。</string>
-    <string name="startup_crl_local_detail">在您重新於設定中啟用之前，Duck Detector 不會執行線上 CRL 重新整理。</string>
+    <string name="startup_crl_ready_detail">TEE 驗證會檢查內建快照，並可在網路條件允許時重新整理 Google 的 attestation revocation feed。</string>
+    <string name="startup_crl_local_headline">TEE 吊銷檢查使用內建快照。</string>
+    <string name="startup_crl_local_detail">在您重新於設定中啟用之前，Duck Detector 不會執行線上 CRL 重新整理。內建吊銷檢查始終保持啟用。</string>
     <string name="startup_package_manager_title">PackageManager</string>
     <string name="startup_package_restricted_headline">套件清單看起來受到限制或過濾。</string>
     <string name="startup_package_restricted_detail">PackageManager 僅暴露了 %1$d 個已安裝套件。在可見性受限、範圍化清單或類似 HMA 的過濾下，Dangerous Apps 與相關探針可能低報已安裝工具。</string>

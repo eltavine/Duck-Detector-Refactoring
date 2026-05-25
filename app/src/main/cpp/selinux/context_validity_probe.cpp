@@ -16,8 +16,10 @@
 
 #include "selinux/context_validity_probe.h"
 
+#include <atomic>
 #include <cerrno>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
@@ -31,6 +33,7 @@
 
 namespace duckdetector::selinux {
     namespace {
+        constexpr int kSelinuxCbAudit = 1;
         constexpr const char *kProcAttrCurrentPath = "/proc/self/attr/current";
         constexpr const char *kSelinuxContextPath = "/sys/fs/selinux/context";
         constexpr const char *kExpectedCarrierType = "app_zygote";
@@ -43,7 +46,8 @@ namespace duckdetector::selinux {
         constexpr const char *kNegativeFileControlContext =
                 "u:object_r:duckdetector_context_oracle_sentinel_file:s0";
         constexpr const char *kQueryMethod = "raw selinuxfs write";
-        constexpr const char *kDirtyPolicyQueryMethod = "android.os.SELinux.checkSELinuxAccess";
+        constexpr const char *kDirtyPolicyQueryMethod = "selinux_check_access";
+        constexpr const char *kProbeMarkerPrefix = "duckdetector_probe=";
         constexpr const char *kProcessClass = "process";
         constexpr const char *kDyntransitionPermission = "dyntransition";
         constexpr const char *kCapabilityClass = "capability";
@@ -67,6 +71,7 @@ namespace duckdetector::selinux {
         constexpr const char *kAdbrootContext = "u:r:adbroot:s0";
         constexpr const char *kUntrustedAppContext = "u:r:untrusted_app:s0";
         constexpr const char *kMagiskContext = "u:r:magisk:s0";
+        constexpr const char *kDroidspacesdContext = "u:r:droidspacesd:s0";
         constexpr const char *kLsposedFileContext = "u:object_r:lsposed_file:s0";
         constexpr const char *kMsdAppContext = "u:r:msd_app:s0";
         constexpr const char *kMsdDaemonContext = "u:r:msd_daemon:s0";
@@ -77,6 +82,17 @@ namespace duckdetector::selinux {
         constexpr const char *kAdbDataFileContext = "u:object_r:adb_data_file:s0";
         constexpr const char *kDirtyPolicyNegativeControlContext =
                 "u:r:duckdetector_dirty_policy_sentinel:s0";
+
+        using security_class_t = unsigned short;
+
+        union selinux_callback {
+            int (*func_log)(int type, const char *fmt, ...);
+
+            int
+            (*func_audit)(void *auditdata, security_class_t cls, char *msgbuf, size_t msgbufsize);
+
+            void *raw;
+        };
 
         using IsSelinuxEnabledFn = int (*)();
         using SecurityGetEnforceFn = int (*)();
@@ -91,6 +107,8 @@ namespace duckdetector::selinux {
                 const char *perm,
                 void *auditdata
         );
+        using SelinuxSetCallbackFn = void (*)(int type, selinux_callback callback);
+        using SelinuxGetCallbackFn = selinux_callback (*)(int type);
 
         struct LoadedSelinuxSymbols {
             void *handle = nullptr;
@@ -102,6 +120,8 @@ namespace duckdetector::selinux {
             GetFileConFn getfilecon = nullptr;
             FreeConFn freecon = nullptr;
             SelinuxCheckAccessFn check_access = nullptr;
+            SelinuxSetCallbackFn set_callback = nullptr;
+            SelinuxGetCallbackFn get_callback = nullptr;
         };
 
         struct ContextCheckResult {
@@ -126,6 +146,8 @@ namespace duckdetector::selinux {
             jmethodID check_access = nullptr;
             bool available = false;
         };
+
+        std::atomic<unsigned int> g_dirty_policy_probe_counter{0};
 
         std::string trim(std::string value) {
             while (!value.empty() &&
@@ -160,6 +182,10 @@ namespace duckdetector::selinux {
             symbols.freecon = resolve_symbol<FreeConFn>(RTLD_DEFAULT, "freecon");
             symbols.check_access = resolve_symbol<SelinuxCheckAccessFn>(RTLD_DEFAULT,
                                                                         "selinux_check_access");
+            symbols.set_callback = resolve_symbol<SelinuxSetCallbackFn>(RTLD_DEFAULT,
+                                                                        "selinux_set_callback");
+            symbols.get_callback = resolve_symbol<SelinuxGetCallbackFn>(RTLD_DEFAULT,
+                                                                        "selinux_get_callback");
 
 #ifdef RTLD_NOLOAD
             if (symbols.is_selinux_enabled == nullptr ||
@@ -168,7 +194,9 @@ namespace duckdetector::selinux {
                 symbols.getpidcon == nullptr ||
                 symbols.getfilecon == nullptr ||
                 symbols.freecon == nullptr ||
-                symbols.check_access == nullptr) {
+                symbols.check_access == nullptr ||
+                symbols.set_callback == nullptr ||
+                symbols.get_callback == nullptr) {
                 symbols.handle = dlopen("libselinux.so", RTLD_NOW | RTLD_NOLOAD);
                 if (symbols.handle != nullptr) {
                     symbols.owns_handle = true;
@@ -200,6 +228,18 @@ namespace duckdetector::selinux {
                         symbols.check_access = resolve_symbol<SelinuxCheckAccessFn>(
                                 symbols.handle,
                                 "selinux_check_access"
+                        );
+                    }
+                    if (symbols.set_callback == nullptr) {
+                        symbols.set_callback = resolve_symbol<SelinuxSetCallbackFn>(
+                                symbols.handle,
+                                "selinux_set_callback"
+                        );
+                    }
+                    if (symbols.get_callback == nullptr) {
+                        symbols.get_callback = resolve_symbol<SelinuxGetCallbackFn>(
+                                symbols.handle,
+                                "selinux_get_callback"
                         );
                     }
                 }
@@ -249,6 +289,66 @@ namespace duckdetector::selinux {
             access.check_access = nullptr;
             access.available = false;
         }
+
+        int dirty_policy_audit_callback(
+                void *auditdata,
+                security_class_t,
+                char *msgbuf,
+                size_t msgbufsize
+        ) {
+            const char *marker =
+                    auditdata != nullptr ? static_cast<const char *>(auditdata) : "dirty_policy";
+            return std::snprintf(msgbuf, msgbufsize, "%s%s", kProbeMarkerPrefix, marker);
+        }
+
+        std::string make_dirty_policy_probe_marker() {
+            return "dddirty_" + std::to_string(getpid()) + "_" +
+                   std::to_string(++g_dirty_policy_probe_counter);
+        }
+
+        class ScopedDirtyPolicyAuditMarker {
+        public:
+            explicit ScopedDirtyPolicyAuditMarker(const LoadedSelinuxSymbols &symbols)
+                    : symbols_(symbols) {
+                if (symbols_.set_callback == nullptr || symbols_.get_callback == nullptr) {
+                    return;
+                }
+
+                previous_callback_ = symbols_.get_callback(kSelinuxCbAudit);
+                selinux_callback callback{};
+                callback.func_audit = dirty_policy_audit_callback;
+                marker_ = make_dirty_policy_probe_marker();
+                symbols_.set_callback(kSelinuxCbAudit, callback);
+                installed_ = true;
+            }
+
+            ~ScopedDirtyPolicyAuditMarker() {
+                if (installed_ && symbols_.set_callback != nullptr) {
+                    symbols_.set_callback(kSelinuxCbAudit, previous_callback_);
+                }
+            }
+
+            ScopedDirtyPolicyAuditMarker(const ScopedDirtyPolicyAuditMarker &) = delete;
+            ScopedDirtyPolicyAuditMarker &operator=(const ScopedDirtyPolicyAuditMarker &) = delete;
+
+            bool installed() const {
+                return installed_;
+            }
+
+            const std::string &marker() const {
+                return marker_;
+            }
+
+            void *auditdata() {
+                return installed_ ? marker_.data() : nullptr;
+            }
+
+        private:
+            const LoadedSelinuxSymbols &symbols_;
+            selinux_callback previous_callback_{};
+            bool installed_ = false;
+            std::string marker_;
+        };
 
         std::optional<std::string> call_context_getter(
                 const LoadedSelinuxSymbols &symbols,
@@ -405,11 +505,12 @@ namespace duckdetector::selinux {
                 const char *source,
                 const char *target,
                 const char *target_class,
-                const char *permission
+                const char *permission,
+                void *auditdata = nullptr
         ) {
             if (symbols.check_access != nullptr) {
                 errno = 0;
-                const int result = symbols.check_access(source, target, target_class, permission, nullptr);
+                const int result = symbols.check_access(source, target, target_class, permission, auditdata);
                 const int call_errno = errno;
                 if (result == 0) {
                     return true;
@@ -474,11 +575,12 @@ namespace duckdetector::selinux {
                 const char *source,
                 const char *target,
                 const char *target_class,
-                const char *permission
+                const char *permission,
+                void *auditdata = nullptr
         ) {
             AccessPairResult result;
-            result.first = check_access_rule(symbols, source, target, target_class, permission);
-            result.second = check_access_rule(symbols, source, target, target_class, permission);
+            result.first = check_access_rule(symbols, source, target, target_class, permission, auditdata);
+            result.second = check_access_rule(symbols, source, target, target_class, permission, auditdata);
             result.stable = result.first.has_value() == result.second.has_value() &&
                             (!result.first.has_value() || *result.first == *result.second);
             return result;
@@ -557,20 +659,33 @@ namespace duckdetector::selinux {
             }
 
             snapshot.probe_attempted = true;
+            ScopedDirtyPolicyAuditMarker audit_marker(symbols);
+            if (audit_marker.installed()) {
+                snapshot.notes.push_back(
+                        std::string("Audit marker: ") + kProbeMarkerPrefix + audit_marker.marker()
+                );
+            } else {
+                snapshot.notes.push_back(
+                        "Audit marker unavailable because libselinux audit callback symbols were missing."
+                );
+            }
+            void *auditdata = audit_marker.auditdata();
 
             const AccessPairResult access_control = check_access_rule_pair(
                     symbols,
                     kExpectedCarrierPrefix,
                     kIsolatedAppContext,
                     kProcessClass,
-                    kDyntransitionPermission
+                    kDyntransitionPermission,
+                    auditdata
             );
             const AccessPairResult negative_control = check_access_rule_pair(
                     symbols,
                     kUntrustedAppContext,
                     kDirtyPolicyNegativeControlContext,
                     kBinderClass,
-                    kCallPermission
+                    kCallPermission,
+                    auditdata
             );
 
             snapshot.access_control_allowed = pair_allowed_value(access_control);
@@ -585,20 +700,23 @@ namespace duckdetector::selinux {
             append_access_note(snapshot, "Access control", access_control);
             append_access_note(snapshot, "Negative control", negative_control);
 
-            const AccessPairResult system_server_execmem = check_access_rule_pair(symbols, kSystemServerContext, kSystemServerContext, kProcessClass, kExecmemPermission);
-            const AccessPairResult fsck_sys_admin = check_access_rule_pair(symbols, kFsckUntrustedContext, kFsckUntrustedContext, kCapabilityClass, kSysAdminPermission);
-            const AccessPairResult shell_su_transition = check_access_rule_pair(symbols, kShellContext, kSuContext, kProcessClass, kTransitionPermission);
-            const AccessPairResult adbd_adbroot_binder_call = check_access_rule_pair(symbols, kAdbdContext, kAdbrootContext, kBinderClass, kCallPermission);
-            const AccessPairResult magisk_binder_call = check_access_rule_pair(symbols, kUntrustedAppContext, kMagiskContext, kBinderClass, kCallPermission);
-            const AccessPairResult ksu_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kKsuFileContext, kFileClass, kReadPermission);
-            const AccessPairResult lsposed_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kLsposedFileContext, kFileClass, kReadPermission);
-            const AccessPairResult msd_app_daemon_connect = check_access_rule_pair(symbols, kMsdAppContext, kMsdDaemonContext, kUnixStreamSocketClass, kConnectToPermission);
-            const AccessPairResult msd_daemon_self_connect = check_access_rule_pair(symbols, kMsdDaemonContext, kMsdDaemonContext, kUnixStreamSocketClass, kConnectToPermission);
-            const AccessPairResult msd_daemon_selinuxfs_read = check_access_rule_pair(symbols, kMsdDaemonContext, kSelinuxfsContext, kFileClass, kReadPermission);
-            const AccessPairResult msd_daemon_configfs_dir_search = check_access_rule_pair(symbols, kMsdDaemonContext, kConfigfsContext, kDirClass, kSearchPermission);
-            const AccessPairResult msd_daemon_configfs_file_write = check_access_rule_pair(symbols, kMsdDaemonContext, kConfigfsContext, kFileClass, kWritePermission);
-            const AccessPairResult xposed_data_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kXposedDataContext, kFileClass, kReadPermission);
-            const AccessPairResult zygote_adb_data_search = check_access_rule_pair(symbols, kZygoteContext, kAdbDataFileContext, kDirClass, kSearchPermission);
+            const AccessPairResult system_server_execmem = check_access_rule_pair(symbols, kSystemServerContext, kSystemServerContext, kProcessClass, kExecmemPermission, auditdata);
+            const AccessPairResult fsck_sys_admin = check_access_rule_pair(symbols, kFsckUntrustedContext, kFsckUntrustedContext, kCapabilityClass, kSysAdminPermission, auditdata);
+            const AccessPairResult shell_su_transition = check_access_rule_pair(symbols, kShellContext, kSuContext, kProcessClass, kTransitionPermission, auditdata);
+            const AccessPairResult adbd_adbroot_binder_call = check_access_rule_pair(symbols, kAdbdContext, kAdbrootContext, kBinderClass, kCallPermission, auditdata);
+            const AccessPairResult magisk_binder_call = check_access_rule_pair(symbols, kUntrustedAppContext, kMagiskContext, kBinderClass, kCallPermission, auditdata);
+            const AccessPairResult ksu_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kKsuFileContext, kFileClass, kReadPermission, auditdata);
+            const AccessPairResult lsposed_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kLsposedFileContext, kFileClass, kReadPermission, auditdata);
+            const AccessPairResult magisk_droidspacesd_transition = check_access_rule_pair(symbols, kMagiskContext, kDroidspacesdContext, kProcessClass, kDyntransitionPermission, auditdata);
+            const AccessPairResult su_droidspacesd_transition = check_access_rule_pair(symbols, kSuContext, kDroidspacesdContext, kProcessClass, kDyntransitionPermission, auditdata);
+            const AccessPairResult system_server_droidspacesd_binder_call = check_access_rule_pair(symbols, kSystemServerContext, kDroidspacesdContext, kBinderClass, kCallPermission, auditdata);
+            const AccessPairResult msd_app_daemon_connect = check_access_rule_pair(symbols, kMsdAppContext, kMsdDaemonContext, kUnixStreamSocketClass, kConnectToPermission, auditdata);
+            const AccessPairResult msd_daemon_self_connect = check_access_rule_pair(symbols, kMsdDaemonContext, kMsdDaemonContext, kUnixStreamSocketClass, kConnectToPermission, auditdata);
+            const AccessPairResult msd_daemon_selinuxfs_read = check_access_rule_pair(symbols, kMsdDaemonContext, kSelinuxfsContext, kFileClass, kReadPermission, auditdata);
+            const AccessPairResult msd_daemon_configfs_dir_search = check_access_rule_pair(symbols, kMsdDaemonContext, kConfigfsContext, kDirClass, kSearchPermission, auditdata);
+            const AccessPairResult msd_daemon_configfs_file_write = check_access_rule_pair(symbols, kMsdDaemonContext, kConfigfsContext, kFileClass, kWritePermission, auditdata);
+            const AccessPairResult xposed_data_file_read = check_access_rule_pair(symbols, kUntrustedAppContext, kXposedDataContext, kFileClass, kReadPermission, auditdata);
+            const AccessPairResult zygote_adb_data_search = check_access_rule_pair(symbols, kZygoteContext, kAdbDataFileContext, kDirClass, kSearchPermission, auditdata);
 
             snapshot.system_server_execmem_allowed = pair_allowed_value(system_server_execmem);
             snapshot.fsck_sys_admin_allowed = pair_allowed_value(fsck_sys_admin);
@@ -609,6 +727,9 @@ namespace duckdetector::selinux {
             snapshot.magisk_binder_call_allowed = pair_allowed_value(magisk_binder_call);
             snapshot.ksu_file_read_allowed = pair_allowed_value(ksu_file_read);
             snapshot.lsposed_file_read_allowed = pair_allowed_value(lsposed_file_read);
+            snapshot.magisk_droidspacesd_transition_allowed = pair_allowed_value(magisk_droidspacesd_transition);
+            snapshot.su_droidspacesd_transition_allowed = pair_allowed_value(su_droidspacesd_transition);
+            snapshot.system_server_droidspacesd_binder_call_allowed = pair_allowed_value(system_server_droidspacesd_binder_call);
             snapshot.msd_app_daemon_connect_allowed = pair_allowed_value(msd_app_daemon_connect);
             snapshot.msd_daemon_self_connect_allowed = pair_allowed_value(msd_daemon_self_connect);
             snapshot.msd_daemon_selinuxfs_read_allowed = pair_allowed_value(msd_daemon_selinuxfs_read);
@@ -624,6 +745,9 @@ namespace duckdetector::selinux {
                               magisk_binder_call.stable &&
                               ksu_file_read.stable &&
                               lsposed_file_read.stable &&
+                              magisk_droidspacesd_transition.stable &&
+                              su_droidspacesd_transition.stable &&
+                              system_server_droidspacesd_binder_call.stable &&
                               msd_app_daemon_connect.stable &&
                               msd_daemon_self_connect.stable &&
                               msd_daemon_selinuxfs_read.stable &&
@@ -644,6 +768,9 @@ namespace duckdetector::selinux {
             append_access_note(snapshot, "untrusted_app -> magisk binder", magisk_binder_call);
             append_access_note(snapshot, "untrusted_app -> ksu_file read", ksu_file_read);
             append_access_note(snapshot, "untrusted_app -> lsposed_file read", lsposed_file_read);
+            append_access_note(snapshot, "magisk -> droidspacesd dyntransition", magisk_droidspacesd_transition);
+            append_access_note(snapshot, "su -> droidspacesd dyntransition", su_droidspacesd_transition);
+            append_access_note(snapshot, "system_server -> droidspacesd binder", system_server_droidspacesd_binder_call);
             append_access_note(snapshot, "msd_app -> msd_daemon connectto", msd_app_daemon_connect);
             append_access_note(snapshot, "msd_daemon -> msd_daemon connectto", msd_daemon_self_connect);
             append_access_note(snapshot, "msd_daemon -> selinuxfs read", msd_daemon_selinuxfs_read);

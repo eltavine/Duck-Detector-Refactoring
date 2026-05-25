@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NetworkCheck
@@ -45,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
@@ -76,17 +78,21 @@ fun SettingsScreen(
         } else {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .align(Alignment.TopCenter)
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth()
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 18.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     WrapSafeText(
                         text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                        ),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     WrapSafeText(
@@ -97,6 +103,7 @@ fun SettingsScreen(
                 }
 
                 Surface(
+                    modifier = Modifier.fillMaxWidth(),
                     shape = ShapeTokens.CornerExtraLarge,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
@@ -166,13 +173,13 @@ fun SettingsScreen(
                     buildHash = uiState.buildHash,
                 )
 
-                AuthorCard()
-
                 OpenSourceLicensesEntry(
                     onClick = { showingLicenses = true },
                 )
 
-                Spacer(modifier = Modifier.height(88.dp))
+                AuthorCard()
+
+                Spacer(modifier = Modifier.height(72.dp))
             }
         }
     }

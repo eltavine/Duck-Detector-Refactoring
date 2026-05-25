@@ -101,7 +101,7 @@ class AppShellStateTest {
     }
 
     @Test
-    fun `unanswered CRL prefs still block after notification onboarding`() {
+    fun `unanswered CRL refresh prefs do not block detector creation`() {
         val gateState = resolveStartupGateState(
             teePrefs = TeeNetworkPrefs(
                 consentAsked = false,
@@ -123,8 +123,8 @@ class AppShellStateTest {
             packageVisibilityReviewAcknowledged = false,
         )
 
-        assertEquals(StartupGateState.REQUIRES_POLICY_REVIEW, gateState)
-        assertFalse(shouldCreateDetectorViewModels(gateState))
+        assertEquals(StartupGateState.READY, gateState)
+        assertTrue(shouldCreateDetectorViewModels(gateState))
     }
 
     @Test

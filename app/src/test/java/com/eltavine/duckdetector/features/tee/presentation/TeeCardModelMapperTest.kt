@@ -87,7 +87,7 @@ class TeeCardModelMapperTest {
     }
 
     @Test
-    fun `skipped network state no longer exposes enable action`() {
+    fun `skipped online refresh state no longer exposes enable action`() {
         val model = mapper.map(
             report = TeeReport(
                 stage = TeeScanStage.READY,
@@ -105,14 +105,18 @@ class TeeCardModelMapperTest {
                 certificates = emptyList(),
                 networkState = TeeNetworkState(
                     mode = TeeNetworkMode.SKIPPED,
-                    summary = "Online CRL disabled in Settings.",
+                    summary = "Built-in revocation snapshot is active; online refresh is disabled in Settings.",
+                    usedCache = true,
                 ),
             ),
             isExpanded = false,
         )
 
         assertTrue(model.actions.none { it.label.contains("CRL", ignoreCase = true) })
-        assertEquals("Online CRL disabled in Settings.", model.networkState.summary)
+        assertEquals(
+            "Built-in revocation snapshot is active; online refresh is disabled in Settings.",
+            model.networkState.summary,
+        )
         assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.networkState.status)
     }
 

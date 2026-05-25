@@ -72,6 +72,48 @@ class LSPosedLogcatProbeTest {
     }
 
     @Test
+    fun `duckdetector marked selinux avc line does not become lsposed hit`() {
+        val probe = LSPosedLogcatProbe()
+        val result = probe.evaluate(
+            mapOf(
+                "overview" to LSPosedLogcatCommandOutput(
+                    output = """
+                        W/auditd( 123): type=1400 audit(0.0:123): avc: denied { read } for scontext=u:r:untrusted_app:s0:c1,c2 tcontext=u:object_r:lsposed_file:s0 tclass=file permissive=0 duckdetector_probe=dddirty_123_1
+                    """.trimIndent(),
+                ),
+                "tag:LSPosed" to LSPosedLogcatCommandOutput(),
+                "tag:LSPosed-Bridge" to LSPosedLogcatCommandOutput(),
+                "tag:LSPosedService" to LSPosedLogcatCommandOutput(),
+                "process" to LSPosedLogcatCommandOutput(),
+            ),
+        )
+
+        assertTrue(result.available)
+        assertTrue(result.signals.isEmpty())
+    }
+
+    @Test
+    fun `dirty policy lsposed file avc denial does not become lsposed hit`() {
+        val probe = LSPosedLogcatProbe()
+        val result = probe.evaluate(
+            mapOf(
+                "overview" to LSPosedLogcatCommandOutput(
+                    output = """
+                        W/auditd( 123): type=1400 audit(0.0:123): avc: denied { read } for scontext=u:r:untrusted_app:s0:c1,c2 tcontext=u:object_r:lsposed_file:s0 tclass=file permissive=0
+                    """.trimIndent(),
+                ),
+                "tag:LSPosed" to LSPosedLogcatCommandOutput(),
+                "tag:LSPosed-Bridge" to LSPosedLogcatCommandOutput(),
+                "tag:LSPosedService" to LSPosedLogcatCommandOutput(),
+                "process" to LSPosedLogcatCommandOutput(),
+            ),
+        )
+
+        assertTrue(result.available)
+        assertTrue(result.signals.isEmpty())
+    }
+
+    @Test
     fun `log access denied downgrades to unavailable`() {
         val probe = LSPosedLogcatProbe(
             commandRunner = LSPosedLogcatCommandRunner { _, _ ->

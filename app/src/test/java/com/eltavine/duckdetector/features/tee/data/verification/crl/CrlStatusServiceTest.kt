@@ -55,7 +55,9 @@ class CrlStatusServiceTest {
                 fetchCount += 1
                 """{"entries":{"1":{"status":"REVOKED","reason":"keyCompromise"}}}"""
             },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"1":{"status":"GOOD"}}}"""
+            ),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1")))
@@ -69,7 +71,7 @@ class CrlStatusServiceTest {
     }
 
     @Test
-    fun `returns skipped when networking is disabled in settings`() = runBlocking {
+    fun `uses built in revocation snapshot when online refresh is disabled`() = runBlocking {
         val store = FakeTeeNetworkPrefsStore(
             TeeNetworkPrefs(
                 consentAsked = true,
@@ -86,18 +88,22 @@ class CrlStatusServiceTest {
                 fetchCalled = true
                 ""
             },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"1":{"status":"REVOKED","reason":"embedded"}}}"""
+            ),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1")))
 
         assertEquals(TeeNetworkMode.SKIPPED, result.networkState.mode)
-        assertTrue(result.networkState.summary.contains("disabled in Settings"))
+        assertTrue(result.networkState.summary.contains("online refresh is disabled in Settings"))
+        assertTrue(result.networkState.usedCache)
+        assertEquals(1, result.revokedCertificates.size)
         assertFalse(fetchCalled)
     }
 
     @Test
-    fun `reports offline when network is unavailable and cache is missing`() = runBlocking {
+    fun `falls back to built in snapshot when online refresh fails`() = runBlocking {
         val store = FakeTeeNetworkPrefsStore(
             TeeNetworkPrefs(
                 consentAsked = true,
@@ -114,16 +120,20 @@ class CrlStatusServiceTest {
                 fetchCount += 1
                 throw IOException("offline")
             },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"1":{"status":"REVOKED","reason":"embedded"}}}"""
+            ),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1")))
 
         assertEquals(TeeNetworkMode.ERROR, result.networkState.mode)
         assertEquals(1, fetchCount)
-        assertTrue(result.networkState.summary.contains("connection failed"))
+        assertTrue(result.networkState.summary.contains("built-in revocation snapshot was used"))
         assertTrue(result.networkState.detail.orEmpty().contains("ConnectivityManager"))
-        assertFalse(result.networkState.usedCache)
+        assertTrue(result.networkState.usedCache)
+        assertTrue(result.networkState.usingCacheFallback)
+        assertEquals(1, result.revokedCertificates.size)
     }
 
     @Test
@@ -144,7 +154,9 @@ class CrlStatusServiceTest {
                 fetchCount += 1
                 """{"entries":{"1":{"status":"GOOD"}}}"""
             },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"1":{"status":"REVOKED","reason":"embedded"}}}"""
+            ),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1")))
@@ -155,6 +167,7 @@ class CrlStatusServiceTest {
         assertTrue(
             result.networkState.detail.orEmpty().contains("Direct HTTPS fetch still succeeded")
         )
+        assertTrue(result.revokedCertificates.isEmpty())
     }
 
     @Test
@@ -173,7 +186,7 @@ class CrlStatusServiceTest {
             feedFetcher = CrlFeedFetcher {
                 """{"entries":{"26":{"status":"REVOKED","reason":"KEY_COMPROMISE"}}}"""
             },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider("""{"entries":{}}"""),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1a")))
@@ -185,7 +198,7 @@ class CrlStatusServiceTest {
     }
 
     @Test
-    fun `reports timeout when refresh times out`() = runBlocking {
+    fun `reports timeout detail while using built in snapshot`() = runBlocking {
         val store = FakeTeeNetworkPrefsStore(
             TeeNetworkPrefs(
                 consentAsked = true,
@@ -198,17 +211,19 @@ class CrlStatusServiceTest {
             consentStore = store,
             networkStatusProvider = CrlNetworkStatusProvider { true },
             feedFetcher = CrlFeedFetcher { throw SocketTimeoutException("timeout") },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider("""{"entries":{}}"""),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1")))
 
         assertEquals(TeeNetworkMode.ERROR, result.networkState.mode)
-        assertTrue(result.networkState.summary.contains("timed out"))
+        assertTrue(result.networkState.summary.contains("built-in revocation snapshot was used"))
+        assertTrue(result.networkState.detail.orEmpty().contains("timed out"))
+        assertTrue(result.networkState.usedCache)
     }
 
     @Test
-    fun `reports parse error when feed json is invalid`() = runBlocking {
+    fun `reports online parse error while using built in snapshot`() = runBlocking {
         val store = FakeTeeNetworkPrefsStore(
             TeeNetworkPrefs(
                 consentAsked = true,
@@ -221,17 +236,45 @@ class CrlStatusServiceTest {
             consentStore = store,
             networkStatusProvider = CrlNetworkStatusProvider { true },
             feedFetcher = CrlFeedFetcher { """{"entries":""" },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider("""{"entries":{}}"""),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1")))
 
         assertEquals(TeeNetworkMode.ERROR, result.networkState.mode)
-        assertTrue(result.networkState.summary.contains("parsed"))
+        assertTrue(result.networkState.detail.orEmpty().contains("parsed"))
+        assertTrue(result.networkState.usedCache)
     }
 
     @Test
-    fun `clears legacy cache and does not use it as fallback`() = runBlocking {
+    fun `reports malformed online feed while using built in snapshot`() = runBlocking {
+        val store = FakeTeeNetworkPrefsStore(
+            TeeNetworkPrefs(
+                consentAsked = true,
+                consentGranted = true,
+                crlCacheJson = null,
+                crlFetchedAt = 0L,
+            ),
+        )
+        val service = CrlStatusService(
+            consentStore = store,
+            networkStatusProvider = CrlNetworkStatusProvider { true },
+            feedFetcher = CrlFeedFetcher { """{"entries":[]}""" },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"1":{"status":"REVOKED","reason":"embedded"}}}"""
+            ),
+        )
+
+        val result = service.inspect(listOf(FakeX509Certificate("1")))
+
+        assertEquals(TeeNetworkMode.ERROR, result.networkState.mode)
+        assertTrue(result.networkState.detail.orEmpty().contains("missing an entries object"))
+        assertTrue(result.networkState.usedCache)
+        assertEquals(1, result.revokedCertificates.size)
+    }
+
+    @Test
+    fun `clears legacy cache and uses embedded snapshot as fallback`() = runBlocking {
         val store = FakeTeeNetworkPrefsStore(
             TeeNetworkPrefs(
                 consentAsked = true,
@@ -244,17 +287,74 @@ class CrlStatusServiceTest {
             consentStore = store,
             networkStatusProvider = CrlNetworkStatusProvider { true },
             feedFetcher = CrlFeedFetcher { throw IllegalStateException("boom") },
-            clock = { NOW },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"1":{"status":"REVOKED","reason":"embedded"}}}"""
+            ),
         )
 
         val result = service.inspect(listOf(FakeX509Certificate("1")))
 
         assertEquals(TeeNetworkMode.ERROR, result.networkState.mode)
-        assertFalse(result.networkState.usingCacheFallback)
-        assertFalse(result.networkState.usedCache)
-        assertTrue(result.revokedCertificates.isEmpty())
+        assertTrue(result.networkState.usingCacheFallback)
+        assertTrue(result.networkState.usedCache)
+        assertEquals(1, result.revokedCertificates.size)
         assertEquals(null, store.current.crlCacheJson)
         assertEquals(0L, store.current.crlFetchedAt)
+    }
+
+    @Test
+    fun `unanswered online refresh consent still uses built in snapshot`() = runBlocking {
+        val store = FakeTeeNetworkPrefsStore(
+            TeeNetworkPrefs(
+                consentAsked = false,
+                consentGranted = false,
+                crlCacheJson = null,
+                crlFetchedAt = 0L,
+            ),
+        )
+        var fetchCalled = false
+        val service = CrlStatusService(
+            consentStore = store,
+            networkStatusProvider = CrlNetworkStatusProvider { true },
+            feedFetcher = CrlFeedFetcher {
+                fetchCalled = true
+                """{"entries":{}}"""
+            },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"1":{"status":"REVOKED","reason":"embedded"}}}"""
+            ),
+        )
+
+        val result = service.inspect(listOf(FakeX509Certificate("1")))
+
+        assertEquals(TeeNetworkMode.CONSENT_REQUIRED, result.networkState.mode)
+        assertTrue(result.networkState.summary.contains("online refresh is awaiting startup consent"))
+        assertTrue(result.networkState.usedCache)
+        assertEquals(1, result.revokedCertificates.size)
+        assertFalse(fetchCalled)
+    }
+
+    @Test
+    fun `reports embedded snapshot parse error`() = runBlocking {
+        val store = FakeTeeNetworkPrefsStore(
+            TeeNetworkPrefs(
+                consentAsked = true,
+                consentGranted = false,
+                crlCacheJson = null,
+                crlFetchedAt = 0L,
+            ),
+        )
+        val service = CrlStatusService(
+            consentStore = store,
+            networkStatusProvider = CrlNetworkStatusProvider { true },
+            feedFetcher = CrlFeedFetcher { """{"entries":{}}""" },
+            embeddedStatusProvider = embeddedStatusProvider("""{"entries":"""),
+        )
+
+        val result = service.inspect(listOf(FakeX509Certificate("1")))
+
+        assertEquals(TeeNetworkMode.ERROR, result.networkState.mode)
+        assertTrue(result.networkState.summary.contains("Built-in CRL snapshot could not be parsed"))
     }
 
     private class FakeTeeNetworkPrefsStore(
@@ -289,6 +389,10 @@ class CrlStatusServiceTest {
                 crlFetchedAt = 0L,
             )
         }
+    }
+
+    private fun embeddedStatusProvider(json: String): CrlEmbeddedStatusProvider {
+        return CrlEmbeddedStatusProvider { json }
     }
 
     @Suppress("DEPRECATION")

@@ -57,6 +57,7 @@ object DangerousAppsCatalog {
             pkg("io.github.a13e300.ksuwebui", "KSU WebUI"),
             pkg("com.sukisu.ultra", "SuKiSu Ultra"),
             pkg("com.resukisu.resukisu", "ReSukisu"),
+            pkg("com.linux.permissionmanager", "SKRoot"),
         )
         addCategory(
             DangerousAppCategory.LOCATION_SPOOF,
@@ -180,15 +181,19 @@ object DangerousAppsCatalog {
     val targetByPackage: Map<String, DangerousAppTarget> = targets.associateBy { it.packageName }
 
     val specialPathDetection: Map<String, String> = linkedMapOf(
+        // Scene 8.x (original)
         "/dev/cpuset/scene-daemon" to "com.omarea.vtools",
         "/dev/memcg/scene_active" to "com.omarea.vtools",
         "/dev/memcg/scene_idle" to "com.omarea.vtools",
         "/dev/scene" to "com.omarea.vtools",
+        // Other apps
         "/sdcard/MT2" to "bin.mt.termex",
         "/sdcard/NP" to "com.wn.app.np",
         "/sdcard/xinhao" to "com.termux",
         "/sdcard/Download/advanced/" to "com.byyoung.setting",
         "/sdcard/.OShin" to "com.suqi8.oshin",
+        // SKRootPro_4.3.5 license file
+        "/sdcard/1.h" to "com.linux.permissionmanager",
     )
 
     val excludedPathsForHmaInference: Set<String> = setOf(
@@ -197,6 +202,7 @@ object DangerousAppsCatalog {
         "/sdcard/xinhao",
         "/sdcard/Download/advanced/",
         "/sdcard/.OShin",
+        "/sdcard/1.h",
     )
 
     private fun pkg(

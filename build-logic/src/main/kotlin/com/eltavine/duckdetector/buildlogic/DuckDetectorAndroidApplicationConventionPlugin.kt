@@ -17,10 +17,12 @@
 package com.eltavine.duckdetector.buildlogic
 
 import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.getByType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
@@ -153,6 +155,58 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
         extensions.configure<KotlinAndroidProjectExtension> {
             compilerOptions {
                 jvmTarget.set(JvmTarget.JVM_17)
+            }
+        }
+
+        pluginManager.withPlugin("com.android.application") {
+            val androidComponents = extensions.getByType<ApplicationAndroidComponentsExtension>()
+            androidComponents.onVariants(androidComponents.selector().all()) { variant ->
+                val taskName = variant.computeTaskName("generate", "TeeCrlAsset")
+                val generateCrlAsset = tasks.register(
+                    taskName,
+                    GenerateTeeCrlAssetTask::class.java,
+                ) {
+                    refreshEnabled.set(
+                        providers.gradleProperty("duckdetector.teeCrl.refresh")
+                            .map(String::toBoolean)
+                            .orElse(
+                                providers.environmentVariable("DUCKDETECTOR_TEE_CRL_REFRESH")
+                                    .map(String::toBoolean)
+                            )
+                            .orElse(false)
+                    )
+                    endpointUrl.set(
+                        providers.gradleProperty("duckdetector.teeCrl.url")
+                            .orElse(TEE_CRL_STATUS_URL)
+                    )
+                    maxAttempts.set(
+                        providers.gradleProperty("duckdetector.teeCrl.maxAttempts")
+                            .map(String::toInt)
+                            .orElse(5)
+                    )
+                    connectTimeoutMillis.set(
+                        providers.gradleProperty("duckdetector.teeCrl.connectTimeoutMillis")
+                            .map(String::toInt)
+                            .orElse(5_000)
+                    )
+                    readTimeoutMillis.set(
+                        providers.gradleProperty("duckdetector.teeCrl.readTimeoutMillis")
+                            .map(String::toInt)
+                            .orElse(5_000)
+                    )
+                    fallbackAsset.set(
+                        layout.projectDirectory.file(
+                            "src/main/assets/$TEE_CRL_FALLBACK_ASSET_FILE_NAME"
+                        )
+                    )
+                    outputDirectory.set(
+                        layout.buildDirectory.dir("generated/teeCrl/${variant.name}/assets")
+                    )
+                }
+                variant.sources.assets?.addGeneratedSourceDirectory(
+                    generateCrlAsset,
+                    GenerateTeeCrlAssetTask::outputDirectory,
+                )
             }
         }
     }

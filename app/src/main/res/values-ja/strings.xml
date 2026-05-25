@@ -27,9 +27,9 @@ limitations under the License.
     <string name="user_agreement_title">利用規約</string>
     <string name="user_agreement_content" formatted="false">Duck Detector を利用することで、以下の条件に同意したものとみなされます:&#10;&#10;1. 利用目的&#10;このアプリは教育目的および個人のセキュリティ評価のために設計されており、ユーザーが自分の端末のセキュリティ状態を理解できるよう支援します。&#10;&#10;2. 保証の否認&#10;このアプリは &quot;現状のまま&quot; 提供され、明示または黙示を問わずいかなる保証も行いません。開発者は検出結果の正確性、完全性、信頼性を保証しません。&#10;&#10;3. ユーザーの責任&#10;このアプリの利用方法およびそれに伴って生じるあらゆる結果については、ユーザー自身が責任を負うものとします。&#10;&#10;4. 法令遵守&#10;ユーザーは適用されるすべての地域法、国内法、国際法を遵守してこのアプリを利用することに同意します。</string>
     <string name="disclaimer_title">免責事項</string>
-    <string name="disclaimer_content" formatted="false">重要なお知らせ:&#10;&#10;1. 検出の限界&#10;Duck Detector は端末のセキュリティ状態を検出するために複数の方法を使用しますが、どの方法も 100&#37; 正確ではありません。結果は最終判定ではなく、参考情報として扱ってください。&#10;&#10;2. 誤検出と見逃し&#10;このアプリは誤検出または見逃しを起こす可能性があります。より包括的な判断のために、専門的なセキュリティツールとご自身の確認を必ず併用してください。&#10;&#10;3. 責任の制限&#10;Duck Detector の開発者、貢献者、および配布者は、このアプリの使用または使用不能によって生じる直接的、間接的、付随的、特別、または結果的損害について責任を負いません。&#10;&#10;4. 第三者サービス&#10;オンライン失効確認を許可すると、アプリが Google attestation revocation endpoint に接続する場合があります。セキュリティスキャン自体は引き続き端末上でローカルに実行され、検出結果がスキャンテレメトリとして意図的にアップロードされることはありません。</string>
+    <string name="disclaimer_content" formatted="false">重要なお知らせ:&#10;&#10;1. 検出の限界&#10;Duck Detector は端末のセキュリティ状態を検出するために複数の方法を使用しますが、どの方法も 100&#37; 正確ではありません。結果は最終判定ではなく、参考情報として扱ってください。&#10;&#10;2. 誤検出と見逃し&#10;このアプリは誤検出または見逃しを起こす可能性があります。より包括的な判断のために、専門的なセキュリティツールとご自身の確認を必ず併用してください。&#10;&#10;3. 責任の制限&#10;Duck Detector の開発者、貢献者、および配布者は、このアプリの使用または使用不能によって生じる直接的、間接的、付随的、特別、または結果的損害について責任を負いません。&#10;&#10;4. 第三者サービス&#10;TEE の失効確認は既定でアプリ内蔵スナップショットを使用します。オンライン失効データ更新を許可すると、アプリが Google attestation revocation endpoint に接続する場合があります。セキュリティスキャン自体は引き続き端末上でローカルに実行され、検出結果がスキャンテレメトリとして意図的にアップロードされることはありません。</string>
     <string name="privacy_notice_title">プライバシー通知</string>
-    <string name="privacy_notice_content" formatted="false">プライバシー概要: セキュリティチェックは端末上でローカルに実行されます。検出結果がスキャンテレメトリとして意図的にアップロードされることはありません。オンライン失効確認を許可すると、アプリが Google attestation revocation endpoint に接続する場合があります。</string>
+    <string name="privacy_notice_content" formatted="false">プライバシー概要: セキュリティチェックは端末上でローカルに実行されます。検出結果がスキャンテレメトリとして意図的にアップロードされることはありません。TEE の失効確認は既定でアプリ内蔵スナップショットを使用します。オンライン失効データ更新を許可すると、アプリが Google attestation revocation endpoint に接続する場合があります。</string>
     <string name="timer_elapsed">30 秒経過</string>
     <string name="timer_waiting">%1$d 秒お待ちください</string>
     <string name="fully_reviewed">全文確認済み</string>
@@ -39,9 +39,9 @@ limitations under the License.
     <string name="agreement_acknowledgement">続行すると、これらの条件を読み同意したものとみなされます。</string>
     <string name="settings_title">設定</string>
     <string name="settings_subtitle">オンライン検証経路のランタイム制御です。</string>
-    <string name="settings_crl_title">オンライン CRL チェックを許可</string>
-    <string name="settings_crl_summary">TEE 検証中に Google attestation revocation feed を照会します。</string>
-    <string name="settings_crl_footer">変更は TEE detector に即時反映されます。他のモジュールは変更されません。</string>
+    <string name="settings_crl_title">オンライン CRL 更新を許可</string>
+    <string name="settings_crl_summary">TEE の失効確認は常に内蔵スナップショットを使用します。この設定は Google の最新 attestation revocation feed の取得だけを許可します。</string>
+    <string name="settings_crl_footer">変更はオンライン更新の動作に即時反映されます。内蔵 TEE 失効確認は有効なままです。</string>
     <string name="about_title">このアプリについて</string>
     <string name="about_subtitle">プロジェクトリンクとビルドメタデータです。</string>
     <string name="about_label_version">バージョン</string>
@@ -52,7 +52,7 @@ limitations under the License.
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_label_build_hash">ビルドハッシュ</string>
     <string name="about_label_privacy">プライバシー / データ利用</string>
-    <string name="about_privacy_summary">チェックは端末上でローカルに実行されます。オンライン CRL 参照は任意で、設定で有効にした場合にのみ実行されます。</string>
+    <string name="about_privacy_summary">チェックは端末上でローカルに実行されます。TEE の失効データはアプリに内蔵されます。オンライン CRL 更新は任意で、設定で有効にした場合にのみ実行されます。</string>
     <string name="about_label_copy_build_info">ビルド情報をコピー</string>
     <string name="about_copy_build_info_summary">バージョン、ビルド時刻、ビルドハッシュをコピー</string>
     <string name="about_clipboard_label">Duck Detector ビルド情報</string>
@@ -104,7 +104,7 @@ limitations under the License.
     <string name="startup_preparing_title">起動を準備中</string>
     <string name="startup_before_scan_title">スキャン前</string>
     <string name="startup_loading_detail">設定内容と PackageManager 可視性をまだ読み込んでいます。完了するまで detector ViewModel は一時停止されたままです。</string>
-    <string name="startup_intro_detail">detector のスキャンが始まる前に、必要な選択を完了してください。通知、Live Update ルーティング、CRL ネットワーク、PackageManager 可視性をここでまとめて確認します。下の必須カードがすべて処理されるまで detector パイプラインはブロックされます。</string>
+    <string name="startup_intro_detail">detector のスキャンが始まる前に、必要な選択を完了してください。通知、Live Update ルーティング、CRL オンライン更新、PackageManager 可視性をここでまとめて確認します。下の必須カードがすべて処理されるまで detector パイプラインはブロックされます。</string>
     <string name="startup_loading_state">起動状態を読み込み中…</string>
     <string name="startup_progress_resolved">起動カード %1$d / %2$d 件を解決済み</string>
     <string name="startup_loading_dependencies_title">起動依存関係を読み込み中</string>
@@ -116,6 +116,7 @@ limitations under the License.
     <string name="startup_status_waiting">待機中</string>
     <string name="startup_status_regular">通常</string>
     <string name="startup_status_local">ローカル</string>
+    <string name="startup_status_optional">任意</string>
     <string name="startup_status_acknowledged">確認済み</string>
     <string name="startup_status_review_later">後で確認</string>
     <string name="startup_notifications_title">通知</string>
@@ -141,15 +142,15 @@ limitations under the License.
     <string name="startup_live_update_use_regular">通常通知を使う</string>
     <string name="startup_live_update_regular_headline">通常通知を選択しました。</string>
     <string name="startup_live_update_regular_detail">promoted ongoing notification は無効のままで、スキャン進行は通常の通知経路を使います。</string>
-    <string name="startup_crl_title">CRL ネットワーク</string>
-    <string name="startup_crl_prompt_headline">TEE の失効確認でネットワークを使うか選択してください。</string>
-    <string name="startup_crl_prompt_detail">ネットワークを許可すると、Duck Detector は TEE 検証中に Google attestation revocation feed を照会できます。ローカル専用モードではオンライン更新を行いません。</string>
-    <string name="startup_crl_allow_network">ネットワークを許可</string>
-    <string name="startup_crl_local_only">ローカルのみ</string>
+    <string name="startup_crl_title">CRL オンライン更新</string>
+    <string name="startup_crl_prompt_headline">TEE の失効確認でオンライン更新を取得するか選択してください。</string>
+    <string name="startup_crl_prompt_detail">Duck Detector は常に内蔵の失効スナップショットを確認します。ネットワークを許可すると、TEE 検証中に Google の最新 attestation revocation feed を取得できます。</string>
+    <string name="startup_crl_allow_network">更新を許可</string>
+    <string name="startup_crl_local_only">内蔵のみ</string>
     <string name="startup_crl_ready_headline">オンライン CRL 更新が許可されています。</string>
-    <string name="startup_crl_ready_detail">ネットワーク条件が許す限り、TEE 検証は Google attestation revocation feed を更新できます。</string>
-    <string name="startup_crl_local_headline">TEE の失効確認はローカル専用です。</string>
-    <string name="startup_crl_local_detail">設定で再度有効にするまで、Duck Detector はオンライン CRL 更新を実行しません。</string>
+    <string name="startup_crl_ready_detail">TEE 検証は内蔵スナップショットを確認し、ネットワーク条件が許す限り Google の attestation revocation feed を更新できます。</string>
+    <string name="startup_crl_local_headline">TEE の失効確認は内蔵スナップショットを使用します。</string>
+    <string name="startup_crl_local_detail">設定で再度有効にするまで、Duck Detector はオンライン CRL 更新を実行しません。内蔵の失効確認は有効なままです。</string>
     <string name="startup_package_manager_title">PackageManager</string>
     <string name="startup_package_restricted_headline">パッケージ一覧が制限またはフィルタされているようです。</string>
     <string name="startup_package_restricted_detail">PackageManager が公開したインストール済みパッケージは %1$d 件だけでした。可視性制限、スコープされた一覧、HMA 風フィルタリングの環境では、Dangerous Apps と関連プローブがインストール済みツールを少なめに報告する可能性があります。</string>

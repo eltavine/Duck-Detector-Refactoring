@@ -170,6 +170,53 @@ class SelinuxCardModelMapperDirtyPolicyRulesTest {
         assertTrue(model.methodRows.none { it.label.startsWith("MSD checker: ") })
     }
 
+    @Test
+    fun `trusted droidspaces checker hit is aggregated and raises warning`() {
+        val model = mapper.map(
+            baseReport(
+                SelinuxCheckResult(
+                    method = "Droidspaces checker: magisk -> droidspacesd dyntransition",
+                    status = "Allowed",
+                    isSecure = false,
+                    permissionDenied = false,
+                    details = "Evidence source=dedicated app_zygote carrier | Observed edge: magisk -> droidspacesd:process dyntransition. Droidspaces seeds this transition from its module policy so Magisk-rooted execution can move into the dedicated droidspacesd domain. The dedicated access oracles reported this edge as allowed.",
+                    dirtyPolicyTrusted = true,
+                ),
+                SelinuxCheckResult(
+                    method = "Droidspaces checker: su -> droidspacesd dyntransition",
+                    status = "Allowed",
+                    isSecure = false,
+                    permissionDenied = false,
+                    details = "Evidence source=dedicated app_zygote carrier | Observed edge: su -> droidspacesd:process dyntransition. Droidspaces exposes this transition so an su-rooted process can enter the dedicated droidspacesd domain. The dedicated access oracles reported this edge as allowed.",
+                    dirtyPolicyTrusted = true,
+                ),
+                SelinuxCheckResult(
+                    method = "Droidspaces checker: system_server -> droidspacesd binder",
+                    status = "Allowed",
+                    isSecure = false,
+                    permissionDenied = false,
+                    details = "Evidence source=dedicated app_zygote carrier | Observed edge: system_server -> droidspacesd:binder call. Droidspaces allows system_server to talk to the dedicated droidspacesd service over binder. The dedicated access oracles reported this edge as allowed.",
+                    dirtyPolicyTrusted = true,
+                ),
+            ),
+        )
+
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals("Enforcing with dirty sepolicy rule", model.verdict)
+        assertTrue(model.summary.contains("Droidspaces: magisk -> droidspacesd dyntransition as allowed"))
+        assertTrue(model.impactItems.any { it.text.contains("Droidspaces: magisk -> droidspacesd dyntransition") })
+        assertTrue(
+            model.methodRows.any {
+                it.label == "Dirty sepolicy rule: Droidspaces" &&
+                    it.value == "3 allowed" &&
+                    it.status == DetectorStatus.danger() &&
+                    it.detail.orEmpty().contains("magisk -> droidspacesd dyntransition") &&
+                    it.detail.orEmpty().contains("system_server -> droidspacesd binder")
+            },
+        )
+        assertTrue(model.methodRows.none { it.label.startsWith("Droidspaces checker: ") })
+    }
+
     private fun baseReport(vararg methods: SelinuxCheckResult): SelinuxReport {
         return SelinuxReport(
             stage = SelinuxStage.READY,

@@ -500,13 +500,20 @@ class SelinuxCardModelMapper {
 
     private fun buildMethodRows(report: SelinuxReport): List<SelinuxDetailRowModel> {
         val msdRows = report.methods.filter { isMsdPolicyRuleMethod(it.method) }
+        val droidspacesRows = report.methods.filter { isDroidspacesPolicyRuleMethod(it.method) }
         var msdInserted = false
+        var droidspacesInserted = false
         return buildList {
             report.methods.forEach { result ->
                 if (isMsdPolicyRuleMethod(result.method)) {
                     if (!msdInserted) {
                         buildAggregatedMsdMethodRow(msdRows)?.let(::add)
                         msdInserted = true
+                    }
+                } else if (isDroidspacesPolicyRuleMethod(result.method)) {
+                    if (!droidspacesInserted) {
+                        buildAggregatedDroidspacesMethodRow(droidspacesRows)?.let(::add)
+                        droidspacesInserted = true
                     }
                 } else {
                     add(methodRow(result))
@@ -533,6 +540,57 @@ class SelinuxCardModelMapper {
         val unavailable = results.filter { it.status == "Unavailable" }.map { msdPolicyRuleName(it.method) }
         val aggregateResult = SelinuxCheckResult(
             method = "Dirty sepolicy rule: MSD",
+            status = when {
+                allowed.isNotEmpty() -> "Allowed"
+                unavailable.isNotEmpty() -> "Unavailable"
+                else -> "Denied"
+            },
+            isSecure = when {
+                allowed.isNotEmpty() -> false
+                unavailable.isNotEmpty() -> null
+                else -> true
+            },
+            permissionDenied = results.all { it.permissionDenied },
+            details = null,
+            dirtyPolicyTrusted = results.any { it.dirtyPolicyTrusted },
+        )
+        return SelinuxDetailRowModel(
+            label = aggregateResult.method,
+            value = buildList {
+                if (allowed.isNotEmpty()) {
+                    add("${allowed.size} allowed")
+                }
+                if (denied.isNotEmpty()) {
+                    add("${denied.size} denied")
+                }
+                if (unavailable.isNotEmpty()) {
+                    add("${unavailable.size} unavailable")
+                }
+            }.joinToString(", "),
+            status = methodStatus(aggregateResult),
+            detail = buildList {
+                if (allowed.isNotEmpty()) {
+                    add("Allowed: ${allowed.joinToString()}")
+                }
+                if (denied.isNotEmpty()) {
+                    add("Denied: ${denied.joinToString()}")
+                }
+                if (unavailable.isNotEmpty()) {
+                    add("Unavailable: ${unavailable.joinToString()}")
+                }
+            }.joinToString(" | "),
+        )
+    }
+
+    private fun buildAggregatedDroidspacesMethodRow(results: List<SelinuxCheckResult>): SelinuxDetailRowModel? {
+        if (results.isEmpty()) {
+            return null
+        }
+        val allowed = results.filter { it.status == "Allowed" }.map { droidspacesPolicyRuleName(it.method) }
+        val denied = results.filter { it.status == "Denied" }.map { droidspacesPolicyRuleName(it.method) }
+        val unavailable = results.filter { it.status == "Unavailable" }.map { droidspacesPolicyRuleName(it.method) }
+        val aggregateResult = SelinuxCheckResult(
+            method = "Dirty sepolicy rule: Droidspaces",
             status = when {
                 allowed.isNotEmpty() -> "Allowed"
                 unavailable.isNotEmpty() -> "Unavailable"
@@ -978,6 +1036,7 @@ class SelinuxCardModelMapper {
 
     private fun isPolicyRuleMethod(method: String): Boolean {
         return method.startsWith("Dirty sepolicy rule: ") ||
+            method.startsWith("Droidspaces checker: ") ||
             method.startsWith("MSD checker: ")
     }
 
@@ -985,9 +1044,14 @@ class SelinuxCardModelMapper {
         return method.startsWith("MSD checker: ")
     }
 
+    private fun isDroidspacesPolicyRuleMethod(method: String): Boolean {
+        return method.startsWith("Droidspaces checker: ")
+    }
+
     private fun policyRuleDisplayName(method: String): String {
         return when {
             method.startsWith("Dirty sepolicy rule: ") -> method.removePrefix("Dirty sepolicy rule: ")
+            method.startsWith("Droidspaces checker: ") -> "Droidspaces: ${method.removePrefix("Droidspaces checker: ")}"
             method.startsWith("MSD checker: ") -> "MSD: ${method.removePrefix("MSD checker: ")}"
             else -> method
         }
@@ -995,6 +1059,10 @@ class SelinuxCardModelMapper {
 
     private fun msdPolicyRuleName(method: String): String {
         return method.removePrefix("MSD checker: ")
+    }
+
+    private fun droidspacesPolicyRuleName(method: String): String {
+        return method.removePrefix("Droidspaces checker: ")
     }
 
     private fun trustedPolicyRuleVerdict(): String {

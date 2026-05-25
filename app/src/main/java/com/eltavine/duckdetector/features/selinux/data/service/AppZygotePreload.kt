@@ -200,6 +200,7 @@ class AppZygotePreload : ZygotePreload {
         private const val ADBD_CONTEXT = "u:r:adbd:s0"
         private const val ADBROOT_CONTEXT = "u:r:adbroot:s0"
         private const val MAGISK_CONTEXT = "u:r:magisk:s0"
+        private const val DROIDSPACESD_CONTEXT = "u:r:droidspacesd:s0"
         private const val KSU_FILE_CONTEXT = "u:object_r:ksu_file:s0"
         private const val LSPOSED_FILE_CONTEXT = "u:object_r:lsposed_file:s0"
         private const val XPOSED_DATA_CONTEXT = "u:object_r:xposed_data:s0"
@@ -377,6 +378,27 @@ class AppZygotePreload : ZygotePreload {
                 "file",
                 "read",
             )
+            val magiskDroidspacesdTransition = queryAccessPair(
+                checkAccess,
+                MAGISK_CONTEXT,
+                DROIDSPACESD_CONTEXT,
+                "process",
+                "dyntransition",
+            )
+            val suDroidspacesdTransition = queryAccessPair(
+                checkAccess,
+                SU_CONTEXT,
+                DROIDSPACESD_CONTEXT,
+                "process",
+                "dyntransition",
+            )
+            val systemServerDroidspacesdBinder = queryAccessPair(
+                checkAccess,
+                SYSTEM_SERVER_CONTEXT,
+                DROIDSPACESD_CONTEXT,
+                "binder",
+                "call",
+            )
             val msdAppDaemonConnect = queryAccessPair(
                 checkAccess,
                 MSD_APP_CONTEXT,
@@ -433,6 +455,9 @@ class AppZygotePreload : ZygotePreload {
                 magiskBinder.stable &&
                 ksuFileRead.stable &&
                 lsposedFileRead.stable &&
+                magiskDroidspacesdTransition.stable &&
+                suDroidspacesdTransition.stable &&
+                systemServerDroidspacesdBinder.stable &&
                 msdAppDaemonConnect.stable &&
                 msdDaemonSelfConnect.stable &&
                 msdDaemonSelinuxfsRead.stable &&
@@ -458,6 +483,9 @@ class AppZygotePreload : ZygotePreload {
                 add(magiskBinder.note("untrusted_app -> magisk binder"))
                 add(ksuFileRead.note("untrusted_app -> ksu_file read"))
                 add(lsposedFileRead.note("untrusted_app -> lsposed_file read"))
+                add(magiskDroidspacesdTransition.note("magisk -> droidspacesd dyntransition"))
+                add(suDroidspacesdTransition.note("su -> droidspacesd dyntransition"))
+                add(systemServerDroidspacesdBinder.note("system_server -> droidspacesd binder"))
                 add(msdAppDaemonConnect.note("msd_app -> msd_daemon connectto"))
                 add(msdDaemonSelfConnect.note("msd_daemon -> msd_daemon connectto"))
                 add(msdDaemonSelinuxfsRead.note("msd_daemon -> selinuxfs read"))
@@ -494,6 +522,9 @@ class AppZygotePreload : ZygotePreload {
                 javaDirtyPolicyMagiskBinderCallAllowed = magiskBinder.stable.thenValue(magiskBinder.first),
                 javaDirtyPolicyKsuFileReadAllowed = ksuFileRead.stable.thenValue(ksuFileRead.first),
                 javaDirtyPolicyLsposedFileReadAllowed = lsposedFileRead.stable.thenValue(lsposedFileRead.first),
+                javaDirtyPolicyMagiskDroidspacesdTransitionAllowed = magiskDroidspacesdTransition.stable.thenValue(magiskDroidspacesdTransition.first),
+                javaDirtyPolicySuDroidspacesdTransitionAllowed = suDroidspacesdTransition.stable.thenValue(suDroidspacesdTransition.first),
+                javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed = systemServerDroidspacesdBinder.stable.thenValue(systemServerDroidspacesdBinder.first),
                 javaDirtyPolicyMsdAppDaemonConnectAllowed = msdAppDaemonConnect.stable.thenValue(msdAppDaemonConnect.first),
                 javaDirtyPolicyMsdDaemonSelfConnectAllowed = msdDaemonSelfConnect.stable.thenValue(msdDaemonSelfConnect.first),
                 javaDirtyPolicyMsdDaemonSelinuxfsReadAllowed = msdDaemonSelinuxfsRead.stable.thenValue(msdDaemonSelinuxfsRead.first),

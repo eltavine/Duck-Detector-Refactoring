@@ -224,7 +224,7 @@ class TeeReportReducer(
                 add(
                     fact(
                         "Revocation",
-                        "Official revocation feed matched certificate serials from the chain.",
+                        "Revocation data matched certificate serials from the chain.",
                         TeeSignalLevel.FAIL
                     )
                 )
@@ -1351,15 +1351,16 @@ class TeeReportReducer(
         val network = artifacts.crl.networkState
         val sourceLabel = when {
             network.mode == TeeNetworkMode.ACTIVE -> "Online"
-            network.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Consent required"
-            network.mode == TeeNetworkMode.SKIPPED -> "Disabled in Settings"
-            network.mode == TeeNetworkMode.ERROR -> "Refresh failed"
-            network.mode == TeeNetworkMode.INACTIVE -> "Offline only"
-            else -> "Offline only"
+            network.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Built-in snapshot"
+            network.mode == TeeNetworkMode.SKIPPED -> "Built-in snapshot"
+            network.mode == TeeNetworkMode.ERROR && network.usedCache -> "Built-in snapshot"
+            network.mode == TeeNetworkMode.ERROR -> "Unavailable"
+            network.mode == TeeNetworkMode.INACTIVE -> "Built-in snapshot"
+            else -> "Built-in snapshot"
         }
         return buildString {
             append(sourceLabel)
-            if (network.mode == TeeNetworkMode.ACTIVE) {
+            if (network.mode == TeeNetworkMode.ACTIVE || network.usedCache) {
                 append(" • ")
                 append(
                     if (artifacts.crl.revokedCertificates.isEmpty()) {
@@ -2167,8 +2168,9 @@ class TeeReportReducer(
     private fun crlSignalValue(artifacts: TeeScanArtifacts): String = when {
         artifacts.crl.revokedCertificates.isNotEmpty() -> "Revoked"
         artifacts.crl.networkState.mode == TeeNetworkMode.ACTIVE -> "Online"
-        artifacts.crl.networkState.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Consent"
-        artifacts.crl.networkState.mode == TeeNetworkMode.SKIPPED -> "Disabled"
+        artifacts.crl.networkState.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Built-in"
+        artifacts.crl.networkState.mode == TeeNetworkMode.SKIPPED -> "Built-in"
+        artifacts.crl.networkState.mode == TeeNetworkMode.ERROR && artifacts.crl.networkState.usedCache -> "Built-in"
         artifacts.crl.networkState.mode == TeeNetworkMode.ERROR -> "Error"
         else -> "Offline"
     }

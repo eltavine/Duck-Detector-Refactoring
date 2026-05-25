@@ -140,6 +140,7 @@ class SelinuxProcAttrCurrentProbe {
             ProbeTarget("Magisk", "u:r:magisk:s0"),
             ProbeTarget("Magisk file", "u:r:magisk_file:s0"),
             ProbeTarget("LSPosed file", "u:r:lsposed_file:s0"),
+            ProbeTarget("DroidSpaces daemon", "u:r:droidspacesd:s0"),
             ProbeTarget("MSD app", "u:r:msd_app:s0"),
             ProbeTarget("MSD daemon", "u:r:msd_daemon:s0"),
             ProbeTarget("Xposed data", "u:r:xposed_data:s0"),

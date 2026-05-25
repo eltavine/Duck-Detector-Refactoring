@@ -27,9 +27,9 @@ limitations under the License.
     <string name="user_agreement_title">Угода користувача</string>
     <string name="user_agreement_content" formatted="false">Використовуючи Duck Detector, ви погоджуєтеся з такими умовами:&#10;&#10;1. Мета використання&#10;Ця програма призначена виключно для освітніх цілей та оцінки особистої безпеки. Це допомагає користувачам зрозуміти стан безпеки їхніх власних пристроїв.&#10;&#10;2. Без гарантії&#10;Ця програма надається &quot;як є&quot; без будь-яких гарантій, явних чи непрямих. Розробники не гарантують точність, повноту або достовірність результатів виявлення.&#10;&#10;3. Відповідальність користувача&#10;Ви несете повну відповідальність за те, як ви використовуєте цю програму, і будь-які наслідки, які можуть виникнути внаслідок її використання.&#10;&#10;4. Дотримання законів&#10;Ви погоджуєтеся використовувати цю програму відповідно до всіх відповідних місцевих, національних і міжнародних законів і правил.</string>
     <string name="disclaimer_title">Відмова від відповідальності</string>
-    <string name="disclaimer_content" formatted="false">ВАЖЛИВЕ ПОВІДОМЛЕННЯ:&#10;&#10;1. Обмеження виявлення&#10;Duck Detector використовує різні методи для виявлення стану безпеки пристрою, але жоден метод виявлення не є на 100&#37; точним. Результати слід вважати індикаторами, а не остаточними оцінками.&#10;&#10;2. Помилкові спрацьовування та помилкові негативи&#10;Програма може давати хибно-позитивні або хибно-негативні результати. Завжди використовуйте професійні інструменти безпеки та власну перевірку для комплексної оцінки.&#10;&#10;3. Жодної відповідальності&#10;Розробники, учасники та розповсюджувачі Duck Detector не несуть відповідальності за будь-які прямі, непрямі, випадкові, спеціальні чи непрямі збитки, спричинені використанням або неможливістю використання цієї програми.&#10;&#10;4. Сторонні послуги&#10;Якщо ви дозволите онлайн-перевірки відкликання, програма може зв’язатися з кінцевою точкою відкликання атестації Google. Самі сканування безпеки все ще виконуються локально на вашому пристрої, а результати детектора навмисно не завантажуються як телеметрія сканування.</string>
+    <string name="disclaimer_content" formatted="false">ВАЖЛИВЕ ПОВІДОМЛЕННЯ:&#10;&#10;1. Обмеження виявлення&#10;Duck Detector використовує різні методи для виявлення стану безпеки пристрою, але жоден метод виявлення не є на 100&#37; точним. Результати слід вважати індикаторами, а не остаточними оцінками.&#10;&#10;2. Помилкові спрацьовування та помилкові негативи&#10;Програма може давати хибно-позитивні або хибно-негативні результати. Завжди використовуйте професійні інструменти безпеки та власну перевірку для комплексної оцінки.&#10;&#10;3. Жодної відповідальності&#10;Розробники, учасники та розповсюджувачі Duck Detector не несуть відповідальності за будь-які прямі, непрямі, випадкові, спеціальні чи непрямі збитки, спричинені використанням або неможливістю використання цієї програми.&#10;&#10;4. Сторонні послуги&#10;Перевірки відкликання TEE за замовчуванням використовують вбудований у застосунок знімок. Якщо ви дозволите онлайн-оновлення даних відкликання, програма може зв’язатися з кінцевою точкою відкликання атестації Google. Самі сканування безпеки все ще виконуються локально на вашому пристрої, а результати детектора навмисно не завантажуються як телеметрія сканування.</string>
     <string name="privacy_notice_title">Повідомлення про конфіденційність</string>
-    <string name="privacy_notice_content" formatted="false">Короткий опис конфіденційності: перевірки безпеки виконуються локально на вашому пристрої. Результати детектора не навмисно завантажуються як сканована телеметрія. Якщо ви дозволите онлайн-перевірки відкликання, програма може зв’язатися з кінцевою точкою відкликання атестації Google.</string>
+    <string name="privacy_notice_content" formatted="false">Короткий опис конфіденційності: перевірки безпеки виконуються локально на вашому пристрої. Результати детектора не навмисно завантажуються як сканована телеметрія. Перевірки відкликання TEE за замовчуванням використовують вбудований знімок; якщо ви дозволите онлайн-оновлення даних відкликання, програма може зв’язатися з кінцевою точкою відкликання атестації Google.</string>
     <string name="timer_elapsed">Минуло 30 секунд</string>
     <string name="timer_waiting">Будь ласка, зачекайте %1$ds</string>
     <string name="fully_reviewed">Повністю переглянуто</string>
@@ -39,9 +39,9 @@ limitations under the License.
     <string name="agreement_acknowledgement">Продовжуючи, ви підтверджуєте, що прочитали ці умови та погоджуєтеся з ними.</string>
     <string name="settings_title">Налаштування</string>
     <string name="settings_subtitle">Елементи керування часом виконання для шляхів онлайн-підтвердження.</string>
-    <string name="settings_crl_title">Дозволити онлайн-перевірки CRL</string>
-    <string name="settings_crl_summary">Запитуйте канал відкликання атестації Google під час перевірки TEE.</string>
-    <string name="settings_crl_footer">Зміни негайно застосовуються до детектора TEE. Інші модулі залишаються незмінними.</string>
+    <string name="settings_crl_title">Дозволити онлайн-оновлення CRL</string>
+    <string name="settings_crl_summary">Перевірки відкликання TEE завжди використовують вбудований знімок; цей перемикач лише дозволяє отримувати найновіший канал відкликання атестації Google.</string>
+    <string name="settings_crl_footer">Зміни негайно застосовуються до онлайн-оновлення. Вбудовані перевірки відкликання TEE залишаються ввімкненими.</string>
     <string name="about_title">Про програму</string>
     <string name="about_subtitle">Посилання на проект та метадані збірки.</string>
     <string name="about_label_version">Версія</string>
@@ -52,7 +52,7 @@ limitations under the License.
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_label_build_hash">Хеш збірки</string>
     <string name="about_label_privacy">Конфіденційність / Використання даних</string>
-    <string name="about_privacy_summary">Перевірки виконуються локально на пристрої. Онлайн-пошук CRL є необов’язковим і відбувається лише тоді, коли ви ввімкнете його в Налаштуваннях.</string>
+    <string name="about_privacy_summary">Перевірки виконуються локально на пристрої. Дані відкликання TEE вбудовані в застосунок; онлайн-оновлення CRL є необов’язковим і відбувається лише тоді, коли ви ввімкнете його в Налаштуваннях.</string>
     <string name="about_label_copy_build_info">Копіювати інформацію про збірку</string>
     <string name="about_copy_build_info_summary">Копіювати версію, час збірки та хеш збірки</string>
     <string name="about_clipboard_label">Інформація про збірку Duck Detector</string>
@@ -116,7 +116,7 @@ limitations under the License.
     <string name="startup_preparing_title">Підготовка до запуску</string>
     <string name="startup_before_scan_title">Перед скануванням</string>
     <string name="startup_loading_detail">Налаштування та видимість PackageManager все ще завантажуються. ViewModels детектора призупинено до завершення цього процесу.</string>
-    <string name="startup_intro_detail">Зробіть необхідний вибір перед початком сканування. Сповіщення, маршрутизація Live Update, мережа CRL та видимість PackageManager перевіряються тут в одному місці. Робота детектора заблокована, доки кожна картка нижче не буде опрацьована.</string>
+    <string name="startup_intro_detail">Зробіть необхідний вибір перед початком сканування. Сповіщення, маршрутизація Live Update, онлайн-оновлення CRL та видимість PackageManager перевіряються тут в одному місці. Робота детектора заблокована, доки кожна картка нижче не буде опрацьована.</string>
     <string name="startup_loading_state">Завантаження стану запуску…</string>
     <string name="startup_progress_resolved">Вирішено %1$d з %2$d карток запуску</string>
     <string name="startup_loading_dependencies_title">Завантаження залежностей запуску</string>
@@ -128,6 +128,7 @@ limitations under the License.
     <string name="startup_status_waiting">Очікування</string>
     <string name="startup_status_regular">Звичайний</string>
     <string name="startup_status_local">Локальний</string>
+    <string name="startup_status_optional">Необов’язково</string>
     <string name="startup_status_acknowledged">Підтверджено</string>
     <string name="startup_status_review_later">Переглянути пізніше</string>
 
@@ -156,15 +157,15 @@ limitations under the License.
     <string name="startup_live_update_regular_headline">Вибрано звичайні сповіщення.</string>
     <string name="startup_live_update_regular_detail">Пріоритетні постійні сповіщення залишаються вимкненими. Замість цього прогрес сканування використовуватиме звичайний шлях сповіщень.</string>
 
-    <string name="startup_crl_title">Мережа CRL</string>
-    <string name="startup_crl_prompt_headline">Виберіть, чи можуть перевірки відкликання TEE використовувати мережу.</string>
-    <string name="startup_crl_prompt_detail">Дозвіл на використання мережі дозволяє Duck Detector запитувати фід відкликання атестації Google під час валідації TEE. Режим «Лише локально» пропускає онлайн-оновлення.</string>
-    <string name="startup_crl_allow_network">Дозволити мережу</string>
-    <string name="startup_crl_local_only">Лише локально</string>
+    <string name="startup_crl_title">Онлайн-оновлення CRL</string>
+    <string name="startup_crl_prompt_headline">Виберіть, чи можуть перевірки відкликання TEE отримувати онлайн-оновлення.</string>
+    <string name="startup_crl_prompt_detail">Duck Detector завжди перевіряє вбудований знімок відкликання. Дозвіл на мережу дає змогу отримувати найновіший канал відкликання атестації Google під час валідації TEE.</string>
+    <string name="startup_crl_allow_network">Дозволити оновлення</string>
+    <string name="startup_crl_local_only">Лише вбудований</string>
     <string name="startup_crl_ready_headline">Онлайн-оновлення CRL дозволено.</string>
-    <string name="startup_crl_ready_detail">Валідація TEE може оновлювати фід відкликання атестації Google кожного разу, коли дозволяють умови мережі.</string>
-    <string name="startup_crl_local_headline">Перевірки відкликання TEE виконуються лише локально.</string>
-    <string name="startup_crl_local_detail">Duck Detector не виконуватиме онлайн-оновлення CRL, доки ви не ввімкнете його знову в Налаштуваннях.</string>
+    <string name="startup_crl_ready_detail">Валідація TEE перевіряє вбудований знімок і може оновлювати канал відкликання атестації Google, коли дозволяють умови мережі.</string>
+    <string name="startup_crl_local_headline">Перевірки відкликання TEE використовують вбудований знімок.</string>
+    <string name="startup_crl_local_detail">Duck Detector не виконуватиме онлайн-оновлення CRL, доки ви не ввімкнете його знову в Налаштуваннях. Вбудовані перевірки відкликання залишаються активними.</string>
 
     <string name="startup_package_manager_title">PackageManager</string>
     <string name="startup_package_restricted_headline">Інвентар пакетів виглядає обмеженим або відфільтрованим.</string>

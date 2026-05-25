@@ -28,6 +28,7 @@ java {
 
 dependencies {
     implementation(libs.android.gradle.plugin)
+    implementation(libs.json)
     implementation(libs.kotlin.gradle.plugin)
 }
 

@@ -27,9 +27,9 @@ limitations under the License.
     <string name="user_agreement_title">ข้อตกลงผู้ใช้</string>
     <string name="user_agreement_content" formatted="false">การใช้งาน Duck Detector ถือว่าคุณยอมรับเงื่อนไขต่อไปนี้:&#10;&#10;1. วัตถุประสงค์การใช้งาน&#10;แอปนี้ออกแบบมาเพื่อการศึกษาและการประเมินความปลอดภัยส่วนบุคคลเท่านั้น โดยช่วยให้ผู้ใช้เข้าใจสถานะความปลอดภัยของอุปกรณ์ตนเอง&#10;&#10;2. การไม่รับประกัน&#10;แอปนี้ให้บริการตามสภาพที่เป็นอยู่ โดยไม่มีการรับประกันใด ๆ ไม่ว่าชัดแจ้งหรือโดยนัย ผู้พัฒนาไม่รับประกันความถูกต้อง ความครบถ้วน หรือความน่าเชื่อถือของผลการตรวจจับ&#10;&#10;3. ความรับผิดชอบของผู้ใช้&#10;คุณต้องรับผิดชอบแต่เพียงผู้เดียวต่อวิธีการใช้งานแอปนี้และผลที่อาจเกิดขึ้นจากการใช้งานนั้น&#10;&#10;4. การปฏิบัติตามกฎหมาย&#10;คุณตกลงที่จะใช้แอปนี้ให้สอดคล้องกับกฎหมายและข้อบังคับระดับท้องถิ่น ระดับประเทศ และระดับสากลที่เกี่ยวข้องทั้งหมด</string>
     <string name="disclaimer_title">ข้อจำกัดความรับผิดชอบ</string>
-    <string name="disclaimer_content" formatted="false">ประกาศสำคัญ:&#10;&#10;1. ข้อจำกัดของการตรวจจับ&#10;Duck Detector ใช้วิธีหลายแบบในการประเมินสถานะความปลอดภัยของอุปกรณ์ แต่ไม่มีวิธีใดที่แม่นยำ 100&#37; ผลลัพธ์ควรถูกมองว่าเป็นสัญญาณประกอบ ไม่ใช่ข้อสรุปสุดท้าย&#10;&#10;2. การแจ้งเตือนผิดพลาดและการพลาดตรวจ&#10;แอปนี้อาจให้ผลลวงหรือพลาดตรวจได้ โปรดใช้ร่วมกับเครื่องมือความปลอดภัยแบบมืออาชีพและการตรวจสอบด้วยตนเองเพื่อการประเมินที่ครบถ้วน&#10;&#10;3. การจำกัดความรับผิด&#10;ผู้พัฒนา ผู้มีส่วนร่วม และผู้จัดจำหน่าย Duck Detector จะไม่รับผิดชอบต่อความเสียหายใด ๆ ทั้งโดยตรง โดยอ้อม โดยบังเอิญ เป็นกรณีพิเศษ หรือเป็นผลสืบเนื่องจากการใช้งานหรือการไม่สามารถใช้งานแอปนี้ได้&#10;&#10;4. บริการของบุคคลที่สาม&#10;หากคุณอนุญาตการตรวจสอบการเพิกถอนแบบออนไลน์ แอปอาจเชื่อมต่อกับ Google attestation revocation endpoint การสแกนความปลอดภัยยังคงทำงานภายในอุปกรณ์ของคุณ และผลการตรวจจับจะไม่ถูกอัปโหลดเป็น telemetry ของการสแกนโดยเจตนา</string>
+    <string name="disclaimer_content" formatted="false">ประกาศสำคัญ:&#10;&#10;1. ข้อจำกัดของการตรวจจับ&#10;Duck Detector ใช้วิธีหลายแบบในการประเมินสถานะความปลอดภัยของอุปกรณ์ แต่ไม่มีวิธีใดที่แม่นยำ 100&#37; ผลลัพธ์ควรถูกมองว่าเป็นสัญญาณประกอบ ไม่ใช่ข้อสรุปสุดท้าย&#10;&#10;2. การแจ้งเตือนผิดพลาดและการพลาดตรวจ&#10;แอปนี้อาจให้ผลลวงหรือพลาดตรวจได้ โปรดใช้ร่วมกับเครื่องมือความปลอดภัยแบบมืออาชีพและการตรวจสอบด้วยตนเองเพื่อการประเมินที่ครบถ้วน&#10;&#10;3. การจำกัดความรับผิด&#10;ผู้พัฒนา ผู้มีส่วนร่วม และผู้จัดจำหน่าย Duck Detector จะไม่รับผิดชอบต่อความเสียหายใด ๆ ทั้งโดยตรง โดยอ้อม โดยบังเอิญ เป็นกรณีพิเศษ หรือเป็นผลสืบเนื่องจากการใช้งานหรือการไม่สามารถใช้งานแอปนี้ได้&#10;&#10;4. บริการของบุคคลที่สาม&#10;การตรวจสอบการเพิกถอน TEE ใช้ snapshot ที่ฝังในแอปเป็นค่าเริ่มต้น หากคุณอนุญาตการอัปเดตข้อมูลการเพิกถอนออนไลน์ แอปอาจเชื่อมต่อกับ Google attestation revocation endpoint การสแกนความปลอดภัยยังคงทำงานภายในอุปกรณ์ของคุณ และผลการตรวจจับจะไม่ถูกอัปโหลดเป็น telemetry ของการสแกนโดยเจตนา</string>
     <string name="privacy_notice_title">ประกาศความเป็นส่วนตัว</string>
-    <string name="privacy_notice_content" formatted="false">สรุปความเป็นส่วนตัว: การตรวจสอบความปลอดภัยจะทำงานภายในอุปกรณ์ของคุณ ผลการตรวจจับจะไม่ถูกอัปโหลดเป็น telemetry ของการสแกนโดยเจตนา หากคุณอนุญาตการตรวจสอบการเพิกถอนแบบออนไลน์ แอปอาจเชื่อมต่อกับ Google attestation revocation endpoint</string>
+    <string name="privacy_notice_content" formatted="false">สรุปความเป็นส่วนตัว: การตรวจสอบความปลอดภัยจะทำงานภายในอุปกรณ์ของคุณ ผลการตรวจจับจะไม่ถูกอัปโหลดเป็น telemetry ของการสแกนโดยเจตนา การตรวจสอบการเพิกถอน TEE ใช้ snapshot ในตัวเป็นค่าเริ่มต้น หากคุณอนุญาตการอัปเดตข้อมูลการเพิกถอนออนไลน์ แอปอาจเชื่อมต่อกับ Google attestation revocation endpoint</string>
     <string name="timer_elapsed">ครบ 30 วินาที</string>
     <string name="timer_waiting">โปรดรอ %1$d วินาที</string>
     <string name="fully_reviewed">ตรวจครบแล้ว</string>
@@ -39,9 +39,9 @@ limitations under the License.
     <string name="agreement_acknowledgement">การดำเนินการต่อหมายความว่าคุณได้รับทราบและยอมรับเงื่อนไขเหล่านี้แล้ว</string>
     <string name="settings_title">การตั้งค่า</string>
     <string name="settings_subtitle">ตัวควบคุมขณะทำงานสำหรับเส้นทางการยืนยันแบบออนไลน์</string>
-    <string name="settings_crl_title">อนุญาตการตรวจสอบ CRL ออนไลน์</string>
-    <string name="settings_crl_summary">สอบถาม Google attestation revocation feed ระหว่างการยืนยัน TEE</string>
-    <string name="settings_crl_footer">การเปลี่ยนแปลงมีผลกับตัวตรวจจับ TEE ทันที โมดูลอื่นจะไม่ถูกแตะต้อง</string>
+    <string name="settings_crl_title">อนุญาตรีเฟรช CRL ออนไลน์</string>
+    <string name="settings_crl_summary">การตรวจสอบการเพิกถอน TEE ใช้ snapshot ในตัวเสมอ ตัวเลือกนี้อนุญาตเฉพาะการดึง Google attestation revocation feed ล่าสุด</string>
+    <string name="settings_crl_footer">การเปลี่ยนแปลงมีผลกับการรีเฟรชออนไลน์ทันที การตรวจสอบการเพิกถอน TEE ในตัวยังคงเปิดใช้อยู่</string>
     <string name="about_title">เกี่ยวกับ</string>
     <string name="about_subtitle">ลิงก์โปรเจกต์และข้อมูลเมตาของบิลด์</string>
     <string name="about_label_version">เวอร์ชัน</string>
@@ -52,7 +52,7 @@ limitations under the License.
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_label_build_hash">แฮชบิลด์</string>
     <string name="about_label_privacy">ความเป็นส่วนตัว / การใช้ข้อมูล</string>
-    <string name="about_privacy_summary">การตรวจสอบทำงานภายในอุปกรณ์เป็นหลัก การค้นหา CRL ออนไลน์เป็นทางเลือกและจะเกิดขึ้นเมื่อคุณเปิดใช้ใน Settings เท่านั้น</string>
+    <string name="about_privacy_summary">การตรวจสอบทำงานภายในอุปกรณ์ ข้อมูลการเพิกถอน TEE ถูกฝังมากับแอป การรีเฟรช CRL ออนไลน์เป็นทางเลือกและจะเกิดขึ้นเมื่อคุณเปิดใช้ใน Settings เท่านั้น</string>
     <string name="about_label_copy_build_info">คัดลอกข้อมูลบิลด์</string>
     <string name="about_copy_build_info_summary">คัดลอกเวอร์ชัน เวลาบิลด์ และแฮชบิลด์</string>
     <string name="about_clipboard_label">ข้อมูลบิลด์ Duck Detector</string>
@@ -104,7 +104,7 @@ limitations under the License.
     <string name="startup_preparing_title">กำลังเตรียมการเริ่มต้น</string>
     <string name="startup_before_scan_title">ก่อนสแกน</string>
     <string name="startup_loading_detail">ค่ากำหนดและการมองเห็น PackageManager ยังคงกำลังโหลด Detector ViewModel จะยังคงหยุดไว้จนกว่าจะเสร็จ</string>
-    <string name="startup_intro_detail">ทำตัวเลือกที่จำเป็นให้เสร็จก่อนการสแกนของ detector จะเริ่มขึ้น ที่นี่จะตรวจสอบการแจ้งเตือน เส้นทาง Live Update เครือข่าย CRL และการมองเห็น PackageManager ในจุดเดียว pipeline ของ detector จะถูกบล็อกจนกว่าการ์ดที่จำเป็นด้านล่างจะได้รับการจัดการครบทั้งหมด</string>
+    <string name="startup_intro_detail">ทำตัวเลือกที่จำเป็นให้เสร็จก่อนการสแกนของ detector จะเริ่มขึ้น ที่นี่จะตรวจสอบการแจ้งเตือน เส้นทาง Live Update การรีเฟรช CRL ออนไลน์ และการมองเห็น PackageManager ในจุดเดียว pipeline ของ detector จะถูกบล็อกจนกว่าการ์ดที่จำเป็นด้านล่างจะได้รับการจัดการครบทั้งหมด</string>
     <string name="startup_loading_state">กำลังโหลดสถานะการเริ่มต้น…</string>
     <string name="startup_progress_resolved">จัดการการ์ดเริ่มต้นแล้ว %1$d จาก %2$d รายการ</string>
     <string name="startup_loading_dependencies_title">กำลังโหลด dependency สำหรับการเริ่มต้น</string>
@@ -116,6 +116,7 @@ limitations under the License.
     <string name="startup_status_waiting">รออยู่</string>
     <string name="startup_status_regular">ปกติ</string>
     <string name="startup_status_local">ภายในเครื่อง</string>
+    <string name="startup_status_optional">ไม่บังคับ</string>
     <string name="startup_status_acknowledged">รับทราบแล้ว</string>
     <string name="startup_status_review_later">ตรวจภายหลัง</string>
     <string name="startup_notifications_title">การแจ้งเตือน</string>
@@ -141,15 +142,15 @@ limitations under the License.
     <string name="startup_live_update_use_regular">ใช้การแจ้งเตือนปกติ</string>
     <string name="startup_live_update_regular_headline">เลือกการแจ้งเตือนปกติแล้ว</string>
     <string name="startup_live_update_regular_detail">การแจ้งเตือนต่อเนื่องแบบ promoted จะยังคงถูกปิด และความคืบหน้าการสแกนจะใช้เส้นทางการแจ้งเตือนปกติแทน</string>
-    <string name="startup_crl_title">เครือข่าย CRL</string>
-    <string name="startup_crl_prompt_headline">เลือกว่าจะอนุญาตให้การตรวจสอบการเพิกถอน TEE ใช้เครือข่ายหรือไม่</string>
-    <string name="startup_crl_prompt_detail">การอนุญาตเครือข่ายจะทำให้ Duck Detector สามารถสอบถาม Google attestation revocation feed ระหว่างการยืนยัน TEE ได้ โหมดเฉพาะภายในเครื่องจะข้ามการรีเฟรชออนไลน์</string>
-    <string name="startup_crl_allow_network">อนุญาตเครือข่าย</string>
-    <string name="startup_crl_local_only">เฉพาะภายในเครื่อง</string>
+    <string name="startup_crl_title">รีเฟรช CRL ออนไลน์</string>
+    <string name="startup_crl_prompt_headline">เลือกว่าจะอนุญาตให้การตรวจสอบการเพิกถอน TEE ดึงอัปเดตออนไลน์หรือไม่</string>
+    <string name="startup_crl_prompt_detail">Duck Detector ตรวจสอบ snapshot การเพิกถอนในตัวเสมอ การอนุญาตเครือข่ายจะทำให้ดึง Google attestation revocation feed ล่าสุดระหว่างการยืนยัน TEE ได้</string>
+    <string name="startup_crl_allow_network">อนุญาตรีเฟรช</string>
+    <string name="startup_crl_local_only">ใช้ในตัวเท่านั้น</string>
     <string name="startup_crl_ready_headline">อนุญาตการรีเฟรช CRL ออนไลน์แล้ว</string>
-    <string name="startup_crl_ready_detail">การยืนยัน TEE อาจรีเฟรช Google attestation revocation feed ได้ทุกครั้งที่สภาพเครือข่ายเอื้ออำนวย</string>
-    <string name="startup_crl_local_headline">การตรวจสอบการเพิกถอน TEE ใช้เฉพาะภายในเครื่อง</string>
-    <string name="startup_crl_local_detail">Duck Detector จะไม่ทำการรีเฟรช CRL ออนไลน์จนกว่าคุณจะเปิดใช้อีกครั้งใน Settings</string>
+    <string name="startup_crl_ready_detail">การยืนยัน TEE ตรวจสอบ snapshot ในตัว และอาจรีเฟรช Google attestation revocation feed ได้เมื่อสภาพเครือข่ายเอื้ออำนวย</string>
+    <string name="startup_crl_local_headline">การตรวจสอบการเพิกถอน TEE ใช้ snapshot ในตัว</string>
+    <string name="startup_crl_local_detail">Duck Detector จะไม่ทำการรีเฟรช CRL ออนไลน์จนกว่าคุณจะเปิดใช้อีกครั้งใน Settings การตรวจสอบการเพิกถอนในตัวยังคงทำงานอยู่</string>
     <string name="startup_package_manager_title">PackageManager</string>
     <string name="startup_package_restricted_headline">รายการแพ็กเกจดูเหมือนถูกจำกัดหรือถูกกรอง</string>
     <string name="startup_package_restricted_detail">PackageManager เปิดเผยแพ็กเกจที่ติดตั้งเพียง %1$d รายการ Dangerous Apps และโพรบที่เกี่ยวข้องอาจรายงานเครื่องมือที่ติดตั้งต่ำกว่าความจริงภายใต้การมองเห็นที่ถูกจำกัด รายการแบบมีขอบเขต หรือการกรองสไตล์ HMA</string>

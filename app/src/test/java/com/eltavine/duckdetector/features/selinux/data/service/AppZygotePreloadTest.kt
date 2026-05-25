@@ -101,6 +101,15 @@ class AppZygotePreloadTest {
                     source == "u:r:untrusted_app:s0" && target == "u:object_r:lsposed_file:s0" &&
                         targetClass == "file" && permission == "read" -> true
 
+                    source == "u:r:magisk:s0" && target == "u:r:droidspacesd:s0" &&
+                        targetClass == "process" && permission == "dyntransition" -> true
+
+                    source == "u:r:su:s0" && target == "u:r:droidspacesd:s0" &&
+                        targetClass == "process" && permission == "dyntransition" -> true
+
+                    source == "u:r:system_server:s0" && target == "u:r:droidspacesd:s0" &&
+                        targetClass == "binder" && permission == "call" -> true
+
                     else -> false
                 }
             },
@@ -114,6 +123,9 @@ class AppZygotePreloadTest {
         assertTrue(snapshot.javaDirtyPolicyStable)
         assertEquals(true, snapshot.javaDirtyPolicySystemServerExecmemAllowed)
         assertEquals(true, snapshot.javaDirtyPolicyLsposedFileReadAllowed)
+        assertEquals(true, snapshot.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed)
+        assertEquals(true, snapshot.javaDirtyPolicySuDroidspacesdTransitionAllowed)
+        assertEquals(true, snapshot.javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed)
         assertEquals(true, snapshot.javaDirtyPolicyNegativeControlRejected)
         assertEquals("android.os.SELinux.checkSELinuxAccess", snapshot.javaDirtyPolicyQueryMethod)
     }

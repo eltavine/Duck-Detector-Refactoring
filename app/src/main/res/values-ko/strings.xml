@@ -27,9 +27,9 @@ limitations under the License.
     <string name="user_agreement_title">사용자 동의</string>
     <string name="user_agreement_content" formatted="false">Duck Detector를 사용함으로써 다음 조건에 동의하게 됩니다:&#10;&#10;1. 사용 목적&#10;이 앱은 교육 목적과 개인 보안 점검 용도로만 설계되었으며, 사용자가 자신의 기기 보안 상태를 이해하도록 돕습니다.&#10;&#10;2. 보증 부인&#10;이 앱은 &quot;있는 그대로&quot; 제공되며, 명시적 또는 묵시적 보증을 제공하지 않습니다. 개발자는 탐지 결과의 정확성, 완전성 또는 신뢰성을 보장하지 않습니다.&#10;&#10;3. 사용자 책임&#10;이 앱을 사용하는 방식과 그로 인해 발생할 수 있는 모든 결과에 대한 책임은 전적으로 사용자에게 있습니다.&#10;&#10;4. 법률 준수&#10;사용자는 모든 관련 지역, 국가 및 국제 법규를 준수하여 이 앱을 사용해야 합니다.</string>
     <string name="disclaimer_title">면책 고지</string>
-    <string name="disclaimer_content" formatted="false">중요 고지:&#10;&#10;1. 탐지 한계&#10;Duck Detector는 기기 보안 상태를 판단하기 위해 여러 방법을 사용하지만, 어느 방법도 100&#37; 정확하지는 않습니다. 결과는 최종 판정이 아니라 참고 신호로 보아야 합니다.&#10;&#10;2. 오탐과 미탐&#10;이 앱은 오탐 또는 미탐을 낼 수 있습니다. 보다 완전한 판단을 위해서는 전문 보안 도구와 사용자의 자체 검증을 함께 활용해 주세요.&#10;&#10;3. 책임 제한&#10;Duck Detector의 개발자, 기여자 및 배포자는 이 앱의 사용 또는 사용 불가로 인해 발생하는 직접적, 간접적, 부수적, 특별 또는 결과적 손해에 대해 책임을 지지 않습니다.&#10;&#10;4. 제3자 서비스&#10;온라인 폐기 확인을 허용하면 앱이 Google attestation revocation endpoint에 접근할 수 있습니다. 보안 스캔 자체는 여전히 사용자의 기기에서 로컬로 수행되며, 탐지 결과가 스캔 텔레메트리로 의도적으로 업로드되지는 않습니다.</string>
+    <string name="disclaimer_content" formatted="false">중요 고지:&#10;&#10;1. 탐지 한계&#10;Duck Detector는 기기 보안 상태를 판단하기 위해 여러 방법을 사용하지만, 어느 방법도 100&#37; 정확하지는 않습니다. 결과는 최종 판정이 아니라 참고 신호로 보아야 합니다.&#10;&#10;2. 오탐과 미탐&#10;이 앱은 오탐 또는 미탐을 낼 수 있습니다. 보다 완전한 판단을 위해서는 전문 보안 도구와 사용자의 자체 검증을 함께 활용해 주세요.&#10;&#10;3. 책임 제한&#10;Duck Detector의 개발자, 기여자 및 배포자는 이 앱의 사용 또는 사용 불가로 인해 발생하는 직접적, 간접적, 부수적, 특별 또는 결과적 손해에 대해 책임을 지지 않습니다.&#10;&#10;4. 제3자 서비스&#10;TEE 폐기 확인은 기본적으로 앱 내장 스냅샷을 사용합니다. 온라인 폐기 데이터 업데이트를 허용하면 앱이 Google attestation revocation endpoint에 접근할 수 있습니다. 보안 스캔 자체는 여전히 사용자의 기기에서 로컬로 수행되며, 탐지 결과가 스캔 텔레메트리로 의도적으로 업로드되지는 않습니다.</string>
     <string name="privacy_notice_title">개인정보 안내</string>
-    <string name="privacy_notice_content" formatted="false">개인정보 요약: 보안 검사는 사용자의 기기에서 로컬로 수행됩니다. 탐지 결과는 스캔 텔레메트리로 의도적으로 업로드되지 않습니다. 온라인 폐기 확인을 허용하면 앱이 Google attestation revocation endpoint에 접근할 수 있습니다.</string>
+    <string name="privacy_notice_content" formatted="false">개인정보 요약: 보안 검사는 사용자의 기기에서 로컬로 수행됩니다. 탐지 결과는 스캔 텔레메트리로 의도적으로 업로드되지 않습니다. TEE 폐기 확인은 기본적으로 앱 내장 스냅샷을 사용합니다. 온라인 폐기 데이터 업데이트를 허용하면 앱이 Google attestation revocation endpoint에 접근할 수 있습니다.</string>
     <string name="timer_elapsed">30초 경과</string>
     <string name="timer_waiting">%1$d초 기다려 주세요</string>
     <string name="fully_reviewed">모두 확인함</string>
@@ -39,9 +39,9 @@ limitations under the License.
     <string name="agreement_acknowledgement">계속하면 이 약관을 읽고 동의했음을 인정하는 것입니다.</string>
     <string name="settings_title">설정</string>
     <string name="settings_subtitle">온라인 검증 경로에 대한 런타임 제어입니다.</string>
-    <string name="settings_crl_title">온라인 CRL 검사 허용</string>
-    <string name="settings_crl_summary">TEE 검증 중 Google attestation revocation feed를 조회합니다.</string>
-    <string name="settings_crl_footer">변경 사항은 TEE 감지기에 즉시 적용됩니다. 다른 모듈은 그대로 유지됩니다.</string>
+    <string name="settings_crl_title">온라인 CRL 새로고침 허용</string>
+    <string name="settings_crl_summary">TEE 폐기 확인은 항상 내장 스냅샷을 사용합니다. 이 설정은 Google 최신 attestation revocation feed 가져오기만 허용합니다.</string>
+    <string name="settings_crl_footer">변경 사항은 온라인 새로고침 동작에 즉시 적용됩니다. 내장 TEE 폐기 확인은 계속 활성화됩니다.</string>
     <string name="about_title">정보</string>
     <string name="about_subtitle">프로젝트 링크와 빌드 메타데이터입니다.</string>
     <string name="about_label_version">버전</string>
@@ -52,7 +52,7 @@ limitations under the License.
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_label_build_hash">빌드 해시</string>
     <string name="about_label_privacy">개인정보 / 데이터 사용</string>
-    <string name="about_privacy_summary">검사는 기기 내에서 로컬로 수행됩니다. 온라인 CRL 조회는 선택 사항이며 설정에서 활성화한 경우에만 수행됩니다.</string>
+    <string name="about_privacy_summary">검사는 기기 내에서 로컬로 수행됩니다. TEE 폐기 데이터는 앱에 내장됩니다. 온라인 CRL 새로고침은 선택 사항이며 설정에서 활성화한 경우에만 수행됩니다.</string>
     <string name="about_label_copy_build_info">빌드 정보 복사</string>
     <string name="about_copy_build_info_summary">버전, 빌드 시간 및 빌드 해시 복사</string>
     <string name="about_clipboard_label">Duck Detector 빌드 정보</string>
@@ -104,7 +104,7 @@ limitations under the License.
     <string name="startup_preparing_title">시작 준비 중</string>
     <string name="startup_before_scan_title">스캔 전</string>
     <string name="startup_loading_detail">설정값과 PackageManager 가시성을 아직 불러오는 중입니다. 이 작업이 끝날 때까지 detector ViewModel은 일시 중지됩니다.</string>
-    <string name="startup_intro_detail">detector 스캔이 시작되기 전에 필요한 선택을 완료하세요. 알림, Live Update 경로, CRL 네트워킹, PackageManager 가시성을 한 곳에서 검토합니다. 아래의 필수 카드가 모두 정리될 때까지 detector 파이프라인은 차단됩니다.</string>
+    <string name="startup_intro_detail">detector 스캔이 시작되기 전에 필요한 선택을 완료하세요. 알림, Live Update 경로, CRL 온라인 새로고침, PackageManager 가시성을 한 곳에서 검토합니다. 아래의 필수 카드가 모두 정리될 때까지 detector 파이프라인은 차단됩니다.</string>
     <string name="startup_loading_state">시작 상태를 불러오는 중…</string>
     <string name="startup_progress_resolved">시작 카드 %1$d / %2$d개 해결됨</string>
     <string name="startup_loading_dependencies_title">시작 종속성 불러오는 중</string>
@@ -116,6 +116,7 @@ limitations under the License.
     <string name="startup_status_waiting">대기 중</string>
     <string name="startup_status_regular">일반</string>
     <string name="startup_status_local">로컬</string>
+    <string name="startup_status_optional">선택 사항</string>
     <string name="startup_status_acknowledged">확인됨</string>
     <string name="startup_status_review_later">나중에 검토</string>
     <string name="startup_notifications_title">알림</string>
@@ -141,15 +142,15 @@ limitations under the License.
     <string name="startup_live_update_use_regular">일반 알림 사용</string>
     <string name="startup_live_update_regular_headline">일반 알림을 선택했습니다.</string>
     <string name="startup_live_update_regular_detail">promoted ongoing notification은 계속 비활성화되며, 스캔 진행 상황은 일반 알림 경로를 사용합니다.</string>
-    <string name="startup_crl_title">CRL 네트워킹</string>
-    <string name="startup_crl_prompt_headline">TEE 폐기 확인이 네트워크를 사용할지 선택하세요.</string>
-    <string name="startup_crl_prompt_detail">네트워크를 허용하면 Duck Detector가 TEE 검증 중 Google attestation revocation feed를 조회할 수 있습니다. 로컬 전용 모드는 온라인 새로고침을 건너뜁니다.</string>
-    <string name="startup_crl_allow_network">네트워크 허용</string>
-    <string name="startup_crl_local_only">로컬만</string>
+    <string name="startup_crl_title">CRL 온라인 새로고침</string>
+    <string name="startup_crl_prompt_headline">TEE 폐기 확인이 온라인 업데이트를 가져올지 선택하세요.</string>
+    <string name="startup_crl_prompt_detail">Duck Detector는 항상 내장 폐기 스냅샷을 확인합니다. 네트워크를 허용하면 TEE 검증 중 Google 최신 attestation revocation feed를 가져올 수 있습니다.</string>
+    <string name="startup_crl_allow_network">새로고침 허용</string>
+    <string name="startup_crl_local_only">내장만</string>
     <string name="startup_crl_ready_headline">온라인 CRL 새로고침이 허용되었습니다.</string>
-    <string name="startup_crl_ready_detail">네트워크 상태가 허용될 때마다 TEE 검증에서 Google attestation revocation feed를 새로고침할 수 있습니다.</string>
-    <string name="startup_crl_local_headline">TEE 폐기 확인은 로컬 전용입니다.</string>
-    <string name="startup_crl_local_detail">설정에서 다시 활성화할 때까지 Duck Detector는 온라인 CRL 새로고침을 수행하지 않습니다.</string>
+    <string name="startup_crl_ready_detail">TEE 검증은 내장 스냅샷을 확인하고 네트워크 상태가 허용될 때마다 Google attestation revocation feed를 새로고침할 수 있습니다.</string>
+    <string name="startup_crl_local_headline">TEE 폐기 확인은 내장 스냅샷을 사용합니다.</string>
+    <string name="startup_crl_local_detail">설정에서 다시 활성화할 때까지 Duck Detector는 온라인 CRL 새로고침을 수행하지 않습니다. 내장 폐기 확인은 계속 활성화됩니다.</string>
     <string name="startup_package_manager_title">PackageManager</string>
     <string name="startup_package_restricted_headline">패키지 목록이 범위 제한되었거나 필터링된 것처럼 보입니다.</string>
     <string name="startup_package_restricted_detail">PackageManager가 설치된 패키지 %1$d개만 노출했습니다. 가시성 제한, 범위화된 목록, HMA 스타일 필터링 환경에서는 Dangerous Apps와 관련 프로브가 설치된 도구를 적게 보고할 수 있습니다.</string>
