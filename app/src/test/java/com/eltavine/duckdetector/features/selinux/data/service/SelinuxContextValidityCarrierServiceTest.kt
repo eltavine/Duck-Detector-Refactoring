@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.features.selinux.data.service
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityBridge
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityPayloadCodec
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
@@ -95,6 +96,9 @@ class SelinuxContextValidityCarrierServiceTest {
         assertEquals("Dedicated app_zygote preload payload unavailable.", snapshot.failureReason)
         assertEquals("Dedicated app_zygote preload payload unavailable.", snapshot.procAttrCurrentFailureReason)
         assertEquals("Dedicated app_zygote preload payload unavailable.", snapshot.dirtyPolicyFailureReason)
+        assertEquals("Dedicated app_zygote preload payload unavailable.", snapshot.policyloadSeqnoFailureReason)
+        assertEquals(SelinuxPolicyloadSeqnoState.UNAVAILABLE.name, snapshot.policyloadSeqnoState)
+        assertTrue(snapshot.policyloadSeqnoNotes.any { it.contains("did not receive a preloaded app_zygote payload") })
         assertTrue(snapshot.notes.any { it.contains("did not receive a preloaded app_zygote payload") })
     }
 

@@ -23,6 +23,8 @@ import com.eltavine.duckdetector.features.selinux.data.probes.DedicatedCarrierSt
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbeResult
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityState
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentProbe
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 import com.eltavine.duckdetector.features.selinux.data.service.SelinuxContextValidityCarrierManager
@@ -94,6 +96,7 @@ class SelinuxRepository(
         val carrierResult = contextValidityProbe.interpret(carrierSnapshot)
         val contextValidityResult = carrierResult
         methods += buildContextValidityMethod(contextValidityResult)
+        methods += buildPolicyloadSeqnoMethod(contextValidityResult)
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
         methods += buildDirtyPolicyMethods(carrierSnapshot)
 
@@ -372,6 +375,46 @@ class SelinuxRepository(
                 SelinuxContextValidityState.KSU_PRESENT -> false
                 SelinuxContextValidityState.AMBIGUOUS -> null
                 SelinuxContextValidityState.INCONSISTENT -> null
+            },
+            permissionDenied = false,
+            details = detail,
+        )
+    }
+
+    private fun buildPolicyloadSeqnoMethod(
+        result: SelinuxContextValidityProbeResult,
+    ): SelinuxCheckResult {
+        val state = runCatching {
+            SelinuxPolicyloadSeqnoState.valueOf(result.policyloadSeqnoState.orEmpty())
+        }.getOrDefault(SelinuxPolicyloadSeqnoState.UNAVAILABLE)
+        val status = when (state) {
+            SelinuxPolicyloadSeqnoState.CLEAN -> SelinuxPolicyloadSeqnoProbe.STATUS_CLEAN
+            SelinuxPolicyloadSeqnoState.SUSPICIOUS -> SelinuxPolicyloadSeqnoProbe.STATUS_SUSPICIOUS
+            SelinuxPolicyloadSeqnoState.INCONCLUSIVE -> SelinuxPolicyloadSeqnoProbe.STATUS_INCONCLUSIVE
+            SelinuxPolicyloadSeqnoState.UNAVAILABLE -> SelinuxPolicyloadSeqnoProbe.STATUS_UNAVAILABLE
+        }
+        val detail = buildList {
+            add("Evidence source=${EvidenceSource.DEDICATED_CARRIER.label}")
+            add("Carrier=${result.policyloadSeqnoCarrierContext ?: result.carrierContext ?: "<unreadable>"}")
+            add("zygotePreloadName required=yes")
+            add("Probe attempted=${if (result.policyloadSeqnoProbeAttempted) "yes" else "no"}")
+            result.policyloadSeqnoStatusSequence?.let { add("status.sequence=$it") }
+            result.policyloadSeqnoStatusPolicyload?.let { add("status.policyload=$it") }
+            result.policyloadSeqnoAccessSeqno?.let { add("access.avd.seqno=$it") }
+            result.policyloadSeqnoProcessClass?.let { add("process class=$it") }
+            (result.policyloadSeqnoFailureReason ?: result.failureReason)
+                ?.let { add("Failure=$it") }
+            result.policyloadSeqnoNotes.forEach(::add)
+        }.joinToString(" | ")
+
+        return SelinuxCheckResult(
+            method = SelinuxPolicyloadSeqnoProbe.METHOD_LABEL,
+            status = status,
+            isSecure = when (state) {
+                SelinuxPolicyloadSeqnoState.CLEAN -> true
+                SelinuxPolicyloadSeqnoState.SUSPICIOUS -> false
+                SelinuxPolicyloadSeqnoState.INCONCLUSIVE,
+                SelinuxPolicyloadSeqnoState.UNAVAILABLE -> null
             },
             permissionDenied = false,
             details = detail,

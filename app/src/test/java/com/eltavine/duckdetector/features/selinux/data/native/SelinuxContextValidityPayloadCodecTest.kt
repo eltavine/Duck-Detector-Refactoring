@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.selinux.data.native
 
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -80,6 +81,16 @@ class SelinuxContextValidityPayloadCodecTest {
             javaDirtyPolicyNegativeControlRejected = true,
             javaDirtyPolicyMagiskDroidspacesdTransitionAllowed = true,
             javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed = true,
+            policyloadSeqnoAvailable = true,
+            policyloadSeqnoProbeAttempted = true,
+            policyloadSeqnoState = SelinuxPolicyloadSeqnoState.SUSPICIOUS.name,
+            policyloadSeqnoCarrierContext = "u:r:app_zygote:s0:c1,c2",
+            policyloadSeqnoStatusSequence = 4,
+            policyloadSeqnoStatusPolicyload = 0,
+            policyloadSeqnoAccessSeqno = 9,
+            policyloadSeqnoProcessClass = 2,
+            policyloadSeqnoFailureReason = "Seqno split",
+            policyloadSeqnoNotes = listOf("zygotePreloadName required"),
             dirtyPolicyNotes = listOf("system_server execmem=allowed"),
             procAttrCurrentProbeAttempted = true,
             procAttrCurrentResults = listOf(
@@ -152,6 +163,16 @@ class SelinuxContextValidityPayloadCodecTest {
         assertTrue(parsed.javaDirtyPolicyProbeAttempted)
         assertEquals(snapshot.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed, parsed.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed)
         assertEquals(snapshot.javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed, parsed.javaDirtyPolicySystemServerDroidspacesdBinderCallAllowed)
+        assertTrue(parsed.policyloadSeqnoAvailable)
+        assertTrue(parsed.policyloadSeqnoProbeAttempted)
+        assertEquals(snapshot.policyloadSeqnoState, parsed.policyloadSeqnoState)
+        assertEquals(snapshot.policyloadSeqnoCarrierContext, parsed.policyloadSeqnoCarrierContext)
+        assertEquals(snapshot.policyloadSeqnoStatusSequence, parsed.policyloadSeqnoStatusSequence)
+        assertEquals(snapshot.policyloadSeqnoStatusPolicyload, parsed.policyloadSeqnoStatusPolicyload)
+        assertEquals(snapshot.policyloadSeqnoAccessSeqno, parsed.policyloadSeqnoAccessSeqno)
+        assertEquals(snapshot.policyloadSeqnoProcessClass, parsed.policyloadSeqnoProcessClass)
+        assertEquals(snapshot.policyloadSeqnoFailureReason, parsed.policyloadSeqnoFailureReason)
+        assertEquals(snapshot.policyloadSeqnoNotes, parsed.policyloadSeqnoNotes)
         assertTrue(parsed.procAttrCurrentProbeAttempted)
         assertEquals(snapshot.procAttrCurrentResults, parsed.procAttrCurrentResults)
         assertEquals(snapshot.procAttrCurrentFailureReason, parsed.procAttrCurrentFailureReason)

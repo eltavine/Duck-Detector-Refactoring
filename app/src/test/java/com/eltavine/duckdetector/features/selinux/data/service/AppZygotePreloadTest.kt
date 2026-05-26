@@ -17,6 +17,8 @@
 package com.eltavine.duckdetector.features.selinux.data.service
 
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoResult
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityBridge
 import org.junit.Assert.assertEquals
@@ -87,6 +89,17 @@ class AppZygotePreloadTest {
                     ),
                 )
             },
+            inspectPolicyloadSeqno = {
+                SelinuxPolicyloadSeqnoResult(
+                    state = SelinuxPolicyloadSeqnoState.SUSPICIOUS,
+                    available = true,
+                    probeAttempted = true,
+                    statusSequence = 4,
+                    statusPolicyload = 0,
+                    accessSeqno = 9,
+                    processClass = 2,
+                )
+            },
             checkAccess = { source, target, targetClass, permission ->
                 when {
                     source == "u:r:app_zygote:s0" && target == "u:r:isolated_app:s0" &&
@@ -121,6 +134,11 @@ class AppZygotePreloadTest {
         assertTrue(snapshot.javaDirtyPolicyProbeAttempted)
         assertTrue(snapshot.javaDirtyPolicyControlsPassed)
         assertTrue(snapshot.javaDirtyPolicyStable)
+        assertTrue(snapshot.policyloadSeqnoAvailable)
+        assertTrue(snapshot.policyloadSeqnoProbeAttempted)
+        assertEquals(SelinuxPolicyloadSeqnoState.SUSPICIOUS.name, snapshot.policyloadSeqnoState)
+        assertEquals(0L, snapshot.policyloadSeqnoStatusPolicyload)
+        assertEquals(9L, snapshot.policyloadSeqnoAccessSeqno)
         assertEquals(true, snapshot.javaDirtyPolicySystemServerExecmemAllowed)
         assertEquals(true, snapshot.javaDirtyPolicyLsposedFileReadAllowed)
         assertEquals(true, snapshot.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed)
@@ -133,6 +151,7 @@ class AppZygotePreloadTest {
     @Test
     fun `augment preload snapshot skips attr writes when carrier gate fails`() {
         var inspectCalls = 0
+        var seqnoCalls = 0
 
         val snapshot = AppZygotePreload.augmentPreloadSnapshot(
             baseSnapshot = SelinuxContextValiditySnapshot(
@@ -160,11 +179,22 @@ class AppZygotePreloadTest {
                     ),
                 )
             },
+            inspectPolicyloadSeqno = {
+                seqnoCalls += 1
+                SelinuxPolicyloadSeqnoResult(
+                    state = SelinuxPolicyloadSeqnoState.SUSPICIOUS,
+                    available = true,
+                    probeAttempted = true,
+                )
+            },
             checkAccess = { _, _, _, _ -> null },
         )
 
         assertEquals(0, inspectCalls)
+        assertEquals(0, seqnoCalls)
         assertFalse(snapshot.procAttrCurrentProbeAttempted)
+        assertFalse(snapshot.policyloadSeqnoProbeAttempted)
+        assertEquals(SelinuxPolicyloadSeqnoState.UNAVAILABLE.name, snapshot.policyloadSeqnoState)
         assertTrue(snapshot.procAttrCurrentResults.isEmpty())
         assertEquals(
             "Carrier pid context did not match the current process context.",

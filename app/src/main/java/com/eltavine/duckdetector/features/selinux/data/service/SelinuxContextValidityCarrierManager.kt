@@ -24,6 +24,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityBridge
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
@@ -59,6 +60,8 @@ open class SelinuxContextValidityCarrierManager(
         return SelinuxContextValiditySnapshot(
             dirtyPolicyFailureReason = reason,
             javaDirtyPolicyFailureReason = reason,
+            policyloadSeqnoState = SelinuxPolicyloadSeqnoState.UNAVAILABLE.name,
+            policyloadSeqnoFailureReason = reason,
             procAttrCurrentFailureReason = reason,
             failureReason = reason,
         )

@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.selinux.data.native
 
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
@@ -85,6 +86,16 @@ class SelinuxContextValidityBridgeTest {
                 JAVA_DIRTY_POLICY_MAGISK_DROIDSPACESD_TRANSITION_ALLOWED=1
                 JAVA_DIRTY_POLICY_FAILURE_REASON=Java dirty policy oracle self-test failed.
                 JAVA_DIRTY_POLICY_NOTE=java system_server execmem=allowed
+                POLICYLOAD_SEQNO_AVAILABLE=1
+                POLICYLOAD_SEQNO_PROBE_ATTEMPTED=1
+                POLICYLOAD_SEQNO_STATE=SUSPICIOUS
+                POLICYLOAD_SEQNO_CARRIER_CONTEXT=u:r:app_zygote:s0:c1,c2
+                POLICYLOAD_SEQNO_STATUS_SEQUENCE=4
+                POLICYLOAD_SEQNO_STATUS_POLICYLOAD=0
+                POLICYLOAD_SEQNO_ACCESS_SEQNO=9
+                POLICYLOAD_SEQNO_PROCESS_CLASS=2
+                POLICYLOAD_SEQNO_FAILURE_REASON=Seqno split
+                POLICYLOAD_SEQNO_NOTE=zygotePreloadName required
                 PROC_ATTR_CURRENT_PROBE_ATTEMPTED=1
                 PROC_ATTR_CURRENT_RESULT=KernelSU\tu:r:ksu:s0\tNORMAL_EINVAL\tErrnoException: errno=22, Invalid argument
                 PROC_ATTR_CURRENT_RESULT=Magisk\tu:r:magisk:s0\tDETECTED_NON_EINVAL\tErrnoException: errno=13, Permission denied
@@ -150,6 +161,16 @@ class SelinuxContextValidityBridgeTest {
         assertEquals(true, snapshot.javaDirtyPolicyMagiskDroidspacesdTransitionAllowed)
         assertEquals("Java dirty policy oracle self-test failed.", snapshot.javaDirtyPolicyFailureReason)
         assertEquals(listOf("java system_server execmem=allowed"), snapshot.javaDirtyPolicyNotes)
+        assertTrue(snapshot.policyloadSeqnoAvailable)
+        assertTrue(snapshot.policyloadSeqnoProbeAttempted)
+        assertEquals(SelinuxPolicyloadSeqnoState.SUSPICIOUS.name, snapshot.policyloadSeqnoState)
+        assertEquals("u:r:app_zygote:s0:c1,c2", snapshot.policyloadSeqnoCarrierContext)
+        assertEquals(4L, snapshot.policyloadSeqnoStatusSequence)
+        assertEquals(0L, snapshot.policyloadSeqnoStatusPolicyload)
+        assertEquals(9L, snapshot.policyloadSeqnoAccessSeqno)
+        assertEquals(2, snapshot.policyloadSeqnoProcessClass)
+        assertEquals("Seqno split", snapshot.policyloadSeqnoFailureReason)
+        assertEquals(listOf("zygotePreloadName required"), snapshot.policyloadSeqnoNotes)
         assertEquals(true, snapshot.procAttrCurrentProbeAttempted)
         assertEquals(
             listOf(

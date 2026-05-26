@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.selinux.data.service
 
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -29,5 +30,7 @@ class SelinuxContextValidityCarrierManagerTest {
         assertEquals("SELinux carrier service unavailable.", snapshot.failureReason)
         assertEquals("SELinux carrier service unavailable.", snapshot.procAttrCurrentFailureReason)
         assertEquals("SELinux carrier service unavailable.", snapshot.dirtyPolicyFailureReason)
+        assertEquals("SELinux carrier service unavailable.", snapshot.policyloadSeqnoFailureReason)
+        assertEquals(SelinuxPolicyloadSeqnoState.UNAVAILABLE.name, snapshot.policyloadSeqnoState)
     }
 }

@@ -23,6 +23,9 @@ import android.system.Os
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityBridge
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityPayloadCodec
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoResult
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentProbe
 import java.lang.reflect.Method
 
@@ -30,6 +33,7 @@ class AppZygotePreload : ZygotePreload {
 
     private val bridge = SelinuxContextValidityBridge()
     private val procAttrCurrentProbe = SelinuxProcAttrCurrentProbe()
+    private val policyloadSeqnoProbe = SelinuxPolicyloadSeqnoProbe()
 
     override fun doPreload(appInfo: ApplicationInfo) {
         val payload = runCatching {
@@ -41,6 +45,7 @@ class AppZygotePreload : ZygotePreload {
                 appUid = appInfo.uid,
                 isUserBuild = Build.TYPE == "user",
                 inspectProcAttrCurrent = procAttrCurrentProbe::inspect,
+                inspectPolicyloadSeqno = policyloadSeqnoProbe::inspect,
                 checkAccess = ::checkSelinuxAccess,
             )
             SelinuxContextValidityPayloadCodec.encode(snapshot)
@@ -184,6 +189,9 @@ class AppZygotePreload : ZygotePreload {
             dirtyPolicyQueryMethod = DIRTY_POLICY_QUERY_METHOD,
             dirtyPolicyFailureReason = reason,
             dirtyPolicyNotes = listOf(FALLBACK_NOTE),
+            policyloadSeqnoState = SelinuxPolicyloadSeqnoState.UNAVAILABLE.name,
+            policyloadSeqnoFailureReason = reason,
+            policyloadSeqnoNotes = listOf(FALLBACK_NOTE),
             failureReason = reason,
             notes = listOf(FALLBACK_NOTE),
         )
@@ -214,6 +222,8 @@ class AppZygotePreload : ZygotePreload {
             "u:r:duckdetector_dirty_policy_sentinel:s0"
         private const val DIRTY_POLICY_QUERY_METHOD = "android.os.SELinux.checkSELinuxAccess"
         private const val FALLBACK_NOTE = "Kotlin preload fallback produced a parseable SELinux snapshot."
+        private const val POLICYLOAD_SEQNO_PRELOAD_NOTE =
+            "zygotePreloadName is required: the policyload/access seqno oracle must run before the isolated child loses app_zygote SELinuxfs access."
 
         internal fun mergeCarrierSelfCheckSnapshot(
             nativeSnapshot: SelinuxContextValiditySnapshot,
@@ -246,14 +256,15 @@ class AppZygotePreload : ZygotePreload {
             appUid: Int,
             isUserBuild: Boolean,
             inspectProcAttrCurrent: () -> List<com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult>,
+            inspectPolicyloadSeqno: () -> SelinuxPolicyloadSeqnoResult,
             checkAccess: (String, String, String, String) -> Boolean?,
         ): SelinuxContextValiditySnapshot {
-            val procAttrFailureReason = SelinuxContextValidityCarrierService.procAttrCurrentGateFailureReason(
+            val carrierGateFailureReason = SelinuxContextValidityCarrierService.procAttrCurrentGateFailureReason(
                 snapshot = baseSnapshot,
                 appUid = appUid,
                 uid = currentUid,
             )
-            val snapshotWithProcAttr = if (procAttrFailureReason == null) {
+            val snapshotWithProcAttr = if (carrierGateFailureReason == null) {
                 baseSnapshot.copy(
                     procAttrCurrentProbeAttempted = true,
                     procAttrCurrentResults = inspectProcAttrCurrent(),
@@ -263,13 +274,47 @@ class AppZygotePreload : ZygotePreload {
                 baseSnapshot.copy(
                     procAttrCurrentProbeAttempted = false,
                     procAttrCurrentResults = emptyList(),
-                    procAttrCurrentFailureReason = procAttrFailureReason,
+                    procAttrCurrentFailureReason = carrierGateFailureReason,
                 )
             }
 
-            return snapshotWithProcAttr.applyJavaDirtyPolicyResults(
+            val snapshotWithPolicyloadSeqno = snapshotWithProcAttr.applyPolicyloadSeqnoResult(
+                failureReason = carrierGateFailureReason,
+                inspectPolicyloadSeqno = inspectPolicyloadSeqno,
+            )
+
+            return snapshotWithPolicyloadSeqno.applyJavaDirtyPolicyResults(
                 isUserBuild = isUserBuild,
                 checkAccess = checkAccess,
+            )
+        }
+
+        private fun SelinuxContextValiditySnapshot.applyPolicyloadSeqnoResult(
+            failureReason: String?,
+            inspectPolicyloadSeqno: () -> SelinuxPolicyloadSeqnoResult,
+        ): SelinuxContextValiditySnapshot {
+            if (failureReason != null) {
+                return copy(
+                    policyloadSeqnoAvailable = false,
+                    policyloadSeqnoProbeAttempted = false,
+                    policyloadSeqnoState = SelinuxPolicyloadSeqnoState.UNAVAILABLE.name,
+                    policyloadSeqnoCarrierContext = carrierContext,
+                    policyloadSeqnoFailureReason = failureReason,
+                    policyloadSeqnoNotes = listOf(POLICYLOAD_SEQNO_PRELOAD_NOTE),
+                )
+            }
+            val result = inspectPolicyloadSeqno()
+            return copy(
+                policyloadSeqnoAvailable = result.available,
+                policyloadSeqnoProbeAttempted = result.probeAttempted,
+                policyloadSeqnoState = result.state.name,
+                policyloadSeqnoCarrierContext = carrierContext,
+                policyloadSeqnoStatusSequence = result.statusSequence,
+                policyloadSeqnoStatusPolicyload = result.statusPolicyload,
+                policyloadSeqnoAccessSeqno = result.accessSeqno,
+                policyloadSeqnoProcessClass = result.processClass,
+                policyloadSeqnoFailureReason = result.failureReason,
+                policyloadSeqnoNotes = result.notes.ifEmpty { listOf(POLICYLOAD_SEQNO_PRELOAD_NOTE) },
             )
         }
 

@@ -25,6 +25,7 @@ import android.system.Os
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityBridge
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityPayloadCodec
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 
 class SelinuxContextValidityCarrierService : Service() {
 
@@ -95,10 +96,13 @@ class SelinuxContextValidityCarrierService : Service() {
                 SelinuxContextValiditySnapshot(
                     dirtyPolicyFailureReason = reason,
                     javaDirtyPolicyFailureReason = reason,
+                    policyloadSeqnoState = SelinuxPolicyloadSeqnoState.UNAVAILABLE.name,
+                    policyloadSeqnoFailureReason = reason,
                     procAttrCurrentFailureReason = reason,
                     failureReason = reason,
                     dirtyPolicyNotes = listOf(note),
                     javaDirtyPolicyNotes = listOf(note),
+                    policyloadSeqnoNotes = listOf(note),
                     notes = listOf(note),
                 ),
             )

@@ -41,6 +41,7 @@ open class SelinuxContextValidityBridge {
         val notes = mutableListOf<String>()
         val dirtyPolicyNotes = mutableListOf<String>()
         val javaDirtyPolicyNotes = mutableListOf<String>()
+        val policyloadSeqnoNotes = mutableListOf<String>()
         val procAttrCurrentResults = mutableListOf<SelinuxProcAttrCurrentResult>()
 
         raw.lineSequence()
@@ -52,6 +53,9 @@ open class SelinuxContextValidityBridge {
                         .decodeValue()
 
                     line.startsWith("JAVA_DIRTY_POLICY_NOTE=") -> javaDirtyPolicyNotes += line.removePrefix("JAVA_DIRTY_POLICY_NOTE=")
+                        .decodeValue()
+
+                    line.startsWith("POLICYLOAD_SEQNO_NOTE=") -> policyloadSeqnoNotes += line.removePrefix("POLICYLOAD_SEQNO_NOTE=")
                         .decodeValue()
 
                     line.startsWith("NOTE=") -> notes += line.removePrefix("NOTE=")
@@ -73,6 +77,7 @@ open class SelinuxContextValidityBridge {
         return snapshot.copy(
             dirtyPolicyNotes = dirtyPolicyNotes,
             javaDirtyPolicyNotes = javaDirtyPolicyNotes,
+            policyloadSeqnoNotes = policyloadSeqnoNotes,
             procAttrCurrentResults = procAttrCurrentResults,
             notes = notes,
         )
@@ -156,6 +161,15 @@ open class SelinuxContextValidityBridge {
             "JAVA_DIRTY_POLICY_XPOSED_DATA_FILE_READ_ALLOWED" -> copy(javaDirtyPolicyXposedDataFileReadAllowed = value.asNullableBool())
             "JAVA_DIRTY_POLICY_ZYGOTE_ADB_DATA_SEARCH_ALLOWED" -> copy(javaDirtyPolicyZygoteAdbDataSearchAllowed = value.asNullableBool())
             "JAVA_DIRTY_POLICY_FAILURE_REASON" -> copy(javaDirtyPolicyFailureReason = value.decodeValue())
+            "POLICYLOAD_SEQNO_AVAILABLE" -> copy(policyloadSeqnoAvailable = value.asBool())
+            "POLICYLOAD_SEQNO_PROBE_ATTEMPTED" -> copy(policyloadSeqnoProbeAttempted = value.asBool())
+            "POLICYLOAD_SEQNO_STATE" -> copy(policyloadSeqnoState = value.decodeValue())
+            "POLICYLOAD_SEQNO_CARRIER_CONTEXT" -> copy(policyloadSeqnoCarrierContext = value.decodeValue())
+            "POLICYLOAD_SEQNO_STATUS_SEQUENCE" -> copy(policyloadSeqnoStatusSequence = value.toLongOrNull())
+            "POLICYLOAD_SEQNO_STATUS_POLICYLOAD" -> copy(policyloadSeqnoStatusPolicyload = value.toLongOrNull())
+            "POLICYLOAD_SEQNO_ACCESS_SEQNO" -> copy(policyloadSeqnoAccessSeqno = value.toLongOrNull())
+            "POLICYLOAD_SEQNO_PROCESS_CLASS" -> copy(policyloadSeqnoProcessClass = value.toIntOrNull())
+            "POLICYLOAD_SEQNO_FAILURE_REASON" -> copy(policyloadSeqnoFailureReason = value.decodeValue())
             "PROC_ATTR_CURRENT_PROBE_ATTEMPTED" -> copy(procAttrCurrentProbeAttempted = value.asBool())
             "PROC_ATTR_CURRENT_FAILURE_REASON" -> copy(procAttrCurrentFailureReason = value.decodeValue())
             "FAILURE_REASON" -> copy(failureReason = value.decodeValue())
