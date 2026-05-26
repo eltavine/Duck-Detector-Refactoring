@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Banner2.svg" alt="DuckDetector Logo" width="600px">
+  <img src="logo.png" alt="DuckDetector Logo" width="600px">
 </p>
 
 <p align="center">
