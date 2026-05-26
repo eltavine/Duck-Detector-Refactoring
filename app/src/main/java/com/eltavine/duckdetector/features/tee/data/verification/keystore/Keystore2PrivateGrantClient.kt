@@ -30,6 +30,10 @@ class Keystore2PrivateGrantClient(
 
     fun lookupBinder(): IBinder? = binderClient.lookupBinder()
 
+    fun constantsSnapshot(): Keystore2PrivateGrantConstants {
+        return resolveConstants()
+    }
+
     fun grantAliasToUid(alias: String, uid: Int): Keystore2PrivateGrantResult {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return Keystore2PrivateGrantResult.unavailable(
@@ -47,7 +51,33 @@ class Keystore2PrivateGrantClient(
 
     fun grantAliasToUid(service: Any, alias: String, uid: Int): Keystore2PrivateGrantResult {
         return runCatching {
-            grantAliasToUid(service, alias, uid, resolveConstants())
+            val constants = resolveConstants()
+            grantAliasToUid(
+                service = service,
+                alias = alias,
+                uid = uid,
+                accessVector = constants.grantAccessVector,
+                constants = constants,
+            )
+        }.getOrElse { throwable ->
+            grantFailureResult(
+                phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
+                detail = "private grant failed: ${describeThrowable(throwable)}",
+                errorKind = classifyFailure(throwable),
+                throwable = throwable,
+            )
+        }
+    }
+
+    fun grantAliasToUid(
+        service: Any,
+        alias: String,
+        uid: Int,
+        accessVector: Int,
+    ): Keystore2PrivateGrantResult {
+        return runCatching {
+            val constants = resolveConstants()
+            grantAliasToUid(service, alias, uid, accessVector, constants)
         }.getOrElse { throwable ->
             grantFailureResult(
                 phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
@@ -274,6 +304,22 @@ class Keystore2PrivateGrantClient(
         uid: Int,
         constants: Keystore2PrivateGrantConstants,
     ): Keystore2PrivateGrantResult {
+        return grantAliasToUid(
+            service = service,
+            alias = alias,
+            uid = uid,
+            accessVector = constants.grantAccessVector,
+            constants = constants,
+        )
+    }
+
+    private fun grantAliasToUid(
+        service: Any,
+        alias: String,
+        uid: Int,
+        accessVector: Int,
+        constants: Keystore2PrivateGrantConstants,
+    ): Keystore2PrivateGrantResult {
         val descriptor = createDescriptor(alias, constants.domainApp)
         val grantDescriptor = service.javaClass.methods
             .firstOrNull { method ->
@@ -283,7 +329,7 @@ class Keystore2PrivateGrantClient(
                     method.parameterTypes[2] == Int::class.javaPrimitiveType
             }
             ?.also { it.isAccessible = true }
-            ?.invoke(service, descriptor, uid, constants.grantAccessVector)
+            ?.invoke(service, descriptor, uid, accessVector)
             ?: return Keystore2PrivateGrantResult.unavailable(
                 phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
                 detail = "private grant failed: hidden grant() returned no descriptor.",
@@ -299,7 +345,7 @@ class Keystore2PrivateGrantClient(
             available = true,
             phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
             grantId = grantId,
-            detail = "private grant created grantId=$grantId unsignedGrantId=${java.lang.Long.toUnsignedString(grantId)} accessVector=${constants.grantAccessVector}",
+            detail = "private grant created grantId=$grantId unsignedGrantId=${java.lang.Long.toUnsignedString(grantId)} accessVector=$accessVector",
         )
     }
 

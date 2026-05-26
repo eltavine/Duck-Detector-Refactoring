@@ -97,6 +97,7 @@ class TeeGrantDomainGranteeService : Service() {
             val result = Keystore2PrivateGrantClient().readGrantChain(keystore2Binder, grantId)
             TeeGrantDomainGranteeChainResult(
                 available = result.available,
+                errorKind = result.errorKind,
                 chain = result.chain,
                 detail = result.detail.ifBlank { "isolated private binder readback blocked." },
                 diagnosticCopyText = result.throwable
@@ -107,6 +108,11 @@ class TeeGrantDomainGranteeService : Service() {
         }.getOrElse { throwable ->
             TeeGrantDomainGranteeChainResult(
                 available = false,
+                errorKind = classifyKeystore2PrivateGrantFailure(
+                    throwableClassName = throwable.rootCauseClassName(),
+                    message = throwable.rootCauseMessage(),
+                    serviceSpecificErrorCode = throwable.serviceSpecificErrorCode(),
+                ),
                 detail = "isolated binder call blocked: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
                 diagnosticCopyText = throwable.stackTraceToString().trim(),
             )
@@ -147,11 +153,43 @@ class TeeGrantDomainGranteeService : Service() {
         }.getOrElse { throwable ->
             TeeGrantDomainGranteeChainResult(
                 available = false,
+                errorKind = classifyKeystore2PrivateGrantFailure(
+                    throwableClassName = throwable.rootCauseClassName(),
+                    message = throwable.rootCauseMessage(),
+                    serviceSpecificErrorCode = throwable.serviceSpecificErrorCode(),
+                ),
                 detail = "$stage isolated readback failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
                 diagnosticCopyText = throwable.stackTraceToString().trim(),
             )
         }
     }
+}
+
+private fun Throwable.rootCause(): Throwable {
+    var current = this
+    while (current.cause != null && current.cause !== current) {
+        current = current.cause!!
+    }
+    return current
+}
+
+private fun Throwable.rootCauseClassName(): String = rootCause().javaClass.name
+
+private fun Throwable.rootCauseMessage(): String? = rootCause().message
+
+private fun Throwable.serviceSpecificErrorCode(): Int? {
+    var current: Throwable? = this
+    while (current != null) {
+        if (current.javaClass.name == "android.os.ServiceSpecificException") {
+            return runCatching {
+                val field = current.javaClass.getField("errorCode")
+                field.isAccessible = true
+                field.get(current) as? Int
+            }.getOrNull()
+        }
+        current = current.cause
+    }
+    return null
 }
 
 object TeeGrantDomainGranteeProtocol {
@@ -164,6 +202,7 @@ object TeeGrantDomainGranteeProtocol {
 
 data class TeeGrantDomainGranteeChainResult(
     val available: Boolean = false,
+    val errorKind: Keystore2PrivateGrantErrorKind = Keystore2PrivateGrantErrorKind.NONE,
     val chain: GrantDomainCertificateChain = GrantDomainCertificateChain(),
     val detail: String = "",
     val diagnosticCopyText: String = "",
@@ -171,6 +210,7 @@ data class TeeGrantDomainGranteeChainResult(
     fun writeToParcel(reply: Parcel?) {
         reply ?: return
         reply.writeInt(if (available) 1 else 0)
+        reply.writeString(errorKind.name)
         reply.writeInt(chain.certificates.size)
         chain.certificates.forEach { certificate ->
             reply.writeInt(certificate.derLength)
@@ -183,6 +223,9 @@ data class TeeGrantDomainGranteeChainResult(
     companion object {
         fun readFromParcel(reply: Parcel): TeeGrantDomainGranteeChainResult {
             val available = reply.readInt() != 0
+            val errorKind = runCatching {
+                Keystore2PrivateGrantErrorKind.valueOf(reply.readString().orEmpty())
+            }.getOrDefault(Keystore2PrivateGrantErrorKind.SERVICE_UNAVAILABLE)
             val size = reply.readInt().coerceAtLeast(0)
             val certificates = buildList {
                 repeat(size) {
@@ -196,6 +239,7 @@ data class TeeGrantDomainGranteeChainResult(
             }
             return TeeGrantDomainGranteeChainResult(
                 available = available,
+                errorKind = errorKind,
                 chain = GrantDomainCertificateChain(certificates),
                 detail = reply.readString().orEmpty(),
                 diagnosticCopyText = reply.readString().orEmpty(),

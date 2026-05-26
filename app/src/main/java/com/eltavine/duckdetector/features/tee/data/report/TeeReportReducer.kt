@@ -32,6 +32,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.MIN_RATIO_SAMPLE_COUNT
@@ -340,6 +341,21 @@ class TeeReportReducer(
                             syntheticGrantGranteeBlindReadbackValue(artifacts),
                         TeeSignalLevel.FAIL,
                         hiddenCopyText = artifacts.syntheticGrantGranteeBlindReadback.diagnosticCopyText
+                            .takeIf { it.isNotBlank() },
+                    )
+                )
+            }
+            if (
+                artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness.anomalyKind ==
+                SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED
+            ) {
+                add(
+                    fact(
+                        "Grant access vector",
+                        "Domain.GRANT handle without GET_INFO still allowed getKeyEntry metadata readback. " +
+                            syntheticGrantGetKeyEntryAccessVectorBlindnessValue(artifacts),
+                        TeeSignalLevel.FAIL,
+                        hiddenCopyText = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness.diagnosticCopyText
                             .takeIf { it.isNotBlank() },
                     )
                 )
@@ -946,6 +962,15 @@ class TeeReportReducer(
                             syntheticGrantGranteeBlindReadbackValue(artifacts),
                             syntheticGrantGranteeBlindReadbackLevel(artifacts),
                             hiddenCopyText = artifacts.syntheticGrantGranteeBlindReadback.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
+                        )
+                    )
+                    add(
+                        fact(
+                            "Grant access vector",
+                            syntheticGrantGetKeyEntryAccessVectorBlindnessValue(artifacts),
+                            syntheticGrantGetKeyEntryAccessVectorBlindnessLevel(artifacts),
+                            hiddenCopyText = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness.diagnosticCopyText
                                 .takeIf { it.isNotBlank() },
                         )
                     )
@@ -1679,6 +1704,40 @@ class TeeReportReducer(
         }
     }
 
+    private fun syntheticGrantGetKeyEntryAccessVectorBlindnessValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness
+        return when {
+            result.anomalyKind ==
+                SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED ->
+                buildString {
+                    append("Matched kind=GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    result.accessVector?.let { append(" accessVector=$it") }
+                    append(" granteeRead=true")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.executed && result.available &&
+                result.anomalyKind == SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.NONE ->
+                buildString {
+                    append("Clean kind=NONE")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    result.accessVector?.let { append(" accessVector=$it") }
+                    append(" granteeRead=PERMISSION_DENIED")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.anomalyKind ==
+                SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER ->
+                "Skipped • ${result.detail}"
+            else -> buildString {
+                append("Unavailable kind=")
+                append(result.anomalyKind.name)
+                result.granteeReadErrorKind?.let { append(" granteeRead=$it") }
+                result.accessVector?.let { append(" accessVector=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+        }
+    }
+
     private fun grantSelfDomainFullChainSplitValue(artifacts: TeeScanArtifacts): String {
         val result = artifacts.grantSelfDomainFullChainSplit
         return when {
@@ -2024,6 +2083,18 @@ class TeeReportReducer(
                 if (result.executed && result.available) TeeSignalLevel.PASS else TeeSignalLevel.INFO
             SyntheticGrantGranteeBlindReadbackAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER,
             SyntheticGrantGranteeBlindReadbackAnomalyKind.UNAVAILABLE -> TeeSignalLevel.INFO
+        }
+    }
+
+    private fun syntheticGrantGetKeyEntryAccessVectorBlindnessLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
+        val result = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness
+        return when (result.anomalyKind) {
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED ->
+                TeeSignalLevel.FAIL
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.NONE ->
+                if (result.executed && result.available) TeeSignalLevel.PASS else TeeSignalLevel.INFO
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER,
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.UNAVAILABLE -> TeeSignalLevel.INFO
         }
     }
 

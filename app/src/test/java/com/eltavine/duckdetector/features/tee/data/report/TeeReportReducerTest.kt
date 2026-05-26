@@ -40,6 +40,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDo
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGetKeyEntryAccessVectorBlindnessResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
@@ -471,6 +473,64 @@ class TeeReportReducerTest {
             it.title == "Grant caller binding" &&
                 it.level == TeeSignalLevel.PASS &&
                 it.body.contains("ownerReplay=KEY_NOT_FOUND")
+        })
+    }
+
+    @Test
+    fun `grant access vector missing get info readback becomes supplementary danger`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                syntheticGrantGetKeyEntryAccessVectorBlindness =
+                    SyntheticGrantGetKeyEntryAccessVectorBlindnessResult(
+                        executed = true,
+                        available = true,
+                        grantCreated = true,
+                        granteeUid = 99001,
+                        accessVector = 0x100,
+                        granteeReadSucceeded = true,
+                        anomalyKind =
+                            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED,
+                        detail = "Private: grantee getKeyEntry(GRANT) succeeded without GET_INFO.",
+                        diagnosticCopyText = "grant access-vector diagnostic",
+                    ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.FAIL, report.supplementaryReviewLevel)
+        assertTrue(report.summary.contains("without GET_INFO", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant access vector" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED") &&
+                it.body.contains("accessVector=256") &&
+                it.hiddenCopyText == "grant access-vector diagnostic"
+        })
+    }
+
+    @Test
+    fun `grant access vector permission denied readback stays clean`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                syntheticGrantGetKeyEntryAccessVectorBlindness =
+                    SyntheticGrantGetKeyEntryAccessVectorBlindnessResult(
+                        executed = true,
+                        available = true,
+                        grantCreated = true,
+                        granteeUid = 99001,
+                        accessVector = 0x100,
+                        anomalyKind = SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.NONE,
+                        detail = "Private: grantee getKeyEntry(GRANT) rejected with PERMISSION_DENIED.",
+                    ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant access vector" &&
+                it.level == TeeSignalLevel.PASS &&
+                it.body.contains("granteeRead=PERMISSION_DENIED")
         })
     }
 
@@ -2132,6 +2192,10 @@ class TeeReportReducerTest {
             SyntheticGrantGranteeBlindReadbackResult(
                 detail = "skipped",
             ),
+        syntheticGrantGetKeyEntryAccessVectorBlindness: SyntheticGrantGetKeyEntryAccessVectorBlindnessResult =
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessResult(
+                detail = "skipped",
+            ),
         grantSelfDomainFullChainSplit: GrantSelfDomainFullChainSplitResult = GrantSelfDomainFullChainSplitResult(
             detail = "skipped",
         ),
@@ -2239,6 +2303,7 @@ class TeeReportReducerTest {
             generateModeParcelFingerprint = generateModeParcelFingerprint,
             grantDomainFullChainSplit = grantDomainFullChainSplit,
             syntheticGrantGranteeBlindReadback = syntheticGrantGranteeBlindReadback,
+            syntheticGrantGetKeyEntryAccessVectorBlindness = syntheticGrantGetKeyEntryAccessVectorBlindness,
             grantSelfDomainFullChainSplit = grantSelfDomainFullChainSplit,
             legacyKeystorePath = legacyKeystorePath,
             listEntriesConsistency = listEntriesConsistency,
