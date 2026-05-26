@@ -23,6 +23,9 @@ import com.eltavine.duckdetector.features.selinux.data.probes.DedicatedCarrierSt
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbeResult
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityState
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPathMetadata
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoMetadataProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoMetadataResult
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoProbe
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxPolicyloadSeqnoState
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentProbe
@@ -47,6 +50,8 @@ class SelinuxRepository(
     context: Context? = null,
     private val auditRuntimeProbe: SelinuxAuditRuntimeProbe = SelinuxAuditRuntimeProbe(),
     private val contextValidityProbe: SelinuxContextValidityProbe = SelinuxContextValidityProbe(),
+    private val policyloadSeqnoMetadataProbe: SelinuxPolicyloadSeqnoMetadataProbe =
+        SelinuxPolicyloadSeqnoMetadataProbe(),
     private val contextValidityCarrierManager: SelinuxContextValidityCarrierManager =
         SelinuxContextValidityCarrierManager(context?.applicationContext),
 ) {
@@ -95,8 +100,9 @@ class SelinuxRepository(
         val carrierSnapshot = contextValidityCarrierManager.collectSnapshot()
         val carrierResult = contextValidityProbe.interpret(carrierSnapshot)
         val contextValidityResult = carrierResult
+        val policyloadSeqnoMetadata = policyloadSeqnoMetadataProbe.inspect()
         methods += buildContextValidityMethod(contextValidityResult)
-        methods += buildPolicyloadSeqnoMethod(contextValidityResult)
+        methods += buildPolicyloadSeqnoMethod(contextValidityResult, policyloadSeqnoMetadata)
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
         methods += buildDirtyPolicyMethods(carrierSnapshot)
 
@@ -383,13 +389,23 @@ class SelinuxRepository(
 
     private fun buildPolicyloadSeqnoMethod(
         result: SelinuxContextValidityProbeResult,
+        metadata: SelinuxPolicyloadSeqnoMetadataResult,
     ): SelinuxCheckResult {
-        val state = runCatching {
+        val carrierState = runCatching {
             SelinuxPolicyloadSeqnoState.valueOf(result.policyloadSeqnoState.orEmpty())
         }.getOrDefault(SelinuxPolicyloadSeqnoState.UNAVAILABLE)
+        val state = when {
+            metadata.failureReason != null -> SelinuxPolicyloadSeqnoState.SUSPICIOUS
+            else -> carrierState
+        }
         val status = when (state) {
             SelinuxPolicyloadSeqnoState.CLEAN -> SelinuxPolicyloadSeqnoProbe.STATUS_CLEAN
-            SelinuxPolicyloadSeqnoState.SUSPICIOUS -> SelinuxPolicyloadSeqnoProbe.STATUS_SUSPICIOUS
+            SelinuxPolicyloadSeqnoState.SUSPICIOUS ->
+                if (metadata.failureReason != null) {
+                    SelinuxPolicyloadSeqnoProbe.STATUS_METADATA_MISMATCH
+                } else {
+                    SelinuxPolicyloadSeqnoProbe.STATUS_SUSPICIOUS
+                }
             SelinuxPolicyloadSeqnoState.INCONCLUSIVE -> SelinuxPolicyloadSeqnoProbe.STATUS_INCONCLUSIVE
             SelinuxPolicyloadSeqnoState.UNAVAILABLE -> SelinuxPolicyloadSeqnoProbe.STATUS_UNAVAILABLE
         }
@@ -402,7 +418,16 @@ class SelinuxRepository(
             result.policyloadSeqnoStatusPolicyload?.let { add("status.policyload=$it") }
             result.policyloadSeqnoAccessSeqno?.let { add("access.avd.seqno=$it") }
             result.policyloadSeqnoProcessClass?.let { add("process class=$it") }
-            (result.policyloadSeqnoFailureReason ?: result.failureReason)
+            policyloadSeqnoMetadataDetail(
+                label = "status metadata",
+                metadata = metadata.statusMetadata,
+            )?.let(::add)
+            policyloadSeqnoMetadataDetail(
+                label = "access metadata",
+                metadata = metadata.accessMetadata,
+            )?.let(::add)
+            metadata.unavailableReason?.let { add("Metadata unavailable=$it") }
+            (metadata.failureReason ?: result.policyloadSeqnoFailureReason ?: result.failureReason)
                 ?.let { add("Failure=$it") }
             result.policyloadSeqnoNotes.forEach(::add)
         }.joinToString(" | ")
@@ -419,6 +444,49 @@ class SelinuxRepository(
             permissionDenied = false,
             details = detail,
         )
+    }
+
+    private fun policyloadSeqnoMetadataDetail(
+        label: String,
+        metadata: SelinuxPathMetadata,
+    ): String? {
+        if (
+            !metadata.exists &&
+            metadata.uid == null &&
+            metadata.mode == null &&
+            metadata.rawMode == null &&
+            metadata.fileType == null &&
+            metadata.failureReason == null
+        ) {
+            return null
+        }
+        return buildString {
+            append(label)
+            append(" path=")
+            append(metadata.path)
+            append(" exists=")
+            append(if (metadata.exists) "yes" else "no")
+            metadata.uid?.let {
+                append(" uid=")
+                append(it)
+            }
+            metadata.mode?.let {
+                append(" mode=")
+                append(it)
+            }
+            metadata.rawMode?.let {
+                append(" rawMode=0x")
+                append(it.toString(radix = 16))
+            }
+            metadata.fileType?.let {
+                append(" type=")
+                append(it)
+            }
+            metadata.failureReason?.takeIf { it.isNotBlank() }?.let {
+                append(" failure=")
+                append(it)
+            }
+        }
     }
 
     private fun buildProcAttrCurrentMethod(

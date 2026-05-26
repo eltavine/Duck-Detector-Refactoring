@@ -88,7 +88,7 @@ class SelinuxCardModelMapper {
                     report.auditIntegrity?.state == SelinuxAuditIntegrityState.TAMPERED -> "Enforcing with audit rewrite"
                     contextValidity?.status == SelinuxContextValidityProbe.BITPAIR_KSU_PRESENT ->
                         "Enforcing with KSU context materialized"
-                    policyloadSeqno?.isSecure == false -> "Enforcing with app_zygote seqno split"
+                    policyloadSeqno?.isSecure == false -> "Enforcing with app_zygote seqno oracle anomaly"
                     procAttrCurrent?.isSecure == false -> "Enforcing with app_zygote attr-write anomaly"
                     dirtyPolicyHit != null -> trustedPolicyRuleVerdict()
                     appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
@@ -164,7 +164,7 @@ class SelinuxCardModelMapper {
                             )
                         }
                         if (policyloadSeqno?.isSecure == false) {
-                            add("The zygotePreload app_zygote carrier observed a policyload/access seqno split; treat this as KernelSU-specific evidence bounded to the preload carrier.")
+                            add("The zygotePreload app_zygote carrier observed a seqno oracle anomaly; treat this as KernelSU-specific evidence bounded to the preload carrier.")
                         }
                         if (dirtyPolicyHit != null) {
                             add(trustedPolicyRuleSummary(dirtyPolicyHit))
@@ -483,7 +483,7 @@ class SelinuxCardModelMapper {
         }
         when {
             policyloadSeqno?.isSecure == false -> items += SelinuxImpactItemModel(
-                "The zygotePreload app_zygote carrier observed a policyload/access seqno split.",
+                "The zygotePreload app_zygote carrier observed a seqno oracle anomaly.",
                 DetectorStatus.danger(),
             )
 

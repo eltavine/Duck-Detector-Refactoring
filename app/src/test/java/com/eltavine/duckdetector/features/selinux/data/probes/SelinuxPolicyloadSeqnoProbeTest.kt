@@ -94,6 +94,133 @@ class SelinuxPolicyloadSeqnoProbeTest {
         assertEquals(9L, result.accessSeqno)
     }
 
+    @Test
+    fun `metadata probe parses regular root readable selinuxfs files`() {
+        val result = metadataProbe(
+            stdout = """
+                /sys/fs/selinux/status	0	8124
+                /sys/fs/selinux/access	0	81b6
+            """.trimIndent(),
+        ).inspect()
+
+        assertTrue(result.available)
+        assertEquals(0, result.statusMetadata.uid)
+        assertEquals("444", result.statusMetadata.mode)
+        assertEquals(0x8124L, result.statusMetadata.rawMode)
+        assertEquals("regular", result.statusMetadata.fileType)
+        assertEquals(0, result.accessMetadata.uid)
+        assertEquals("666", result.accessMetadata.mode)
+        assertEquals(0x81b6L, result.accessMetadata.rawMode)
+        assertEquals("regular", result.accessMetadata.fileType)
+    }
+
+    @Test
+    fun `missing status metadata is a fail condition when access metadata parsed`() {
+        val result = metadataProbe(
+            stdout = "/sys/fs/selinux/access\t0\t81b6",
+        ).inspect()
+
+        assertTrue(result.available)
+        assertEquals(false, result.statusMetadata.exists)
+        assertTrue(result.failureReason.orEmpty().contains("/sys/fs/selinux/status missing"))
+    }
+
+    @Test
+    fun `missing access metadata is a fail condition when status metadata parsed`() {
+        val result = metadataProbe(
+            stdout = "/sys/fs/selinux/status\t0\t8124",
+        ).inspect()
+
+        assertTrue(result.available)
+        assertEquals(false, result.accessMetadata.exists)
+        assertTrue(result.failureReason.orEmpty().contains("/sys/fs/selinux/access missing"))
+    }
+
+    @Test
+    fun `non root selinux status owner is a fail condition`() {
+        val result = metadataProbe(
+            stdout = """
+                /sys/fs/selinux/status	2000	8124
+                /sys/fs/selinux/access	0	81b6
+            """.trimIndent(),
+        ).inspect()
+
+        assertTrue(result.available)
+        assertEquals(2000, result.statusMetadata.uid)
+        assertTrue(result.failureReason.orEmpty().contains("uid=2000 expected=0"))
+    }
+
+    @Test
+    fun `non 666 selinux access mode is a fail condition`() {
+        val result = metadataProbe(
+            stdout = """
+                /sys/fs/selinux/status	0	8124
+                /sys/fs/selinux/access	0	8124
+            """.trimIndent(),
+        ).inspect()
+
+        assertTrue(result.available)
+        assertEquals("444", result.accessMetadata.mode)
+        assertEquals(0x8124L, result.accessMetadata.rawMode)
+        assertTrue(result.failureReason.orEmpty().contains("mode=444 expected=666"))
+    }
+
+    @Test
+    fun `non regular selinux status path is a fail condition`() {
+        val result = metadataProbe(
+            stdout = """
+                /sys/fs/selinux/status	0	4124
+                /sys/fs/selinux/access	0	81b6
+            """.trimIndent(),
+        ).inspect()
+
+        assertTrue(result.available)
+        assertEquals("directory", result.statusMetadata.fileType)
+        assertTrue(result.failureReason.orEmpty().contains("type=directory expected=regular"))
+    }
+
+    @Test
+    fun `stat timeout is unavailable not a metadata fail`() {
+        val result = metadataProbe(
+            stdout = "",
+            timedOut = true,
+        ).inspect()
+
+        assertEquals(false, result.available)
+        assertEquals(null, result.failureReason)
+        assertTrue(result.unavailableReason.orEmpty().contains("stat command timed out"))
+    }
+
+    @Test
+    fun `stat nonzero exit with parsed metadata still evaluates parsed metadata`() {
+        val result = metadataProbe(
+            stdout = """
+                /sys/fs/selinux/status	0	8124
+                /sys/fs/selinux/access	0	81b6
+            """.trimIndent(),
+            exitCode = 1,
+            stderr = "No such file",
+        ).inspect()
+
+        assertTrue(result.available)
+        assertEquals(null, result.failureReason)
+        assertEquals(null, result.unavailableReason)
+    }
+
+    @Test
+    fun `stat unparsable uid is unavailable not a metadata fail`() {
+        val result = metadataProbe(
+            stdout = """
+                /sys/fs/selinux/status	root	8124
+                /sys/fs/selinux/access	0	81b6
+            """.trimIndent(),
+        ).inspect()
+
+        assertEquals(false, result.available)
+        assertEquals(null, result.failureReason)
+        assertTrue(result.unavailableReason.orEmpty().contains("stat uid was not numeric"))
+    }
+
     private fun status(
         sequence: Long,
         policyload: Long,
@@ -111,4 +238,33 @@ class SelinuxPolicyloadSeqnoProbeTest {
         processClass = 2,
         seqno = seqno,
     )
+
+    private fun metadataProbe(
+        stdout: String,
+        exitCode: Int? = 0,
+        stderr: String = "",
+        timedOut: Boolean = false,
+    ): SelinuxPolicyloadSeqnoMetadataProbe {
+        return SelinuxPolicyloadSeqnoMetadataProbe(
+            statCommandRunner = SelinuxStatCommandRunner { command, timeoutSeconds ->
+                assertEquals(
+                    listOf(
+                        "/system/bin/stat",
+                        "-c",
+                        "%n\t%u\t%f",
+                        "/sys/fs/selinux/status",
+                        "/sys/fs/selinux/access",
+                    ),
+                    command,
+                )
+                assertEquals(2L, timeoutSeconds)
+                SelinuxStatCommandResult(
+                    exitCode = exitCode,
+                    stdout = stdout,
+                    stderr = stderr,
+                    timedOut = timedOut,
+                )
+            },
+        )
+    }
 }

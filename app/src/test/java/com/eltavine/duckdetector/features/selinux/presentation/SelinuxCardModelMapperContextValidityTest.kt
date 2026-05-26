@@ -280,12 +280,48 @@ class SelinuxCardModelMapperContextValidityTest {
         )
 
         assertEquals(DetectorStatus.danger(), model.status)
-        assertEquals("Enforcing with app_zygote seqno split", model.verdict)
-        assertTrue(model.summary.contains("policyload/access seqno split"))
+        assertEquals("Enforcing with app_zygote seqno oracle anomaly", model.verdict)
+        assertTrue(model.summary.contains("seqno oracle anomaly"))
         assertTrue(
             model.methodRows.any {
                 it.label == SelinuxPolicyloadSeqnoProbe.METHOD_LABEL &&
                     it.status == DetectorStatus.danger()
+            },
+        )
+    }
+
+    @Test
+    fun `app zygote seqno metadata mismatch maps to danger after support rows`() {
+        val model = mapper.map(
+            baseReport(
+                SelinuxCheckResult(
+                    method = SelinuxContextValidityProbe.METHOD_LABEL,
+                    status = SelinuxContextValidityProbe.BITPAIR_UNSUPPORTED,
+                    isSecure = null,
+                    permissionDenied = false,
+                    details = "Carrier=<unreadable> | Carrier state=failed",
+                ),
+                SelinuxCheckResult(
+                    method = SelinuxPolicyloadSeqnoProbe.METHOD_LABEL,
+                    status = SelinuxPolicyloadSeqnoProbe.STATUS_METADATA_MISMATCH,
+                    isSecure = false,
+                    permissionDenied = false,
+                    details = "status metadata path=/sys/fs/selinux/status exists=yes uid=0 mode=444 | " +
+                        "access metadata path=/sys/fs/selinux/access exists=yes uid=0 mode=444 | " +
+                        "Failure=metadata mismatch: /sys/fs/selinux/access mode=444 expected=666",
+                ),
+            ),
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals("Enforcing with app_zygote seqno oracle anomaly", model.verdict)
+        assertTrue(model.summary.contains("seqno oracle anomaly"))
+        assertTrue(
+            model.methodRows.any {
+                it.label == SelinuxPolicyloadSeqnoProbe.METHOD_LABEL &&
+                    it.value == SelinuxPolicyloadSeqnoProbe.STATUS_METADATA_MISMATCH &&
+                    it.status == DetectorStatus.danger() &&
+                    it.detail.orEmpty().contains("metadata mismatch")
             },
         )
     }
