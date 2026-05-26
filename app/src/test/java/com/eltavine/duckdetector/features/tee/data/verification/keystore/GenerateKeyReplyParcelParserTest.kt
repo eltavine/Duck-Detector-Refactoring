@@ -118,6 +118,38 @@ class GenerateKeyReplyParcelParserTest {
     }
 
     @Test
+    fun `fingerprint matches when modification time is above high threshold`() {
+        val result = parser.parse(
+            rawReply = variableCountGenerateModeReply(
+                lastSecLevel = 20,
+                lastTag = 0x00000020,
+                lastUnionTag = 1,
+                modificationTimeMs = 5_000_000_000L,
+            ),
+        )
+
+        assertTrue(result.parseSucceeded)
+        assertEquals(5_000_000_000L, result.modificationTimeMs)
+        assertTrue(result.matched)
+    }
+
+    @Test
+    fun `fingerprint does not match at high threshold boundary without stable tuple`() {
+        val result = parser.parse(
+            rawReply = variableCountGenerateModeReply(
+                lastSecLevel = 20,
+                lastTag = 0x00000020,
+                lastUnionTag = 1,
+                modificationTimeMs = 4_999_999_999L,
+            ),
+        )
+
+        assertTrue(result.parseSucceeded)
+        assertEquals(4_999_999_999L, result.modificationTimeMs)
+        assertFalse(result.matched)
+    }
+
+    @Test
     fun `fingerprint does not match when last authorization security level differs`() {
         val result = parser.parse(rawReply = variableCountGenerateModeReply(lastSecLevel = 20))
 

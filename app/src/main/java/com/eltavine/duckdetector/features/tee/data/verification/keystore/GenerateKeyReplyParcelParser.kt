@@ -65,11 +65,14 @@ class GenerateKeyReplyParcelParser {
 
             val lastAuthorizationHasUnknownUnionTag = isUnknownKeyParameterValueUnionTag(lastAuthorization.unionTag)
             val matched =
-                modificationTimeMs == TARGET_MODIFICATION_TIME_MS &&
-                    lastAuthorization.secLevel in TARGET_LAST_AUTHORIZATION_SEC_LEVELS &&
-                    lastAuthorization.tag == TARGET_LAST_AUTHORIZATION_TAG &&
-                    lastAuthorization.unionTag == TARGET_LAST_AUTHORIZATION_UNION_TAG &&
-                    lastAuthorizationHasUnknownUnionTag
+                modificationTimeMs > TARGET_HIGH_MODIFICATION_TIME_MS_THRESHOLD ||
+                    (
+                        modificationTimeMs == TARGET_MODIFICATION_TIME_MS &&
+                            lastAuthorization.secLevel in TARGET_LAST_AUTHORIZATION_SEC_LEVELS &&
+                            lastAuthorization.tag == TARGET_LAST_AUTHORIZATION_TAG &&
+                            lastAuthorization.unionTag == TARGET_LAST_AUTHORIZATION_UNION_TAG &&
+                            lastAuthorizationHasUnknownUnionTag
+                        )
             GenerateKeyReplyParcelParseResult(
                 parseSucceeded = true,
                 authorizationCount = authorizationCount,
@@ -305,6 +308,7 @@ class GenerateKeyReplyParcelParser {
         const val AUTHORIZATION_TAG_OFFSET = 4
         const val AUTHORIZATION_UNION_TAG_OFFSET = 8
         const val TARGET_MODIFICATION_TIME_MS = 4294967297L
+        const val TARGET_HIGH_MODIFICATION_TIME_MS_THRESHOLD = 4_999_999_999L
         val TARGET_LAST_AUTHORIZATION_SEC_LEVELS = setOf(4L, 256L)
         const val TARGET_LAST_AUTHORIZATION_TAG = 0x00000001L
         const val TARGET_LAST_AUTHORIZATION_UNION_TAG = 32L
