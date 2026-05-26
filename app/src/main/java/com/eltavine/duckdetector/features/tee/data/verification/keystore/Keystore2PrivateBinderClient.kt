@@ -414,11 +414,15 @@ class Keystore2PrivateBinderClient {
     }
 
     fun deleteKey(service: Any, keyDescriptor: Any) {
-        runCatching {
+        deleteKeyChecked(service, keyDescriptor)
+    }
+
+    fun deleteKeyChecked(service: Any, keyDescriptor: Any): Throwable? {
+        return runCatching {
             service.javaClass
                 .getMethod("deleteKey", keyDescriptor.javaClass)
                 .invoke(service, keyDescriptor)
-        }
+        }.exceptionOrNull()
     }
 
     fun listEntries(service: Any): Array<Any?> {

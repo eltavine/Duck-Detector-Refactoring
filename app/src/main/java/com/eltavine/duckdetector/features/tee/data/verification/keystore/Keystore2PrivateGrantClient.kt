@@ -41,32 +41,19 @@ class Keystore2PrivateGrantClient(
             failurePhase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
             failurePrefix = "private grant failed",
         ) { service, constants ->
-            val descriptor = createDescriptor(alias, constants.domainApp)
-            val grantDescriptor = service.javaClass.methods
-                .firstOrNull { method ->
-                    method.name == "grant" &&
-                        method.parameterTypes.size == 3 &&
-                        method.parameterTypes[1] == Int::class.javaPrimitiveType &&
-                        method.parameterTypes[2] == Int::class.javaPrimitiveType
-                }
-                ?.also { it.isAccessible = true }
-                ?.invoke(service, descriptor, uid, constants.grantAccessVector)
-                ?: return@withService Keystore2PrivateGrantResult.unavailable(
-                    phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
-                    detail = "private grant failed: hidden grant() returned no descriptor.",
-                )
-            val grantId = readLongField(grantDescriptor, "nspace")
-            if (grantId == null) {
-                return@withService Keystore2PrivateGrantResult.unavailable(
-                    phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
-                    detail = "private grant failed: hidden grant() returned invalid grant namespace.",
-                )
-            }
-            Keystore2PrivateGrantResult(
-                available = true,
+            grantAliasToUid(service, alias, uid, constants)
+        }
+    }
+
+    fun grantAliasToUid(service: Any, alias: String, uid: Int): Keystore2PrivateGrantResult {
+        return runCatching {
+            grantAliasToUid(service, alias, uid, resolveConstants())
+        }.getOrElse { throwable ->
+            grantFailureResult(
                 phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
-                grantId = grantId,
-                detail = "private grant created grantId=$grantId unsignedGrantId=${java.lang.Long.toUnsignedString(grantId)} accessVector=${constants.grantAccessVector}",
+                detail = "private grant failed: ${describeThrowable(throwable)}",
+                errorKind = classifyFailure(throwable),
+                throwable = throwable,
             )
         }
     }
@@ -82,23 +69,19 @@ class Keystore2PrivateGrantClient(
             failurePhase = Keystore2PrivateGrantPhase.PRIVATE_UNGRANT,
             failurePrefix = "private ungrant failed",
         ) { service, constants ->
-            val descriptor = createDescriptor(alias, constants.domainApp)
-            val method = service.javaClass.methods
-                .firstOrNull { candidate ->
-                    candidate.name == "ungrant" &&
-                        candidate.parameterTypes.size == 2 &&
-                        candidate.parameterTypes[1] == Int::class.javaPrimitiveType
-                }
-                ?: return@withService Keystore2PrivateGrantResult.unavailable(
-                    phase = Keystore2PrivateGrantPhase.PRIVATE_UNGRANT,
-                    detail = "private ungrant failed: hidden ungrant() was unavailable.",
-                )
-            method.isAccessible = true
-            method.invoke(service, descriptor, uid)
-            Keystore2PrivateGrantResult(
-                available = true,
+            revokeAliasGrant(service, alias, uid, constants)
+        }
+    }
+
+    fun revokeAliasGrant(service: Any, alias: String, uid: Int): Keystore2PrivateGrantResult {
+        return runCatching {
+            revokeAliasGrant(service, alias, uid, resolveConstants())
+        }.getOrElse { throwable ->
+            grantFailureResult(
                 phase = Keystore2PrivateGrantPhase.PRIVATE_UNGRANT,
-                detail = "private ungrant completed uid=$uid",
+                detail = "private ungrant failed: ${describeThrowable(throwable)}",
+                errorKind = classifyFailure(throwable),
+                throwable = throwable,
             )
         }
     }
@@ -114,12 +97,19 @@ class Keystore2PrivateGrantClient(
             failurePhase = Keystore2PrivateGrantPhase.PRIVATE_GET_KEY_ENTRY_APP,
             failurePrefix = "private getKeyEntry(APP) failed",
         ) { service, constants ->
-            readChainFromDescriptor(
-                service = service,
-                descriptor = createDescriptor(alias, constants.domainApp),
+            readOwnerChain(service, alias, constants)
+        }
+    }
+
+    fun readOwnerChain(service: Any, alias: String): Keystore2PrivateGrantChainResult {
+        return runCatching {
+            readOwnerChain(service, alias, resolveConstants())
+        }.getOrElse { throwable ->
+            grantFailureResult(
                 phase = Keystore2PrivateGrantPhase.PRIVATE_GET_KEY_ENTRY_APP,
-                emptyDetail = "private getKeyEntry(APP) returned an empty certificate chain.",
-                successDetailPrefix = "private getKeyEntry(APP)",
+                detail = "private getKeyEntry(APP) failed: ${describeThrowable(throwable)}",
+                errorKind = classifyFailure(throwable),
+                throwable = throwable,
             )
         }
     }
@@ -135,12 +125,46 @@ class Keystore2PrivateGrantClient(
             failurePhase = Keystore2PrivateGrantPhase.PRIVATE_GET_KEY_ENTRY_GRANT,
             failurePrefix = "private getKeyEntry(GRANT) failed",
         ) { service, constants ->
-            readChainFromDescriptor(
-                service = service,
-                descriptor = createDescriptor(grantId, constants.domainGrant),
+            readGrantChain(service, grantId, constants)
+        }
+    }
+
+    fun readGrantChain(service: Any, grantId: Long): Keystore2PrivateGrantChainResult {
+        return runCatching {
+            readGrantChain(service, grantId, resolveConstants())
+        }.getOrElse { throwable ->
+            grantFailureResult(
                 phase = Keystore2PrivateGrantPhase.PRIVATE_GET_KEY_ENTRY_GRANT,
-                emptyDetail = "private getKeyEntry(GRANT) returned an empty certificate chain.",
-                successDetailPrefix = "private getKeyEntry(GRANT)",
+                detail = "private getKeyEntry(GRANT) failed: ${describeThrowable(throwable)}",
+                errorKind = classifyFailure(throwable),
+                throwable = throwable,
+            )
+        }
+    }
+
+    fun readGrantEntry(service: Any, grantId: Long): Keystore2PrivateGrantResult {
+        return runCatching {
+            val constants = resolveConstants()
+            val descriptor = createDescriptor(grantId, constants.domainGrant)
+            service.javaClass
+                .getMethod("getKeyEntry", descriptor.javaClass)
+                .also { it.isAccessible = true }
+                .invoke(service, descriptor)
+                ?: return@runCatching Keystore2PrivateGrantResult.unavailable(
+                    phase = Keystore2PrivateGrantPhase.PRIVATE_OWNER_REPLAY_GRANT,
+                    detail = "private owner replay getKeyEntry(GRANT) returned no KeyEntryResponse.",
+                )
+            Keystore2PrivateGrantResult(
+                available = true,
+                phase = Keystore2PrivateGrantPhase.PRIVATE_OWNER_REPLAY_GRANT,
+                detail = "private owner replay getKeyEntry(GRANT) returned a response.",
+            )
+        }.getOrElse { throwable ->
+            Keystore2PrivateGrantResult.unavailable(
+                phase = Keystore2PrivateGrantPhase.PRIVATE_OWNER_REPLAY_GRANT,
+                errorKind = classifyFailure(throwable),
+                detail = "private owner replay getKeyEntry(GRANT) failed: ${describeThrowable(throwable)}",
+                throwable = throwable,
             )
         }
     }
@@ -241,6 +265,95 @@ class Keystore2PrivateGrantClient(
             phase = phase,
             chain = chain,
             detail = "$successDetailPrefix chainLength=${chain.certificates.size}",
+        )
+    }
+
+    private fun grantAliasToUid(
+        service: Any,
+        alias: String,
+        uid: Int,
+        constants: Keystore2PrivateGrantConstants,
+    ): Keystore2PrivateGrantResult {
+        val descriptor = createDescriptor(alias, constants.domainApp)
+        val grantDescriptor = service.javaClass.methods
+            .firstOrNull { method ->
+                method.name == "grant" &&
+                    method.parameterTypes.size == 3 &&
+                    method.parameterTypes[1] == Int::class.javaPrimitiveType &&
+                    method.parameterTypes[2] == Int::class.javaPrimitiveType
+            }
+            ?.also { it.isAccessible = true }
+            ?.invoke(service, descriptor, uid, constants.grantAccessVector)
+            ?: return Keystore2PrivateGrantResult.unavailable(
+                phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
+                detail = "private grant failed: hidden grant() returned no descriptor.",
+            )
+        val grantId = readLongField(grantDescriptor, "nspace")
+        if (grantId == null) {
+            return Keystore2PrivateGrantResult.unavailable(
+                phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
+                detail = "private grant failed: hidden grant() returned invalid grant namespace.",
+            )
+        }
+        return Keystore2PrivateGrantResult(
+            available = true,
+            phase = Keystore2PrivateGrantPhase.PRIVATE_GRANT,
+            grantId = grantId,
+            detail = "private grant created grantId=$grantId unsignedGrantId=${java.lang.Long.toUnsignedString(grantId)} accessVector=${constants.grantAccessVector}",
+        )
+    }
+
+    private fun revokeAliasGrant(
+        service: Any,
+        alias: String,
+        uid: Int,
+        constants: Keystore2PrivateGrantConstants,
+    ): Keystore2PrivateGrantResult {
+        val descriptor = createDescriptor(alias, constants.domainApp)
+        val method = service.javaClass.methods
+            .firstOrNull { candidate ->
+                candidate.name == "ungrant" &&
+                    candidate.parameterTypes.size == 2 &&
+                    candidate.parameterTypes[1] == Int::class.javaPrimitiveType
+            }
+            ?: return Keystore2PrivateGrantResult.unavailable(
+                phase = Keystore2PrivateGrantPhase.PRIVATE_UNGRANT,
+                detail = "private ungrant failed: hidden ungrant() was unavailable.",
+            )
+        method.isAccessible = true
+        method.invoke(service, descriptor, uid)
+        return Keystore2PrivateGrantResult(
+            available = true,
+            phase = Keystore2PrivateGrantPhase.PRIVATE_UNGRANT,
+            detail = "private ungrant completed uid=$uid",
+        )
+    }
+
+    private fun readOwnerChain(
+        service: Any,
+        alias: String,
+        constants: Keystore2PrivateGrantConstants,
+    ): Keystore2PrivateGrantChainResult {
+        return readChainFromDescriptor(
+            service = service,
+            descriptor = createDescriptor(alias, constants.domainApp),
+            phase = Keystore2PrivateGrantPhase.PRIVATE_GET_KEY_ENTRY_APP,
+            emptyDetail = "private getKeyEntry(APP) returned an empty certificate chain.",
+            successDetailPrefix = "private getKeyEntry(APP)",
+        )
+    }
+
+    private fun readGrantChain(
+        service: Any,
+        grantId: Long,
+        constants: Keystore2PrivateGrantConstants,
+    ): Keystore2PrivateGrantChainResult {
+        return readChainFromDescriptor(
+            service = service,
+            descriptor = createDescriptor(grantId, constants.domainGrant),
+            phase = Keystore2PrivateGrantPhase.PRIVATE_GET_KEY_ENTRY_GRANT,
+            emptyDetail = "private getKeyEntry(GRANT) returned an empty certificate chain.",
+            successDetailPrefix = "private getKeyEntry(GRANT)",
         )
     }
 
@@ -570,6 +683,7 @@ enum class Keystore2PrivateGrantPhase {
     PRIVATE_GRANT,
     PRIVATE_GET_KEY_ENTRY_APP,
     PRIVATE_GET_KEY_ENTRY_GRANT,
+    PRIVATE_OWNER_REPLAY_GRANT,
     ISOLATED_BINDER_READBACK,
     PRIVATE_UNGRANT,
 }

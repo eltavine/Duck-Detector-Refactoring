@@ -38,6 +38,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDo
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
@@ -412,6 +414,61 @@ class TeeReportReducerTest {
             it.title == "Grant isolated-domain" &&
                 it.level == TeeSignalLevel.INFO &&
                 it.body.contains("Unavailable", ignoreCase = true)
+        })
+    }
+
+    @Test
+    fun `grant caller binding non grantee readback becomes supplementary danger`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                syntheticGrantGranteeBlindReadback = SyntheticGrantGranteeBlindReadbackResult(
+                    executed = true,
+                    available = true,
+                    grantCreated = true,
+                    granteeUid = 99001,
+                    granteeReadSucceeded = true,
+                    ownerReplaySucceeded = true,
+                    anomalyKind = SyntheticGrantGranteeBlindReadbackAnomalyKind.NON_GRANTEE_READBACK_ALLOWED,
+                    detail = "Private: non-grantee owner replay succeeded for isolated grant handle.",
+                    diagnosticCopyText = "grant caller binding diagnostic",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.FAIL, report.supplementaryReviewLevel)
+        assertTrue(report.summary.contains("Grant handle remained readable", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant caller binding" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("NON_GRANTEE_READBACK_ALLOWED") &&
+                it.body.contains("ownerReplay=true") &&
+                it.hiddenCopyText == "grant caller binding diagnostic"
+        })
+    }
+
+    @Test
+    fun `grant caller binding rejected owner replay stays clean`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                syntheticGrantGranteeBlindReadback = SyntheticGrantGranteeBlindReadbackResult(
+                    executed = true,
+                    available = true,
+                    grantCreated = true,
+                    granteeUid = 99001,
+                    granteeReadSucceeded = true,
+                    anomalyKind = SyntheticGrantGranteeBlindReadbackAnomalyKind.NONE,
+                    detail = "Private: owner replay rejected with KEY_NOT_FOUND.",
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Grant caller binding" &&
+                it.level == TeeSignalLevel.PASS &&
+                it.body.contains("ownerReplay=KEY_NOT_FOUND")
         })
     }
 
@@ -2008,6 +2065,10 @@ class TeeReportReducerTest {
         grantDomainFullChainSplit: GrantDomainFullChainSplitResult = GrantDomainFullChainSplitResult(
             detail = "skipped",
         ),
+        syntheticGrantGranteeBlindReadback: SyntheticGrantGranteeBlindReadbackResult =
+            SyntheticGrantGranteeBlindReadbackResult(
+                detail = "skipped",
+            ),
         grantSelfDomainFullChainSplit: GrantSelfDomainFullChainSplitResult = GrantSelfDomainFullChainSplitResult(
             detail = "skipped",
         ),
@@ -2113,6 +2174,7 @@ class TeeReportReducerTest {
             keystore2Hook = keystore2Hook,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
             grantDomainFullChainSplit = grantDomainFullChainSplit,
+            syntheticGrantGranteeBlindReadback = syntheticGrantGranteeBlindReadback,
             grantSelfDomainFullChainSplit = grantSelfDomainFullChainSplit,
             legacyKeystorePath = legacyKeystorePath,
             listEntriesConsistency = listEntriesConsistency,

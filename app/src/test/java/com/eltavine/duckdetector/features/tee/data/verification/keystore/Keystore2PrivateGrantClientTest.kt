@@ -140,4 +140,16 @@ class Keystore2PrivateGrantClientTest {
         assertEquals(Keystore2PrivateGrantPhase.PRIVATE_UNGRANT, result.phase)
         assertEquals(Keystore2PrivateGrantErrorKind.UNGRANT_FAILED, result.errorKind)
     }
+
+    @Test
+    fun `owner replay phase is distinct from certificate chain readback`() {
+        val result = Keystore2PrivateGrantResult.unavailable(
+            phase = Keystore2PrivateGrantPhase.PRIVATE_OWNER_REPLAY_GRANT,
+            errorKind = Keystore2PrivateGrantErrorKind.KEY_NOT_FOUND,
+            detail = "private owner replay getKeyEntry(GRANT) failed: KEY_NOT_FOUND",
+        )
+
+        assertEquals(Keystore2PrivateGrantPhase.PRIVATE_OWNER_REPLAY_GRANT, result.phase)
+        assertEquals(Keystore2PrivateGrantErrorKind.KEY_NOT_FOUND, result.errorKind)
+    }
 }

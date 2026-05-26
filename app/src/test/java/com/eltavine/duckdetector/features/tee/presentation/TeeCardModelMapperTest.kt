@@ -482,6 +482,49 @@ class TeeCardModelMapperTest {
     }
 
     @Test
+    fun `grant caller binding failure escalates aligned tee card to danger`() {
+        val model = mapper.map(
+            report = TeeReport(
+                stage = TeeScanStage.READY,
+                verdict = TeeVerdict.CONSISTENT,
+                tier = TeeTier.TEE,
+                headline = "Attestation aligned; local probes need review",
+                summary = "Grant handle remained readable by its non-grantee owner. Attestation and trust-path checks still aligned.",
+                collapsedSummary = "Aligned • local review",
+                trustRoot = TeeTrustRoot.GOOGLE,
+                trustSummary = "Local trust path",
+                tamperScore = 10,
+                evidenceCount = 1,
+                supplementaryIndicatorCount = 1,
+                supplementaryReviewLevel = TeeSignalLevel.FAIL,
+                signals = listOf(
+                    TeeSignal("Grant caller binding", "Matched", TeeSignalLevel.FAIL),
+                ),
+                sections = listOf(
+                    TeeEvidenceSection(
+                        title = "Checks",
+                        items = listOf(
+                            TeeEvidenceItem(
+                                "Grant caller binding",
+                                "Matched kind=NON_GRANTEE_READBACK_ALLOWED uid=99001 ownerReplay=true",
+                                TeeSignalLevel.FAIL,
+                            ),
+                        ),
+                    ),
+                ),
+                certificates = emptyList(),
+            ),
+            isExpanded = false,
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals(
+            "Grant handle caller binding failed; open TEE details for stage diagnostics.",
+            model.findingDetail,
+        )
+    }
+
+    @Test
     fun `grant isolated-domain private readback crash shows warning card and compact finding detail`() {
         val model = mapper.map(
             report = TeeReport(

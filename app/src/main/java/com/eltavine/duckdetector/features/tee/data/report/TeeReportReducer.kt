@@ -31,6 +31,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.MIN_RATIO_SAMPLE_COUNT
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
@@ -326,6 +327,21 @@ class TeeReportReducer(
 
                 GrantDomainAnomalyKind.NONE,
                 GrantDomainAnomalyKind.UNAVAILABLE -> Unit
+            }
+            if (
+                artifacts.syntheticGrantGranteeBlindReadback.anomalyKind ==
+                SyntheticGrantGranteeBlindReadbackAnomalyKind.NON_GRANTEE_READBACK_ALLOWED
+            ) {
+                add(
+                    fact(
+                        "Grant caller binding",
+                        "Grant handle remained readable by its non-grantee owner. " +
+                            syntheticGrantGranteeBlindReadbackValue(artifacts),
+                        TeeSignalLevel.FAIL,
+                        hiddenCopyText = artifacts.syntheticGrantGranteeBlindReadback.diagnosticCopyText
+                            .takeIf { it.isNotBlank() },
+                    )
+                )
             }
             // self-domain removes the isolated-process policy variable; its key-not-found variant is treated like a visibility split.
             // self-domain 排除了 isolated-process 策略变量；其 key-not-found 变体按可见性断裂处理。
@@ -911,6 +927,15 @@ class TeeReportReducer(
                             grantDomainFullChainSplitValue(artifacts),
                             grantDomainFullChainSplitLevel(artifacts),
                             hiddenCopyText = artifacts.grantDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
+                        )
+                    )
+                    add(
+                        fact(
+                            "Grant caller binding",
+                            syntheticGrantGranteeBlindReadbackValue(artifacts),
+                            syntheticGrantGranteeBlindReadbackLevel(artifacts),
+                            hiddenCopyText = artifacts.syntheticGrantGranteeBlindReadback.diagnosticCopyText
                                 .takeIf { it.isNotBlank() },
                         )
                     )
@@ -1613,6 +1638,35 @@ class TeeReportReducer(
         }
     }
 
+    private fun syntheticGrantGranteeBlindReadbackValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.syntheticGrantGranteeBlindReadback
+        return when {
+            result.anomalyKind == SyntheticGrantGranteeBlindReadbackAnomalyKind.NON_GRANTEE_READBACK_ALLOWED ->
+                buildString {
+                    append("Matched kind=NON_GRANTEE_READBACK_ALLOWED")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    append(" ownerReplay=true")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.executed && result.available &&
+                result.anomalyKind == SyntheticGrantGranteeBlindReadbackAnomalyKind.NONE ->
+                buildString {
+                    append("Clean kind=NONE")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    append(" ownerReplay=KEY_NOT_FOUND")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.anomalyKind == SyntheticGrantGranteeBlindReadbackAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER ->
+                "Skipped • ${result.detail}"
+            else -> buildString {
+                append("Unavailable kind=")
+                append(result.anomalyKind.name)
+                result.ownerReplayErrorKind?.let { append(" ownerReplay=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+        }
+    }
+
     private fun grantSelfDomainFullChainSplitValue(artifacts: TeeScanArtifacts): String {
         val result = artifacts.grantSelfDomainFullChainSplit
         return when {
@@ -1947,6 +2001,17 @@ class TeeReportReducer(
             result.executed && result.splitDetected -> TeeSignalLevel.FAIL
             result.executed && result.available -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
+        }
+    }
+
+    private fun syntheticGrantGranteeBlindReadbackLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
+        val result = artifacts.syntheticGrantGranteeBlindReadback
+        return when (result.anomalyKind) {
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.NON_GRANTEE_READBACK_ALLOWED -> TeeSignalLevel.FAIL
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.NONE ->
+                if (result.executed && result.available) TeeSignalLevel.PASS else TeeSignalLevel.INFO
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER,
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.UNAVAILABLE -> TeeSignalLevel.INFO
         }
     }
 

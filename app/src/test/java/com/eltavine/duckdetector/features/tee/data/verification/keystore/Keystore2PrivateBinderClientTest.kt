@@ -175,4 +175,21 @@ class Keystore2PrivateBinderClientTest {
         assertEquals(1, records.size)
         assertEquals(2, records.single().occurrenceCount)
     }
+
+    @Test
+    fun `delete key checked exposes cleanup failures`() {
+        val failure = client.deleteKeyChecked(FailingDeleteService(), FakeDescriptor())
+
+        assertNotNull(failure)
+        assertEquals("cleanup failed", failure!!.cause?.message)
+    }
+
+    class FakeDescriptor
+
+    class FailingDeleteService {
+        fun deleteKey(descriptor: FakeDescriptor) {
+            check(descriptor.javaClass == FakeDescriptor::class.java)
+            error("cleanup failed")
+        }
+    }
 }
