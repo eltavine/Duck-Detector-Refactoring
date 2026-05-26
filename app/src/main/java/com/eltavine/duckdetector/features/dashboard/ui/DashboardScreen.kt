@@ -387,6 +387,7 @@ fun DashboardScreen(
                 .fillMaxSize()
                 .graphicsLayer {
                     translationY = -scrollOffset
+                    clip = false
                 },
         ) {
             QrBlindWatermark(deviceInfoCard = uiState.deviceInfoCard)
