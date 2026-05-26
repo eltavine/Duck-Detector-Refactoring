@@ -60,6 +60,7 @@ import kotlin.math.sin
  * @param spacingDp         Gap between QR tiles in dp. Default 72.
  * @param floatAmplitudeDp  Maximum pixel drift amplitude in dp. Default 18.
  * @param floatPeriodMs     Full drift cycle duration in ms. Default 25_000.
+ * @param scrollOffsetPx    Current scroll offset in pixels to shift the tile grid.
  * @param modifier          Standard Compose modifier.
  */
 @Composable
@@ -70,6 +71,7 @@ fun QrBlindWatermark(
     spacingDp: Float = 72f,
     floatAmplitudeDp: Float = 18f,
     floatPeriodMs: Int = 25_000,
+    scrollOffsetPx: Float = 0f,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -126,7 +128,10 @@ fun QrBlindWatermark(
         val canvasW = size.width
         val canvasH = size.height
 
-        // Number of tiles needed to cover the screen with margin
+        // Shift tile grid by scroll offset (modulo cell size for wrapping)
+        val gridShiftY = scrollOffsetPx % cellSizePx
+
+        // Number of tiles needed to cover the screen (extra row for scroll shift)
         val cols = (canvasW / cellSizePx).toInt() + 2
         val rows = (canvasH / cellSizePx).toInt() + 2
 
@@ -144,7 +149,7 @@ fun QrBlindWatermark(
                 val offsetY = cos(phaseY + tilePhaseShift) * amplitudePx
 
                 val baseX = col * cellSizePx
-                val baseY = row * cellSizePx
+                val baseY = row * cellSizePx - gridShiftY
 
                 val drawX = baseX + offsetX
                 val drawY = baseY + offsetY

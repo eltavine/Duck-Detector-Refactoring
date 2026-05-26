@@ -71,7 +71,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -373,7 +372,7 @@ fun DashboardScreen(
         }
 
         // Blind watermark — QR code overlaid at very low opacity (floating, follows scroll)
-        val scrollOffset by remember(lazyListState) {
+        val scrollOffsetPx by remember(lazyListState) {
             derivedStateOf {
                 lazyListState.layoutInfo.visibleItemsInfo
                     .firstOrNull()
@@ -382,16 +381,10 @@ fun DashboardScreen(
                     ?: 0f
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    translationY = -scrollOffset
-                    clip = false
-                },
-        ) {
-            QrBlindWatermark(deviceInfoCard = uiState.deviceInfoCard)
-        }
+        QrBlindWatermark(
+            deviceInfoCard = uiState.deviceInfoCard,
+            scrollOffsetPx = scrollOffsetPx,
+        )
     }
 }
 
