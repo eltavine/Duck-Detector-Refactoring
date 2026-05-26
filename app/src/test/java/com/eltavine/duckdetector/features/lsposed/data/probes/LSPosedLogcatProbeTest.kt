@@ -114,6 +114,25 @@ class LSPosedLogcatProbeTest {
     }
 
     @Test
+    fun `selinux avc without type marker does not become direct lsposed hit`() {
+        val probe = LSPosedLogcatProbe()
+        val result = probe.evaluate(
+            mapOf(
+                "overview" to LSPosedLogcatCommandOutput(
+                    output = "05-26 09:07:16.652 28028 28028 E SELinux : avc:  denied  { read } for  scontext=u:r:untrusted_app:s0 tcontext=u:object_r:lsposed_file:s0 tclass=file permissive=0",
+                ),
+                "tag:LSPosed" to LSPosedLogcatCommandOutput(),
+                "tag:LSPosed-Bridge" to LSPosedLogcatCommandOutput(),
+                "tag:LSPosedService" to LSPosedLogcatCommandOutput(),
+                "process" to LSPosedLogcatCommandOutput(),
+            ),
+        )
+
+        assertTrue(result.available)
+        assertTrue(result.signals.isEmpty())
+    }
+
+    @Test
     fun `log access denied downgrades to unavailable`() {
         val probe = LSPosedLogcatProbe(
             commandRunner = LSPosedLogcatCommandRunner { _, _ ->
