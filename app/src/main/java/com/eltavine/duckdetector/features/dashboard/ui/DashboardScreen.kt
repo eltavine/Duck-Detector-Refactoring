@@ -93,9 +93,9 @@ import com.eltavine.duckdetector.features.virtualization.ui.card.VirtualizationD
 import com.eltavine.duckdetector.features.zygisk.ui.card.ZygiskDetectorCard
 import com.eltavine.duckdetector.ui.theme.ShapeTokens
 
-private const val DUCK_DETECTOR_QQ_GROUP = "1079283524"
+private const val DUCK_DETECTOR_QQ_GROUP = "789344870"
 private const val DUCK_DETECTOR_QQ_GROUP_URL =
-    "https://qun.qq.com/universal-share/share?ac=1&authKey=VWdSICnmxMiNF1t409UcE%2FjdQVeorZKvrKP85I2pepXf4rfv9IFfdAw8kAuMdk5v&busi_data=eyJncm91cENvZGUiOiIxMDc5MjgzNTI0IiwidG9rZW4iOiJ2Q3VSSll2QndhK3JoZlhHZFU4VmxUSFREdjBVVHhFNHlTbXVPVDkzY0twTHlJTldSZVFlUmxncjlnM0Rac2dwIiwidWluIjoiMzMzNDcxMzIzMyJ9&data=ms9NmidW7tH7vZrZkYOux0z9cAUWBOp4THmPYdBeCpt6sBVyd1oP9E3lL-0yToQMBBTK3X7aZQ9SLnzxEmxWlQ&svctype=4&tempid=h5_group_info"
+    "https://qun.qq.com/universal-share/share?ac=1&authKey=VWdSICnmxMiNF1t409UcE%2FjdQVeorZKvrKP85I2pepXf4rfv9IFfdAw8kAuMdk5v&busi_data=eyJncm91cENvZGUiOiI3ODkzNDQ4NzAiLCJ0b2tlbiI6InZDdVJKWXZCd2ErcmhmWEdkVThWbFRIVER2MFVUeEU0eVNtdk9UOTNjS3BMeUlOV1JlUWVSbGdyOWczRFpzZ3AiLCJ1aW4iOiIzMzM0NzEzMjMzIn0=&data=ms9NmidW7tH7vZrZkYOux0z9cAUWBOp4THmPYdBeCpt6sBVyd1oP9E3lL-0yToQMBBTK3X7aZQ9SLnzxEmxWlQ&svctype=4&tempid=h5_group_info"
 
 @Composable
 fun DashboardScreen(

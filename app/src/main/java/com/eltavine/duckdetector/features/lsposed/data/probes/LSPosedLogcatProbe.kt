@@ -171,6 +171,10 @@ class LSPosedLogcatProbe(
                 }
             }
 
+            if (line.isSelinuxAvcLine()) {
+                return@forEach
+            }
+
             val lowerLine = line.lowercase()
             if (
                 lowerLine.contains("lsposed") ||
@@ -271,13 +275,20 @@ class LSPosedLogcatProbe(
 
     private fun String.isDirtyPolicyLsposedFileAvc(): Boolean {
         val lower = lowercase()
-        return "type=1400" in lower &&
-                "avc:" in lower &&
+        return "avc:" in lower &&
                 "denied" in lower &&
                 "scontext=u:r:untrusted_app" in lower &&
                 "tcontext=u:object_r:lsposed_file:s0" in lower &&
                 "tclass=file" in lower &&
                 DIRTY_POLICY_LSPOSED_FILE_READ_REGEX.containsMatchIn(this)
+    }
+
+    private fun String.isSelinuxAvcLine(): Boolean {
+        val lower = lowercase()
+        return "avc:" in lower &&
+                "denied" in lower &&
+                "scontext=" in lower &&
+                "tcontext=" in lower
     }
 
     private fun String.matchesPattern(
