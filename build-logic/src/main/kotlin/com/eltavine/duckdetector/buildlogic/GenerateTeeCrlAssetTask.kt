@@ -31,6 +31,7 @@ import org.gradle.api.tasks.TaskAction
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
+import java.math.BigInteger
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -172,8 +173,17 @@ abstract class GenerateTeeCrlAssetTask : DefaultTask() {
         val remoteKeys = remoteEntries.keys()
         while (remoteKeys.hasNext()) {
             val key = remoteKeys.next()
-            if (!fallbackEntries.has(key)) {
-                fallbackEntries.put(key, remoteEntries.get(key))
+            val remoteEntry = remoteEntries.getJSONObject(key)
+            if (isLocalMassAbuseSerial(key) && remoteEntry.isRevokedOrSuspended()) {
+                // 临时例外：构建增量真的拉到该序列号时，标记为远端来源，运行时不再降级成本地“大规模滥用”WARN。
+                fallbackEntries.put(
+                    LOCAL_MASS_ABUSE_SERIAL,
+                    JSONObject(remoteEntry.toString()).put(DUCK_SOURCE_FIELD, DUCK_SOURCE_REMOTE),
+                )
+            } else if (fallbackEntries.has(key)) {
+                continue
+            } else {
+                fallbackEntries.put(key, remoteEntry)
             }
         }
         return fallbackRoot.toString(2)
@@ -195,3 +205,22 @@ abstract class GenerateTeeCrlAssetTask : DefaultTask() {
         return root
     }
 }
+
+private fun isLocalMassAbuseSerial(key: String): Boolean {
+    val normalized = key.lowercase().trimStart('0').ifBlank { "0" }
+    return normalized == LOCAL_MASS_ABUSE_SERIAL ||
+        runCatching {
+            BigInteger(key).toString(16).lowercase() == LOCAL_MASS_ABUSE_SERIAL
+        }.getOrDefault(false)
+}
+
+private fun JSONObject.isRevokedOrSuspended(): Boolean {
+    return when (optString("status")) {
+        "REVOKED", "SUSPENDED" -> true
+        else -> false
+    }
+}
+
+private const val LOCAL_MASS_ABUSE_SERIAL = "8616ef30679ed43cc2b43e3c97a2319e"
+private const val DUCK_SOURCE_FIELD = "_duckDetectorSource"
+private const val DUCK_SOURCE_REMOTE = "REMOTE"

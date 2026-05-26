@@ -167,7 +167,10 @@ class CrlStatusService(
         return withContext(Dispatchers.IO) {
             runCatching {
                 val json = embeddedStatusProvider.load()
-                val entries = parseStatusJson(json)
+                val entries = parseStatusJson(
+                    json = json,
+                    defaultSource = CrlEntrySource.EMBEDDED,
+                )
                 CrlSnapshotResult.Success(entries)
             }.getOrElse { throwable ->
                 CrlSnapshotResult.Failure(classifyEmbeddedFailure(throwable))
@@ -179,7 +182,10 @@ class CrlStatusService(
         return withContext(Dispatchers.IO) {
             runCatching {
                 val json = feedFetcher.fetch()
-                val entries = parseStatusJson(json)
+                val entries = parseStatusJson(
+                    json = json,
+                    defaultSource = CrlEntrySource.ONLINE,
+                )
                 CrlSnapshotResult.Success(entries)
             }.getOrElse { throwable ->
                 CrlSnapshotResult.Failure(classifyFailure(throwable))
@@ -199,7 +205,13 @@ class CrlStatusService(
         // 内置吊销是本地信任下限；在线数据可以追加条目，但不能降级仓库已标记吊销/暂停的序列号。
         return LinkedHashMap<String, CrlEntry>(embeddedEntries).apply {
             onlineEntries.forEach { (serial, entry) ->
-                putIfAbsent(serial, entry)
+                val existing = this[serial]
+                if (existing?.isLocalMassAbuseOverride(serial) == true && entry.isRevokedOrSuspended()) {
+                    // 临时例外：该本地硬编码序列号只是“大规模滥用”WARN，联网/构建增量命中时恢复标准 CRL 语义。
+                    this[serial] = entry
+                } else {
+                    putIfAbsent(serial, entry)
+                }
             }
         }
     }
@@ -212,17 +224,29 @@ class CrlStatusService(
         val revoked = chain.mapNotNull { cert ->
             val serialHex = cert.serialNumber.toString(16).lowercase()
             val serialDec = cert.serialNumber.toString()
-            val entry = entries[serialHex]
-                ?: entries[serialDec]
-                ?: entries[serialHex.trimStart('0').ifBlank { "0" }]
-                ?: entries[serialDec.trimStart('0').ifBlank { "0" }]
+            val candidates = listOfNotNull(
+                entries[serialHex],
+                entries[serialDec],
+                entries[serialHex.trimStart('0').ifBlank { "0" }],
+                entries[serialDec.trimStart('0').ifBlank { "0" }],
+            )
+            val entry = candidates.firstOrNull {
+                it.source == CrlEntrySource.ONLINE &&
+                    (it.status == STATUS_REVOKED || it.status == STATUS_SUSPENDED)
+            } ?: candidates.firstOrNull()
 
             entry
                 ?.takeIf { it.status == STATUS_REVOKED || it.status == STATUS_SUSPENDED }
                 ?.let { matched ->
+                    val evidenceKind = matched.evidenceKind(serialHex)
                     RevokedCertificate(
                         serial = "$serialHex / $serialDec",
-                        reason = matched.reason ?: matched.status,
+                        reason = if (evidenceKind == RevokedCertificateEvidenceKind.LOCAL_MASS_ABUSE) {
+                            "MASS_ABUSE"
+                        } else {
+                            matched.reason ?: matched.status
+                        },
+                        evidenceKind = evidenceKind,
                     )
                 }
         }
@@ -250,7 +274,10 @@ class CrlStatusService(
         return "$baseSummary $verdict"
     }
 
-    private fun parseStatusJson(json: String): Map<String, CrlEntry> {
+    private fun parseStatusJson(
+        json: String,
+        defaultSource: CrlEntrySource,
+    ): Map<String, CrlEntry> {
         val root = JSONObject(json)
         val entries = root.optJSONObject("entries")
             ?: throw JSONException("Attestation status feed is missing an entries object.")
@@ -264,6 +291,10 @@ class CrlStatusService(
                 result[serial] = CrlEntry(
                     status = entry.optString("status", "UNKNOWN"),
                     reason = entry.optString("reason").takeIf { it.isNotBlank() },
+                    source = entry.optString(DUCK_SOURCE_FIELD)
+                        .takeIf { it == DUCK_SOURCE_REMOTE }
+                        ?.let { CrlEntrySource.ONLINE }
+                        ?: defaultSource,
                 )
             }
         }
@@ -328,6 +359,24 @@ class CrlStatusService(
         }
     }
 
+    private fun CrlEntry.evidenceKind(serialHex: String): RevokedCertificateEvidenceKind {
+        return if (isLocalMassAbuseOverride(serialHex)) {
+            RevokedCertificateEvidenceKind.LOCAL_MASS_ABUSE
+        } else {
+            RevokedCertificateEvidenceKind.STANDARD_REVOCATION
+        }
+    }
+
+    private fun CrlEntry.isRevokedOrSuspended(): Boolean {
+        return status == STATUS_REVOKED || status == STATUS_SUSPENDED
+    }
+
+    private fun CrlEntry.isLocalMassAbuseOverride(serial: String): Boolean {
+        return source == CrlEntrySource.EMBEDDED &&
+            status == STATUS_REVOKED &&
+            serial.trimStart('0').ifBlank { "0" } == LOCAL_MASS_ABUSE_SERIAL
+    }
+
     private fun joinDetails(
         vararg parts: String?,
     ): String? {
@@ -349,6 +398,9 @@ class CrlStatusService(
         private const val NETWORK_TIMEOUT_MS = 5_000
         private const val STATUS_REVOKED = "REVOKED"
         private const val STATUS_SUSPENDED = "SUSPENDED"
+        private const val LOCAL_MASS_ABUSE_SERIAL = "8616ef30679ed43cc2b43e3c97a2319e"
+        private const val DUCK_SOURCE_FIELD = "_duckDetectorSource"
+        private const val DUCK_SOURCE_REMOTE = "REMOTE"
     }
 }
 
@@ -411,7 +463,13 @@ data class CrlStatusResult(
 data class RevokedCertificate(
     val serial: String,
     val reason: String,
+    val evidenceKind: RevokedCertificateEvidenceKind = RevokedCertificateEvidenceKind.STANDARD_REVOCATION,
 )
+
+enum class RevokedCertificateEvidenceKind {
+    STANDARD_REVOCATION,
+    LOCAL_MASS_ABUSE,
+}
 
 internal class AssetsCrlEmbeddedStatusProvider(
     private val context: Context,
@@ -458,7 +516,13 @@ private data class CrlFailure(
 private data class CrlEntry(
     val status: String,
     val reason: String?,
+    val source: CrlEntrySource,
 )
+
+private enum class CrlEntrySource {
+    EMBEDDED,
+    ONLINE,
+}
 
 private class HttpStatusException(
     val statusCode: Int,

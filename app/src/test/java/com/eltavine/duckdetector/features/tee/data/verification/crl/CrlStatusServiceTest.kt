@@ -172,6 +172,126 @@ class CrlStatusServiceTest {
     }
 
     @Test
+    fun `local hardcoded abuse serial is classified as mass abuse warning evidence`() = runBlocking {
+        val store = FakeTeeNetworkPrefsStore(
+            TeeNetworkPrefs(
+                consentAsked = true,
+                consentGranted = false,
+                crlCacheJson = null,
+                crlFetchedAt = 0L,
+            ),
+        )
+        val service = CrlStatusService(
+            consentStore = store,
+            networkStatusProvider = CrlNetworkStatusProvider { true },
+            feedFetcher = CrlFeedFetcher { """{"entries":{}}""" },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"8616ef30679ed43cc2b43e3c97a2319e":{"status":"REVOKED","reason":"KEY_COMPROMISE"}}}"""
+            ),
+        )
+
+        val result = service.inspect(listOf(FakeX509Certificate(LOCAL_MASS_ABUSE_SERIAL)))
+
+        assertEquals(1, result.revokedCertificates.size)
+        assertEquals("MASS_ABUSE", result.revokedCertificates.single().reason)
+        assertEquals(
+            RevokedCertificateEvidenceKind.LOCAL_MASS_ABUSE,
+            result.revokedCertificates.single().evidenceKind,
+        )
+    }
+
+    @Test
+    fun `online hardcoded abuse serial remains standard revocation evidence`() = runBlocking {
+        val store = FakeTeeNetworkPrefsStore(
+            TeeNetworkPrefs(
+                consentAsked = true,
+                consentGranted = true,
+                crlCacheJson = null,
+                crlFetchedAt = 0L,
+            ),
+        )
+        val service = CrlStatusService(
+            consentStore = store,
+            networkStatusProvider = CrlNetworkStatusProvider { true },
+            feedFetcher = CrlFeedFetcher {
+                """{"entries":{"8616ef30679ed43cc2b43e3c97a2319e":{"status":"REVOKED","reason":"KEY_COMPROMISE"}}}"""
+            },
+            embeddedStatusProvider = embeddedStatusProvider("""{"entries":{}}"""),
+        )
+
+        val result = service.inspect(listOf(FakeX509Certificate(LOCAL_MASS_ABUSE_SERIAL)))
+
+        assertEquals(1, result.revokedCertificates.size)
+        assertEquals("KEY_COMPROMISE", result.revokedCertificates.single().reason)
+        assertEquals(
+            RevokedCertificateEvidenceKind.STANDARD_REVOCATION,
+            result.revokedCertificates.single().evidenceKind,
+        )
+    }
+
+    @Test
+    fun `online decimal hardcoded abuse serial overrides local hex warning evidence`() = runBlocking {
+        val store = FakeTeeNetworkPrefsStore(
+            TeeNetworkPrefs(
+                consentAsked = true,
+                consentGranted = true,
+                crlCacheJson = null,
+                crlFetchedAt = 0L,
+            ),
+        )
+        val service = CrlStatusService(
+            consentStore = store,
+            networkStatusProvider = CrlNetworkStatusProvider { true },
+            feedFetcher = CrlFeedFetcher {
+                """{"entries":{"${LOCAL_MASS_ABUSE_SERIAL_DEC}":{"status":"REVOKED","reason":"KEY_COMPROMISE"}}}"""
+            },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"8616ef30679ed43cc2b43e3c97a2319e":{"status":"REVOKED","reason":"KEY_COMPROMISE"}}}"""
+            ),
+        )
+
+        val result = service.inspect(listOf(FakeX509Certificate(LOCAL_MASS_ABUSE_SERIAL)))
+
+        assertEquals(1, result.revokedCertificates.size)
+        assertEquals("KEY_COMPROMISE", result.revokedCertificates.single().reason)
+        assertEquals(
+            RevokedCertificateEvidenceKind.STANDARD_REVOCATION,
+            result.revokedCertificates.single().evidenceKind,
+        )
+    }
+
+    @Test
+    fun `online good status does not suppress local mass abuse warning evidence`() = runBlocking {
+        val store = FakeTeeNetworkPrefsStore(
+            TeeNetworkPrefs(
+                consentAsked = true,
+                consentGranted = true,
+                crlCacheJson = null,
+                crlFetchedAt = 0L,
+            ),
+        )
+        val service = CrlStatusService(
+            consentStore = store,
+            networkStatusProvider = CrlNetworkStatusProvider { true },
+            feedFetcher = CrlFeedFetcher {
+                """{"entries":{"8616ef30679ed43cc2b43e3c97a2319e":{"status":"GOOD"}}}"""
+            },
+            embeddedStatusProvider = embeddedStatusProvider(
+                """{"entries":{"8616ef30679ed43cc2b43e3c97a2319e":{"status":"REVOKED","reason":"KEY_COMPROMISE"}}}"""
+            ),
+        )
+
+        val result = service.inspect(listOf(FakeX509Certificate(LOCAL_MASS_ABUSE_SERIAL)))
+
+        assertEquals(1, result.revokedCertificates.size)
+        assertEquals("MASS_ABUSE", result.revokedCertificates.single().reason)
+        assertEquals(
+            RevokedCertificateEvidenceKind.LOCAL_MASS_ABUSE,
+            result.revokedCertificates.single().evidenceKind,
+        )
+    }
+
+    @Test
     fun `matches revoked certificate when feed key is decimal`() = runBlocking {
         val store = FakeTeeNetworkPrefsStore(
             TeeNetworkPrefs(
@@ -468,5 +588,8 @@ class CrlStatusServiceTest {
 
     private companion object {
         private const val NOW = 1_900_000_000_000L
+        private const val LOCAL_MASS_ABUSE_SERIAL = "8616ef30679ed43cc2b43e3c97a2319e"
+        private const val LOCAL_MASS_ABUSE_SERIAL_DEC =
+            "178235633296982535164483918324719301022"
     }
 }

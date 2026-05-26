@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.tee.data.report
 
 import android.os.Build
 import com.eltavine.duckdetector.features.tee.data.attestation.AttestationSnapshot
+import com.eltavine.duckdetector.features.tee.data.verification.crl.RevokedCertificateEvidenceKind
 import com.eltavine.duckdetector.features.tee.domain.TeeEvidenceItem
 import com.eltavine.duckdetector.features.tee.domain.TeeEvidenceSection
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkMode
@@ -221,7 +222,7 @@ class TeeReportReducer(
                     )
                 )
             }
-            if (artifacts.crl.revokedCertificates.isNotEmpty()) {
+            if (hasHardRevocation(artifacts)) {
                 add(
                     fact(
                         "Revocation",
@@ -697,6 +698,15 @@ class TeeReportReducer(
             }
             artifacts.rkp.consistencyIssue?.let { issue ->
                 add(fact("RKP consistency", issue, TeeSignalLevel.WARN))
+            }
+            if (hasLocalMassAbuseRevocation(artifacts)) {
+                add(
+                    fact(
+                        "Revocation",
+                        "Built-in local revocation floor matched a certificate serial associated with mass abuse.",
+                        TeeSignalLevel.WARN,
+                    )
+                )
             }
         }
     }
@@ -1403,6 +1413,8 @@ class TeeReportReducer(
                 append(
                     if (artifacts.crl.revokedCertificates.isEmpty()) {
                         "clean"
+                    } else if (hasLocalMassAbuseRevocation(artifacts) && !hasHardRevocation(artifacts)) {
+                        "mass abuse"
                     } else {
                         "${artifacts.crl.revokedCertificates.size} revoked"
                     },
@@ -2245,7 +2257,8 @@ class TeeReportReducer(
     }
 
     private fun crlSignalValue(artifacts: TeeScanArtifacts): String = when {
-        artifacts.crl.revokedCertificates.isNotEmpty() -> "Revoked"
+        hasHardRevocation(artifacts) -> "Revoked"
+        hasLocalMassAbuseRevocation(artifacts) -> "Mass abuse"
         artifacts.crl.networkState.mode == TeeNetworkMode.ACTIVE -> "Online"
         artifacts.crl.networkState.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Built-in"
         artifacts.crl.networkState.mode == TeeNetworkMode.SKIPPED -> "Built-in"
@@ -2325,7 +2338,8 @@ class TeeReportReducer(
     }
 
     private fun crlSignalLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
-        artifacts.crl.revokedCertificates.isNotEmpty() -> TeeSignalLevel.FAIL
+        hasHardRevocation(artifacts) -> TeeSignalLevel.FAIL
+        hasLocalMassAbuseRevocation(artifacts) -> TeeSignalLevel.WARN
         artifacts.crl.networkState.mode == TeeNetworkMode.ACTIVE -> TeeSignalLevel.PASS
         artifacts.crl.networkState.mode == TeeNetworkMode.ERROR -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.INFO
@@ -2609,6 +2623,19 @@ class TeeReportReducer(
         !artifacts.trust.chainSignatureValid -> TeeSignalLevel.FAIL
         hasLocalTrustReviewSignals(artifacts) -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.PASS
+    }
+
+    private fun hasHardRevocation(artifacts: TeeScanArtifacts): Boolean {
+        return artifacts.crl.revokedCertificates.any {
+            it.evidenceKind == RevokedCertificateEvidenceKind.STANDARD_REVOCATION
+        }
+    }
+
+    private fun hasLocalMassAbuseRevocation(artifacts: TeeScanArtifacts): Boolean {
+        // 临时本地口径：仅 checked-in 硬编码序列号命中时降级为 WARN，远端/联网 CRL 仍按标准吊销处理。
+        return artifacts.crl.revokedCertificates.any {
+            it.evidenceKind == RevokedCertificateEvidenceKind.LOCAL_MASS_ABUSE
+        }
     }
 
     private fun hasLocalTrustReviewSignals(artifacts: TeeScanArtifacts): Boolean {
