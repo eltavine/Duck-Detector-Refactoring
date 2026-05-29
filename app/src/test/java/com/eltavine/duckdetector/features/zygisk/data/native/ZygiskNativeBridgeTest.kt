@@ -63,4 +63,26 @@ class ZygiskNativeBridgeTest {
         assertEquals(0, snapshot.strongHitCount)
         assertTrue(snapshot.traces.isEmpty())
     }
+
+    @Test
+    fun `parse decodes NeoZygisk TMP_PATH marker trace`() {
+        val snapshot = bridge.parse(
+            """
+                AVAILABLE=1
+                STRONG_HITS=1
+                TRACE=RUNTIME	DANGER	NeoZygisk environment marker	Environment contains NeoZygisk marker: TMP_PATH=/data/adb/neozygisk.
+            """.trimIndent(),
+        )
+
+        assertTrue(snapshot.available)
+        assertEquals(1, snapshot.strongHitCount)
+        assertEquals(1, snapshot.traces.size)
+        assertEquals("RUNTIME", snapshot.traces[0].group)
+        assertEquals("DANGER", snapshot.traces[0].severity)
+        assertEquals("NeoZygisk environment marker", snapshot.traces[0].label)
+        assertEquals(
+            "Environment contains NeoZygisk marker: TMP_PATH=/data/adb/neozygisk.",
+            snapshot.traces[0].detail,
+        )
+    }
 }

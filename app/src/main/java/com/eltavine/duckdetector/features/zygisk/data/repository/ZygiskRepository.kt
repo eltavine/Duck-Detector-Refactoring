@@ -312,6 +312,7 @@ class ZygiskRepository(
             "TracerPid",
             "Namespace bypass",
             "Linker hook",
+            "NeoZygisk environment marker",
             "Seccomp trap",
         )
     }

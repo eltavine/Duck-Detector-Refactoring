@@ -19,6 +19,9 @@ package com.eltavine.duckdetector.features.zygisk.presentation
 import com.eltavine.duckdetector.core.ui.model.DetectorStatus
 import com.eltavine.duckdetector.core.ui.model.InfoKind
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskReport
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignal
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalGroup
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalSeverity
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskStage
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -37,6 +40,32 @@ class ZygiskCardModelMapperTest {
     fun `one direct native signal maps to danger`() {
         val model = mapper.map(report(nativeStrongHitCount = 1))
         assertEquals(DetectorStatus.danger(), model.status)
+    }
+
+    @Test
+    fun `NeoZygisk TMP_PATH marker renders as danger signal`() {
+        val model = mapper.map(
+            report(
+                nativeStrongHitCount = 1,
+                signals = listOf(
+                    ZygiskSignal(
+                        id = "zygisk_trace_0",
+                        label = "NeoZygisk environment marker",
+                        value = "Danger",
+                        group = ZygiskSignalGroup.RUNTIME,
+                        severity = ZygiskSignalSeverity.DANGER,
+                        detail = "Environment contains NeoZygisk marker: TMP_PATH=/data/adb/neozygisk.",
+                        direct = true,
+                        detailMonospace = true,
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals("NeoZygisk environment marker", model.signalRows.single().label)
+        assertEquals(DetectorStatus.danger(), model.signalRows.single().status)
+        assertEquals(true, model.signalRows.single().detailMonospace)
     }
 
     @Test
@@ -74,6 +103,7 @@ class ZygiskCardModelMapperTest {
         nativeAvailable: Boolean = true,
         nativeStrongHitCount: Int = 0,
         heuristicHitCount: Int = 0,
+        signals: List<ZygiskSignal> = emptyList(),
     ): ZygiskReport {
         return ZygiskReport(
             stage = ZygiskStage.READY,
@@ -85,7 +115,7 @@ class ZygiskCardModelMapperTest {
             nativeStrongHitCount = nativeStrongHitCount,
             heuristicHitCount = heuristicHitCount,
             tracerPid = 0,
-            signals = emptyList(),
+            signals = signals,
             methods = emptyList(),
             references = ZygiskReport.defaultReferences(),
         )

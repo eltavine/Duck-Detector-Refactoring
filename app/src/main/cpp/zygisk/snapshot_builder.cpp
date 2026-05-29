@@ -17,6 +17,7 @@
 #include "zygisk/snapshot_builder.h"
 
 #include "zygisk/probes/atexit_probe.h"
+#include "zygisk/probes/environment_probe.h"
 #include "zygisk/probes/fd_probe.h"
 #include "zygisk/probes/heap_entropy_probe.h"
 #include "zygisk/probes/linker_hook_probe.h"
@@ -51,6 +52,7 @@ namespace duckdetector::zygisk {
         snapshot.available = true;
 
         const auto solist = collect_solist_probe();
+        const auto environment = collect_environment_probe();
         const auto vmap = collect_vmap_probe();
         const auto atexit = collect_atexit_probe();
         const auto smaps = collect_smaps_probe();
@@ -77,6 +79,7 @@ namespace duckdetector::zygisk {
         snapshot.fd_hits = fd.hit_count;
 
         merge_probe(snapshot, solist);
+        merge_probe(snapshot, environment);
         merge_probe(snapshot, vmap);
         merge_probe(snapshot, atexit);
         merge_probe(snapshot, smaps);

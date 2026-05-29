@@ -118,6 +118,7 @@ set(LSPOSED_SOURCES
 set(ZYGISK_SOURCES
     zygisk/common/codec.cpp
     zygisk/probes/fd_trap.cpp
+    zygisk/probes/environment_probe.cpp
     zygisk/probes/solist_probe.cpp
     zygisk/probes/vmap_probe.cpp
     zygisk/probes/atexit_probe.cpp

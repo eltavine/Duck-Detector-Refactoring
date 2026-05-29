@@ -81,20 +81,20 @@ class ZygiskCardModelMapper {
     ): String {
         return when (report.stage) {
             ZygiskStage.LOADING ->
-                "The detector is collecting cross-process specialization evidence first, then correlating linker, namespace, maps, smaps, thread, fd, stack, seccomp, and heap traces from the current process."
+                "The detector is collecting cross-process specialization evidence first, then correlating environment, linker, namespace, maps, smaps, thread, fd, stack, seccomp, and heap traces from the current process."
 
             ZygiskStage.FAILED ->
                 report.errorMessage ?: "Zygisk detection failed before evidence could be assembled."
 
             ZygiskStage.READY -> when (report.toDetectorStatus()) {
                 DetectorStatus.danger() ->
-                    "FD trap or direct runtime probes exposed evidence consistent with specialization tampering, namespace bypass, linker redirection, ptrace attachment, or libc-hook side effects."
+                    "FD trap or direct runtime probes exposed evidence consistent with TMP_PATH leakage, specialization tampering, namespace bypass, linker redirection, ptrace attachment, or libc-hook side effects."
 
                 DetectorStatus.warning() ->
                     "Only heuristic residue surfaced, so this result should be read together with Memory and Mount before treating it as a confirmed Zygisk runtime."
 
                 DetectorStatus.allClear() ->
-                    "The FD trap stayed clean and the native runtime snapshot did not expose linker, maps, heap, thread, or descriptor traces associated with Zygisk-style injection."
+                    "The FD trap stayed clean and the native runtime snapshot did not expose TMP_PATH, linker, maps, heap, thread, or descriptor traces associated with Zygisk-style injection."
 
                 else ->
                     "One or more major scan paths were unavailable, so this card cannot treat the absence of hits as a clean runtime result."
@@ -189,7 +189,7 @@ class ZygiskCardModelMapper {
                     label = "Strong signals",
                     value = report.strongHitCount.toString(),
                     status = if (report.strongHitCount > 0) DetectorStatus.danger() else DetectorStatus.allClear(),
-                    detail = "Direct strong signals include FD trap, namespace bypass, linker hook, TracerPid, and seccomp trap positives.",
+                    detail = "Direct strong signals include FD trap, NeoZygisk TMP_PATH leakage, namespace bypass, linker hook, TracerPid, and seccomp trap positives.",
                 ),
                 ZygiskDetailRowModel(
                     label = "Heuristic signals",
