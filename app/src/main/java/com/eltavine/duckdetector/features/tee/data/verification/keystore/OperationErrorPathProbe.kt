@@ -120,7 +120,7 @@ class OperationErrorPathProbe(
         val operation = created.operation ?: return false
         return try {
             binderClient.updateAadOperation(operation, "aad".encodeToByteArray())
-            false
+            isUpdateAadSuccessExpected()
         } catch (throwable: Throwable) {
             binderClient.isServiceSpecificException(throwable)
         } finally {
@@ -192,6 +192,34 @@ class OperationErrorPathProbe(
     companion object {
         private const val LARGE_INPUT_SIZE = 0x8001
         private const val INVALID_OPERATION_HANDLE_FALLBACK = -28
+
+        private val UPDATE_AAD_ALLOWS_SUCCESS = setOf("samsung")
+        private val XIAOMI_BRANDS = setOf("xiaomi", "redmi", "poco")
+
+        private fun isUpdateAadSuccessExpected(): Boolean {
+            val manufacturer = Build.MANUFACTURER.lowercase()
+            val brand = Build.BRAND.lowercase()
+
+            if (manufacturer in UPDATE_AAD_ALLOWS_SUCCESS || brand in UPDATE_AAD_ALLOWS_SUCCESS) return true
+
+            if (manufacturer != "xiaomi" && brand !in XIAOMI_BRANDS) return false
+
+            return isMediaTekDevice()
+        }
+
+        private fun isMediaTekDevice(): Boolean {
+            val roHardware = readSystemProperty("ro.hardware")
+            if (!roHardware.isNullOrBlank() && roHardware.startsWith("mt")) return true
+            return Build.HARDWARE.startsWith("mt", ignoreCase = true)
+        }
+
+        private fun readSystemProperty(key: String): String? {
+            return runCatching {
+                Class.forName("android.os.SystemProperties")
+                    .getMethod("get", String::class.java, String::class.java)
+                    .invoke(null, key, "") as String
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+        }
     }
 }
 
