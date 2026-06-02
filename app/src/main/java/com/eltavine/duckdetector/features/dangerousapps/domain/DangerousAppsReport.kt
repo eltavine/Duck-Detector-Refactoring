@@ -43,6 +43,7 @@ enum class DangerousDetectionMethodKind(
     SCENE_LOOPBACK("Scene loopback"),
     THANOX_IPC("IPC Probe (DROPBOX_SERVICE)"),
     ACCESSIBILITY_SERVICE("Accessibility Service"),
+    SCENE_BROADCAST("Scene broadcast"),
 }
 
 data class DangerousAppTarget(

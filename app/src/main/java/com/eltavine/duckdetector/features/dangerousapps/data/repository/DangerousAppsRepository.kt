@@ -16,7 +16,9 @@
 
 package com.eltavine.duckdetector.features.dangerousapps.data.repository
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.os.IBinder
 import android.os.Parcel
 import android.provider.Settings
@@ -38,6 +40,7 @@ import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousDetectio
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousPackageVisibility
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -212,6 +215,14 @@ class DangerousAppsRepository(
             )
         }
 
+        if (detectSceneBroadcast()) {
+            appendMethod(
+                detectedApps = detectedApps,
+                packageName = SCENE_PACKAGE,
+                method = DangerousDetectionMethod(DangerousDetectionMethodKind.SCENE_BROADCAST),
+            )
+        }
+
         val findings = buildFindings(detectedApps)
         val hiddenFromPackageManager = if (packageVisibility == DangerousPackageVisibility.FULL) {
             findings.filter { finding ->
@@ -268,6 +279,7 @@ class DangerousAppsRepository(
             add(DangerousDetectionMethodKind.NATIVE_DATA_STAT)
             add(DangerousDetectionMethodKind.SPECIAL_PATH)
             add(DangerousDetectionMethodKind.SCENE_LOOPBACK)
+            add(DangerousDetectionMethodKind.SCENE_BROADCAST)
             add(DangerousDetectionMethodKind.THANOX_IPC)
             add(DangerousDetectionMethodKind.ACCESSIBILITY_SERVICE)
         }
@@ -565,13 +577,122 @@ class DangerousAppsRepository(
         return if (statDenied) markerPath else null
     }
 
+    private fun detectSceneBroadcast(): Boolean {
+        val token = Random.nextLong().toULong().toString(16) +
+            Random.nextLong().toULong().toString(16)
+        val pocPath = "/sdcard/$token"
+        val detected = try {
+            val intent = Intent().apply {
+                component = ComponentName(
+                    "com.omarea.vtools",
+                    "com.omarea.scene_mode.ReceiverShortcut",
+                )
+                putExtra("packageName", "x; touch $pocPath; id >> $pocPath; #")
+            }
+            context.sendBroadcast(intent)
+            waitForScenePocFile(pocPath)
+        } catch (_: Exception) {
+            false
+        } finally {
+            runCatching { File(pocPath).delete() }
+        }
+        return detected
+    }
+
+    private fun waitForScenePocFile(path: String): Boolean {
+        repeat(SCENE_BROADCAST_POLL_ATTEMPTS) { attempt ->
+            if (verifyPocFile(path)) {
+                return true
+            }
+            if (attempt + 1 < SCENE_BROADCAST_POLL_ATTEMPTS) {
+                Thread.sleep(SCENE_BROADCAST_POLL_INTERVAL_MS)
+            }
+        }
+        return false
+    }
+
+    private fun verifyPocFile(path: String): Boolean {
+        val accessOutcome = probeAccess(path)
+        val statOutcome = probeStat(path)
+        val openOutcome = probeOpen(path)
+
+        // This is a side-channel probe, not a direct-access probe: EACCES/EPERM
+        // can still mean the marker exists but is fenced by storage policy.
+        if (listOf(accessOutcome, statOutcome, openOutcome).any { it == PathProbeOutcome.MISSING }) {
+            return false
+        }
+        if (listOf(accessOutcome, statOutcome, openOutcome).none { it == PathProbeOutcome.EXISTS }) {
+            return false
+        }
+
+        runCatching { Os.getxattr(path, "security.selinux") }
+
+        // O_EXCL stays supplementary. If it reports EEXIST that strengthens the
+        // signal; if storage policy blocks it earlier we still keep the hit.
+        runCatching {
+            val fd = Os.open(path, OsConstants.O_CREAT or OsConstants.O_EXCL or OsConstants.O_WRONLY, 0)
+            Os.close(fd)
+            runCatching { Os.remove(path) }
+        }
+
+        return true
+    }
+
+    private fun probeAccess(path: String): PathProbeOutcome {
+        return try {
+            Os.access(path, OsConstants.F_OK)
+            PathProbeOutcome.EXISTS
+        } catch (e: ErrnoException) {
+            when (e.errno) {
+                OsConstants.ENOENT -> PathProbeOutcome.MISSING
+                OsConstants.EACCES, OsConstants.EPERM -> PathProbeOutcome.EXISTS
+                else -> PathProbeOutcome.UNKNOWN
+            }
+        }
+    }
+
+    private fun probeStat(path: String): PathProbeOutcome {
+        return try {
+            Os.stat(path)
+            PathProbeOutcome.EXISTS
+        } catch (e: ErrnoException) {
+            when (e.errno) {
+                OsConstants.ENOENT -> PathProbeOutcome.MISSING
+                OsConstants.EACCES, OsConstants.EPERM -> PathProbeOutcome.EXISTS
+                else -> PathProbeOutcome.UNKNOWN
+            }
+        }
+    }
+
+    private fun probeOpen(path: String): PathProbeOutcome {
+        return try {
+            val fd = Os.open(path, OsConstants.O_RDONLY, 0)
+            Os.close(fd)
+            PathProbeOutcome.EXISTS
+        } catch (e: ErrnoException) {
+            when (e.errno) {
+                OsConstants.ENOENT -> PathProbeOutcome.MISSING
+                OsConstants.EACCES, OsConstants.EPERM, OsConstants.EISDIR -> PathProbeOutcome.EXISTS
+                else -> PathProbeOutcome.UNKNOWN
+            }
+        }
+    }
+
     private data class MutableFinding(
         val target: DangerousAppTarget,
         val methods: LinkedHashSet<DangerousDetectionMethod> = linkedSetOf(),
     )
 
+    private enum class PathProbeOutcome {
+        EXISTS,
+        MISSING,
+        UNKNOWN,
+    }
+
     companion object {
         private const val PROCESS_TIMEOUT_SECONDS = 5L
+        private const val SCENE_BROADCAST_POLL_ATTEMPTS = 8
+        private const val SCENE_BROADCAST_POLL_INTERVAL_MS = 150L
         private const val ZERO_WIDTH_SPACE = "\u200B"
         private const val THANOX_PROXIED_SERVICE = "dropbox"
         private const val THANOX_PACKAGE = "github.tornaco.android.thanos"
