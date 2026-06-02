@@ -615,27 +615,16 @@ class DangerousAppsRepository(
         val accessOutcome = probeAccess(path)
         val statOutcome = probeStat(path)
         val openOutcome = probeOpen(path)
+        val createOutcome = probeCreate(path)
 
-        // This is a side-channel probe, not a direct-access probe: EACCES/EPERM
-        // can still mean the marker exists but is fenced by storage policy.
         if (listOf(accessOutcome, statOutcome, openOutcome).any { it == PathProbeOutcome.MISSING }) {
-            return false
-        }
-        if (listOf(accessOutcome, statOutcome, openOutcome).none { it == PathProbeOutcome.EXISTS }) {
             return false
         }
 
         runCatching { Os.getxattr(path, "security.selinux") }
 
-        // O_EXCL stays supplementary. If it reports EEXIST that strengthens the
-        // signal; if storage policy blocks it earlier we still keep the hit.
-        runCatching {
-            val fd = Os.open(path, OsConstants.O_CREAT or OsConstants.O_EXCL or OsConstants.O_WRONLY, 0)
-            Os.close(fd)
-            runCatching { Os.remove(path) }
-        }
-
-        return true
+        return createOutcome == CreateProbeOutcome.ALREADY_EXISTS ||
+            listOf(accessOutcome, statOutcome, openOutcome).any { it == PathProbeOutcome.EXISTS }
     }
 
     private fun probeAccess(path: String): PathProbeOutcome {
@@ -645,7 +634,7 @@ class DangerousAppsRepository(
         } catch (e: ErrnoException) {
             when (e.errno) {
                 OsConstants.ENOENT -> PathProbeOutcome.MISSING
-                OsConstants.EACCES, OsConstants.EPERM -> PathProbeOutcome.EXISTS
+                OsConstants.EACCES, OsConstants.EPERM -> PathProbeOutcome.UNKNOWN
                 else -> PathProbeOutcome.UNKNOWN
             }
         }
@@ -658,7 +647,7 @@ class DangerousAppsRepository(
         } catch (e: ErrnoException) {
             when (e.errno) {
                 OsConstants.ENOENT -> PathProbeOutcome.MISSING
-                OsConstants.EACCES, OsConstants.EPERM -> PathProbeOutcome.EXISTS
+                OsConstants.EACCES, OsConstants.EPERM -> PathProbeOutcome.UNKNOWN
                 else -> PathProbeOutcome.UNKNOWN
             }
         }
@@ -672,8 +661,25 @@ class DangerousAppsRepository(
         } catch (e: ErrnoException) {
             when (e.errno) {
                 OsConstants.ENOENT -> PathProbeOutcome.MISSING
-                OsConstants.EACCES, OsConstants.EPERM, OsConstants.EISDIR -> PathProbeOutcome.EXISTS
+                OsConstants.EACCES, OsConstants.EPERM -> PathProbeOutcome.UNKNOWN
+                OsConstants.EISDIR -> PathProbeOutcome.EXISTS
                 else -> PathProbeOutcome.UNKNOWN
+            }
+        }
+    }
+
+    private fun probeCreate(path: String): CreateProbeOutcome {
+        return try {
+            val fd = Os.open(path, OsConstants.O_CREAT or OsConstants.O_EXCL or OsConstants.O_WRONLY, 0)
+            Os.close(fd)
+            runCatching { Os.remove(path) }
+            CreateProbeOutcome.CREATED_BY_US
+        } catch (e: ErrnoException) {
+            when (e.errno) {
+                OsConstants.EEXIST -> CreateProbeOutcome.ALREADY_EXISTS
+                OsConstants.EACCES, OsConstants.EPERM -> CreateProbeOutcome.BLOCKED
+                OsConstants.ENOENT -> CreateProbeOutcome.MISSING
+                else -> CreateProbeOutcome.UNKNOWN
             }
         }
     }
@@ -686,6 +692,14 @@ class DangerousAppsRepository(
     private enum class PathProbeOutcome {
         EXISTS,
         MISSING,
+        UNKNOWN,
+    }
+
+    private enum class CreateProbeOutcome {
+        ALREADY_EXISTS,
+        CREATED_BY_US,
+        MISSING,
+        BLOCKED,
         UNKNOWN,
     }
 
