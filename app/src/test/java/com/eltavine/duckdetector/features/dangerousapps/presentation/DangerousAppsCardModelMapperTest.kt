@@ -40,6 +40,7 @@ class DangerousAppsCardModelMapperTest {
                 packageVisibility = DangerousPackageVisibility.FULL,
                 packageManagerVisibleCount = 43,
                 suspiciousLowPmInventory = true,
+                suspiciousSharedStorageDenied = false,
                 targets = DangerousAppsCatalog.targets,
                 findings = emptyList(),
                 hiddenFromPackageManager = emptyList(),
@@ -78,6 +79,7 @@ class DangerousAppsCardModelMapperTest {
                 packageVisibility = DangerousPackageVisibility.FULL,
                 packageManagerVisibleCount = 120,
                 suspiciousLowPmInventory = false,
+                suspiciousSharedStorageDenied = false,
                 targets = DangerousAppsCatalog.targets,
                 findings = listOf(finding),
                 hiddenFromPackageManager = listOf(finding),
@@ -93,5 +95,29 @@ class DangerousAppsCardModelMapperTest {
             listOf("createPackageContext + ZipFile"),
             model.packageItems.single().methods,
         )
+    }
+
+    @Test
+    fun `shared storage baseline denial becomes warning and mentions shared user gid`() {
+        val model = mapper.map(
+            DangerousAppsReport(
+                stage = DangerousAppsStage.READY,
+                packageVisibility = DangerousPackageVisibility.FULL,
+                packageManagerVisibleCount = 120,
+                suspiciousLowPmInventory = false,
+                suspiciousSharedStorageDenied = true,
+                targets = DangerousAppsCatalog.targets,
+                findings = emptyList(),
+                hiddenFromPackageManager = emptyList(),
+                probesRan = emptyList(),
+                issues = listOf(
+                    "Shared external-storage baseline paths all returned EACCES/EPERM. This suggests shared user gid or related zygote storage groups may have been restricted.",
+                ),
+            ),
+        )
+
+        assertEquals(DetectionSeverity.WARNING, model.status.severity)
+        assertEquals("Shared storage baseline denied", model.verdict)
+        assertTrue(model.summary.contains("shared user gid"))
     }
 }

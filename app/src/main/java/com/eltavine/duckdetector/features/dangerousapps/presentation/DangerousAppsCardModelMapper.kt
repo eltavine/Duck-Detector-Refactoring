@@ -81,6 +81,7 @@ class DangerousAppsCardModelMapper {
             DangerousAppsStage.READY -> when {
                 report.hiddenCount > 0 -> "HMA-style concealment detected"
                 report.detectedCount > 0 -> "${report.detectedCount} risky package(s) surfaced"
+                report.suspiciousSharedStorageDenied -> "Shared storage baseline denied"
                 report.suspiciousLowPmInventory -> "Package inventory unusually small"
                 report.packageVisibility == DangerousPackageVisibility.RESTRICTED -> "Inventory visibility limited"
                 else -> "No known risky packages"
@@ -115,6 +116,9 @@ class DangerousAppsCardModelMapper {
                             )
                         }
                     }
+
+                report.suspiciousSharedStorageDenied ->
+                    "Multiple fixed shared-storage baseline paths returned EACCES/EPERM under stat(). This suggests shared user gid or related zygote storage groups may have been restricted."
 
                 report.suspiciousLowPmInventory ->
                     "PackageManager reported a full inventory surface but returned only ${report.packageManagerVisibleCount} visible packages. That is unusually low for a modern device and can happen under HMA-style whitelist filtering."
@@ -266,6 +270,7 @@ class DangerousAppsCardModelMapper {
             DangerousAppsStage.READY -> when {
                 hiddenCount > 0 -> DetectorStatus.danger()
                 detectedCount > 0 -> DetectorStatus.warning()
+                suspiciousSharedStorageDenied -> DetectorStatus.warning()
                 suspiciousLowPmInventory -> DetectorStatus.warning()
                 packageVisibility == DangerousPackageVisibility.RESTRICTED -> DetectorStatus.info(
                     InfoKind.ERROR

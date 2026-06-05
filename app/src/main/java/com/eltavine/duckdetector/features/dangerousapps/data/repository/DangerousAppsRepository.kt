@@ -75,12 +75,16 @@ class DangerousAppsRepository(
             packageVisibility = packageVisibility,
             installedPackageCount = packageManagerVisibleCount,
         )
+        val suspiciousSharedStorageDenied = detectSharedStorageBaselineDenied()
 
         if (packageVisibility == DangerousPackageVisibility.RESTRICTED) {
             issues += "PackageManager visibility is restricted on this device profile."
         }
         if (suspiciousLowPmInventory) {
             issues += "PackageManager returned only $packageManagerVisibleCount visible packages despite a full inventory result. This can happen under HMA-style whitelist filtering."
+        }
+        if (suspiciousSharedStorageDenied) {
+            issues += "Shared external-storage baseline paths all returned EACCES/EPERM. This suggests shared user gid or related zygote storage groups may have been restricted."
         }
 
         if (packageVisibility == DangerousPackageVisibility.FULL) {
@@ -238,6 +242,7 @@ class DangerousAppsRepository(
             packageVisibility = packageVisibility,
             packageManagerVisibleCount = packageManagerVisibleCount,
             suspiciousLowPmInventory = suspiciousLowPmInventory,
+            suspiciousSharedStorageDenied = suspiciousSharedStorageDenied,
             targets = targets,
             findings = findings,
             hiddenFromPackageManager = hiddenFromPackageManager,
@@ -415,6 +420,19 @@ class DangerousAppsRepository(
             false
         } finally {
             process?.destroy()
+        }
+    }
+
+    private fun detectSharedStorageBaselineDenied(): Boolean {
+        return SHARED_STORAGE_BASELINE_PATHS.all { path ->
+            try {
+                Os.stat(path)
+                false
+            } catch (e: ErrnoException) {
+                e.errno == OsConstants.EACCES || e.errno == OsConstants.EPERM
+            } catch (_: Exception) {
+                false
+            }
         }
     }
 
@@ -720,6 +738,13 @@ class DangerousAppsRepository(
             "\uFE0F",
             "\uFEFF",
             "\uFFA0",
+        )
+        private val SHARED_STORAGE_BASELINE_PATHS = listOf(
+            "/sdcard",
+            "/sdcard/Android",
+            "/sdcard/DCIM",
+            "/sdcard/Download",
+            "/sdcard/Pictures",
         )
     }
 }
