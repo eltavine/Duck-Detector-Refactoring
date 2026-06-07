@@ -1099,7 +1099,7 @@ class TeeReportReducer(
                         fact(
                             "Pruning",
                             pruningValue(artifacts),
-                            if (artifacts.pruning.suspicious) TeeSignalLevel.WARN else TeeSignalLevel.INFO
+                            TeeSignalLevel.INFO
                         )
                     )
                     add(
