@@ -53,7 +53,10 @@ class BiometricTeeIntegrationProbe(
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
                 biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
                     BiometricManager.BIOMETRIC_SUCCESS
-            else -> biometricManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+            else -> {
+                @Suppress("DEPRECATION")
+                biometricManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+            }
         }
         if (!strongBiometricAvailable) {
             return BiometricTeeIntegrationResult(

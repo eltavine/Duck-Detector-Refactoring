@@ -16,7 +16,9 @@
 
 package com.eltavine.duckdetector.features.deviceinfo.data.repository
 
+import android.app.ActivityManager
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.view.Display
@@ -26,8 +28,10 @@ import com.eltavine.duckdetector.features.deviceinfo.domain.DeviceInfoSection
 import com.eltavine.duckdetector.features.deviceinfo.domain.DeviceInfoStage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.TimeUnit
 
 class DeviceInfoRepository(
     context: Context,
@@ -57,6 +61,18 @@ class DeviceInfoRepository(
                 ?: "Unavailable"
         val kernelVersion = System.getProperty("os.version").orUnavailable()
 
+        // Collect SOC / chipset information
+        val socManufacturer = readSocManufacturer()
+        val socModel = readSocModel()
+        val cpuHardware = readCpuHardware()
+        val boardPlatform = readSystemProperty("ro.board.platform")
+        val chipName = readSystemProperty("ro.chipname")
+        val cpuCores = Runtime.getRuntime().availableProcessors().toString()
+        val cpuArch = System.getProperty("os.arch").orUnavailable()
+        val cpuAbiList = Build.SUPPORTED_ABIS.joinToString()
+
+        val isolatedProcessSupport = checkIsolatedProcessSupport()
+
         val sections = listOf(
             DeviceInfoSection(
                 title = "Identity",
@@ -67,6 +83,47 @@ class DeviceInfoRepository(
                     DeviceInfoEntry("Device", Build.DEVICE.orUnavailable()),
                     DeviceInfoEntry("Product", Build.PRODUCT.orUnavailable()),
                     DeviceInfoEntry("Board", Build.BOARD.orUnavailable()),
+                ),
+            ),
+            DeviceInfoSection(
+                title = "SOC / Chipset",
+                entries = listOf(
+                    DeviceInfoEntry(
+                        "SOC Manufacturer",
+                        socManufacturer.orUnavailable(),
+                    ),
+                    DeviceInfoEntry(
+                        "SOC Model",
+                        socModel.orUnavailable(),
+                    ),
+                    DeviceInfoEntry(
+                        "CPU Hardware",
+                        cpuHardware.orUnavailable(),
+                        detailMonospace = true
+                    ),
+                    DeviceInfoEntry(
+                        "Board Platform",
+                        boardPlatform.orUnavailable(),
+                        detailMonospace = true
+                    ),
+                    DeviceInfoEntry(
+                        "Chip Name",
+                        chipName.orUnavailable(),
+                        detailMonospace = true
+                    ),
+                    DeviceInfoEntry(
+                        "CPU Cores",
+                        cpuCores,
+                    ),
+                    DeviceInfoEntry(
+                        "CPU Architecture",
+                        cpuArch,
+                    ),
+                    DeviceInfoEntry(
+                        "ABI List",
+                        cpuAbiList.orUnavailable(),
+                        detailMonospace = true
+                    ),
                 ),
             ),
             DeviceInfoSection(
@@ -130,6 +187,7 @@ class DeviceInfoRepository(
                     DeviceInfoEntry("Resolution", resolution),
                     DeviceInfoEntry("Density", density),
                     DeviceInfoEntry("Refresh rate", refreshRate),
+                    DeviceInfoEntry("Isolated process", isolatedProcessSupport),
                 ),
             ),
         )
@@ -150,5 +208,110 @@ class DeviceInfoRepository(
         } else {
             String.format(Locale.US, "%.1f", value)
         }
+    }
+
+    // --- SOC / Chipset helpers ---
+
+    private fun readSocManufacturer(): String? {
+        // API 31+ (Android 12+) provides Build.SOC_MANUFACTURER
+        return runCatching {
+            Build::class.java.getDeclaredField("SOC_MANUFACTURER").let { field ->
+                field.isAccessible = true
+                field.get(null) as? String
+            }
+        }.getOrNull()
+    }
+
+    private fun readSocModel(): String? {
+        // API 31+ (Android 12+) provides Build.SOC_MODEL
+        return runCatching {
+            Build::class.java.getDeclaredField("SOC_MODEL").let { field ->
+                field.isAccessible = true
+                field.get(null) as? String
+            }
+        }.getOrNull()
+    }
+
+    private fun readCpuHardware(): String? {
+        // Try parsing /proc/cpuinfo for "Hardware" line first
+        runCatching {
+            File("/proc/cpuinfo").useLines { lines ->
+                lines.firstOrNull { it.startsWith("Hardware") }
+                    ?.substringAfter(":")
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+            }
+        }.getOrNull()?.let { return it }
+
+        // Fallback: use Build.HARDWARE if not available via cpuinfo
+        return Build.HARDWARE.takeIf { it.isNotBlank() }
+    }
+
+    @Suppress("PrivateApi")
+    private fun readSystemProperty(name: String): String? {
+        // Try Android hidden API reflection first
+        runCatching {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("get", String::class.java)
+            (method.invoke(null, name) as? String)?.trim()?.takeIf { it.isNotEmpty() }
+        }.getOrNull()?.let { return it }
+
+        // Fallback: use getprop shell command
+        return readViaGetprop(name)
+    }
+
+    private fun readViaGetprop(name: String): String? {
+        var process: Process? = null
+        return try {
+            process = ProcessBuilder("getprop", name)
+                .redirectErrorStream(true)
+                .start()
+            val output = process.inputStream.bufferedReader().use { it.readText().trim() }
+            if (!process.waitFor(PROCESS_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                null
+            } else {
+                output.takeIf { it.isNotBlank() }
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            process?.destroy()
+        }
+    }
+
+    private fun checkIsolatedProcessSupport(): String {
+        // Isolated processes were introduced in API 16 (Android 4.1).
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+            return "Unsupported (API < 16)"
+        }
+
+        // Verify the platform recognizes the FLAG_ISOLATED_PROCESS constant.
+        val flagDefined = runCatching {
+            ServiceInfo::class.java.getDeclaredField("FLAG_ISOLATED_PROCESS")
+        }.isSuccess
+
+        if (!flagDefined) {
+            return "Unavailable (flag missing)"
+        }
+
+        // Check if the ActivityManager can enumerate isolated processes.
+        val activityManager =
+            appContext.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        if (activityManager != null) {
+            val canList = runCatching {
+                // Some restricted environments block getRunningAppProcesses.
+                activityManager.runningAppProcesses
+            }.isSuccess
+            if (!canList) {
+                return "Supported (restricted visibility)"
+            }
+        }
+
+        return "Supported"
+    }
+
+    private companion object {
+        private const val PROCESS_TIMEOUT_SECONDS = 3L
     }
 }

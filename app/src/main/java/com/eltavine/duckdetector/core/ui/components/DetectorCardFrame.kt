@@ -100,7 +100,13 @@ fun DetectorCardFrame(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize()
+                .then(
+                    if (autoExpansionDirective.disableAnimation) {
+                        Modifier
+                    } else {
+                        Modifier.animateContentSize()
+                    },
+                )
                 .padding(horizontal = 18.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

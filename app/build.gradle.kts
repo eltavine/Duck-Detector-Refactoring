@@ -35,6 +35,7 @@ dependencies {
         exclude(group = "com.github.skydoves", module = "compose-stability-runtime")
     }
     implementation(libs.bundles.app.security)
+    implementation(libs.zxing.core)
     testImplementation(libs.bundles.test.unit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.bundles.test.android)
