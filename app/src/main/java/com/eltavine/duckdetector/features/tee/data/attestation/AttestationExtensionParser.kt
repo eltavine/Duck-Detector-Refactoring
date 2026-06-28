@@ -99,6 +99,7 @@ class AttestationExtensionParser {
                     ?: AttestedApplicationInfo(),
                 deviceInfo = parseDeviceInfo(tags),
                 deviceUniqueAttestation = tags.containsKey(720),
+                moduleHashHex = tags[724]?.let { ASN1OctetString.getInstance(it).octets.toHex() },
                 trustedAttestationIndex = attestationIndex,
                 rawCertificates = chain,
                 displayCertificates = buildDisplayCertificates(

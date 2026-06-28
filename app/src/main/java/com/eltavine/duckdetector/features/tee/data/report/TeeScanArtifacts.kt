@@ -49,6 +49,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Operati
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.OversizedChallengeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCertificateResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCertificateSecurityLevelResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SupplementaryAttestationInfoResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult
@@ -71,6 +72,7 @@ data class TeeScanArtifacts(
     val oversizedChallenge: OversizedChallengeResult,
     val keyboxImport: KeyboxImportResult,
     val importKeyRetainedAttestationNarrative: ImportKeyRetainedAttestationNarrativeResult,
+    val supplementaryAttestationInfo: SupplementaryAttestationInfoResult,
     val keystore2Hook: Keystore2HookResult,
     val generateModeParcelFingerprint: Keystore2GenerateModeParcelFingerprintResult,
     val grantDomainFullChainSplit: GrantDomainFullChainSplitResult,

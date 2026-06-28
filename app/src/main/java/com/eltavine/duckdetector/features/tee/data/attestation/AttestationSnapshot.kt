@@ -38,6 +38,7 @@ data class AttestationSnapshot(
     val applicationInfo: AttestedApplicationInfo = AttestedApplicationInfo(),
     val deviceInfo: AttestedDeviceInfo = AttestedDeviceInfo(),
     val deviceUniqueAttestation: Boolean = false,
+    val moduleHashHex: String? = null,
     val trustedAttestationIndex: Int? = null,
     val rawCertificates: List<X509Certificate>,
     val displayCertificates: List<TeeCertificateItem>,

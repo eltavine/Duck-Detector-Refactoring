@@ -62,6 +62,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Operati
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.OversizedChallengeProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCertificateProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCertificateSecurityLevelProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SupplementaryAttestationInfoProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentProbe
@@ -124,6 +125,7 @@ class TeeRepository(
     private val operationPruningProbe = OperationPruningProbe()
     private val dualAlgorithmProbe = DualAlgorithmChainProbe(trustAnalyzer)
     private val idAttestationProbe = IdAttestationProbe()
+    private val supplementaryAttestationInfoProbe = SupplementaryAttestationInfoProbe(appContext)
     private val strongBoxProbe = StrongBoxBehaviorProbeSuite(appContext, collector)
     private val soterProbe = SoterCapabilityProbe(appContext)
 
@@ -142,6 +144,7 @@ class TeeRepository(
                 nativeBridge.collectSnapshot(snapshot.rawCertificates.firstOrNull()?.encoded)
             val soter = runCatching { soterProbe.inspect() }.getOrDefault(TeeSoterState())
             val bootConsistency = bootConsistencyProbe.inspect(snapshot)
+            val supplementaryAttestationInfo = supplementaryAttestationInfoProbe.inspect(snapshot)
             val timingSideChannel = timingSideChannelProbe.inspect(
                 useStrongBox = false,
                 nativeSnapshot = native,
@@ -169,6 +172,7 @@ class TeeRepository(
                     oversizedChallenge = deepChecks.oversizedChallenge,
                     keyboxImport = deepChecks.keyboxImport,
                     importKeyRetainedAttestationNarrative = deepChecks.importKeyRetainedAttestationNarrative,
+                    supplementaryAttestationInfo = supplementaryAttestationInfo,
                     keystore2Hook = deepChecks.keystore2Hook,
                     generateModeParcelFingerprint = deepChecks.generateModeParcelFingerprint,
                     grantDomainFullChainSplit = deepChecks.grantDomainFullChainSplit,

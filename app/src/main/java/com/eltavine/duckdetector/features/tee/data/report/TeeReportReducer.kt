@@ -36,6 +36,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Synthet
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.MIN_RATIO_SAMPLE_COUNT
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SupplementaryAttestationInfoAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponseAnomalyKind
@@ -476,6 +477,42 @@ class TeeReportReducer(
                         TeeSignalLevel.FAIL,
                     )
                 )
+            }
+            when (artifacts.supplementaryAttestationInfo.anomalyKind) {
+                SupplementaryAttestationInfoAnomalyKind.MISSING_ATTESTATION_MODULE_HASH -> {
+                    add(
+                        fact(
+                            "Module hash",
+                            "getSupplementaryAttestationInfo(MODULE_HASH) returned module info, but attestation omitted MODULE_HASH.",
+                            TeeSignalLevel.WARN,
+                            hiddenCopyText = artifacts.supplementaryAttestationInfo.diagnosticCopyText,
+                        )
+                    )
+                }
+                SupplementaryAttestationInfoAnomalyKind.MISMATCH -> {
+                    add(
+                        fact(
+                            "Module hash",
+                            "Attested MODULE_HASH did not match getSupplementaryAttestationInfo(MODULE_HASH).",
+                            TeeSignalLevel.WARN,
+                            hiddenCopyText = artifacts.supplementaryAttestationInfo.diagnosticCopyText,
+                        )
+                    )
+                }
+                SupplementaryAttestationInfoAnomalyKind.UNEXPECTED_ATTESTATION_MODULE_HASH -> {
+                    add(
+                        fact(
+                            "Module hash",
+                            "Attestation carried MODULE_HASH while getSupplementaryAttestationInfo(MODULE_HASH) was unavailable.",
+                            TeeSignalLevel.WARN,
+                            hiddenCopyText = artifacts.supplementaryAttestationInfo.diagnosticCopyText,
+                        )
+                    )
+                }
+                SupplementaryAttestationInfoAnomalyKind.NONE,
+                SupplementaryAttestationInfoAnomalyKind.MISSING_ATTESTATION_MODULE_HASH,
+                SupplementaryAttestationInfoAnomalyKind.MISMATCH,
+                SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED -> Unit
             }
             if (
                 artifacts.updateSubcomponentStaleResponsePersistence.anomalyKind ==
@@ -945,6 +982,14 @@ class TeeReportReducer(
                             "ImportKey narrative",
                             importKeyRetainedAttestationNarrativeValue(artifacts),
                             importKeyRetainedAttestationNarrativeLevel(artifacts)
+                        )
+                    )
+                    add(
+                        fact(
+                            "Module hash",
+                            supplementaryAttestationInfoValue(artifacts),
+                            supplementaryAttestationInfoLevel(artifacts),
+                            hiddenCopyText = artifacts.supplementaryAttestationInfo.diagnosticCopyText,
                         )
                     )
                     add(
@@ -2560,6 +2605,36 @@ class TeeReportReducer(
         artifacts.soter.abnormalEnvironment -> TeeSignalLevel.WARN
         !artifacts.soter.serviceReachable -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.INFO
+    }
+
+    private fun supplementaryAttestationInfoLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when (
+        artifacts.supplementaryAttestationInfo.anomalyKind
+    ) {
+        SupplementaryAttestationInfoAnomalyKind.MISSING_ATTESTATION_MODULE_HASH,
+        SupplementaryAttestationInfoAnomalyKind.MISMATCH -> TeeSignalLevel.FAIL
+        SupplementaryAttestationInfoAnomalyKind.UNEXPECTED_ATTESTATION_MODULE_HASH -> TeeSignalLevel.WARN
+        SupplementaryAttestationInfoAnomalyKind.NONE -> TeeSignalLevel.PASS
+        SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED -> TeeSignalLevel.INFO
+    }
+
+    private fun supplementaryAttestationInfoValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.supplementaryAttestationInfo
+        return when (result.anomalyKind) {
+            SupplementaryAttestationInfoAnomalyKind.MISSING_ATTESTATION_MODULE_HASH ->
+                "MODULE_HASH omitted from attestation. ${result.detail}"
+            SupplementaryAttestationInfoAnomalyKind.MISMATCH ->
+                "MODULE_HASH did not match supplementary attestation info. ${result.detail}"
+            SupplementaryAttestationInfoAnomalyKind.UNEXPECTED_ATTESTATION_MODULE_HASH ->
+                "MODULE_HASH present while supplementary attestation info was unavailable. ${result.detail}"
+            SupplementaryAttestationInfoAnomalyKind.NONE ->
+                if (result.attestedModuleHashHex == null) {
+                    "MODULE_HASH not required by attestation version. ${result.detail}"
+                } else {
+                    "MODULE_HASH matched supplementary attestation info. ${result.detail}"
+                }
+            SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED ->
+                "Unavailable. ${result.detail}"
+        }
     }
 
     private fun indicatorLevel(
