@@ -542,6 +542,16 @@ class TeeReportReducer(
                     )
                 )
             }
+            val aesGcmAuthorizationFailures = aesGcmAuthorizationFailures(artifacts.aesGcm)
+            if (artifacts.aesGcm.executed && aesGcmAuthorizationFailures.isNotEmpty()) {
+                add(
+                    fact(
+                        "AES-GCM",
+                        "AndroidKeyStore AES-GCM accepted unauthorized parameters: ${aesGcmAuthorizationFailures.joinToString("; ")}.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
+            }
             if (artifacts.aesGcm.executed && artifacts.aesGcm.insideSecureHardware == false) {
                 add(
                     fact(
@@ -1530,6 +1540,7 @@ class TeeReportReducer(
 
     private fun aesGcmValue(artifacts: TeeScanArtifacts): String {
         val result = artifacts.aesGcm
+        val authorizationFailures = aesGcmAuthorizationFailures(result)
         return when {
             !result.executed -> "Skipped"
             !result.roundTripSucceeded -> buildString {
@@ -1538,6 +1549,12 @@ class TeeReportReducer(
                     append(" • ")
                     append(it)
                 }
+            }
+
+            authorizationFailures.isNotEmpty() -> buildString {
+                append("Auth failed")
+                append(" • ")
+                append(authorizationFailures.joinToString("; "))
             }
 
             result.insideSecureHardware == true -> buildString {
@@ -1604,6 +1621,75 @@ class TeeReportReducer(
             ),
             KeyMintCryptoCheck("ECDH P-256", crypto.ecdhP256Executed, crypto.ecdhP256Ok, crypto.ecdhP256Detail),
             KeyMintCryptoCheck("RSA-PSS SHA-256", true, crypto.rsaPssSha256Ok, crypto.rsaPssSha256Detail),
+            KeyMintCryptoCheck("AES-CBC/CTR auth", crypto.aesCbcCtrExecuted, crypto.aesCbcCtrOk, crypto.aesCbcCtrDetail),
+            KeyMintCryptoCheck(
+                "AES-CBC padding auth",
+                crypto.aesCbcNoPaddingExecuted,
+                crypto.aesCbcNoPaddingOk,
+                crypto.aesCbcNoPaddingDetail,
+            ),
+            KeyMintCryptoCheck("EC SHA-512 auth", crypto.ecSha512Executed, crypto.ecSha512Ok, crypto.ecSha512Detail),
+            KeyMintCryptoCheck(
+                "RSA-PSS SHA-512 auth",
+                crypto.rsaPssSha512Executed,
+                crypto.rsaPssSha512Ok,
+                crypto.rsaPssSha512Detail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA-PSS PKCS#1 auth",
+                crypto.rsaPssPkcs1Executed,
+                crypto.rsaPssPkcs1Ok,
+                crypto.rsaPssPkcs1Detail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA OAEP/PKCS#1 auth",
+                crypto.rsaOaepPkcs1Executed,
+                crypto.rsaOaepPkcs1Ok,
+                crypto.rsaOaepPkcs1Detail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA PKCS#1/OAEP auth",
+                crypto.rsaPkcs1OaepExecuted,
+                crypto.rsaPkcs1OaepOk,
+                crypto.rsaPkcs1OaepDetail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA-OAEP MGF1",
+                crypto.rsaOaepMgf1Executed,
+                crypto.rsaOaepMgf1Ok,
+                crypto.rsaOaepMgf1Detail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA-OAEP MGF1 auth",
+                crypto.rsaOaepMgf1Sha1Executed,
+                crypto.rsaOaepMgf1Sha1Ok,
+                crypto.rsaOaepMgf1Sha1Detail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA-OAEP SHA-256",
+                crypto.rsaOaepSha256Executed,
+                crypto.rsaOaepSha256Ok,
+                crypto.rsaOaepSha256Detail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA-OAEP SHA-1 auth",
+                crypto.rsaOaepSha1Executed,
+                crypto.rsaOaepSha1Ok,
+                crypto.rsaOaepSha1Detail,
+            ),
+            KeyMintCryptoCheck("EC NONE auth", crypto.ecNoneExecuted, crypto.ecNoneOk, crypto.ecNoneDetail),
+            KeyMintCryptoCheck(
+                "RSA PKCS#1 SHA-1 auth",
+                crypto.rsaPkcs1Sha1Executed,
+                crypto.rsaPkcs1Sha1Ok,
+                crypto.rsaPkcs1Sha1Detail,
+            ),
+            KeyMintCryptoCheck(
+                "RSA PKCS#1/PSS auth",
+                crypto.rsaPkcs1PssExecuted,
+                crypto.rsaPkcs1PssOk,
+                crypto.rsaPkcs1PssDetail,
+            ),
         )
     }
 
@@ -2127,8 +2213,20 @@ class TeeReportReducer(
         return when {
             !artifacts.aesGcm.executed -> TeeSignalLevel.INFO
             !artifacts.aesGcm.roundTripSucceeded -> TeeSignalLevel.FAIL
+            aesGcmAuthorizationFailures(artifacts.aesGcm).isNotEmpty() -> TeeSignalLevel.FAIL
             artifacts.aesGcm.insideSecureHardware == false -> TeeSignalLevel.WARN
             else -> TeeSignalLevel.PASS
+        }
+    }
+
+    private fun aesGcmAuthorizationFailures(result: AesGcmRoundTripResult): List<String> {
+        if (!result.executed) {
+            return emptyList()
+        }
+        return buildList {
+            if (!result.cbcRejected) add("CBC: ${result.cbcRejectedDetail}")
+            if (!result.mac64Rejected) add("MAC64: ${result.mac64RejectedDetail}")
+            if (!result.shortNonceRejected) add("nonce: ${result.shortNonceRejectedDetail}")
         }
     }
 
