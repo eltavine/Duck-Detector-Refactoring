@@ -55,6 +55,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingA
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionResult
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorResult
 import com.eltavine.duckdetector.features.tee.domain.TeeRkpState
 import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
@@ -75,6 +76,7 @@ data class TeeScanArtifacts(
     val keyboxImport: KeyboxImportResult,
     val importKeyRetainedAttestationNarrative: ImportKeyRetainedAttestationNarrativeResult,
     val supplementaryAttestationInfo: SupplementaryAttestationInfoResult,
+    val vintfKeyMintVersion: VintfKeyMintVersionResult,
     val keystore2Hook: Keystore2HookResult,
     val generateModeParcelFingerprint: Keystore2GenerateModeParcelFingerprintResult,
     val grantDomainFullChainSplit: GrantDomainFullChainSplitResult,

@@ -70,6 +70,10 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingS
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponseAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionDeclaration
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionFamily
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionResult
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorResult
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkMode
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkState
@@ -199,6 +203,55 @@ class TeeReportReducerTest {
             it.title == "TEE Simulator generate-mode fingerprint" &&
                 it.body.contains("probe unavailable", ignoreCase = true) &&
             it.hiddenCopyText == "unavailable diagnostic"
+        })
+    }
+
+    @Test
+    fun `vintf keymint version mismatch becomes supplementary failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                vintfKeyMintVersion = VintfKeyMintVersionResult(
+                    readable = true,
+                    anomalyKind = VintfKeyMintVersionAnomalyKind.MISMATCH,
+                    declarations = listOf(
+                        VintfKeyMintVersionDeclaration(
+                            family = VintfKeyMintVersionFamily.KEYMINT_AIDL,
+                            sourcePath = "/vendor/etc/vintf/manifest.xml",
+                            format = "aidl",
+                            halName = "android.hardware.security.keymint",
+                            interfaceName = "IKeyMintDevice",
+                            instance = "default",
+                            vintfVersion = "3",
+                            expectedKeymasterVersion = 300,
+                            expectedAttestationVersion = 300,
+                        ),
+                    ),
+                    comparedDeclarations = listOf(
+                        VintfKeyMintVersionDeclaration(
+                            family = VintfKeyMintVersionFamily.KEYMINT_AIDL,
+                            sourcePath = "/vendor/etc/vintf/manifest.xml",
+                            format = "aidl",
+                            halName = "android.hardware.security.keymint",
+                            interfaceName = "IKeyMintDevice",
+                            instance = "default",
+                            vintfVersion = "3",
+                            expectedKeymasterVersion = 300,
+                            expectedAttestationVersion = 300,
+                        ),
+                    ),
+                    attestationVersion = 400,
+                    keymasterVersion = 400,
+                    detail = "kind=MISMATCH",
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "KeyMint VINTF" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("did not match", ignoreCase = true)
         })
     }
 
@@ -2175,6 +2228,11 @@ class TeeReportReducerTest {
             anomalyKind = SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED,
             detail = "skipped",
         ),
+        vintfKeyMintVersion: VintfKeyMintVersionResult = VintfKeyMintVersionResult(
+            readable = true,
+            anomalyKind = VintfKeyMintVersionAnomalyKind.NO_DECLARATION,
+            detail = "skipped",
+        ),
         legacyKeystorePath: LegacyKeystorePathResult = LegacyKeystorePathResult(
             executed = false,
             detail = "skipped",
@@ -2312,6 +2370,7 @@ class TeeReportReducerTest {
             ),
             importKeyRetainedAttestationNarrative = importKeyRetainedAttestationNarrative,
             supplementaryAttestationInfo = supplementaryAttestationInfo,
+            vintfKeyMintVersion = vintfKeyMintVersion,
             keystore2Hook = keystore2Hook,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
             grantDomainFullChainSplit = grantDomainFullChainSplit,

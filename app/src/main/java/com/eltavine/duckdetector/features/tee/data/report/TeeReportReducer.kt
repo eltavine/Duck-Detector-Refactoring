@@ -31,6 +31,7 @@ import com.eltavine.duckdetector.features.tee.domain.TeeSignalLevel
 import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.AesGcmRoundTripResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackAnomalyKind
@@ -40,6 +41,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Supplem
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponseAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.timingSideChannelRatio
 import java.time.LocalDate
 import java.time.Period
@@ -279,6 +281,17 @@ class TeeReportReducer(
                         "Matched TEE Simulator generate-mode fingerprint.",
                         TeeSignalLevel.FAIL,
                         hiddenCopyText = artifacts.generateModeParcelFingerprint.diagnosticCopyText,
+                    )
+                )
+            }
+            if (artifacts.vintfKeyMintVersion.anomalyKind == VintfKeyMintVersionAnomalyKind.MISMATCH) {
+                add(
+                    fact(
+                        "KeyMint VINTF",
+                        "VINTF KeyMint version diverged from attestation. " +
+                            vintfKeyMintVersionValue(artifacts),
+                        TeeSignalLevel.FAIL,
+                        hiddenCopyText = artifacts.vintfKeyMintVersion.diagnosticCopyText,
                     )
                 )
             }
@@ -1007,6 +1020,14 @@ class TeeReportReducer(
                             "ImportKey narrative",
                             importKeyRetainedAttestationNarrativeValue(artifacts),
                             importKeyRetainedAttestationNarrativeLevel(artifacts)
+                        )
+                    )
+                    add(
+                        fact(
+                            "KeyMint VINTF",
+                            vintfKeyMintVersionValue(artifacts),
+                            vintfKeyMintVersionLevel(artifacts),
+                            hiddenCopyText = artifacts.vintfKeyMintVersion.diagnosticCopyText,
                         )
                     )
                     add(
@@ -2779,6 +2800,32 @@ class TeeReportReducer(
         SupplementaryAttestationInfoAnomalyKind.UNEXPECTED_ATTESTATION_MODULE_HASH -> TeeSignalLevel.WARN
         SupplementaryAttestationInfoAnomalyKind.NONE -> TeeSignalLevel.PASS
         SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED -> TeeSignalLevel.INFO
+    }
+
+    private fun vintfKeyMintVersionLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when (
+        artifacts.vintfKeyMintVersion.anomalyKind
+    ) {
+        VintfKeyMintVersionAnomalyKind.MISMATCH -> TeeSignalLevel.FAIL
+        VintfKeyMintVersionAnomalyKind.NONE -> TeeSignalLevel.PASS
+        VintfKeyMintVersionAnomalyKind.UNREADABLE,
+        VintfKeyMintVersionAnomalyKind.NO_DECLARATION,
+        VintfKeyMintVersionAnomalyKind.NO_ATTESTED_VERSION -> TeeSignalLevel.INFO
+    }
+
+    private fun vintfKeyMintVersionValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.vintfKeyMintVersion
+        return when (result.anomalyKind) {
+            VintfKeyMintVersionAnomalyKind.MISMATCH ->
+                "VINTF declaration did not match attested version. ${result.detail}"
+            VintfKeyMintVersionAnomalyKind.NONE ->
+                "VINTF declaration matched attested KeyMint version. ${result.detail}"
+            VintfKeyMintVersionAnomalyKind.UNREADABLE ->
+                "VINTF manifest was not fully readable. ${result.detail}"
+            VintfKeyMintVersionAnomalyKind.NO_DECLARATION ->
+                "No comparable KeyMint VINTF declaration was found. ${result.detail}"
+            VintfKeyMintVersionAnomalyKind.NO_ATTESTED_VERSION ->
+                "Attested KeyMint version was unavailable. ${result.detail}"
+        }
     }
 
     private fun supplementaryAttestationInfoValue(artifacts: TeeScanArtifacts): String {

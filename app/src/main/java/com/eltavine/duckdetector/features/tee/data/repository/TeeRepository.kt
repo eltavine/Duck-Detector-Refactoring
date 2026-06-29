@@ -68,6 +68,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingA
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionProbe
 import com.eltavine.duckdetector.features.tee.data.verification.rkp.RkpExtensionAnalyzer
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorProbeSuite
 import com.eltavine.duckdetector.features.tee.domain.TeeReport
@@ -128,6 +129,7 @@ class TeeRepository(
     private val dualAlgorithmProbe = DualAlgorithmChainProbe(trustAnalyzer)
     private val idAttestationProbe = IdAttestationProbe()
     private val supplementaryAttestationInfoProbe = SupplementaryAttestationInfoProbe(appContext)
+    private val vintfKeyMintVersionProbe = VintfKeyMintVersionProbe()
     private val strongBoxProbe = StrongBoxBehaviorProbeSuite(appContext, collector)
     private val soterProbe = SoterCapabilityProbe(appContext)
 
@@ -147,6 +149,7 @@ class TeeRepository(
             val soter = runCatching { soterProbe.inspect() }.getOrDefault(TeeSoterState())
             val bootConsistency = bootConsistencyProbe.inspect(snapshot)
             val supplementaryAttestationInfo = supplementaryAttestationInfoProbe.inspect(snapshot)
+            val vintfKeyMintVersion = vintfKeyMintVersionProbe.inspect(snapshot)
             val timingSideChannel = timingSideChannelProbe.inspect(
                 useStrongBox = false,
                 nativeSnapshot = native,
@@ -176,6 +179,7 @@ class TeeRepository(
                     keyboxImport = deepChecks.keyboxImport,
                     importKeyRetainedAttestationNarrative = deepChecks.importKeyRetainedAttestationNarrative,
                     supplementaryAttestationInfo = supplementaryAttestationInfo,
+                    vintfKeyMintVersion = vintfKeyMintVersion,
                     keystore2Hook = deepChecks.keystore2Hook,
                     generateModeParcelFingerprint = deepChecks.generateModeParcelFingerprint,
                     grantDomainFullChainSplit = deepChecks.grantDomainFullChainSplit,
