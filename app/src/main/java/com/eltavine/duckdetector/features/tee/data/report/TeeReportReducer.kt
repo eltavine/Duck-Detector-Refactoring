@@ -510,8 +510,6 @@ class TeeReportReducer(
                     )
                 }
                 SupplementaryAttestationInfoAnomalyKind.NONE,
-                SupplementaryAttestationInfoAnomalyKind.MISSING_ATTESTATION_MODULE_HASH,
-                SupplementaryAttestationInfoAnomalyKind.MISMATCH,
                 SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED -> Unit
             }
             if (
@@ -550,6 +548,27 @@ class TeeReportReducer(
                         "AES-GCM",
                         "AndroidKeyStore AES-GCM key was software-backed instead of secure hardware.",
                         TeeSignalLevel.WARN,
+                    )
+                )
+            }
+            if (artifacts.keyMintCapability.executed && !artifacts.keyMintCapability.hmacSha256Ok) {
+                add(
+                    fact(
+                        "KeyMint HMAC",
+                        "Hardware-backed KeyMint could not generate and use an HMAC-SHA256 key.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
+            }
+            if (artifacts.keyMintCapability.executed &&
+                artifacts.keyMintCapability.limitedUseEcExecuted &&
+                !artifacts.keyMintCapability.limitedUseEcOk
+            ) {
+                add(
+                    fact(
+                        "KeyMint limited-use EC",
+                        "Hardware-backed KeyMint could not create and enforce a single-use EC signing key.",
+                        TeeSignalLevel.FAIL,
                     )
                 )
             }
@@ -946,6 +965,20 @@ class TeeReportReducer(
                         )
                     )
                     add(fact("Lifecycle", lifecycleValue(artifacts), lifecycleLevel(artifacts)))
+                    add(
+                        fact(
+                            "KeyMint HMAC",
+                            keyMintHmacValue(artifacts),
+                            keyMintHmacLevel(artifacts)
+                        )
+                    )
+                    add(
+                        fact(
+                            "KeyMint limited-use EC",
+                            keyMintLimitedUseEcValue(artifacts),
+                            keyMintLimitedUseEcLevel(artifacts)
+                        )
+                    )
                     add(
                         fact(
                             "Timing",
@@ -1546,6 +1579,38 @@ class TeeReportReducer(
                 }
             }
         }
+    }
+
+    private fun keyMintHmacValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.keyMintCapability
+        return when {
+            !result.executed -> "Skipped"
+            result.hmacSha256Ok -> "HMAC-SHA256 ok"
+            else -> "HMAC-SHA256 failed • ${result.hmacSha256Detail}"
+        }
+    }
+
+    private fun keyMintHmacLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
+        !artifacts.keyMintCapability.executed -> TeeSignalLevel.INFO
+        artifacts.keyMintCapability.hmacSha256Ok -> TeeSignalLevel.PASS
+        else -> TeeSignalLevel.FAIL
+    }
+
+    private fun keyMintLimitedUseEcValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.keyMintCapability
+        return when {
+            !result.executed -> "Skipped"
+            !result.limitedUseEcExecuted -> "Skipped"
+            result.limitedUseEcOk -> "Single-use EC ok"
+            else -> "Single-use EC failed • ${result.limitedUseEcDetail}"
+        }
+    }
+
+    private fun keyMintLimitedUseEcLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
+        !artifacts.keyMintCapability.executed -> TeeSignalLevel.INFO
+        !artifacts.keyMintCapability.limitedUseEcExecuted -> TeeSignalLevel.INFO
+        artifacts.keyMintCapability.limitedUseEcOk -> TeeSignalLevel.PASS
+        else -> TeeSignalLevel.FAIL
     }
 
     private fun timingValue(artifacts: TeeScanArtifacts): String {
@@ -2611,7 +2676,7 @@ class TeeReportReducer(
         artifacts.supplementaryAttestationInfo.anomalyKind
     ) {
         SupplementaryAttestationInfoAnomalyKind.MISSING_ATTESTATION_MODULE_HASH,
-        SupplementaryAttestationInfoAnomalyKind.MISMATCH -> TeeSignalLevel.FAIL
+        SupplementaryAttestationInfoAnomalyKind.MISMATCH,
         SupplementaryAttestationInfoAnomalyKind.UNEXPECTED_ATTESTATION_MODULE_HASH -> TeeSignalLevel.WARN
         SupplementaryAttestationInfoAnomalyKind.NONE -> TeeSignalLevel.PASS
         SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED -> TeeSignalLevel.INFO

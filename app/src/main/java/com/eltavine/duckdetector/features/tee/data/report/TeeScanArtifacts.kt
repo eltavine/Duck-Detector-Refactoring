@@ -34,6 +34,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyboxI
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2GenerateModeParcelFingerprintResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2HookResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCapabilityResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainFullChainSplitResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGetKeyEntryAccessVectorBlindnessResult
@@ -67,6 +68,7 @@ data class TeeScanArtifacts(
     val pairConsistency: KeyPairConsistencyResult,
     val aesGcm: AesGcmRoundTripResult,
     val lifecycle: KeyLifecycleResult,
+    val keyMintCapability: KeyMintCapabilityResult,
     val timing: TimingAnomalyResult,
     val timingSideChannel: TimingSideChannelResult,
     val oversizedChallenge: OversizedChallengeResult,

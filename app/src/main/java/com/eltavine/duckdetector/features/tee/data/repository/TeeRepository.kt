@@ -38,6 +38,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.BinderP
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.BiometricTeeIntegrationProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCapabilityProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataSemanticsProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataShapeProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyPairConsistencyProbe
@@ -94,6 +95,7 @@ class TeeRepository(
     private val pairConsistencyProbe = KeyPairConsistencyProbe()
     private val aesGcmProbe = AesGcmRoundTripProbe()
     private val lifecycleProbe = KeyLifecycleProbe()
+    private val keyMintCapabilityProbe = KeyMintCapabilityProbe()
     private val timingProbe = TimingAnomalyProbe()
     private val timingSideChannelProbe = TimingSideChannelProbe()
     private val oversizedChallengeProbe = OversizedChallengeProbe()
@@ -167,6 +169,7 @@ class TeeRepository(
                     pairConsistency = deepChecks.pairConsistency,
                     aesGcm = deepChecks.aesGcm,
                     lifecycle = deepChecks.lifecycle,
+                    keyMintCapability = deepChecks.keyMintCapability,
                     timing = deepChecks.timing,
                     timingSideChannel = deepChecks.timingSideChannel,
                     oversizedChallenge = deepChecks.oversizedChallenge,
@@ -222,6 +225,7 @@ class TeeRepository(
         val pairConsistency = async { pairConsistencyProbe.inspect(useStrongBox = useStrongBox) }
         val aesGcm = async { aesGcmProbe.inspect(useStrongBox = useStrongBox) }
         val lifecycle = async { lifecycleProbe.inspect(useStrongBox = useStrongBox) }
+        val keyMintCapability = async { keyMintCapabilityProbe.inspect(useStrongBox = useStrongBox) }
         val timing = async { timingProbe.inspect(useStrongBox = useStrongBox) }
         val oversizedChallenge = async { oversizedChallengeProbe.inspect(useStrongBox = useStrongBox) }
         val keyboxImport = async { keyboxImportProbe.inspect() }
@@ -250,6 +254,7 @@ class TeeRepository(
         val pairConsistencyResult = pairConsistency.await()
         val aesGcmResult = aesGcm.await()
         val lifecycleResult = lifecycle.await()
+        val keyMintCapabilityResult = keyMintCapability.await()
         val timingResult = timing.await()
         val oversizedChallengeResult = oversizedChallenge.await()
         val keyboxImportResult = keyboxImport.await()
@@ -301,6 +306,7 @@ class TeeRepository(
             pairConsistency = pairConsistencyResult,
             aesGcm = aesGcmResult,
             lifecycle = lifecycleResult,
+            keyMintCapability = keyMintCapabilityResult,
             timing = timingResult,
             timingSideChannel = timingSideChannel,
             oversizedChallenge = oversizedChallengeResult,
@@ -353,6 +359,7 @@ private data class DeferredChecks(
     val pairConsistency: com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyPairConsistencyResult,
     val aesGcm: com.eltavine.duckdetector.features.tee.data.verification.keystore.AesGcmRoundTripResult,
     val lifecycle: com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult,
+    val keyMintCapability: com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCapabilityResult,
     val timing: com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult,
     val timingSideChannel: com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult,
     val oversizedChallenge: com.eltavine.duckdetector.features.tee.data.verification.keystore.OversizedChallengeResult,
@@ -401,6 +408,11 @@ private data class DeferredChecks(
                 deleteRemovedAlias = true,
                 regeneratedFreshMaterial = true,
                 detail = "Lifecycle probe skipped.",
+            ),
+            keyMintCapability = com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCapabilityResult(
+                executed = false,
+                hmacSha256Detail = "KeyMint capability probe skipped.",
+                limitedUseEcDetail = "KeyMint capability probe skipped.",
             ),
             timing = com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult(
                 suspicious = false,

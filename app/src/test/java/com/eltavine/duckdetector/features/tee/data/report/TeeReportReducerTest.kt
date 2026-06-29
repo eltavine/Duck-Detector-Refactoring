@@ -47,6 +47,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Synthet
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCapabilityResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataSemanticsResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataShapeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyPairConsistencyResult
@@ -62,6 +63,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Operati
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.OversizedChallengeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCertificateResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCertificateSecurityLevelResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SupplementaryAttestationInfoAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SupplementaryAttestationInfoResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult
@@ -2164,6 +2167,16 @@ class TeeReportReducerTest {
         ),
         rkp: TeeRkpState = TeeRkpState(),
         soter: TeeSoterState = TeeSoterState(),
+        keyMintCapability: KeyMintCapabilityResult = KeyMintCapabilityResult(
+            executed = false,
+            hmacSha256Detail = "skipped",
+            limitedUseEcDetail = "skipped",
+        ),
+        supplementaryAttestationInfo: SupplementaryAttestationInfoResult = SupplementaryAttestationInfoResult(
+            available = false,
+            anomalyKind = SupplementaryAttestationInfoAnomalyKind.UNSUPPORTED,
+            detail = "skipped",
+        ),
         legacyKeystorePath: LegacyKeystorePathResult = LegacyKeystorePathResult(
             executed = false,
             detail = "skipped",
@@ -2289,6 +2302,7 @@ class TeeReportReducerTest {
                 regeneratedFreshMaterial = true,
                 detail = "ok",
             ),
+            keyMintCapability = keyMintCapability,
             timing = timing,
             timingSideChannel = timingSideChannel,
             oversizedChallenge = oversizedChallenge,
@@ -2299,6 +2313,7 @@ class TeeReportReducerTest {
                 detail = "skipped",
             ),
             importKeyRetainedAttestationNarrative = importKeyRetainedAttestationNarrative,
+            supplementaryAttestationInfo = supplementaryAttestationInfo,
             keystore2Hook = keystore2Hook,
             generateModeParcelFingerprint = generateModeParcelFingerprint,
             grantDomainFullChainSplit = grantDomainFullChainSplit,
