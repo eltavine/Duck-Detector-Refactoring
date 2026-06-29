@@ -39,16 +39,18 @@ class KeyMintCapabilityProbe {
         val rsaPss = rsaPssSha256(useStrongBox)
         return KeyMintCapabilityResult(
             executed = true,
-            hmacSha256Ok = hmac.ok,
-            hmacSha256Detail = hmac.detail,
-            limitedUseEcExecuted = limitedUseEc.executed,
-            limitedUseEcOk = limitedUseEc.ok,
-            limitedUseEcDetail = limitedUseEc.detail,
-            ecdhP256Executed = ecdh.executed,
-            ecdhP256Ok = ecdh.ok,
-            ecdhP256Detail = ecdh.detail,
-            rsaPssSha256Ok = rsaPss.ok,
-            rsaPssSha256Detail = rsaPss.detail,
+            crypto = KeyMintCryptoCapabilityResult(
+                hmacSha256Ok = hmac.ok,
+                hmacSha256Detail = hmac.detail,
+                limitedUseEcExecuted = limitedUseEc.executed,
+                limitedUseEcOk = limitedUseEc.ok,
+                limitedUseEcDetail = limitedUseEc.detail,
+                ecdhP256Executed = ecdh.executed,
+                ecdhP256Ok = ecdh.ok,
+                ecdhP256Detail = ecdh.detail,
+                rsaPssSha256Ok = rsaPss.ok,
+                rsaPssSha256Detail = rsaPss.detail,
+            ),
         )
     }
 
@@ -218,11 +220,15 @@ class KeyMintCapabilityProbe {
 
 data class KeyMintCapabilityResult(
     val executed: Boolean,
+    val crypto: KeyMintCryptoCapabilityResult = KeyMintCryptoCapabilityResult(),
+)
+
+data class KeyMintCryptoCapabilityResult(
     val hmacSha256Ok: Boolean = true,
-    val hmacSha256Detail: String,
+    val hmacSha256Detail: String = "HMAC-SHA256 skipped.",
     val limitedUseEcExecuted: Boolean = true,
     val limitedUseEcOk: Boolean = true,
-    val limitedUseEcDetail: String,
+    val limitedUseEcDetail: String = "Single-use EC skipped.",
     val ecdhP256Executed: Boolean = true,
     val ecdhP256Ok: Boolean = true,
     val ecdhP256Detail: String = "ECDH P-256 skipped.",

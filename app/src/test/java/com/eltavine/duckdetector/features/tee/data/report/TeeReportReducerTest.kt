@@ -2169,8 +2169,6 @@ class TeeReportReducerTest {
         soter: TeeSoterState = TeeSoterState(),
         keyMintCapability: KeyMintCapabilityResult = KeyMintCapabilityResult(
             executed = false,
-            hmacSha256Detail = "skipped",
-            limitedUseEcDetail = "skipped",
         ),
         supplementaryAttestationInfo: SupplementaryAttestationInfoResult = SupplementaryAttestationInfoResult(
             available = false,

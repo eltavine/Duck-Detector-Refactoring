@@ -411,8 +411,6 @@ private data class DeferredChecks(
             ),
             keyMintCapability = com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCapabilityResult(
                 executed = false,
-                hmacSha256Detail = "KeyMint capability probe skipped.",
-                limitedUseEcDetail = "KeyMint capability probe skipped.",
             ),
             timing = com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult(
                 suspicious = false,
