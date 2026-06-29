@@ -572,6 +572,27 @@ class TeeReportReducer(
                     )
                 )
             }
+            if (artifacts.keyMintCapability.executed &&
+                artifacts.keyMintCapability.ecdhP256Executed &&
+                !artifacts.keyMintCapability.ecdhP256Ok
+            ) {
+                add(
+                    fact(
+                        "KeyMint ECDH",
+                        "Hardware-backed KeyMint could not complete an EC P-256 key agreement.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
+            }
+            if (artifacts.keyMintCapability.executed && !artifacts.keyMintCapability.rsaPssSha256Ok) {
+                add(
+                    fact(
+                        "KeyMint RSA-PSS",
+                        "Hardware-backed KeyMint could not create and verify an RSA-PSS SHA-256 signature.",
+                        TeeSignalLevel.FAIL,
+                    )
+                )
+            }
             if (!artifacts.lifecycle.deleteRemovedAlias || !artifacts.lifecycle.regeneratedFreshMaterial) {
                 add(
                     fact(
@@ -977,6 +998,20 @@ class TeeReportReducer(
                             "KeyMint limited-use EC",
                             keyMintLimitedUseEcValue(artifacts),
                             keyMintLimitedUseEcLevel(artifacts)
+                        )
+                    )
+                    add(
+                        fact(
+                            "KeyMint ECDH",
+                            keyMintEcdhValue(artifacts),
+                            keyMintEcdhLevel(artifacts)
+                        )
+                    )
+                    add(
+                        fact(
+                            "KeyMint RSA-PSS",
+                            keyMintRsaPssValue(artifacts),
+                            keyMintRsaPssLevel(artifacts)
                         )
                     )
                     add(
@@ -1610,6 +1645,38 @@ class TeeReportReducer(
         !artifacts.keyMintCapability.executed -> TeeSignalLevel.INFO
         !artifacts.keyMintCapability.limitedUseEcExecuted -> TeeSignalLevel.INFO
         artifacts.keyMintCapability.limitedUseEcOk -> TeeSignalLevel.PASS
+        else -> TeeSignalLevel.FAIL
+    }
+
+    private fun keyMintEcdhValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.keyMintCapability
+        return when {
+            !result.executed -> "Skipped"
+            !result.ecdhP256Executed -> "Skipped"
+            result.ecdhP256Ok -> "ECDH P-256 ok"
+            else -> "ECDH P-256 failed • ${result.ecdhP256Detail}"
+        }
+    }
+
+    private fun keyMintEcdhLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
+        !artifacts.keyMintCapability.executed -> TeeSignalLevel.INFO
+        !artifacts.keyMintCapability.ecdhP256Executed -> TeeSignalLevel.INFO
+        artifacts.keyMintCapability.ecdhP256Ok -> TeeSignalLevel.PASS
+        else -> TeeSignalLevel.FAIL
+    }
+
+    private fun keyMintRsaPssValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.keyMintCapability
+        return when {
+            !result.executed -> "Skipped"
+            result.rsaPssSha256Ok -> "RSA-PSS SHA-256 ok"
+            else -> "RSA-PSS SHA-256 failed • ${result.rsaPssSha256Detail}"
+        }
+    }
+
+    private fun keyMintRsaPssLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
+        !artifacts.keyMintCapability.executed -> TeeSignalLevel.INFO
+        artifacts.keyMintCapability.rsaPssSha256Ok -> TeeSignalLevel.PASS
         else -> TeeSignalLevel.FAIL
     }
 
