@@ -160,6 +160,44 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
 
         pluginManager.withPlugin("com.android.application") {
             val androidComponents = extensions.getByType<ApplicationAndroidComponentsExtension>()
+            val generateGithubContributorsAsset = tasks.register(
+                "generateGithubContributorsAsset",
+                GenerateGithubContributorsAssetTask::class.java,
+            ) {
+                endpointUrl.set(
+                    providers.gradleProperty("duckdetector.githubContributors.url")
+                        .orElse(GITHUB_CONTRIBUTORS_API_URL)
+                )
+                authToken.set(
+                    providers.gradleProperty("duckdetector.githubContributors.token")
+                        .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+                        .orElse(providers.environmentVariable("GH_TOKEN"))
+                )
+                maxAttempts.set(
+                    providers.gradleProperty("duckdetector.githubContributors.maxAttempts")
+                        .map(String::toInt)
+                        .orElse(4)
+                )
+                connectTimeoutMillis.set(
+                    providers.gradleProperty("duckdetector.githubContributors.connectTimeoutMillis")
+                        .map(String::toInt)
+                        .orElse(5_000)
+                )
+                readTimeoutMillis.set(
+                    providers.gradleProperty("duckdetector.githubContributors.readTimeoutMillis")
+                        .map(String::toInt)
+                        .orElse(10_000)
+                )
+                contributorsAssetFile.set(
+                    layout.projectDirectory.file("src/main/assets/$GITHUB_CONTRIBUTORS_ASSET_FILE_NAME")
+                )
+                avatarOutputDirectory.set(
+                    layout.projectDirectory.dir("src/main/assets/$GITHUB_CONTRIBUTORS_AVATAR_DIRECTORY")
+                )
+            }
+            tasks.named("preBuild").configure {
+                dependsOn(generateGithubContributorsAsset)
+            }
             androidComponents.onVariants(androidComponents.selector().all()) { variant ->
                 val taskName = variant.computeTaskName("generate", "TeeCrlAsset")
                 val generateCrlAsset = tasks.register(

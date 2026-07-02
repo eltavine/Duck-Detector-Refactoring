@@ -42,11 +42,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.formatBuildTimeUtc
 import com.eltavine.duckdetector.ui.theme.ShapeTokens
@@ -64,7 +64,6 @@ fun AboutCard(
     buildHash: String,
     modifier: Modifier = Modifier,
 ) {
-    val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val clipboardLabel = stringResource(R.string.about_clipboard_label)
     val clipboardVersionLine = stringResource(R.string.about_clipboard_version_line, versionName, versionCode)
@@ -132,19 +131,19 @@ fun AboutCard(
                     label = stringResource(R.string.about_label_website),
                     value = ABOUT_WEBSITE,
                     icon = Icons.Rounded.Language,
-                    onClick = { uriHandler.openUri("https://$ABOUT_WEBSITE") },
+                    onClick = { openExternalUri(context, "https://$ABOUT_WEBSITE") },
                 )
                 AboutInfoRow(
                     label = stringResource(R.string.social_github),
                     value = ABOUT_GITHUB_REPOSITORY,
                     iconPainter = painterResource(R.drawable.ic_github),
-                    onClick = { uriHandler.openUri(ABOUT_GITHUB_URL) },
+                    onClick = { openExternalUri(context, ABOUT_GITHUB_URL) },
                 )
                 AboutInfoRow(
                     label = stringResource(R.string.about_label_email),
                     value = ABOUT_EMAIL,
                     icon = Icons.Rounded.Email,
-                    onClick = { uriHandler.openUri("mailto:$ABOUT_EMAIL") },
+                    onClick = { openExternalUri(context, "mailto:$ABOUT_EMAIL") },
                 )
                 AboutInfoRow(
                     label = stringResource(R.string.about_label_build_time),

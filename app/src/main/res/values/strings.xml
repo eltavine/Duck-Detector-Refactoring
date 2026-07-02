@@ -75,9 +75,11 @@ limitations under the License.
     <string name="author_summary_zg089">Arabic translation</string>
     <string name="author_summary_coolzyd">Kernel Check</string>
     <string name="author_summary_947409161">Ukrainian translation</string>
+    <string name="author_summary_qwq233">TEE</string>
     <string name="author_summary_mirin">UI</string>
     <string name="author_summary_aviraxp">SELinux and LSPosed false-positive report</string>
     <string name="author_summary_5ec1cff">SELinux and LSPosed false-positive finding</string>
+    <string name="author_summary_default">Contributor</string>
     <string name="author_swipe_hint_single">Swipe left or right to browse authors.</string>
     <string name="author_swipe_hint_paged">Swipe left or right to browse authors. %1$d/%2$d</string>
     <string name="author_boundary_toast">Finality</string>

@@ -61,7 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -73,6 +73,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.ui.openExternalUri
 import kotlinx.coroutines.delay
 
 private const val APP_ERRORS_TRACKING_GITHUB =
@@ -110,7 +111,7 @@ fun AlphaBuildWarningOverlay(
     }
 
     val canDismiss = remainingSeconds == 0
-    val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val dismissOverlay = {
         if (forceVisible == null) {
@@ -205,12 +206,12 @@ fun AlphaBuildWarningOverlay(
                         ExternalLinkIcon(
                             iconResId = R.drawable.ic_github,
                             label = stringResource(R.string.social_github),
-                            onOpen = { uriHandler.openUri(APP_ERRORS_TRACKING_GITHUB) },
+                            onOpen = { openExternalUri(context, APP_ERRORS_TRACKING_GITHUB) },
                         )
                         ExternalLinkIcon(
                             iconResId = R.drawable.ic_telegram,
                             label = stringResource(R.string.social_telegram),
-                            onOpen = { uriHandler.openUri(APP_ERRORS_TRACKING_TELEGRAM) },
+                            onOpen = { openExternalUri(context, APP_ERRORS_TRACKING_TELEGRAM) },
                         )
                     }
 

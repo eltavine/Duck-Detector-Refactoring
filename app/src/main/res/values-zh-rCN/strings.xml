@@ -65,6 +65,7 @@ limitations under the License.
     <string name="author_summary_eltavine">负责 UI、C++、ASM 与 Kotlin。</string>
     <string name="author_summary_baka">TEE 与 Zygisk</string>
     <string name="author_summary_xiaotong">TEE（C++、Kotlin）</string>
+    <string name="author_summary_qwq233">TEE</string>
     <string name="author_summary_wxx">CI（Kotlin）</string>
     <string name="author_summary_aviraxp">SELinux 与 LSPosed 误报反馈</string>
     <string name="author_summary_5ec1cff">SELinux 与 LSPosed 误报发现</string>

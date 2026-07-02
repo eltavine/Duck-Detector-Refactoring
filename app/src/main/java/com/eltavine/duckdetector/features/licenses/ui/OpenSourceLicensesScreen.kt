@@ -58,12 +58,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.licenses.data.AboutLibrariesJsonOverrides
 import com.eltavine.duckdetector.ui.theme.ShapeTokens
@@ -89,7 +90,7 @@ fun OpenSourceLicensesScreen(
                 .use { it.readText() },
         )
     }
-    val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
     val libraryCount = libraries?.libraries?.size
     var selectedLibrary by remember { mutableStateOf<Library?>(null) }
 
@@ -260,7 +261,7 @@ fun OpenSourceLicensesScreen(
             dismissButton = {
                 if (!projectUrl.isNullOrBlank()) {
                     OutlinedButton(
-                        onClick = { uriHandler.openUri(projectUrl) },
+                        onClick = { openExternalUri(context, projectUrl) },
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Language,
@@ -410,7 +411,7 @@ fun OpenSourceLicensesScreen(
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
-                                            OutlinedButton(onClick = { uriHandler.openUri(url) }) {
+                                            OutlinedButton(onClick = { openExternalUri(context, url) }) {
                                                 WrapSafeText(text = stringResource(R.string.licenses_dialog_open))
                                             }
                                         }

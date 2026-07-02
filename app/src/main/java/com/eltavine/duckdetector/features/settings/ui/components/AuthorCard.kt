@@ -16,13 +16,14 @@
 
 package com.eltavine.duckdetector.features.settings.ui.components
 
+import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -52,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -65,6 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.ui.theme.ShapeTokens
 import compose.icons.SimpleIcons
@@ -72,152 +76,29 @@ import compose.icons.simpleicons.Assemblyscript
 import compose.icons.simpleicons.Cplusplus
 import compose.icons.simpleicons.Figma
 import compose.icons.simpleicons.Kotlin
+import org.json.JSONArray
 import kotlin.math.abs
 
 @Composable
 fun AuthorCard(
     modifier: Modifier = Modifier,
 ) {
-    val authors = listOf(
-        AuthorProfile(
-            name = "Eltavine",
-            avatarRes = R.drawable.author_eltavine,
-            contributionSummary = stringResource(R.string.author_summary_eltavine),
-            contributions = listOf(
-                AuthorContribution.Ui,
-                AuthorContribution.Cpp,
-                AuthorContribution.Asm,
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "XiaoTong6666",
-            avatarRes = R.drawable.author_xiaotong6666,
-            contributionSummary = stringResource(R.string.author_summary_xiaotong),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "FldBudin",
-            avatarRes = R.drawable.author_fldbudin,
-            contributionSummary = stringResource(R.string.author_summary_baka),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "AlexLiuDev233",
-            avatarRes = R.drawable.author_alexliudev233,
-            contributionSummary = stringResource(R.string.author_summary_alex),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "Searchur",
-            avatarRes = R.drawable.author_searchur,
-            contributionSummary = stringResource(R.string.author_summary_searchur),
-            contributions = listOf(
-                AuthorContribution.Ui,
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "VictorModi",
-            avatarRes = R.drawable.author_victormodi,
-            contributionSummary = stringResource(R.string.author_summary_victor),
-            contributions = listOf(
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "HSSkyBoy",
-            avatarRes = R.drawable.author_hsskyboy,
-            contributionSummary = stringResource(R.string.author_summary_hsskyboy),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-            ),
-        ),
-        AuthorProfile(
-            name = "LingQingBigKing",
-            avatarRes = R.drawable.author_lingqingbigking,
-            contributionSummary = stringResource(R.string.author_summary_lingqing),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-            ),
-        ),
-        AuthorProfile(
-            name = "SQMY-dor",
-            avatarRes = R.drawable.author_sqmy_dor,
-            contributionSummary = stringResource(R.string.author_summary_sqmy),
-            contributions = listOf(
-                AuthorContribution.Ui,
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "ZG089",
-            avatarRes = R.drawable.author_zg089,
-            contributionSummary = stringResource(R.string.author_summary_zg089),
-            contributions = listOf(
-                AuthorContribution.Ui,
-            ),
-        ),
-        AuthorProfile(
-            name = "coolzyd9107",
-            avatarRes = R.drawable.author_coolzyd9107,
-            contributionSummary = stringResource(R.string.author_summary_coolzyd),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-            ),
-        ),
-        AuthorProfile(
-            name = "wxxsfxyzm",
-            avatarRes = R.drawable.author_wxxsfxyzm,
-            contributionSummary = stringResource(R.string.author_summary_wxx),
-            contributions = listOf(
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
-            name = "947409161",
-            avatarRes = R.drawable.author_947409161,
-            contributionSummary = stringResource(R.string.author_summary_947409161),
-            contributions = listOf(
-                AuthorContribution.Ui,
-            ),
-        ),
-        AuthorProfile(
-            name = "MiRinChan",
-            avatarRes = R.drawable.author_mirinchan,
-            contributionSummary = stringResource(R.string.author_summary_mirin),
-            contributions = listOf(
-                AuthorContribution.Ui,
-            ),
-        ),
-        AuthorProfile(
-            name = "aviraxp",
-            avatarRes = R.drawable.author_aviraxp,
-            contributionSummary = stringResource(R.string.author_summary_aviraxp),
-            contributions = listOf(
-                AuthorContribution.Security,
-            ),
-        ),
-        AuthorProfile(
-            name = "5ec1cff",
-            avatarRes = R.drawable.author_5ec1cff,
-            contributionSummary = stringResource(R.string.author_summary_5ec1cff),
-            contributions = listOf(
-                AuthorContribution.Security,
-            ),
-        ),
-    )
-    val pagerState = rememberPagerState(pageCount = { authors.size })
     val context = LocalContext.current
+    val contributorSnapshots = remember(context) { loadContributorSnapshots(context) }
+    val authors = contributorSnapshots.map { snapshot ->
+        AuthorProfile(
+            login = snapshot.login,
+            name = snapshot.name,
+            profileUrl = snapshot.profileUrl,
+            avatarAssetPath = snapshot.avatarAssetPath,
+            contributionSummary = stringResource(summaryResIdForKey(snapshot.summaryKey)),
+            contributions = snapshot.contributionKeys.mapNotNull(::authorContributionForKey),
+        )
+    }
+    if (authors.isEmpty()) {
+        return
+    }
+    val pagerState = rememberPagerState(pageCount = { authors.size })
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
     val dragThresholdPx = with(density) { 42.dp.toPx() }
@@ -296,8 +177,14 @@ private fun AuthorPage(
     profile: AuthorProfile,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     Surface(
-        modifier = modifier,
+        modifier = modifier
+            .height(404.dp)
+            .clip(ShapeTokens.CornerExtraLargeIncreased)
+            .clickable {
+                openExternalUri(context, profile.profileUrl)
+            },
         shape = ShapeTokens.CornerExtraLargeIncreased,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 0.dp,
@@ -306,18 +193,26 @@ private fun AuthorPage(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxSize()
                 .padding(horizontal = 22.dp, vertical = 22.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            WrapSafeText(
-                text = profile.name,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                WrapSafeText(
+                    text = profile.name,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             AuthorAvatar(
                 profile = profile,
@@ -325,13 +220,21 @@ private fun AuthorPage(
                     .size(132.dp),
             )
 
-            WrapSafeText(
-                text = profile.contributionSummary,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                WrapSafeText(
+                    text = profile.contributionSummary,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             Row(
+                modifier = Modifier.height(40.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -348,6 +251,17 @@ private fun AuthorAvatar(
     profile: AuthorProfile,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val avatarBitmap = remember(profile.avatarAssetPath, context) {
+        profile.avatarAssetPath?.let { assetPath ->
+            runCatching {
+                context.assets.open(assetPath).use { stream ->
+                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                }
+            }.getOrNull()
+        }
+    }
+
     Box(
         modifier = modifier
             .clip(CircleShape)
@@ -358,12 +272,24 @@ private fun AuthorAvatar(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = androidx.compose.ui.res.painterResource(id = profile.avatarRes),
-            contentDescription = profile.name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
+        when {
+            avatarBitmap != null -> {
+                Image(
+                    bitmap = avatarBitmap,
+                    contentDescription = profile.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            else -> {
+                WrapSafeText(
+                    text = profile.name.firstOrNull()?.uppercase() ?: "?",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
@@ -442,10 +368,21 @@ private fun ContributionIcon(
 }
 
 private data class AuthorProfile(
+    val login: String,
     val name: String,
-    @param:DrawableRes val avatarRes: Int,
+    val profileUrl: String,
+    val avatarAssetPath: String?,
     val contributionSummary: String,
     val contributions: List<AuthorContribution>,
+)
+
+private data class ContributorSnapshot(
+    val login: String,
+    val name: String,
+    val profileUrl: String,
+    val avatarAssetPath: String?,
+    val summaryKey: String?,
+    val contributionKeys: List<String>,
 )
 
 private sealed class AuthorContribution(
@@ -483,3 +420,85 @@ private sealed class AuthorContribution(
         tint = Color(0xFFD32F2F),
     )
 }
+
+private fun loadContributorSnapshots(context: android.content.Context): List<ContributorSnapshot> {
+    val assetManager = context.assets
+    val payload = runCatching {
+        assetManager.open(CONTRIBUTORS_ASSET_FILE_NAME).bufferedReader(Charsets.UTF_8).use { reader ->
+            reader.readText()
+        }
+    }.getOrNull() ?: return emptyList()
+    return runCatching {
+        val array = JSONArray(payload)
+        buildList(array.length()) {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val login = item.optString("login").trim()
+                val name = item.optString("name").trim().ifBlank { login }
+                if (login.isBlank()) {
+                    continue
+                }
+                add(
+                    ContributorSnapshot(
+                        login = login,
+                        name = name,
+                        profileUrl = item.optString("profileUrl").trim().ifBlank { "https://github.com/$login" },
+                        avatarAssetPath = item.optString("avatarAssetPath").trim().ifBlank { null },
+                        summaryKey = item.optString("summaryKey").trim().ifBlank { null },
+                        contributionKeys = item.optJSONArray("contributionKeys").toStringList(),
+                    )
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
+}
+
+private fun summaryResIdForKey(summaryKey: String?): Int {
+    return when (summaryKey) {
+        "author_summary_eltavine" -> R.string.author_summary_eltavine
+        "author_summary_baka" -> R.string.author_summary_baka
+        "author_summary_xiaotong" -> R.string.author_summary_xiaotong
+        "author_summary_searchur" -> R.string.author_summary_searchur
+        "author_summary_wxx" -> R.string.author_summary_wxx
+        "author_summary_alex" -> R.string.author_summary_alex
+        "author_summary_hsskyboy" -> R.string.author_summary_hsskyboy
+        "author_summary_lingqing" -> R.string.author_summary_lingqing
+        "author_summary_qwq233" -> R.string.author_summary_qwq233
+        "author_summary_sqmy" -> R.string.author_summary_sqmy
+        "author_summary_victor" -> R.string.author_summary_victor
+        "author_summary_zg089" -> R.string.author_summary_zg089
+        "author_summary_coolzyd" -> R.string.author_summary_coolzyd
+        "author_summary_947409161" -> R.string.author_summary_947409161
+        "author_summary_mirin" -> R.string.author_summary_mirin
+        "author_summary_aviraxp" -> R.string.author_summary_aviraxp
+        "author_summary_5ec1cff" -> R.string.author_summary_5ec1cff
+        else -> R.string.author_summary_default
+    }
+}
+
+private fun authorContributionForKey(key: String): AuthorContribution? {
+    return when (key.lowercase()) {
+        "ui" -> AuthorContribution.Ui
+        "cpp" -> AuthorContribution.Cpp
+        "asm" -> AuthorContribution.Asm
+        "kotlin" -> AuthorContribution.Kotlin
+        "security" -> AuthorContribution.Security
+        else -> null
+    }
+}
+
+private fun JSONArray?.toStringList(): List<String> {
+    if (this == null) {
+        return emptyList()
+    }
+    return buildList(length()) {
+        for (index in 0 until length()) {
+            val value = optString(index).trim()
+            if (value.isNotEmpty()) {
+                add(value)
+            }
+        }
+    }
+}
+
+private const val CONTRIBUTORS_ASSET_FILE_NAME = "github_contributors.json"
