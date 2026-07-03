@@ -140,8 +140,9 @@ class KeyMintCapabilityProbe {
         val alias = "duck_grant_update_${System.nanoTime()}"
         val binderClient = Keystore2PrivateBinderClient()
         val grantClient = Keystore2PrivateGrantClient(binderClient)
-        val markerCert = ByteArray(8) { 0x7c }
-        val markerChain = ByteArray(8) { 0x0d }
+        val random = java.security.SecureRandom()
+        val markerCert = ByteArray(32).also(random::nextBytes)
+        val markerChain = ByteArray(32).also(random::nextBytes)
         var grantCreated = false
         return try {
             AndroidKeyStoreTools.generateSigningEcKey(
