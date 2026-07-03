@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.tee.data.verification.keystore
 
 import android.os.Build
+import android.os.Process
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import com.eltavine.duckdetector.features.tee.data.keystore.AndroidKeyStoreTools
@@ -64,6 +65,7 @@ class KeyMintCapabilityProbe {
         val ecNone = ecNoneRejected(useStrongBox)
         val rsaPkcs1Sha1 = rsaPkcs1Sha1Rejected(useStrongBox)
         val rsaPkcs1Pss = rsaPkcs1PssRejected(useStrongBox)
+        val grantUpdateSubcomponent = grantUpdateSubcomponent(useStrongBox)
         return KeyMintCapabilityResult(
             executed = true,
             crypto = KeyMintCryptoCapabilityResult(
@@ -119,8 +121,97 @@ class KeyMintCapabilityProbe {
                 rsaPkcs1PssExecuted = rsaPkcs1Pss.executed,
                 rsaPkcs1PssOk = rsaPkcs1Pss.ok,
                 rsaPkcs1PssDetail = rsaPkcs1Pss.detail,
+                grantUpdateSubcomponentExecuted = grantUpdateSubcomponent.executed,
+                grantUpdateSubcomponentOk = grantUpdateSubcomponent.ok,
+                grantUpdateSubcomponentDetail = grantUpdateSubcomponent.detail,
             ),
         )
+    }
+
+    private fun grantUpdateSubcomponent(useStrongBox: Boolean): CheckResult {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return CheckResult(
+                ok = true,
+                detail = "Grant updateSubcomponent requires Android 12 or newer.",
+                executed = false,
+            )
+        }
+        val keyStore = AndroidKeyStoreTools.loadKeyStore()
+        val alias = "duck_grant_update_${System.nanoTime()}"
+        val binderClient = Keystore2PrivateBinderClient()
+        val grantClient = Keystore2PrivateGrantClient(binderClient)
+        val markerCert = ByteArray(8) { 0x7c }
+        val markerChain = ByteArray(8) { 0x0d }
+        var grantCreated = false
+        return try {
+            AndroidKeyStoreTools.generateSigningEcKey(
+                keyStore = keyStore,
+                alias = alias,
+                subject = "CN=Duck Grant Update, O=Eltavine",
+                useStrongBox = useStrongBox,
+            )
+            val service = binderClient.getKeystoreService() ?: return CheckResult(
+                ok = true,
+                detail = "Grant updateSubcomponent skipped: Keystore2 service unavailable.",
+                executed = false,
+            )
+            val constants = grantClient.constantsSnapshot()
+            val grant = grantClient.grantAliasToUid(
+                service = service,
+                alias = alias,
+                uid = Process.myUid(),
+                accessVector = constants.permissionGetInfo or constants.permissionUpdate,
+            )
+            val grantId = grant.grantId
+            if (!grant.available || grantId == null) {
+                return CheckResult(
+                    ok = true,
+                    detail = "Grant updateSubcomponent skipped: ${grant.detail}",
+                    executed = false,
+                )
+            }
+            grantCreated = true
+            val grantDescriptor = grantClient.createGrantDescriptor(grantId)
+            val updateFailure = runCatching {
+                service.javaClass
+                    .getMethod(
+                        "updateSubcomponent",
+                        grantDescriptor.javaClass,
+                        ByteArray::class.java,
+                        ByteArray::class.java,
+                    )
+                    .invoke(service, grantDescriptor, markerCert, markerChain)
+            }.exceptionOrNull()
+            if (updateFailure != null) {
+                return CheckResult(
+                    ok = false,
+                    detail = "Grant updateSubcomponent failed after grant: ${binderClient.describeThrowable(updateFailure)}",
+                )
+            }
+            val response = binderClient.getKeyEntryResponse(service, grantDescriptor)
+                ?: return CheckResult(false, "Grant updateSubcomponent readback returned no KeyEntryResponse.")
+            val certMatches = binderClient.getCertificateBlob(response)?.contentEquals(markerCert) == true
+            val chainMatches = binderClient.getCertificateChainBlob(response)?.contentEquals(markerChain) == true
+            CheckResult(
+                ok = certMatches && chainMatches,
+                detail = "grantUpdateSubcomponent certMatches=$certMatches, chainMatches=$chainMatches.",
+            )
+        } catch (throwable: Throwable) {
+            if (grantCreated) {
+                CheckResult(false, "Grant updateSubcomponent failed after grant: ${binderClient.describeThrowable(throwable)}")
+            } else {
+                CheckResult(
+                    ok = true,
+                    detail = "Grant updateSubcomponent skipped: ${binderClient.describeThrowable(throwable)}",
+                    executed = false,
+                )
+            }
+        } finally {
+            if (grantCreated) {
+                runCatching { grantClient.revokeAliasGrant(alias = alias, uid = Process.myUid()) }
+            }
+            AndroidKeyStoreTools.safeDelete(keyStore, alias)
+        }
     }
 
     private fun hmacSha256(useStrongBox: Boolean): CheckResult {
@@ -785,6 +876,9 @@ data class KeyMintCryptoCapabilityResult(
     val rsaPkcs1PssExecuted: Boolean = true,
     val rsaPkcs1PssOk: Boolean = true,
     val rsaPkcs1PssDetail: String = "RSA PKCS#1/PSS authorization skipped.",
+    val grantUpdateSubcomponentExecuted: Boolean = true,
+    val grantUpdateSubcomponentOk: Boolean = true,
+    val grantUpdateSubcomponentDetail: String = "Grant updateSubcomponent skipped.",
 )
 
 private const val SIGNATURE_ECDSA_SHA256 = "SHA256withECDSA"

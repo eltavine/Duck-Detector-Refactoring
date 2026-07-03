@@ -34,6 +34,10 @@ class Keystore2PrivateGrantClient(
         return resolveConstants()
     }
 
+    fun createGrantDescriptor(grantId: Long): Any {
+        return createDescriptor(grantId, resolveConstants().domainGrant)
+    }
+
     fun grantAliasToUid(alias: String, uid: Int): Keystore2PrivateGrantResult {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return Keystore2PrivateGrantResult.unavailable(
@@ -437,6 +441,7 @@ class Keystore2PrivateGrantClient(
             domainGrant = resolveStaticInt(CLASS_DOMAIN, "GRANT", DOMAIN_GRANT_FALLBACK),
             permissionUse = resolveStaticInt(CLASS_KEY_PERMISSION, "USE", KEY_PERMISSION_USE_FALLBACK),
             permissionGetInfo = resolveStaticInt(CLASS_KEY_PERMISSION, "GET_INFO", KEY_PERMISSION_GET_INFO_FALLBACK),
+            permissionUpdate = resolveStaticInt(CLASS_KEY_PERMISSION, "UPDATE", KEY_PERMISSION_UPDATE_FALLBACK),
             transactionGetKeyEntry = resolveStaticInt(
                 "$CLASS_IKEYSTORE_SERVICE\$Stub",
                 "TRANSACTION_getKeyEntry",
@@ -620,6 +625,7 @@ class Keystore2PrivateGrantClient(
         const val DOMAIN_GRANT_FALLBACK = 1
         const val KEY_PERMISSION_GET_INFO_FALLBACK = 0x4
         const val KEY_PERMISSION_GRANT_FALLBACK = 0x8
+        const val KEY_PERMISSION_UPDATE_FALLBACK = 0x20
         const val KEY_PERMISSION_USE_FALLBACK = 0x100
         const val TRANSACTION_GET_KEY_ENTRY_FALLBACK = 2
         const val TRANSACTION_GRANT_FALLBACK = 7
@@ -642,6 +648,7 @@ data class Keystore2PrivateGrantConstants(
     val domainGrant: Int,
     val permissionUse: Int,
     val permissionGetInfo: Int,
+    val permissionUpdate: Int,
     val transactionGetKeyEntry: Int,
     val transactionGrant: Int,
     val transactionUngrant: Int,
@@ -750,6 +757,7 @@ internal fun buildDefaultKeystore2PrivateGrantConstants(): Keystore2PrivateGrant
         domainGrant = Keystore2PrivateGrantClient.DOMAIN_GRANT_FALLBACK,
         permissionUse = Keystore2PrivateGrantClient.KEY_PERMISSION_USE_FALLBACK,
         permissionGetInfo = Keystore2PrivateGrantClient.KEY_PERMISSION_GET_INFO_FALLBACK,
+        permissionUpdate = Keystore2PrivateGrantClient.KEY_PERMISSION_UPDATE_FALLBACK,
         transactionGetKeyEntry = Keystore2PrivateGrantClient.TRANSACTION_GET_KEY_ENTRY_FALLBACK,
         transactionGrant = Keystore2PrivateGrantClient.TRANSACTION_GRANT_FALLBACK,
         transactionUngrant = Keystore2PrivateGrantClient.TRANSACTION_UNGRANT_FALLBACK,
