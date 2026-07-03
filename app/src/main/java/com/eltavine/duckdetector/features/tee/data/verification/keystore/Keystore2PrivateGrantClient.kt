@@ -625,7 +625,7 @@ class Keystore2PrivateGrantClient(
         const val DOMAIN_GRANT_FALLBACK = 1
         const val KEY_PERMISSION_GET_INFO_FALLBACK = 0x4
         const val KEY_PERMISSION_GRANT_FALLBACK = 0x8
-        const val KEY_PERMISSION_UPDATE_FALLBACK = 0x20
+        const val KEY_PERMISSION_UPDATE_FALLBACK = 0x80
         const val KEY_PERMISSION_USE_FALLBACK = 0x100
         const val TRANSACTION_GET_KEY_ENTRY_FALLBACK = 2
         const val TRANSACTION_GRANT_FALLBACK = 7

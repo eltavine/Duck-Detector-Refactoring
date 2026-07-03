@@ -190,11 +190,16 @@ class KeyMintCapabilityProbe {
             }
             val response = binderClient.getKeyEntryResponse(service, grantDescriptor)
                 ?: return CheckResult(false, "Grant updateSubcomponent readback returned no KeyEntryResponse.")
+            val appResponse = binderClient.getKeyEntryResponse(service, binderClient.createKeyDescriptor(alias))
+                ?: return CheckResult(false, "Grant updateSubcomponent APP readback returned no KeyEntryResponse.")
             val certMatches = binderClient.getCertificateBlob(response)?.contentEquals(markerCert) == true
             val chainMatches = binderClient.getCertificateChainBlob(response)?.contentEquals(markerChain) == true
+            val appCertMatches = binderClient.getCertificateBlob(appResponse)?.contentEquals(markerCert) == true
+            val appChainMatches = binderClient.getCertificateChainBlob(appResponse)?.contentEquals(markerChain) == true
             CheckResult(
-                ok = certMatches && chainMatches,
-                detail = "grantUpdateSubcomponent certMatches=$certMatches, chainMatches=$chainMatches.",
+                ok = certMatches && chainMatches && appCertMatches && appChainMatches,
+                detail = "grantUpdateSubcomponent certMatches=$certMatches, chainMatches=$chainMatches, " +
+                    "appCertMatches=$appCertMatches, appChainMatches=$appChainMatches.",
             )
         } catch (throwable: Throwable) {
             if (grantCreated) {
