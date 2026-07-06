@@ -403,6 +403,19 @@ class TeeReportReducer(
                     )
                 }
 
+                GrantSelfDomainAnomalyKind.SELF_GRANT_ATTESTATION_APP_KEY_NOT_FOUND -> {
+                    add(
+                        fact(
+                            "Grant self-domain",
+                            "Grant self-domain custom-attestation visibility divergence detected. " +
+                                grantSelfDomainFullChainSplitValue(artifacts),
+                            TeeSignalLevel.FAIL,
+                            hiddenCopyText = artifacts.grantSelfDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
+                        )
+                    )
+                }
+
                 GrantSelfDomainAnomalyKind.NONE,
                 GrantSelfDomainAnomalyKind.UNAVAILABLE -> Unit
             }
@@ -1959,6 +1972,15 @@ class TeeReportReducer(
     private fun grantSelfDomainFullChainSplitValue(artifacts: TeeScanArtifacts): String {
         val result = artifacts.grantSelfDomainFullChainSplit
         return when {
+            result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_ATTESTATION_APP_KEY_NOT_FOUND ->
+                buildString {
+                    append("Matched")
+                    append(" kind=")
+                    append(result.anomalyKind.name)
+                    if (result.grantIdPresent) append(" grantId=true")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+
             result.executed && result.splitDetected -> buildString {
                 append("Matched")
                 append(" kind=")
@@ -2370,7 +2392,8 @@ class TeeReportReducer(
             // Same-UID key-not-found is not ordinary unavailability: the owner alias was proven readable before grant.
             // 同 UID key-not-found 不是普通不可用：grant 之前 owner alias 已被证明可读。
             result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT ||
-                result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN -> {
+                result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN ||
+                result.anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_ATTESTATION_APP_KEY_NOT_FOUND -> {
                 TeeSignalLevel.FAIL
             }
             result.executed && result.available -> TeeSignalLevel.PASS

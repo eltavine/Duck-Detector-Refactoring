@@ -100,7 +100,23 @@ class GrantSelfDomainFullChainSplitProbe(
                     )
                 }
                 diagnostics.add("private-final", privateResult.detail)
-                result = selectFinalResult(publicResult, hiddenResult, privateResult)
+                val grantAttestationResult = if (
+                    publicResult.isDanger() ||
+                    hiddenResult.isDanger() ||
+                    privateResult.isDanger()
+                ) {
+                    GrantSelfDomainFullChainSplitResult(
+                        detail = "skipped because earlier grant self-domain stage already detected danger",
+                    )
+                } else {
+                    inspectGrantDescriptorCustomAttestation(
+                        useStrongBox = useStrongBox,
+                        selfUid = selfUid,
+                        diagnostics = diagnostics,
+                    )
+                }
+                diagnostics.add("grant-attest-final", grantAttestationResult.detail)
+                result = selectFinalResult(publicResult, hiddenResult, privateResult, grantAttestationResult)
                 result = result.copy(diagnosticCopyText = diagnostics.text())
             }
         } catch (throwable: Throwable) {
@@ -212,6 +228,117 @@ class GrantSelfDomainFullChainSplitProbe(
             }
         }
         return stageResult
+    }
+
+    private fun inspectGrantDescriptorCustomAttestation(
+        useStrongBox: Boolean,
+        selfUid: Int,
+        diagnostics: GrantDetectionDiagnosticLog,
+    ): GrantSelfDomainFullChainSplitResult {
+        if (useStrongBox) {
+            return GrantSelfDomainFullChainSplitResult(
+                detail = "Private grant-attest: skipped for StrongBox pass.",
+            )
+        }
+        val keyStore = AndroidKeyStoreTools.loadKeyStore()
+        val baselineAlias = "duck_grant_attest_self_base_${System.nanoTime()}"
+        val attestAlias = "duck_grant_attest_self_ak_${System.nanoTime()}"
+        val subjectAlias = "duck_grant_attest_self_sub_${System.nanoTime()}"
+        val binderClient = Keystore2PrivateBinderClient()
+        val grantClient = Keystore2PrivateGrantClient(binderClient)
+        var session: Keystore2PrivateSession? = null
+        var grantCreated = false
+        var service: Any? = null
+        try {
+            service = binderClient.getKeystoreService() ?: return GrantSelfDomainFullChainSplitResult(
+                detail = "Private grant-attest: Keystore2 service unavailable.",
+            )
+            val sessionResult = binderClient.openSession(useStrongBox = false)
+            session = sessionResult.session ?: return GrantSelfDomainFullChainSplitResult(
+                detail = "Private grant-attest: ${sessionResult.failureReason ?: "private session unavailable"}.",
+            )
+            runCatching {
+                binderClient.generateSigningKey(
+                    securityLevel = session.securityLevel,
+                    keyDescriptor = binderClient.createKeyDescriptor(baselineAlias),
+                    attestationKeyDescriptor = null,
+                    attest = true,
+                )
+                binderClient.getKeyEntry(service, binderClient.createKeyDescriptor(baselineAlias))
+            }.getOrElse { throwable ->
+                diagnostics.addThrowable("grant-attest-baseline-app-read", throwable)
+                return GrantSelfDomainFullChainSplitResult(
+                    detail = "Private grant-attest: baseline APP getKeyEntry unavailable after ordinary private generateKey (${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}).",
+                )
+            }
+            if (!AndroidKeyStoreTools.generateAttestOnlyEcKey(keyStore, attestAlias)) {
+                return GrantSelfDomainFullChainSplitResult(
+                    detail = "Private grant-attest: PURPOSE_ATTEST_KEY generation unavailable.",
+                )
+            }
+            val grantResult = grantClient.grantAliasToUid(service, attestAlias, selfUid)
+            grantResult.throwable?.let { diagnostics.addThrowable("grant-attest-grant", it) }
+            val grantId = grantResult.grantId
+            if (!grantResult.available || grantId == null) {
+                return GrantSelfDomainFullChainSplitResult(
+                    detail = "Private grant-attest: ${grantResult.detail}",
+                )
+            }
+            grantCreated = true
+            binderClient.generateSigningKey(
+                securityLevel = session.securityLevel,
+                keyDescriptor = binderClient.createKeyDescriptor(subjectAlias),
+                attestationKeyDescriptor = grantClient.createGrantDescriptor(grantId),
+                attest = true,
+            )
+            val appDescriptor = binderClient.createKeyDescriptor(subjectAlias)
+            val appReadFailure = runCatching {
+                binderClient.getKeyEntry(service, appDescriptor)
+            }.exceptionOrNull()
+            if (appReadFailure == null) {
+                return GrantSelfDomainFullChainSplitResult(
+                    executed = true,
+                    available = true,
+                    grantIdPresent = true,
+                    anomalyKind = GrantSelfDomainAnomalyKind.NONE,
+                    detail = "Private grant-attest: clean APP getKeyEntry after GRANT custom attestation; baseline APP readback ok.",
+                )
+            }
+            diagnostics.addThrowable("grant-attest-app-read", appReadFailure)
+            val errorKind = classifyKeystore2PrivateGrantFailure(
+                throwableClassName = appReadFailure.javaClass.name,
+                message = appReadFailure.message,
+                serviceSpecificErrorCode = binderClient.extractServiceSpecificErrorCode(appReadFailure),
+            )
+            return if (errorKind == Keystore2PrivateGrantErrorKind.KEY_NOT_FOUND) {
+                GrantSelfDomainFullChainSplitResult(
+                    executed = true,
+                    available = true,
+                    grantIdPresent = true,
+                    anomalyKind = GrantSelfDomainAnomalyKind.SELF_GRANT_ATTESTATION_APP_KEY_NOT_FOUND,
+                    detail = "Private grant-attest: APP getKeyEntry returned KEY_NOT_FOUND after GRANT custom attestation succeeded; baseline APP readback ok.",
+                )
+            } else {
+                GrantSelfDomainFullChainSplitResult(
+                    grantIdPresent = true,
+                    detail = "Private grant-attest: APP getKeyEntry failed (${GrantDomainFullChainSplitProbe.describeThrowable(appReadFailure)}).",
+                )
+            }
+        } catch (throwable: Throwable) {
+            diagnostics.addThrowable("grant-attest-failure", throwable)
+            return GrantSelfDomainFullChainSplitResult(
+                detail = "Private grant-attest failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+            )
+        } finally {
+            session?.let { binderClient.closeSession(it) }
+            if (grantCreated && service != null) {
+                val ungrantResult = grantClient.revokeAliasGrant(service, attestAlias, selfUid)
+                ungrantResult.throwable?.let { diagnostics.addThrowable("grant-attest-revoke", it) }
+            }
+            AndroidKeyStoreTools.safeDelete(keyStore, subjectAlias)
+            AndroidKeyStoreTools.safeDelete(keyStore, baselineAlias)
+            AndroidKeyStoreTools.safeDelete(keyStore, attestAlias)
+        }
     }
 
     private fun inspectJavaApi(
@@ -328,14 +455,17 @@ class GrantSelfDomainFullChainSplitProbe(
             publicResult: GrantSelfDomainFullChainSplitResult,
             hiddenResult: GrantSelfDomainFullChainSplitResult,
             privateResult: GrantSelfDomainFullChainSplitResult = GrantSelfDomainFullChainSplitResult(),
+            grantAttestationResult: GrantSelfDomainFullChainSplitResult = GrantSelfDomainFullChainSplitResult(),
         ): GrantSelfDomainFullChainSplitResult {
             // Keep the strongest signal, but preserve all stage summaries so a clean Java pass does
             // not hide a lower-level APP/GRANT plane split found by private Binder.
             // 保留最强信号，同时保留所有阶段摘要，避免 Java 绿卡掩盖 private Binder 发现的 APP/GRANT 平面断裂。
             val selected = when {
+                grantAttestationResult.isDanger() -> grantAttestationResult
                 privateResult.isDanger() -> privateResult
                 hiddenResult.isDanger() -> hiddenResult
                 publicResult.isDanger() -> publicResult
+                grantAttestationResult.executed || grantAttestationResult.available -> grantAttestationResult
                 privateResult.executed || privateResult.available -> privateResult
                 hiddenResult.executed || hiddenResult.available -> hiddenResult
                 else -> publicResult
@@ -345,7 +475,12 @@ class GrantSelfDomainFullChainSplitProbe(
                     publicDetail = publicResult.detail,
                     hiddenDetail = hiddenResult.detail,
                     privateDetail = privateResult.detail,
-                ),
+                ).let { combined ->
+                    appendGrantDetail(
+                        combined,
+                        "Grant-attest: ${grantAttestationResult.detail.ifBlank { "not executed" }}",
+                    )
+                },
             )
         }
     }
@@ -353,7 +488,8 @@ class GrantSelfDomainFullChainSplitProbe(
 
 private fun GrantSelfDomainFullChainSplitResult.isDanger(): Boolean {
     return anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT ||
-        anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
+        anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN ||
+        anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_ATTESTATION_APP_KEY_NOT_FOUND
 }
 
 data class GrantSelfDomainFullChainSplitResult(
@@ -373,5 +509,6 @@ enum class GrantSelfDomainAnomalyKind {
     NONE,
     SELF_CHAIN_SPLIT,
     SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
+    SELF_GRANT_ATTESTATION_APP_KEY_NOT_FOUND,
     UNAVAILABLE,
 }

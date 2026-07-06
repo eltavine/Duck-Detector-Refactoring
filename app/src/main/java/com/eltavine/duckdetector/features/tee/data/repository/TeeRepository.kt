@@ -352,7 +352,8 @@ private fun GrantDomainFullChainSplitResult.hasDanger(): Boolean {
 
 private fun GrantSelfDomainFullChainSplitResult.hasDanger(): Boolean {
     return anomalyKind == GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT ||
-        anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN
+        anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN ||
+        anomalyKind == GrantSelfDomainAnomalyKind.SELF_GRANT_ATTESTATION_APP_KEY_NOT_FOUND
 }
 
 private fun SyntheticGrantGranteeBlindReadbackResult.hasDanger(): Boolean {
