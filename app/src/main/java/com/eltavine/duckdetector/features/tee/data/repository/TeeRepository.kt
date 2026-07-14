@@ -155,6 +155,7 @@ class TeeRepository(
                 nativeSnapshot = native,
             )
             val deepChecks = collectDeepChecks(
+                attestationVersion = snapshot.attestationVersion ?: 2,
                 useStrongBox = snapshot.tier == TeeTier.STRONGBOX,
                 deepChecksAllowed = snapshot.tier == TeeTier.TEE || snapshot.tier == TeeTier.STRONGBOX,
                 snapshot = snapshot,
@@ -217,6 +218,7 @@ class TeeRepository(
     }
 
     private suspend fun collectDeepChecks(
+        attestationVersion: Int,
         useStrongBox: Boolean,
         deepChecksAllowed: Boolean,
         snapshot: com.eltavine.duckdetector.features.tee.data.attestation.AttestationSnapshot,
@@ -229,7 +231,7 @@ class TeeRepository(
         val pairConsistency = async { pairConsistencyProbe.inspect(useStrongBox = useStrongBox) }
         val aesGcm = async { aesGcmProbe.inspect(useStrongBox = useStrongBox) }
         val lifecycle = async { lifecycleProbe.inspect(useStrongBox = useStrongBox) }
-        val keyMintCapability = async { keyMintCapabilityProbe.inspect(useStrongBox = useStrongBox) }
+        val keyMintCapability = async { keyMintCapabilityProbe.inspect(attestationVersion = attestationVersion, useStrongBox = useStrongBox) }
         val timing = async { timingProbe.inspect(useStrongBox = useStrongBox) }
         val oversizedChallenge = async { oversizedChallengeProbe.inspect(useStrongBox = useStrongBox) }
         val keyboxImport = async { keyboxImportProbe.inspect() }

@@ -46,7 +46,7 @@ import javax.crypto.spec.PSource
 import javax.security.auth.x500.X500Principal
 
 class KeyMintCapabilityProbe {
-    fun inspect(useStrongBox: Boolean = false): KeyMintCapabilityResult {
+    fun inspect(attestationVersion: Int = 2, useStrongBox: Boolean = false): KeyMintCapabilityResult {
         val hmac = hmacSha256(useStrongBox)
         val limitedUseEc = limitedUseEc(useStrongBox)
         val ecdh = ecdhP256(useStrongBox)
@@ -58,8 +58,8 @@ class KeyMintCapabilityProbe {
         val rsaPssPkcs1 = rsaPssPkcs1Rejected(useStrongBox)
         val rsaOaepPkcs1 = rsaOaepPkcs1Rejected(useStrongBox)
         val rsaPkcs1Oaep = rsaPkcs1OaepRejected(useStrongBox)
-        val rsaOaepMgf1 = rsaOaepMgf1Sha256(useStrongBox)
-        val rsaOaepMgf1Sha1 = rsaOaepMgf1Sha1Rejected(useStrongBox)
+        val rsaOaepMgf1 = rsaOaepMgf1Sha256(attestationVersion, useStrongBox)
+        val rsaOaepMgf1Sha1 = rsaOaepMgf1Sha1Rejected(attestationVersion, useStrongBox)
         val rsaOaepSha256 = rsaOaepSha256RoundTrip(useStrongBox)
         val rsaOaepSha1 = rsaOaepSha1Rejected(useStrongBox)
         val ecNone = ecNoneRejected(useStrongBox)
@@ -516,11 +516,18 @@ class KeyMintCapabilityProbe {
         }
     }
 
-    private fun rsaOaepMgf1Sha256(useStrongBox: Boolean): CheckResult {
+    private fun rsaOaepMgf1Sha256(attestationVersion: Int, useStrongBox: Boolean): CheckResult {
         if (Build.VERSION.SDK_INT < 35) {
             return CheckResult(
                 ok = true,
                 detail = "RSA-OAEP MGF1 digest probe requires Android 15 or newer.",
+                executed = false,
+            )
+        }
+        if (attestationVersion < 100) {
+            return CheckResult(
+                ok = true,
+                detail = "RSA-OAEP MGF1 digest probe requires KeyMint 1.0 or newer.",
                 executed = false,
             )
         }
@@ -559,11 +566,18 @@ class KeyMintCapabilityProbe {
         }
     }
 
-    private fun rsaOaepMgf1Sha1Rejected(useStrongBox: Boolean): CheckResult {
+    private fun rsaOaepMgf1Sha1Rejected(attestationVersion: Int, useStrongBox: Boolean): CheckResult {
         if (Build.VERSION.SDK_INT < 35) {
             return CheckResult(
                 ok = true,
                 detail = "RSA-OAEP MGF1 digest authorization probe requires Android 15 or newer.",
+                executed = false,
+            )
+        }
+        if (attestationVersion < 100) {
+            return CheckResult(
+                ok = true,
+                detail = "RSA-OAEP MGF1 digest authorization probe requires KeyMint 1.0 or newer.",
                 executed = false,
             )
         }
