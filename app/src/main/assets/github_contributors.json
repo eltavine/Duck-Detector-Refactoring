@@ -7,7 +7,7 @@
       "asm",
       "kotlin"
     ],
-    "contributions": 99,
+    "contributions": 100,
     "name": "eltavine",
     "avatarAssetPath": "github_contributors/avatars/eltavine.jpg",
     "summaryKey": "author_summary_eltavine",
@@ -121,6 +121,14 @@
     "avatarAssetPath": "github_contributors/avatars/hsskyboy.jpg",
     "summaryKey": "author_summary_hsskyboy",
     "login": "HSSkyBoy"
+  },
+  {
+    "profileUrl": "https://github.com/salvogiangri",
+    "contributionKeys": [],
+    "contributions": 2,
+    "name": "salvogiangri",
+    "avatarAssetPath": "github_contributors/avatars/salvogiangri.jpg",
+    "login": "salvogiangri"
   },
   {
     "profileUrl": "https://github.com/SQMY-dor",
