@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.systemproperties.data.rules
 
+import android.os.Build
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertyCategory
 
 data class SystemPropertyRule(
@@ -192,13 +193,22 @@ object SystemPropertiesCatalog {
             dangerousValues = listOf("unencrypted"),
             expectedSafeValue = "encrypted",
         ),
-        SystemPropertyRule(
-            property = "sys.oem_unlock_allowed",
-            description = "OEM unlock allowed",
-            category = SystemPropertyCategory.VERIFIED_BOOT,
-            warningValues = listOf("1", "true"),
-            expectedSafeValue = "0",
-        ),
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+            SystemPropertyRule(
+                property = "sys.oem_unlock_allowed",
+                description = "OEM unlock allowed",
+                category = SystemPropertyCategory.VERIFIED_BOOT,
+                dangerousValues = listOf("*"),
+            )
+        } else {
+            SystemPropertyRule(
+                property = "sys.oem_unlock_allowed",
+                description = "OEM unlock allowed",
+                category = SystemPropertyCategory.VERIFIED_BOOT,
+                warningValues = listOf("1", "true"),
+                expectedSafeValue = "0",
+            )
+        },
         SystemPropertyRule(
             property = "ro.oem_unlock_supported",
             description = "OEM unlock supported",
