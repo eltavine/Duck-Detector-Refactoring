@@ -19,12 +19,21 @@ package com.eltavine.duckdetector.core.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.browser.customtabs.CustomTabsClient
+import androidx.browser.customtabs.CustomTabsIntent
 
 fun openExternalUri(context: Context, rawUri: String): Boolean {
     val uri = runCatching { Uri.parse(rawUri) }.getOrNull() ?: return false
-    val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (intent.resolveActivity(context.packageManager) == null) {
-        return false
+    if (CustomTabsClient.getPackageName(context, null)?.isNotBlank() == true) {
+        CustomTabsIntent.Builder()
+            .build()
+            .launchUrl(context, uri)
+        return true
+    } else {
+        val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (intent.resolveActivity(context.packageManager) == null) {
+            return false
+        }
+        return runCatching { context.startActivity(intent) }.isSuccess
     }
-    return runCatching { context.startActivity(intent) }.isSuccess
 }
