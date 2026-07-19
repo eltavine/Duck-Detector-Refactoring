@@ -7,7 +7,7 @@
       "asm",
       "kotlin"
     ],
-    "contributions": 100,
+    "contributions": 101,
     "name": "eltavine",
     "avatarAssetPath": "github_contributors/avatars/eltavine.jpg",
     "summaryKey": "author_summary_eltavine",
@@ -40,7 +40,7 @@
   {
     "profileUrl": "https://github.com/947409161",
     "contributionKeys": ["ui"],
-    "contributions": 11,
+    "contributions": 12,
     "name": "947409161",
     "avatarAssetPath": "github_contributors/avatars/947409161.jpg",
     "summaryKey": "author_summary_947409161",
@@ -193,6 +193,14 @@
     "name": "cursoragent",
     "avatarAssetPath": "github_contributors/avatars/cursoragent.jpg",
     "login": "cursoragent"
+  },
+  {
+    "profileUrl": "https://github.com/Xiaobocai08",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "Xiaobocai08",
+    "avatarAssetPath": "github_contributors/avatars/xiaobocai08.jpg",
+    "login": "Xiaobocai08"
   },
   {
     "profileUrl": "https://github.com/coolzyd9107",
