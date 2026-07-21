@@ -19,7 +19,7 @@
       "cpp",
       "kotlin"
     ],
-    "contributions": 26,
+    "contributions": 27,
     "name": "XiaoTong6666",
     "avatarAssetPath": "github_contributors/avatars/xiaotong6666.jpg",
     "summaryKey": "author_summary_xiaotong",
@@ -88,6 +88,14 @@
     "login": "VictorModi"
   },
   {
+    "profileUrl": "https://github.com/salvogiangri",
+    "contributionKeys": [],
+    "contributions": 3,
+    "name": "salvogiangri",
+    "avatarAssetPath": "github_contributors/avatars/salvogiangri.jpg",
+    "login": "salvogiangri"
+  },
+  {
     "profileUrl": "https://github.com/hamjin",
     "contributionKeys": [],
     "contributions": 2,
@@ -121,14 +129,6 @@
     "avatarAssetPath": "github_contributors/avatars/hsskyboy.jpg",
     "summaryKey": "author_summary_hsskyboy",
     "login": "HSSkyBoy"
-  },
-  {
-    "profileUrl": "https://github.com/salvogiangri",
-    "contributionKeys": [],
-    "contributions": 2,
-    "name": "salvogiangri",
-    "avatarAssetPath": "github_contributors/avatars/salvogiangri.jpg",
-    "login": "salvogiangri"
   },
   {
     "profileUrl": "https://github.com/SQMY-dor",
