@@ -30,3 +30,13 @@
 
 # Native preload launches MainActivity by explicit component name before Compose starts.
 -keepnames class com.eltavine.duckdetector.MainActivity
+
+# DashboardExportFormatter reflects over shared UI row models when building
+# exported reports. Keep the field names stable in release builds so R8 does
+# not strip detector card details from the text export.
+-keepclassmembers class com.eltavine.duckdetector.features.**.ui.model.** {
+    java.lang.String label;
+    java.lang.String value;
+    java.lang.String detail;
+    java.lang.String text;
+}
