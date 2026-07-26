@@ -768,6 +768,8 @@ class KernelCheckRepository(
             "aptkernel",
             "coolzyd9107",
             "aptusitu",
+            "Winkmoon",
+            "ShirokoNeko",
         )
 
         private val CASE_SENSITIVE_KEYWORDS = listOf("OKI")
