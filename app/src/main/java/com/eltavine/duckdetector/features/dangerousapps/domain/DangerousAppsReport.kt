@@ -41,6 +41,7 @@ enum class DangerousDetectionMethodKind(
     NATIVE_DATA_STAT("Native /data/data stat"),
     SPECIAL_PATH("Special path"),
     SCENE_LOOPBACK("Scene loopback"),
+    SCENE_DEBUGFS_CONTEXT("Scene debugfs context"),
     THANOX_IPC("IPC Probe (DROPBOX_SERVICE)"),
     ACCESSIBILITY_SERVICE("Accessibility Service"),
     SCENE_BROADCAST("Scene broadcast"),

@@ -29,6 +29,7 @@ import android.text.TextUtils
 import com.eltavine.duckdetector.features.dangerousapps.data.native.DangerousAppsNativeBridge
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.CreatePackageContextZipProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.OpenApkFdPackageProbe
+import com.eltavine.duckdetector.features.dangerousapps.data.probes.SceneDebugfsContextProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.SceneLoopbackProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.rules.DangerousAppsCatalog
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppFinding
@@ -50,6 +51,7 @@ class DangerousAppsRepository(
     private val createPackageContextZipProbe: CreatePackageContextZipProbe =
         CreatePackageContextZipProbe(context),
     private val openApkFdPackageProbe: OpenApkFdPackageProbe = OpenApkFdPackageProbe(),
+    private val sceneDebugfsContextProbe: SceneDebugfsContextProbe = SceneDebugfsContextProbe(),
     private val sceneLoopbackProbe: SceneLoopbackProbe = SceneLoopbackProbe(),
 ) {
 
@@ -219,6 +221,19 @@ class DangerousAppsRepository(
             )
         }
 
+        sceneDebugfsContextProbe.probe()
+            .takeIf { it.detected }
+            ?.let { result ->
+                appendMethod(
+                    detectedApps = detectedApps,
+                    packageName = SCENE_PACKAGE,
+                    method = DangerousDetectionMethod(
+                        kind = DangerousDetectionMethodKind.SCENE_DEBUGFS_CONTEXT,
+                        detail = result.detail,
+                    ),
+                )
+            }
+
         if (detectSceneBroadcast()) {
             appendMethod(
                 detectedApps = detectedApps,
@@ -284,6 +299,7 @@ class DangerousAppsRepository(
             add(DangerousDetectionMethodKind.NATIVE_DATA_STAT)
             add(DangerousDetectionMethodKind.SPECIAL_PATH)
             add(DangerousDetectionMethodKind.SCENE_LOOPBACK)
+            add(DangerousDetectionMethodKind.SCENE_DEBUGFS_CONTEXT)
             add(DangerousDetectionMethodKind.SCENE_BROADCAST)
             add(DangerousDetectionMethodKind.THANOX_IPC)
             add(DangerousDetectionMethodKind.ACCESSIBILITY_SERVICE)
