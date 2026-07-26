@@ -148,6 +148,18 @@ class KernelCheckRepository(
             )
         }
 
+        val nonReleaseMajorVersion = detectNonReleaseKernelMajorVersion(unameOutput)
+        if (nonReleaseMajorVersion != null) {
+            dangerFindings += KernelCheckFinding(
+                id = "non_release_kernel_version",
+                label = "Kernel major version",
+                value = nonReleaseMajorVersion,
+                detail = "Kernel release major version $nonReleaseMajorVersion does not match any " +
+                        "released Linux kernel major version.",
+                severity = KernelCheckFindingSeverity.HARD,
+            )
+        }
+
         val cmdlineMatches = nativeSnapshot.findings.details("CMDLINE|CRITICAL|")
             .ifEmpty { detectCriticalCmdlineFallback(procCmdline) }
         if (cmdlineMatches.isNotEmpty()) {
@@ -225,6 +237,7 @@ class KernelCheckRepository(
             buildNamingMethod("telegramScan", dangerById["telegram_ref"]),
             buildNamingMethod("mentionScan", dangerById["at_mention"]),
             buildNamingMethod("customKernel", dangerById["custom_kernel"]),
+            buildNamingMethod("kernelVersionCheck", dangerById["non_release_kernel_version"]),
             buildNativeMethod(
                 "cmdlineCheck",
                 dangerById["suspicious_cmdline"],
@@ -352,6 +365,28 @@ class KernelCheckRepository(
                 }
             }
         }
+    }
+
+    private fun detectNonReleaseKernelMajorVersion(
+        unameOutput: String,
+    ): String? {
+        val major = extractKernelReleaseMajor(unameOutput) ?: return null
+        return major.takeIf { it !in KNOWN_KERNEL_MAJOR_VERSIONS }
+    }
+
+    private fun extractKernelReleaseMajor(
+        source: String,
+    ): String? {
+        // Genuine `uname -a` output on Android is "Linux localhost <release> ...". Requiring
+        // that exact prefix anchors extraction to a real uname invocation and rejects the
+        // /proc/version fallback ("Linux version <release> ...") and any other reformatted or
+        // spoofed identity string, instead of guessing the release field from its position alone.
+        val tokens = source.trim().split(Regex("""\s+"""))
+        if (tokens.getOrNull(0) != "Linux" || tokens.getOrNull(1) != "localhost") {
+            return null
+        }
+        val releaseToken = tokens.getOrNull(2) ?: return null
+        return KERNEL_RELEASE_MAJOR_REGEX.find(releaseToken)?.groupValues?.get(1)
     }
 
     private fun detectCriticalCmdlineFallback(
@@ -775,7 +810,14 @@ class KernelCheckRepository(
         private val CASE_SENSITIVE_KEYWORDS = listOf("OKI")
 
         private val KEYWORD_SCAN_COUNT =
-            CUSTOM_KERNEL_KEYWORDS.size + CASE_SENSITIVE_KEYWORDS.size + 5
+            CUSTOM_KERNEL_KEYWORDS.size + CASE_SENSITIVE_KEYWORDS.size + 6
+
+        // Only the kernel release major number is checked - minor line, patch level, and
+        // kernel.org's own longterm/LTS tagging are intentionally ignored. Linux major numbers
+        // change roughly once per decade, so this stays valid far longer than a minor-line list.
+        private val KNOWN_KERNEL_MAJOR_VERSIONS = setOf("4", "5", "6")
+
+        private val KERNEL_RELEASE_MAJOR_REGEX = Regex("""^(\d{1,2})\.\d{1,3}\.\d+""")
 
         private val CMDLINE_CHECKS = listOf(
             CmdlineCheck(

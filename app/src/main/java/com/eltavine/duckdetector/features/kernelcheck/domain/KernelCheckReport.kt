@@ -111,6 +111,7 @@ data class KernelCheckReport(
             "telegram_ref",
             "at_mention",
             "custom_kernel",
+            "non_release_kernel_version",
         )
 
         private val BOOT_FINDING_IDS = setOf(

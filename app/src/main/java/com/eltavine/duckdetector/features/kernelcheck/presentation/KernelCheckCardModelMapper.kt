@@ -593,6 +593,7 @@ class KernelCheckCardModelMapper {
             "telegramScan",
             "mentionScan",
             "customKernel",
+            "kernelVersionCheck",
             "cmdlineCheck",
             "cvePatchCheck",
             "kptrRestrict",
