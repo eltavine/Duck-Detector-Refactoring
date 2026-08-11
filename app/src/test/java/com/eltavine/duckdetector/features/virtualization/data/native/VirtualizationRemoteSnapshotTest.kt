@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.virtualization.data.native
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,5 +60,50 @@ class VirtualizationRemoteSnapshotTest {
         assertEquals("1|8:1|/|/apex|ext4|/dev/block/dm-1", snapshot.apexMountKey)
         assertEquals(1, snapshot.findings.size)
         assertEquals(1, snapshot.artifactKeys.size)
+    }
+
+    @Test
+    fun `parse handles proc mount view divergence fields`() {
+        val snapshot = VirtualizationRemoteSnapshot.parse(
+            """
+            AVAILABLE=1
+            PROFILE=ISOLATED
+            PROC_MOUNT_VIEW_AVAILABLE=1
+            PROC_MOUNT_VIEW_COUNT=3
+            PROC_MOUNT_VIEW_EXPECTED=1
+            PROC_MOUNT_VIEW_PIDS=47
+            PROC_MOUNT_VIEW_DIVERGENT=1
+            PROC_MOUNT_VIEW_TOKEN_HIT=1
+            PROC_MOUNT_VIEW_TOKEN_DETAIL=/magisk /system overlay rw
+            PROC_MOUNT_VIEW_DETAIL=Scanned 47 pid(s), 3 distinct view(s), expected 1.
+            """.trimIndent(),
+        )
+
+        assertTrue(snapshot.available)
+        assertTrue(snapshot.procMountViewAvailable)
+        assertEquals(3, snapshot.procMountViewCount)
+        assertEquals(1, snapshot.procMountViewExpected)
+        assertEquals(47, snapshot.procMountViewPidCount)
+        assertTrue(snapshot.procMountViewDivergent)
+        assertTrue(snapshot.procMountViewTokenHit)
+        assertEquals("/magisk /system overlay rw", snapshot.procMountViewTokenDetail)
+        assertTrue(snapshot.procMountViewDetail.contains("3 distinct view(s)"))
+    }
+
+    @Test
+    fun `parse defaults proc mount view fields when absent`() {
+        val snapshot = VirtualizationRemoteSnapshot.parse(
+            """
+            AVAILABLE=1
+            PROFILE=ISOLATED
+            """.trimIndent(),
+        )
+
+        assertFalse(snapshot.procMountViewAvailable)
+        assertEquals(0, snapshot.procMountViewCount)
+        assertEquals(1, snapshot.procMountViewExpected)
+        assertEquals(0, snapshot.procMountViewPidCount)
+        assertFalse(snapshot.procMountViewDivergent)
+        assertFalse(snapshot.procMountViewTokenHit)
     }
 }

@@ -37,6 +37,14 @@ data class VirtualizationRemoteSnapshot(
     val apexMountKey: String = "",
     val systemMountKey: String = "",
     val vendorMountKey: String = "",
+    val procMountViewAvailable: Boolean = false,
+    val procMountViewCount: Int = 0,
+    val procMountViewExpected: Int = 1,
+    val procMountViewPidCount: Int = 0,
+    val procMountViewDivergent: Boolean = false,
+    val procMountViewTokenHit: Boolean = false,
+    val procMountViewTokenDetail: String = "",
+    val procMountViewDetail: String = "",
     val filesDir: String = "",
     val cacheDir: String = "",
     val codePath: String = "",
@@ -67,6 +75,14 @@ data class VirtualizationRemoteSnapshot(
             var apexMountKey = ""
             var systemMountKey = ""
             var vendorMountKey = ""
+            var procMountViewAvailable = false
+            var procMountViewCount = 0
+            var procMountViewExpected = 1
+            var procMountViewPidCount = 0
+            var procMountViewDivergent = false
+            var procMountViewTokenHit = false
+            var procMountViewTokenDetail = ""
+            var procMountViewDetail = ""
             var filesDir = ""
             var cacheDir = ""
             var codePath = ""
@@ -116,6 +132,16 @@ data class VirtualizationRemoteSnapshot(
                                 "APEX_MOUNT_KEY" -> apexMountKey = value
                                 "SYSTEM_MOUNT_KEY" -> systemMountKey = value
                                 "VENDOR_MOUNT_KEY" -> vendorMountKey = value
+                                "PROC_MOUNT_VIEW_AVAILABLE" -> procMountViewAvailable = value.asBool()
+                                "PROC_MOUNT_VIEW_COUNT" -> procMountViewCount = value.toIntOrNull() ?: 0
+                                "PROC_MOUNT_VIEW_EXPECTED" -> procMountViewExpected =
+                                    value.toIntOrNull() ?: 1
+                                "PROC_MOUNT_VIEW_PIDS" -> procMountViewPidCount =
+                                    value.toIntOrNull() ?: 0
+                                "PROC_MOUNT_VIEW_DIVERGENT" -> procMountViewDivergent = value.asBool()
+                                "PROC_MOUNT_VIEW_TOKEN_HIT" -> procMountViewTokenHit = value.asBool()
+                                "PROC_MOUNT_VIEW_TOKEN_DETAIL" -> procMountViewTokenDetail = value
+                                "PROC_MOUNT_VIEW_DETAIL" -> procMountViewDetail = value
                                 "FILES_DIR" -> filesDir = value
                                 "CACHE_DIR" -> cacheDir = value
                                 "CODE_PATH" -> codePath = value
@@ -141,6 +167,14 @@ data class VirtualizationRemoteSnapshot(
                 apexMountKey = apexMountKey,
                 systemMountKey = systemMountKey,
                 vendorMountKey = vendorMountKey,
+                procMountViewAvailable = procMountViewAvailable,
+                procMountViewCount = procMountViewCount,
+                procMountViewExpected = procMountViewExpected,
+                procMountViewPidCount = procMountViewPidCount,
+                procMountViewDivergent = procMountViewDivergent,
+                procMountViewTokenHit = procMountViewTokenHit,
+                procMountViewTokenDetail = procMountViewTokenDetail,
+                procMountViewDetail = procMountViewDetail,
                 filesDir = filesDir,
                 cacheDir = cacheDir,
                 codePath = codePath,

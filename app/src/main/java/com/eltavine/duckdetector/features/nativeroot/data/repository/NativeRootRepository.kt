@@ -26,6 +26,8 @@ import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuManager
 import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuManagerFingerprintProbeResult
 import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceDriftProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceDriftProbeResult
+import com.eltavine.duckdetector.features.nativeroot.data.probes.ProcMountViewDivergenceProbe
+import com.eltavine.duckdetector.features.nativeroot.data.probes.ProcMountViewDivergenceProbeResult
 import com.eltavine.duckdetector.features.nativeroot.data.probes.RootProcessAuditProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.ShellTmpMetadataProbe
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFinding
@@ -49,6 +51,8 @@ class NativeRootRepository(
     ),
     private val kernelSuManagerFingerprintProbe: KernelSuManagerFingerprintProbe =
         KernelSuManagerFingerprintProbe(context?.applicationContext),
+    private val procMountViewDivergenceProbe: ProcMountViewDivergenceProbe =
+        ProcMountViewDivergenceProbe(context?.applicationContext),
 ) {
 
     suspend fun scan(): NativeRootReport = withContext(Dispatchers.IO) {
@@ -69,13 +73,15 @@ class NativeRootRepository(
         val cgroupResult = cgroupProcessLeakProbe.run()
         val mountNamespaceResult = mountNamespaceDriftProbe.run()
         val managerFingerprintResult = kernelSuManagerFingerprintProbe.run()
+        val procMountViewResult = procMountViewDivergenceProbe.run()
         val findings =
             nativeFindings +
                     shellTmpResult.findings +
                     rootProcessResult.findings +
                     cgroupResult.findings +
                     mountNamespaceResult.findings +
-                    managerFingerprintResult.findings
+                    managerFingerprintResult.findings +
+                    procMountViewResult.findings
 
         return NativeRootReport(
             stage = NativeRootStage.READY,
@@ -112,6 +118,7 @@ class NativeRootRepository(
                 cgroupResult = cgroupResult,
                 mountNamespaceResult = mountNamespaceResult,
                 managerFingerprintResult = managerFingerprintResult,
+                procMountViewResult = procMountViewResult,
             ),
             kernelPatchSideChannel = snapshot.kernelPatchSideChannel,
             ksuSupercallAttempted = snapshot.ksuSupercallAttempted,
@@ -134,6 +141,12 @@ class NativeRootRepository(
             ksuManagerPackagePresent = managerFingerprintResult.packagePresent,
             ksuManagerTraitHitCount = managerFingerprintResult.traitHitCount,
             ksuManagerVisibilityRestricted = managerFingerprintResult.visibilityRestricted,
+            procMountViewProbeAvailable = procMountViewResult.isolatedProcessAvailable,
+            procMountViewDistinctCount = procMountViewResult.distinctViewCount,
+            procMountViewExpectedCount = procMountViewResult.expectedViewCount,
+            procMountViewPidCount = procMountViewResult.scannedPidCount,
+            procMountViewDivergent = procMountViewResult.divergent,
+            procMountViewTokenHit = procMountViewResult.tokenHit,
         )
     }
 
@@ -145,6 +158,7 @@ class NativeRootRepository(
         cgroupResult: CgroupProcessLeakProbeResult,
         mountNamespaceResult: MountNamespaceDriftProbeResult,
         managerFingerprintResult: KernelSuManagerFingerprintProbeResult,
+        procMountViewResult: ProcMountViewDivergenceProbeResult,
     ): List<NativeRootMethodResult> {
         val directFindings =
             findings.filter { it.group == NativeRootGroup.SYSCALL || it.group == NativeRootGroup.SIDE_CHANNEL }
@@ -326,6 +340,31 @@ class NativeRootRepository(
                 },
             ),
             NativeRootMethodResult(
+                label = "procMountViewDivergence",
+                summary = when {
+                    procMountViewResult.tokenHit -> "Root token"
+                    procMountViewResult.divergent ->
+                        "${procMountViewResult.distinctViewCount} view(s)"
+
+                    procMountViewResult.isolatedProcessAvailable -> "Clean"
+                    procMountViewResult.available -> "Unavailable"
+                    else -> "Unavailable"
+                },
+                outcome = when {
+                    procMountViewResult.tokenHit -> NativeRootMethodOutcome.DETECTED
+                    procMountViewResult.divergent -> NativeRootMethodOutcome.WARNING
+                    procMountViewResult.isolatedProcessAvailable -> NativeRootMethodOutcome.CLEAN
+                    else -> NativeRootMethodOutcome.SUPPORT
+                },
+                detail = buildString {
+                    append("Enumerates the /proc/<pid>/mountinfo view of every visible process from an isolated helper process and counts distinct mount tables. Selective mount hiding (Magisk DenyList / KernelSU umount) makes different processes expose different tables, so divergence from the expected baseline surfaces hidden mounts. Direct magisk/KSU//adb/ tokens in any visible table are a stronger direct signal.")
+                    if (procMountViewResult.detail.isNotBlank()) {
+                        append("\n")
+                        append(procMountViewResult.detail)
+                    }
+                },
+            ),
+            NativeRootMethodResult(
                 label = "ksuManagerFingerprint",
                 summary = when {
                     managerFingerprintResult.packagePresent && managerFingerprintResult.traitHitCount > 0 ->
@@ -384,6 +423,10 @@ class NativeRootRepository(
                     if (managerFingerprintResult.detail.isNotBlank()) {
                         append("\nManager fingerprint: ")
                         append(managerFingerprintResult.detail)
+                    }
+                    if (procMountViewResult.detail.isNotBlank()) {
+                        append("\nMount view divergence: ")
+                        append(procMountViewResult.detail)
                     }
                 },
             ),

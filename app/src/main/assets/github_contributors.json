@@ -7,7 +7,7 @@
       "asm",
       "kotlin"
     ],
-    "contributions": 104,
+    "contributions": 109,
     "name": "eltavine",
     "avatarAssetPath": "github_contributors/avatars/eltavine.jpg",
     "summaryKey": "author_summary_eltavine",
@@ -77,6 +77,14 @@
     "name": "vvb2060",
     "avatarAssetPath": "github_contributors/avatars/vvb2060.jpg",
     "login": "vvb2060"
+  },
+  {
+    "profileUrl": "https://github.com/NEURAX-FX",
+    "contributionKeys": [],
+    "contributions": 3,
+    "name": "NEURAX-FX",
+    "avatarAssetPath": "github_contributors/avatars/neurax-fx.jpg",
+    "login": "NEURAX-FX"
   },
   {
     "profileUrl": "https://github.com/VictorModi",

@@ -77,6 +77,8 @@ class NativeRootCardModelMapper {
                 report.magiskDetected -> "Magisk native indicators detected"
                 report.rootDetected -> "Root indicators detected"
                 report.hasDangerFindings -> "${report.dangerFindingCount} runtime root signal(s)"
+                report.procMountViewTokenHit -> "Root mount token exposed across process views"
+                report.procMountViewDivergent -> "Hidden mount view divergence across processes"
                 report.mountAnchorDriftCount > 0 -> "Isolated mount drift suggests namespace tampering"
                 report.mountDriftSignalCount > 0 -> "Isolated-process namespace drift needs review"
                 report.ksuManagerPackagePresent && report.ksuManagerTraitHitCount > 0 ->
@@ -104,7 +106,7 @@ class NativeRootCardModelMapper {
                     "Read-only ksu_driver hits, direct syscall hits, self-process IOC, root-manager paths, curated runtime residue paths, /data/local/tmp metadata drift, cgroup/process leakage, unexpected root processes, or isolated-process namespace drift indicate active native root infrastructure."
 
                 report.hasWarningFindings ->
-                    "Only weaker isolated-process mount drift, manager manifest fingerprints, process, cgroup, kernel, property, or metadata residue surfaced. These are review-worthy, but not as strong as direct native probes."
+                    "Only weaker isolated-process mount drift, cross-process mount view divergence, manager manifest fingerprints, process, cgroup, kernel, property, or metadata residue surfaced. These are review-worthy, but not as strong as direct native probes."
 
                 !report.nativeAvailable ->
                     "This detector relies mostly on JNI-backed native probes. Native coverage was unavailable on this build, and the remaining runtime checks stayed clean."
@@ -113,7 +115,7 @@ class NativeRootCardModelMapper {
                     "No native root indicator surfaced from available probes, but one or more direct, cgroup, isolated-process, or package-visibility evidence paths had reduced coverage."
 
                 else ->
-                    "KernelSU read-only supercall, prctl-side probes, KernelPatch side channel, self-process IOC, isolated-process mount drift, manager manifest fingerprint, SUSFS side-channel, /data/adb artifacts, curated tmp/system/storage residue paths, /data/local/tmp metadata, root-process audit, cgroup/process leakage, kernel strings, and properties stayed clean."
+                    "KernelSU read-only supercall, prctl-side probes, KernelPatch side channel, self-process IOC, isolated-process mount drift and cross-process mount view comparison, manager manifest fingerprint, SUSFS side-channel, /data/adb artifacts, curated tmp/system/storage residue paths, /data/local/tmp metadata, root-process audit, cgroup/process leakage, kernel strings, and properties stayed clean."
             }
         }
         if (report.stage != NativeRootStage.READY) {
@@ -410,6 +412,9 @@ class NativeRootCardModelMapper {
                     "Isolated mnt ns",
                     "Mount drift hits",
                     "Mount anchor drifts",
+                    "Proc mount views",
+                    "Proc view expected",
+                    "Proc view pids",
                     "Manager package",
                     "Manager traits",
                     "Cgroup paths",
@@ -441,6 +446,9 @@ class NativeRootCardModelMapper {
                     "Isolated mnt ns",
                     "Mount drift hits",
                     "Mount anchor drifts",
+                    "Proc mount views",
+                    "Proc view expected",
+                    "Proc view pids",
                     "Manager package",
                     "Manager traits",
                     "Cgroup paths",
@@ -574,6 +582,30 @@ class NativeRootCardModelMapper {
                         report.isolatedMountProbeAvailable -> DetectorStatus.allClear()
                         else -> DetectorStatus.info(InfoKind.SUPPORT)
                     },
+                ),
+                NativeRootDetailRowModel(
+                    "Proc mount views",
+                    if (report.procMountViewProbeAvailable) report.procMountViewDistinctCount.toString() else "N/A",
+                    when {
+                        report.procMountViewTokenHit -> DetectorStatus.danger()
+                        report.procMountViewDivergent -> DetectorStatus.warning()
+                        report.procMountViewProbeAvailable -> DetectorStatus.allClear()
+                        else -> DetectorStatus.info(InfoKind.SUPPORT)
+                    },
+                ),
+                NativeRootDetailRowModel(
+                    "Proc view expected",
+                    if (report.procMountViewProbeAvailable) report.procMountViewExpectedCount.toString() else "N/A",
+                    when {
+                        report.procMountViewDivergent -> DetectorStatus.warning()
+                        report.procMountViewProbeAvailable -> DetectorStatus.allClear()
+                        else -> DetectorStatus.info(InfoKind.SUPPORT)
+                    },
+                ),
+                NativeRootDetailRowModel(
+                    "Proc view pids",
+                    if (report.procMountViewProbeAvailable) report.procMountViewPidCount.toString() else "N/A",
+                    DetectorStatus.info(InfoKind.SUPPORT),
                 ),
                 NativeRootDetailRowModel(
                     "Manager package",
@@ -728,6 +760,7 @@ class NativeRootCardModelMapper {
             "susfsSideChannel",
             "selfProcessIoc",
             "isolatedMountDrift",
+            "procMountViewDivergence",
             "ksuManagerFingerprint",
             "runtimeArtifacts",
             "cgroupLeakage",
@@ -794,6 +827,7 @@ class NativeRootCardModelMapper {
     private fun NativeRootReport.hasRuntimeReducedCoverage(): Boolean {
         return !cgroupAvailable ||
                 !isolatedMountProbeAvailable ||
+                !procMountViewProbeAvailable ||
                 ksuManagerVisibilityRestricted
     }
 }
