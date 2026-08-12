@@ -78,6 +78,179 @@ class VintfKeyMintVersionProbeTest {
             ).inspect(snapshot(attestationVersion = 400, keymasterVersion = 400))
 
             assertEquals(VintfKeyMintVersionAnomalyKind.NO_DECLARATION, result.anomalyKind)
+            assertTrue(result.declarations.any { it.instance == "strongbox" })
+        }
+    }
+
+    @Test
+    fun `strongbox attestation compares strongbox aidl declaration`() {
+        withManifest(
+            """
+            <manifest version="1.0" type="device">
+                <hal format="aidl">
+                    <name>android.hardware.security.keymint</name>
+                    <version>2</version>
+                    <interface>
+                        <name>IKeyMintDevice</name>
+                        <instance>strongbox</instance>
+                    </interface>
+                </hal>
+            </manifest>
+            """.trimIndent(),
+        ) { path ->
+            val result = VintfKeyMintVersionProbe(
+                manifestDirs = emptyList(),
+                manifestFiles = listOf(path),
+            ).inspect(
+                snapshot(attestationVersion = 200, keymasterVersion = 200).copy(
+                    tier = TeeTier.STRONGBOX,
+                    attestationTier = TeeTier.STRONGBOX,
+                    keymasterTier = TeeTier.STRONGBOX,
+                ),
+            )
+
+            assertEquals(VintfKeyMintVersionAnomalyKind.NONE, result.anomalyKind)
+            assertEquals("strongbox", result.comparedDeclarations.single().instance)
+        }
+    }
+
+    @Test
+    fun `strongbox attestation compares strongbox keymaster declaration`() {
+        withManifest(
+            """
+            <manifest version="1.0" type="device">
+                <hal format="hidl">
+                    <name>android.hardware.keymaster</name>
+                    <version>4.1</version>
+                    <interface>
+                        <name>IKeymasterDevice</name>
+                        <instance>strongbox</instance>
+                    </interface>
+                </hal>
+            </manifest>
+            """.trimIndent(),
+        ) { path ->
+            val result = VintfKeyMintVersionProbe(
+                manifestDirs = emptyList(),
+                manifestFiles = listOf(path),
+            ).inspect(
+                snapshot(attestationVersion = 4, keymasterVersion = 41).copy(
+                    tier = TeeTier.STRONGBOX,
+                    attestationTier = TeeTier.STRONGBOX,
+                    keymasterTier = TeeTier.STRONGBOX,
+                ),
+            )
+
+            assertEquals(VintfKeyMintVersionAnomalyKind.NONE, result.anomalyKind)
+            assertEquals("strongbox", result.comparedDeclarations.single().instance)
+        }
+    }
+
+    @Test
+    fun `security level disagreement is a mismatch`() {
+        withManifest(
+            """
+            <manifest version="1.0" type="device">
+                <hal format="aidl">
+                    <name>android.hardware.security.keymint</name>
+                    <version>3</version>
+                    <interface>
+                        <name>IKeyMintDevice</name>
+                        <instance>default</instance>
+                    </interface>
+                </hal>
+            </manifest>
+            """.trimIndent(),
+        ) { path ->
+            val result = VintfKeyMintVersionProbe(
+                manifestDirs = emptyList(),
+                manifestFiles = listOf(path),
+            ).inspect(
+                snapshot(attestationVersion = 300, keymasterVersion = 300).copy(
+                    attestationTier = TeeTier.TEE,
+                    keymasterTier = TeeTier.STRONGBOX,
+                ),
+            )
+
+            assertEquals(VintfKeyMintVersionAnomalyKind.MISMATCH, result.anomalyKind)
+            assertTrue(result.detail.contains("security levels disagree"))
+        }
+    }
+
+    @Test
+    fun `version family disagreement is a mismatch`() {
+        withManifest(
+            """
+            <manifest version="1.0" type="device">
+                <hal format="aidl">
+                    <name>android.hardware.security.keymint</name>
+                    <version>3</version>
+                    <interface>
+                        <name>IKeyMintDevice</name>
+                        <instance>default</instance>
+                    </interface>
+                </hal>
+            </manifest>
+            """.trimIndent(),
+        ) { path ->
+            val result = VintfKeyMintVersionProbe(
+                manifestDirs = emptyList(),
+                manifestFiles = listOf(path),
+            ).inspect(snapshot(attestationVersion = 300, keymasterVersion = 41))
+
+            assertEquals(VintfKeyMintVersionAnomalyKind.MISMATCH, result.anomalyKind)
+            assertTrue(result.detail.contains("HAL family"))
+        }
+    }
+
+    @Test
+    fun `versionless aidl declaration defaults to keymint1`() {
+        withManifest(
+            """
+            <manifest version="1.0" type="device">
+                <hal format="aidl">
+                    <name>android.hardware.security.keymint</name>
+                    <interface>
+                        <name>IKeyMintDevice</name>
+                        <instance>default</instance>
+                    </interface>
+                </hal>
+            </manifest>
+            """.trimIndent(),
+        ) { path ->
+            val result = VintfKeyMintVersionProbe(
+                manifestDirs = emptyList(),
+                manifestFiles = listOf(path),
+            ).inspect(snapshot(attestationVersion = 100, keymasterVersion = 100))
+
+            assertEquals(VintfKeyMintVersionAnomalyKind.NONE, result.anomalyKind)
+            assertEquals("1", result.comparedDeclarations.single().vintfVersion)
+        }
+    }
+
+    @Test
+    fun `hidl fqname preserves version instance association`() {
+        withManifest(
+            """
+            <manifest version="1.0" type="device">
+                <hal format="hidl">
+                    <name>android.hardware.keymaster</name>
+                    <fqname>@4.0::IKeymasterDevice/default</fqname>
+                    <fqname>@4.1::IKeymasterDevice/strongbox</fqname>
+                </hal>
+            </manifest>
+            """.trimIndent(),
+        ) { path ->
+            val result = VintfKeyMintVersionProbe(
+                manifestDirs = emptyList(),
+                manifestFiles = listOf(path),
+            ).inspect(snapshot(attestationVersion = 4, keymasterVersion = 41))
+
+            assertEquals(VintfKeyMintVersionAnomalyKind.MISMATCH, result.anomalyKind)
+            assertEquals(listOf("4.0"), result.comparedDeclarations.map { it.vintfVersion })
+            assertTrue(result.declarations.none {
+                it.instance == "default" && it.vintfVersion == "4.1"
+            })
         }
     }
 

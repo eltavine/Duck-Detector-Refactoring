@@ -1027,7 +1027,8 @@ class TeeReportReducer(
                         fact(
                             "KeyMint crypto",
                             keyMintCryptoValue(artifacts),
-                            keyMintCryptoLevel(artifacts)
+                            keyMintCryptoLevel(artifacts),
+                            hiddenCopyText = keyMintCryptoDiagnosticCopyText(artifacts),
                         )
                     )
                     add(
@@ -1672,6 +1673,27 @@ class TeeReportReducer(
                 else -> "${check.name} failed: ${check.detail}"
             }
         }
+    }
+
+    private fun keyMintCryptoDiagnosticCopyText(artifacts: TeeScanArtifacts): String = buildString {
+        appendLine("tee-keymint-crypto-diagnostic=v1")
+        appendLine("tier=${effectiveTier(artifacts)}")
+        appendLine("attestationTier=${artifacts.snapshot.attestationTier ?: "null"}")
+        appendLine("keymasterTier=${artifacts.snapshot.keymasterTier ?: "null"}")
+        appendLine("attestationVersion=${artifacts.snapshot.attestationVersion ?: "null"}")
+        appendLine("keymasterVersion=${artifacts.snapshot.keymasterVersion ?: "null"}")
+        appendLine("vintfKind=${artifacts.vintfKeyMintVersion.anomalyKind}")
+        appendLine(
+            "vintfCompared=" + artifacts.vintfKeyMintVersion.comparedDeclarations
+                .joinToString { it.summary }
+                .ifBlank { "none" },
+        )
+        appendLine("vintfDiagnostic:")
+        artifacts.vintfKeyMintVersion.diagnosticCopyText.lineSequence().forEach { line ->
+            appendLine("  $line")
+        }
+        appendLine("capabilityExecuted=${artifacts.keyMintCapability.executed}")
+        append(artifacts.keyMintCapability.diagnosticCopyText.ifBlank { "probeDiagnostic=unavailable" })
     }
 
     private fun keyMintCryptoLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {

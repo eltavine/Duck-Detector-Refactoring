@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.tee.data.verification.keystore
 
 import com.eltavine.duckdetector.features.tee.data.attestation.AttestationSnapshot
+import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import java.io.File
 import java.io.StringReader
 import javax.xml.parsers.DocumentBuilderFactory
@@ -32,12 +33,32 @@ class VintfKeyMintVersionProbe(
         val manifest = readManifests()
         val actualKeymasterVersion = snapshot.keymasterVersion
         val actualAttestationVersion = snapshot.attestationVersion
-        val keyMintAttestation = (actualKeymasterVersion ?: actualAttestationVersion ?: 0) >= 100
-        val comparedDeclarations = manifest.declarations.filter { declaration ->
-            if (keyMintAttestation) {
-                declaration.family == VintfKeyMintVersionFamily.KEYMINT_AIDL
-            } else {
-                declaration.family == VintfKeyMintVersionFamily.KEYMASTER_HIDL
+        // Tier and version-family mismatches are treated as hard mismatches before any declaration match,
+        // because mixing TEE vs StrongBox or Keymaster vs KeyMint would let us compare the wrong backend.
+        // 在做 declaration 匹配之前，先把 tier 和版本家族不一致当成硬 mismatch；否则可能把 TEE 和
+        // StrongBox、或者 Keymaster 和 KeyMint 交叉比较，最后得出一个“看起来匹配、其实对象错了”的结论。
+        val versionFamilyMismatch = actualKeymasterVersion != null && actualAttestationVersion != null &&
+            (actualKeymasterVersion >= 100) != (actualAttestationVersion >= 100)
+        val tierMismatch = snapshot.attestationTier != null && snapshot.keymasterTier != null &&
+            snapshot.attestationTier != snapshot.keymasterTier
+        val keyMintAttestation = maxOf(actualKeymasterVersion ?: 0, actualAttestationVersion ?: 0) >= 100
+        val selectedTier = snapshot.keymasterTier ?: snapshot.attestationTier ?: snapshot.tier
+        val expectedInstance = if (selectedTier == TeeTier.STRONGBOX) {
+            STRONGBOX_INSTANCE
+        } else {
+            DEFAULT_INSTANCE
+        }
+        val comparedDeclarations = if (tierMismatch) {
+            emptyList()
+        } else {
+            manifest.declarations.filter { declaration ->
+                if (keyMintAttestation) {
+                    declaration.family == VintfKeyMintVersionFamily.KEYMINT_AIDL &&
+                        declaration.instance == expectedInstance
+                } else {
+                    declaration.family == VintfKeyMintVersionFamily.KEYMASTER_HIDL &&
+                        declaration.instance == expectedInstance
+                }
             }
         }
         val hasActualVersion = actualKeymasterVersion != null || actualAttestationVersion != null
@@ -45,7 +66,7 @@ class VintfKeyMintVersionProbe(
             hasActualVersion &&
             comparedDeclarations.none { it.matches(actualKeymasterVersion, actualAttestationVersion) }
         val anomalyKind = when {
-            mismatch -> VintfKeyMintVersionAnomalyKind.MISMATCH
+            tierMismatch || versionFamilyMismatch || mismatch -> VintfKeyMintVersionAnomalyKind.MISMATCH
             manifest.unreadablePaths.isNotEmpty() -> VintfKeyMintVersionAnomalyKind.UNREADABLE
             comparedDeclarations.isEmpty() -> VintfKeyMintVersionAnomalyKind.NO_DECLARATION
             !hasActualVersion -> VintfKeyMintVersionAnomalyKind.NO_ATTESTED_VERSION
@@ -60,13 +81,19 @@ class VintfKeyMintVersionProbe(
             unreadablePaths = manifest.unreadablePaths,
             attestationVersion = actualAttestationVersion,
             keymasterVersion = actualKeymasterVersion,
-            detail = detailFor(
-                anomalyKind = anomalyKind,
-                comparedDeclarations = comparedDeclarations,
-                unreadablePaths = manifest.unreadablePaths,
-                attestationVersion = actualAttestationVersion,
-                keymasterVersion = actualKeymasterVersion,
-            ),
+            detail = when {
+                tierMismatch -> "Attestation and keymaster security levels disagree: " +
+                    "attestation=${snapshot.attestationTier}, keymaster=${snapshot.keymasterTier}."
+                versionFamilyMismatch -> "Attestation and keymaster versions disagree on HAL family: " +
+                    "attestation=$actualAttestationVersion, keymaster=$actualKeymasterVersion."
+                else -> detailFor(
+                    anomalyKind = anomalyKind,
+                    comparedDeclarations = comparedDeclarations,
+                    unreadablePaths = manifest.unreadablePaths,
+                    attestationVersion = actualAttestationVersion,
+                    keymasterVersion = actualKeymasterVersion,
+                )
+            },
         )
     }
 
@@ -207,57 +234,97 @@ class VintfKeyMintVersionProbe(
         }
 
         private fun keyMintDeclarations(): List<VintfKeyMintVersionDeclaration> {
-            if (!hasInstance(KEYMINT_INTERFACE_NAME, DEFAULT_INSTANCE)) {
+            val instances = interfaceInstances(KEYMINT_INTERFACE_NAME)
+                .filter { it == DEFAULT_INSTANCE || it == STRONGBOX_INSTANCE }
+            if (instances.isEmpty()) {
                 return emptyList()
             }
-            return versions.mapNotNull { version ->
-                version.toIntOrNull()?.takeIf { it > 0 }?.let { aidlVersion ->
-                    VintfKeyMintVersionDeclaration(
-                        family = VintfKeyMintVersionFamily.KEYMINT_AIDL,
-                        sourcePath = sourcePath,
-                        format = format,
-                        halName = halName,
-                        interfaceName = KEYMINT_INTERFACE_NAME,
-                        instance = DEFAULT_INSTANCE,
-                        vintfVersion = version,
-                        expectedKeymasterVersion = aidlVersion * 100,
-                        expectedAttestationVersion = aidlVersion * 100,
-                    )
+            // Versionless AIDL HAL declarations mean version 1 in VINTF practice; treating them as missing
+            // would create a false NO_DECLARATION / false legacy skip on valid KeyMint 1 devices.
+            // VINTF 里未显式写 version 的 AIDL HAL 在实践中等价于 version 1；如果当作缺失处理，会把
+            // 合法的 KeyMint 1 设备误报成没有声明，甚至误走 legacy skip。
+            val aidlVersions = versions.ifEmpty { listOf(DEFAULT_AIDL_VERSION) }
+            return instances.flatMap { instance ->
+                aidlVersions.mapNotNull { version ->
+                    version.toIntOrNull()?.takeIf { it > 0 }?.let { aidlVersion ->
+                        VintfKeyMintVersionDeclaration(
+                            family = VintfKeyMintVersionFamily.KEYMINT_AIDL,
+                            sourcePath = sourcePath,
+                            format = format,
+                            halName = halName,
+                            interfaceName = KEYMINT_INTERFACE_NAME,
+                            instance = instance,
+                            vintfVersion = version,
+                            expectedKeymasterVersion = aidlVersion * 100,
+                            expectedAttestationVersion = aidlVersion * 100,
+                        )
+                    }
                 }
             }
+        }
+
+        private fun interfaceInstances(interfaceName: String): Set<String> {
+            val fqnameInstances = fqnames.mapNotNull { fqname ->
+                val name = fqname.substringAfter("::", fqname).substringBefore("/")
+                val instance = fqname.substringAfter("/", "")
+                instance.takeIf { name == interfaceName && it.isNotEmpty() }
+            }
+            return (interfaces[interfaceName].orEmpty() + fqnameInstances).toSet()
         }
 
         private fun keymasterDeclarations(): List<VintfKeyMintVersionDeclaration> {
-            if (!hasInstance(KEYMASTER_INTERFACE_NAME, DEFAULT_INSTANCE)) {
-                return emptyList()
-            }
-            return (versions.flatMap(::expandHidlVersions) + fqnames.mapNotNull(::versionFromFqname))
-                .distinct()
-                .mapNotNull { version ->
+            // For HIDL we must preserve the exact version-instance association from fqname.
+            // A naive cross-product would wrongly synthesize nonexistent pairs such as
+            // default@4.1 when the manifest only declares strongbox@4.1.
+            // HIDL 这里必须保留 fqname 中“版本-实例”的原始绑定关系；如果做笛卡尔积，就会伪造出
+            // manifest 根本没声明的 default@4.1 之类组合。
+            val interfaceDeclaredInstances = interfaces[KEYMASTER_INTERFACE_NAME].orEmpty()
+                .filter { it == DEFAULT_INSTANCE || it == STRONGBOX_INSTANCE }
+            val interfaceDeclarations = interfaceDeclaredInstances.flatMap { instance ->
+                versions.flatMap(::expandHidlVersions).distinct().mapNotNull { version ->
                     val expected = expectedLegacyVersions(version) ?: return@mapNotNull null
-                    VintfKeyMintVersionDeclaration(
-                        family = VintfKeyMintVersionFamily.KEYMASTER_HIDL,
-                        sourcePath = sourcePath,
-                        format = format,
-                        halName = halName,
-                        interfaceName = KEYMASTER_INTERFACE_NAME,
-                        instance = DEFAULT_INSTANCE,
-                        vintfVersion = version,
-                        expectedKeymasterVersion = expected.first,
-                        expectedAttestationVersion = expected.second,
-                    )
+                    legacyDeclaration(instance, version, expected)
                 }
+            }
+            val fqnameDeclarations = fqnames.mapNotNull { fqname ->
+                val parsed = parseHidlFqname(fqname) ?: return@mapNotNull null
+                if (
+                    parsed.interfaceName != KEYMASTER_INTERFACE_NAME ||
+                    (parsed.instance != DEFAULT_INSTANCE && parsed.instance != STRONGBOX_INSTANCE)
+                ) {
+                    return@mapNotNull null
+                }
+                val expected = expectedLegacyVersions(parsed.version) ?: return@mapNotNull null
+                legacyDeclaration(parsed.instance, parsed.version, expected)
+            }
+            return (interfaceDeclarations + fqnameDeclarations).distinct()
         }
 
-        private fun hasInstance(interfaceName: String, instance: String): Boolean {
-            return fqnames.any { fqname ->
-                fqname.substringAfter("::", fqname).substringBefore("/") == interfaceName &&
-                    fqname.substringAfter("/", "") == instance
-            } || (interfaces[interfaceName]?.contains(instance) == true)
+        private fun legacyDeclaration(
+            instance: String,
+            version: String,
+            expected: Pair<Int, Int>,
+        ): VintfKeyMintVersionDeclaration {
+            return VintfKeyMintVersionDeclaration(
+                family = VintfKeyMintVersionFamily.KEYMASTER_HIDL,
+                sourcePath = sourcePath,
+                format = format,
+                halName = halName,
+                interfaceName = KEYMASTER_INTERFACE_NAME,
+                instance = instance,
+                vintfVersion = version,
+                expectedKeymasterVersion = expected.first,
+                expectedAttestationVersion = expected.second,
+            )
         }
 
-        private fun versionFromFqname(fqname: String): String? {
-            return FQNAME_VERSION_REGEX.find(fqname)?.groupValues?.getOrNull(1)
+        private fun parseHidlFqname(fqname: String): ParsedHidlFqname? {
+            val match = HIDL_FQNAME_REGEX.matchEntire(fqname) ?: return null
+            return ParsedHidlFqname(
+                version = match.groupValues[1],
+                interfaceName = match.groupValues[2],
+                instance = match.groupValues[3],
+            )
         }
     }
 
@@ -281,7 +348,9 @@ class VintfKeyMintVersionProbe(
         private const val KEYMINT_INTERFACE_NAME = "IKeyMintDevice"
         private const val KEYMASTER_INTERFACE_NAME = "IKeymasterDevice"
         private const val DEFAULT_INSTANCE = "default"
-        private val FQNAME_VERSION_REGEX = Regex("^@([0-9]+(?:\\.[0-9]+)?)::")
+        private const val STRONGBOX_INSTANCE = "strongbox"
+        private const val DEFAULT_AIDL_VERSION = "1"
+        private val HIDL_FQNAME_REGEX = Regex("^@([0-9]+(?:\\.[0-9]+)?)::([^/]+)/(.+)$")
 
         private fun expectedLegacyVersions(version: String): Pair<Int, Int>? {
             return when (version) {
@@ -302,6 +371,12 @@ class VintfKeyMintVersionProbe(
 
         private val HIDL_VERSION_RANGE_REGEX = Regex("^([0-9]+)\\.([0-9]+)-([0-9]+)$")
     }
+
+    private data class ParsedHidlFqname(
+        val version: String,
+        val interfaceName: String,
+        val instance: String,
+    )
 }
 
 enum class VintfKeyMintVersionFamily {

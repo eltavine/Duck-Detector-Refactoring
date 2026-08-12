@@ -73,6 +73,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystor
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2PostProcessingResult
 import com.eltavine.duckdetector.features.tee.data.verification.rkp.RkpProvisionedManufacturerProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionProbe
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionFamily
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionResult
 import com.eltavine.duckdetector.features.tee.data.verification.rkp.RkpExtensionAnalyzer
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorProbeSuite
 import com.eltavine.duckdetector.features.tee.domain.TeeReport
@@ -185,10 +187,10 @@ class TeeRepository(
                 nativeSnapshot = native,
             )
             val deepChecks = collectDeepChecks(
-                attestationVersion = snapshot.attestationVersion ?: 2,
                 useStrongBox = snapshot.tier == TeeTier.STRONGBOX,
                 deepChecksAllowed = snapshot.tier == TeeTier.TEE || snapshot.tier == TeeTier.STRONGBOX,
                 snapshot = snapshot,
+                vintfKeyMintVersion = vintfKeyMintVersion,
                 timingSideChannel = timingSideChannel,
             )
 
@@ -250,10 +252,10 @@ class TeeRepository(
     }
 
     private suspend fun collectDeepChecks(
-        attestationVersion: Int,
         useStrongBox: Boolean,
         deepChecksAllowed: Boolean,
         snapshot: com.eltavine.duckdetector.features.tee.data.attestation.AttestationSnapshot,
+        vintfKeyMintVersion: VintfKeyMintVersionResult,
         timingSideChannel: com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult,
     ): DeferredChecks = coroutineScope {
         if (!deepChecksAllowed) {
@@ -263,7 +265,31 @@ class TeeRepository(
         val pairConsistency = async { pairConsistencyProbe.inspect(useStrongBox = useStrongBox) }
         val aesGcm = async { aesGcmProbe.inspect(useStrongBox = useStrongBox) }
         val lifecycle = async { lifecycleProbe.inspect(useStrongBox = useStrongBox) }
-        val keyMintCapability = async { keyMintCapabilityProbe.inspect(attestationVersion = attestationVersion, useStrongBox = useStrongBox) }
+        val keyMintCapability = async {
+            val tierConsistent = snapshot.attestationTier == null || snapshot.keymasterTier == null ||
+                snapshot.attestationTier == snapshot.keymasterTier
+            val nativeKeyMintObserved = listOfNotNull(snapshot.attestationVersion, snapshot.keymasterVersion)
+                .any { it >= 100 }
+            keyMintCapabilityProbe.inspect(
+                attestationVersion = snapshot.attestationVersion,
+                keymasterVersion = snapshot.keymasterVersion,
+                declaredKeyMintVersion = vintfKeyMintVersion.declarations
+                    .filter {
+                        it.family == VintfKeyMintVersionFamily.KEYMINT_AIDL &&
+                            it.instance == if (useStrongBox) "strongbox" else "default"
+                    }
+                    .maxOfOrNull { it.expectedKeymasterVersion },
+                legacyKeymasterDeclared = !nativeKeyMintObserved && vintfKeyMintVersion.declarations.none {
+                    it.family == VintfKeyMintVersionFamily.KEYMINT_AIDL &&
+                        it.instance == if (useStrongBox) "strongbox" else "default"
+                } && vintfKeyMintVersion.declarations.any {
+                    it.family == VintfKeyMintVersionFamily.KEYMASTER_HIDL &&
+                        it.instance == if (useStrongBox) "strongbox" else "default"
+                },
+                securityLevelsConsistent = tierConsistent,
+                useStrongBox = useStrongBox,
+            )
+        }
         val timing = async { timingProbe.inspect(useStrongBox = useStrongBox) }
         val oversizedChallenge = async { oversizedChallengeProbe.inspect(useStrongBox = useStrongBox) }
         val keyboxImport = async { keyboxImportProbe.inspect() }

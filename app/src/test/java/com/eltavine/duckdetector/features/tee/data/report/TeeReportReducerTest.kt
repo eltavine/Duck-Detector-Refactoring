@@ -48,6 +48,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportK
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.ImportKeyRetainedAttestationNarrativeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyLifecycleResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCapabilityResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMintCryptoCapabilityResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataSemanticsResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyMetadataShapeResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.KeyPairConsistencyResult
@@ -93,6 +94,74 @@ import org.junit.Test
 class TeeReportReducerTest {
 
     private val reducer = TeeReportReducer()
+
+    @Test
+    fun `isolated rsa oaep mgf1 failure remains failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                keyMintCapability = KeyMintCapabilityResult(
+                    executed = true,
+                    crypto = KeyMintCryptoCapabilityResult(
+                        rsaOaepMgf1Ok = false,
+                        rsaOaepMgf1Detail = "roundTrip=false, decryptedBytes=0.",
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.FAIL, report.supplementaryReviewLevel)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "KeyMint crypto" && it.level == TeeSignalLevel.FAIL
+        })
+    }
+
+    @Test
+    fun `rsa oaep unauthorized mgf1 digest remains failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                keyMintCapability = KeyMintCapabilityResult(
+                    executed = true,
+                    crypto = KeyMintCryptoCapabilityResult(
+                        rsaOaepMgf1Sha1Ok = false,
+                        rsaOaepMgf1Sha1Detail = "Unauthorized MGF1-SHA1 operation succeeded.",
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.FAIL, report.supplementaryReviewLevel)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "KeyMint crypto" && it.level == TeeSignalLevel.FAIL
+        })
+    }
+
+    @Test
+    fun `keymint crypto row hides full diagnostic behind copy payload`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                keyMintCapability = KeyMintCapabilityResult(
+                    executed = true,
+                    crypto = KeyMintCryptoCapabilityResult(
+                        rsaOaepMgf1Detail = "roundTrip=true, decryptedBytes=20.",
+                    ),
+                    diagnosticCopyText = "keymint-capability-diagnostic=v1\nrawBegin=true\nerrorCode=-78",
+                ),
+            ),
+        )
+
+        val row = report.sections.single { it.title == "Checks" }.items.single {
+            it.title == "KeyMint crypto"
+        }
+        assertTrue(row.body.contains("RSA-OAEP MGF1 ok"))
+        assertTrue(!row.body.contains("errorCode=-78"))
+        assertTrue(row.hiddenCopyText?.contains("tee-keymint-crypto-diagnostic=v1") == true)
+        assertTrue(row.hiddenCopyText?.contains("rawBegin=true") == true)
+        assertTrue(row.hiddenCopyText?.contains("errorCode=-78") == true)
+    }
 
     @Test
     fun `java hook becomes supplementary review without changing attestation verdict`() {

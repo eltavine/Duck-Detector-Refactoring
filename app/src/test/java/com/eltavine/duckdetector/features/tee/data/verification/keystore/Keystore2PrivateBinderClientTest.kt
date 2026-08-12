@@ -151,6 +151,9 @@ class Keystore2PrivateBinderClientTest {
         assertEquals("setEcCurve", keyParameterSetterNameForTag(0x1000000A))
         assertEquals("setKeyPurpose", keyParameterSetterNameForTag(0x20000001))
         assertEquals("setDigest", keyParameterSetterNameForTag(0x20000005))
+        assertEquals("setPaddingMode", keyParameterSetterNameForTag(0x20000006))
+        assertEquals("setLongInteger", keyParameterSetterNameForTag(0x500000C8))
+        assertEquals("setDigest", keyParameterSetterNameForTag(0x200000CB))
         assertEquals("setBoolValue", keyParameterSetterNameForTag(0x700001F7))
         assertEquals("setBlob", keyParameterSetterNameForTag(0x900002C4.toInt()))
     }

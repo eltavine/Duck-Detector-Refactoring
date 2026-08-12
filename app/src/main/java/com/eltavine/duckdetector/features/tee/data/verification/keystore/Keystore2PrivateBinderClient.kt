@@ -204,6 +204,24 @@ class Keystore2PrivateBinderClient {
         return invokeGenerateKey(securityLevel, keyDescriptor, attestationKeyDescriptor, parameters)
     }
 
+    fun generateRsaOaepKey(
+        securityLevel: Any,
+        keyDescriptor: Any,
+        mgfDigest: Int,
+    ): Any? {
+        val parameters = listOf(
+            createKeyParameter(getTagValue("ALGORITHM") ?: 0x10000002, getAlgorithmValue("RSA") ?: 1),
+            createKeyParameter(getTagValue("KEY_SIZE") ?: 0x30000003, 2048),
+            createKeyParameter(getTagValue("PURPOSE") ?: 0x20000001, getKeyPurposeValue("DECRYPT") ?: 1),
+            createKeyParameter(getTagValue("DIGEST") ?: 0x20000005, getDigestValue("SHA_2_256") ?: 4),
+            createKeyParameter(getTagValue("PADDING") ?: 0x20000006, getPaddingModeValue("RSA_OAEP") ?: 2),
+            createKeyParameter(getTagValue("RSA_PUBLIC_EXPONENT") ?: 0x500000C8, 65537L),
+            createKeyParameter(getTagValue("RSA_OAEP_MGF_DIGEST") ?: 0x200000CB, mgfDigest),
+            createKeyParameter(getTagValue("NO_AUTH_REQUIRED") ?: 0x700001F7, true),
+        )
+        return invokeGenerateKey(securityLevel, keyDescriptor, null, parameters)
+    }
+
     fun captureGenerateKeyReply(useStrongBox: Boolean = false): GenerateKeyReplyCaptureResult {
         val sessionResult = openSession(
             useStrongBox = useStrongBox,
@@ -313,6 +331,11 @@ class Keystore2PrivateBinderClient {
         return getFieldValue(metadata, "keySecurityLevel")
     }
 
+    fun getKeyMetadataSecurityLevel(keyMetadataOrResponse: Any): Int? {
+        val metadata = getMetadata(keyMetadataOrResponse) ?: keyMetadataOrResponse
+        return intEnumValue(getFieldValue(metadata, "keySecurityLevel"))
+    }
+
     fun getPureCertSecurityLevel(keyEntryResponse: Any): Any? {
         getSecurityLevelBinder(keyEntryResponse)?.let { return it }
         return getMetadataSecurityLevel(keyEntryResponse)
@@ -336,9 +359,23 @@ class Keystore2PrivateBinderClient {
         return getFieldValue(keyParameter, "tag") as? Int
     }
 
+    fun getAuthorizationSecurityLevel(authorization: Any): Int? {
+        return intEnumValue(getFieldValue(authorization, "securityLevel"))
+    }
+
     fun getAuthorizationIntValue(authorization: Any): Int? {
         val keyParameter = getFieldValue(authorization, "keyParameter") ?: return null
         return getKeyParameterIntValue(keyParameter)
+    }
+
+    fun getAuthorizationDigestValue(authorization: Any): Int? {
+        val keyParameter = getFieldValue(authorization, "keyParameter") ?: return null
+        val value = getFieldValue(keyParameter, "value") ?: return null
+        return runCatching {
+            val method = value.javaClass.getMethod("getDigest")
+            method.isAccessible = true
+            method.invoke(value) as? Int
+        }.getOrNull()
     }
 
     fun getKeyOriginValue(name: String): Int? {
@@ -396,6 +433,13 @@ class Keystore2PrivateBinderClient {
         return runCatching {
             val digestClass = loadClass("android.hardware.security.keymint.Digest")
             digestClass.getField(name).getInt(null)
+        }.getOrNull()
+    }
+
+    fun getPaddingModeValue(name: String): Int? {
+        return runCatching {
+            val paddingClass = loadClass("android.hardware.security.keymint.PaddingMode")
+            paddingClass.getField(name).getInt(null)
         }.getOrNull()
     }
 
@@ -468,11 +512,34 @@ class Keystore2PrivateBinderClient {
         return createSigningOperationParameters() + createKeyParameter(algorithmTag, ecAlgorithm)
     }
 
+    fun createRsaOaepDecryptOperationParameters(digest: Int, mgfDigest: Int?): List<Any> {
+        val purposeTag = getTagValue("PURPOSE") ?: 0x20000001
+        val digestTag = getTagValue("DIGEST") ?: 0x20000005
+        val paddingTag = getTagValue("PADDING") ?: 0x20000006
+        val mgfDigestTag = getTagValue("RSA_OAEP_MGF_DIGEST") ?: 0x200000CB
+        val decryptPurpose = getKeyPurposeValue("DECRYPT") ?: 1
+        val rsaOaepPadding = getPaddingModeValue("RSA_OAEP") ?: 2
+        return buildList {
+            add(createKeyParameter(purposeTag, decryptPurpose))
+            add(createKeyParameter(digestTag, digest))
+            add(createKeyParameter(paddingTag, rsaOaepPadding))
+            mgfDigest?.let { add(createKeyParameter(mgfDigestTag, it)) }
+        }
+    }
+
     fun createOperation(
         securityLevel: Any,
         keyDescriptor: Any,
         parameters: List<Any>,
     ): Any? {
+        // Hidden binder signatures vary less than OEM wrapper classes do, so we insist on the exact
+        // createOperation(KeyDescriptor, KeyParameter[], boolean) shape and fail closed otherwise.
+        // 这里故意要求精确签名，而不是模糊匹配任意 createOperation 重载；一旦签名不对，就说明我们
+        // 已经不在验证 AOSP 语义，而是在猜 OEM 私有包装，必须 fail closed。
+        //
+        // AOSP reference:
+        // system/hardware/interfaces/keystore2/aidl/android/system/keystore2/IKeystoreSecurityLevel.aidl
+        // https://android.googlesource.com/platform/system/hardware/interfaces/+/refs/heads/main/keystore2/aidl/android/system/keystore2/IKeystoreSecurityLevel.aidl
         val keyParameterClass = loadClass(CLASS_KEY_PARAMETER)
         val array = java.lang.reflect.Array.newInstance(keyParameterClass, parameters.size)
         parameters.forEachIndexed { index, value ->
@@ -483,28 +550,14 @@ class Keystore2PrivateBinderClient {
                 it.parameterTypes.size == 3 &&
                 it.parameterTypes[0].isAssignableFrom(keyDescriptor.javaClass) &&
                 it.parameterTypes[1].isArray &&
+                it.parameterTypes[1].componentType?.isAssignableFrom(keyParameterClass) == true &&
                 (it.parameterTypes[2] == Boolean::class.javaPrimitiveType ||
                     it.parameterTypes[2] == Boolean::class.java)
         }?.let { exactMethod ->
             exactMethod.isAccessible = true
             return exactMethod.invoke(securityLevel, keyDescriptor, array, false)
         }
-        val createOperationMethod = securityLevel.javaClass.methods.firstOrNull {
-            it.name == "createOperation" && it.parameterTypes.isNotEmpty()
-        } ?: throw NoSuchMethodException("Unable to find hidden createOperation on ${securityLevel.javaClass.name}")
-        createOperationMethod.isAccessible = true
-        val args = createOperationMethod.parameterTypes.mapIndexed { index, type ->
-            when {
-                index == 0 -> keyDescriptor
-                index == 1 && type.isArray -> array
-                type == Boolean::class.javaPrimitiveType || type == Boolean::class.java -> false
-                type == Int::class.javaPrimitiveType || type == Int::class.java -> 0
-                type == Long::class.javaPrimitiveType || type == Long::class.java -> 0L
-                type == ByteArray::class.java -> ByteArray(0)
-                else -> null
-            }
-        }.toTypedArray()
-        return createOperationMethod.invoke(securityLevel, *args)
+        throw NoSuchMethodException("Unable to find exact hidden createOperation signature on ${securityLevel.javaClass.name}")
     }
 
     fun getOperationHandle(createOperationResponse: Any?): Any? {
@@ -538,6 +591,15 @@ class Keystore2PrivateBinderClient {
 
     fun updateAadOperation(operation: Any, input: ByteArray): Any? {
         return operation.javaClass.getMethod("updateAad", ByteArray::class.java).invoke(operation, input)
+    }
+
+    fun finishOperation(operation: Any, input: ByteArray): ByteArray? {
+        val method = operation.javaClass.methods.firstOrNull {
+            it.name == "finish" &&
+                it.parameterTypes.contentEquals(arrayOf(ByteArray::class.java, ByteArray::class.java))
+        } ?: throw NoSuchMethodException("Unable to find hidden finish(byte[], byte[]) on ${operation.javaClass.name}")
+        method.isAccessible = true
+        return method.invoke(operation, input, null) as? ByteArray
     }
 
     fun isServiceSpecificException(throwable: Throwable): Boolean {
@@ -625,7 +687,14 @@ class Keystore2PrivateBinderClient {
             java.lang.reflect.Array.set(array, index, value)
         }
         val generateKeyMethod = securityLevel.javaClass.methods.firstOrNull {
-            it.name == "generateKey" && it.parameterTypes.size == 5
+            it.name == "generateKey" &&
+                it.parameterTypes.size == 5 &&
+                it.parameterTypes[0].isAssignableFrom(keyDescriptor.javaClass) &&
+                it.parameterTypes[1].isAssignableFrom(keyDescriptor.javaClass) &&
+                it.parameterTypes[2].isArray &&
+                it.parameterTypes[2].componentType?.isAssignableFrom(keyParameterClass) == true &&
+                it.parameterTypes[3] == Int::class.javaPrimitiveType &&
+                it.parameterTypes[4] == ByteArray::class.java
         } ?: throw NoSuchMethodException("Unable to find hidden generateKey signature on ${securityLevel.javaClass.name}")
         generateKeyMethod.isAccessible = true
         return HiddenMethodInvocation(
@@ -689,6 +758,11 @@ class Keystore2PrivateBinderClient {
             setter.isAccessible = true
             setter.invoke(valueObject, value)
         } catch (_: NoSuchMethodException) {
+            // Fallback is still constrained to the exact union arm name; we do not reinterpret digest as
+            // integer or padding as purpose, because that would fabricate a parameter shape different from
+            // AOSP KeyParameterValue.
+            // fallback 依旧限制在同名 union arm 内，不允许把 digest 当 integer、把 padding 当 purpose
+            // 去乱塞值，否则会伪造出偏离 AOSP KeyParameterValue 语义的参数。
             val setter = valueClass.declaredMethods.firstOrNull {
                 it.name == setterName && it.parameterTypes.size == 1
             } ?: throw NoSuchMethodException("Unable to find $setterName on ${valueClass.name}")
@@ -937,7 +1011,17 @@ class Keystore2PrivateBinderClient {
 
     private fun getKeyParameterIntValue(keyParameter: Any): Int? {
         val value = getFieldValue(keyParameter, "value") ?: return null
-        sequenceOf("getKeyPurpose", "getAlgorithm", "getOrigin", "getSecurityLevel", "getInteger")
+        sequenceOf(
+            "getKeyPurpose",
+            "getAlgorithm",
+            "getBlockMode",
+            "getPaddingMode",
+            "getDigest",
+            "getEcCurve",
+            "getOrigin",
+            "getSecurityLevel",
+            "getInteger",
+        )
             .forEach { methodName ->
                 runCatching {
                     val method = value.javaClass.getMethod(methodName)
@@ -945,11 +1029,34 @@ class Keystore2PrivateBinderClient {
                     return method.invoke(value) as? Int
                 }
             }
-        sequenceOf("keyPurpose", "algorithm", "origin", "securityLevel", "integer")
+        sequenceOf(
+            "keyPurpose",
+            "algorithm",
+            "blockMode",
+            "paddingMode",
+            "digest",
+            "ecCurve",
+            "origin",
+            "securityLevel",
+            "integer",
+        )
             .forEach { fieldName ->
                 (getFieldValue(value, fieldName) as? Int)?.let { return it }
             }
         return null
+    }
+
+    private fun intEnumValue(raw: Any?): Int? {
+        raw ?: return null
+        return when (raw) {
+            is Int -> raw
+            is Enum<*> -> raw.ordinal
+            else -> runCatching {
+                raw.javaClass.getMethod("getNumber").invoke(raw) as? Int
+            }.getOrNull() ?: runCatching {
+                raw.javaClass.getMethod("getValue").invoke(raw) as? Int
+            }.getOrNull()
+        }
     }
 
     private fun generateKeyTransactionCode(): Int {
@@ -1208,7 +1315,7 @@ internal fun keyParameterSetterNameForTag(tag: Int): String {
             1 -> "setKeyPurpose"
             2 -> "setAlgorithm"
             4 -> "setBlockMode"
-            5 -> "setDigest"
+            5, 203 -> "setDigest"
             6 -> "setPaddingMode"
             10 -> "setEcCurve"
             304 -> "setSecurityLevel"
