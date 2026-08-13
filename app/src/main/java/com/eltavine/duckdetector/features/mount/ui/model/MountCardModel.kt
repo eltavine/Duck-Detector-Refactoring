@@ -25,6 +25,7 @@ data class MountCardModel(
     val verdict: String,
     val summary: String,
     val headerFacts: List<MountHeaderFactModel>,
+    val procMountViewRows: List<MountDetailRowModel>,
     val artifactRows: List<MountDetailRowModel>,
     val runtimeRows: List<MountDetailRowModel>,
     val filesystemRows: List<MountDetailRowModel>,
@@ -46,6 +47,7 @@ data class MountDetailRowModel(
     val status: DetectorStatus,
     val detail: String? = null,
     val detailMonospace: Boolean = false,
+    val hiddenCopyText: String? = null,
 )
 
 data class MountImpactItemModel(

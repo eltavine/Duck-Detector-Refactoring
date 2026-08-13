@@ -41,6 +41,7 @@ class MountCardModelMapper {
             verdict = buildVerdict(report),
             summary = buildSummary(report),
             headerFacts = buildHeaderFacts(report),
+            procMountViewRows = listOf(procMountViewRow(report)),
             artifactRows = buildRows(
                 report.stage,
                 report.artifactRows,
@@ -84,16 +85,20 @@ class MountCardModelMapper {
     private fun buildVerdict(report: MountReport): String {
         return when (report.stage) {
             MountStage.LOADING -> "Scanning runtime mount visibility"
-            MountStage.FAILED -> "Mount scan failed"
+            MountStage.FAILED -> when {
+                report.procMountViewTokenHit -> "${report.dangerSignalCount} critical mount signal(s)"
+                report.procMountViewDivergent -> "${report.warningSignalCount} mount signal(s) need review"
+                else -> "Mount scan failed"
+            }
             MountStage.READY -> when {
-                report.dangerFindings.isNotEmpty() && hasOnlyPreloadEvidence(report) ->
-                    "${report.dangerFindings.size} critical startup signal(s)"
+                report.dangerSignalCount > 0 && hasOnlyPreloadEvidence(report) ->
+                    "${report.dangerSignalCount} critical startup signal(s)"
 
-                report.dangerFindings.isNotEmpty() -> "${report.dangerFindings.size} critical mount signal(s)"
-                report.warningFindings.isNotEmpty() && hasOnlyPreloadEvidence(report) ->
-                    "${report.warningFindings.size} startup signal(s) need review"
+                report.dangerSignalCount > 0 -> "${report.dangerSignalCount} critical mount signal(s)"
+                report.warningSignalCount > 0 && hasOnlyPreloadEvidence(report) ->
+                    "${report.warningSignalCount} startup signal(s) need review"
 
-                report.warningFindings.isNotEmpty() -> "${report.warningFindings.size} mount signal(s) need review"
+                report.warningSignalCount > 0 -> "${report.warningSignalCount} mount signal(s) need review"
                 else -> "No suspicious mount-layer signal"
             }
         }
@@ -104,10 +109,21 @@ class MountCardModelMapper {
             MountStage.LOADING ->
                 "Mount table, mountinfo, memory maps, filesystem type, and path-based root artifact probes are collecting local evidence."
 
-            MountStage.FAILED ->
-                report.errorMessage ?: "Mount scan failed before evidence could be assembled."
+            MountStage.FAILED -> when {
+                report.procMountViewTokenHit ->
+                    "A visible process mount table contains a direct root-managed mount token."
 
-            MountStage.READY -> if (hasOnlyPreloadEvidence(report) && report.dangerFindings.isNotEmpty()) {
+                report.procMountViewDivergent ->
+                    "Cross-process mount tables diverge from the isolated-process baseline."
+
+                else -> report.errorMessage ?: "Mount scan failed before evidence could be assembled."
+            }
+
+            MountStage.READY -> if (report.procMountViewTokenHit) {
+                "A visible process mount table contains a direct root-managed mount token."
+            } else if (report.procMountViewDivergent) {
+                "Cross-process mount tables diverge from the isolated-process baseline."
+            } else if (hasOnlyPreloadEvidence(report) && report.dangerFindings.isNotEmpty()) {
                 "Startup preload captured early namespace or mount anomalies before the normal runtime scan settled."
             } else if (hasOnlyPreloadEvidence(report) && report.warningFindings.isNotEmpty()) {
                 "Startup preload captured weaker early mount inconsistencies that still merit review."
@@ -127,17 +143,42 @@ class MountCardModelMapper {
     private fun buildHeaderFacts(report: MountReport): List<MountHeaderFactModel> {
         return when (report.stage) {
             MountStage.LOADING -> placeholderFacts("Pending", DetectorStatus.info(InfoKind.SUPPORT))
-            MountStage.FAILED -> placeholderFacts("Error", DetectorStatus.info(InfoKind.ERROR))
+            MountStage.FAILED -> if (report.procMountViewTokenHit || report.procMountViewDivergent) {
+                listOf(
+                    MountHeaderFactModel(
+                        label = "Critical",
+                        value = countLabel(report.dangerSignalCount),
+                        status = if (report.dangerSignalCount == 0) {
+                            DetectorStatus.allClear()
+                        } else {
+                            DetectorStatus.danger()
+                        },
+                    ),
+                    MountHeaderFactModel(
+                        label = "Review",
+                        value = countLabel(report.warningSignalCount),
+                        status = if (report.warningSignalCount == 0) {
+                            DetectorStatus.allClear()
+                        } else {
+                            DetectorStatus.warning()
+                        },
+                    ),
+                    MountHeaderFactModel("Coverage", "Error", DetectorStatus.info(InfoKind.ERROR)),
+                    MountHeaderFactModel("Native", "Error", DetectorStatus.info(InfoKind.ERROR)),
+                )
+            } else {
+                placeholderFacts("Error", DetectorStatus.info(InfoKind.ERROR))
+            }
             MountStage.READY -> listOf(
                 MountHeaderFactModel(
                     label = "Critical",
-                    value = countLabel(report.dangerFindings.size),
-                    status = if (report.dangerFindings.isEmpty()) DetectorStatus.allClear() else DetectorStatus.danger(),
+                    value = countLabel(report.dangerSignalCount),
+                    status = if (report.dangerSignalCount == 0) DetectorStatus.allClear() else DetectorStatus.danger(),
                 ),
                 MountHeaderFactModel(
                     label = "Review",
-                    value = countLabel(report.warningFindings.size),
-                    status = if (report.warningFindings.isEmpty()) DetectorStatus.allClear() else DetectorStatus.warning(),
+                    value = countLabel(report.warningSignalCount),
+                    status = if (report.warningSignalCount == 0) DetectorStatus.allClear() else DetectorStatus.warning(),
                 ),
                 MountHeaderFactModel(
                     label = "Coverage",
@@ -201,18 +242,57 @@ class MountCardModelMapper {
                 ),
             )
 
-            MountStage.FAILED -> listOf(
-                MountImpactItemModel(
-                    text = report.errorMessage ?: "Mount scan failed.",
-                    status = DetectorStatus.info(InfoKind.ERROR),
-                ),
-            )
-
-            MountStage.READY -> report.impacts.map {
-                MountImpactItemModel(
-                    text = it.text,
-                    status = severityStatus(it.severity),
+            MountStage.FAILED -> buildList {
+                if (report.procMountViewTokenHit) {
+                    add(
+                        MountImpactItemModel(
+                            text = "A direct root token in a visible process mount table is strong evidence of a root-managed mount layer.",
+                            status = DetectorStatus.danger(),
+                        ),
+                    )
+                } else if (report.procMountViewDivergent) {
+                    add(
+                        MountImpactItemModel(
+                            text = "Different processes expose different mount tables to the isolated observer, which can indicate selective mount hiding.",
+                            status = DetectorStatus.warning(),
+                        ),
+                    )
+                }
+                add(
+                    MountImpactItemModel(
+                        text = report.errorMessage ?: "Mount scan failed.",
+                        status = DetectorStatus.info(InfoKind.ERROR),
+                    ),
                 )
+            }
+
+            MountStage.READY -> buildList {
+                if (report.procMountViewTokenHit) {
+                    add(
+                        MountImpactItemModel(
+                            text = "A direct root token in a visible process mount table is strong evidence of a root-managed mount layer.",
+                            status = DetectorStatus.danger(),
+                        ),
+                    )
+                } else if (report.procMountViewDivergent) {
+                    add(
+                        MountImpactItemModel(
+                            text = "Different processes expose different mount tables to the isolated observer, which can indicate selective mount hiding.",
+                            status = DetectorStatus.warning(),
+                        ),
+                    )
+                }
+                report.impacts
+                    .filterNot { impact ->
+                        (report.procMountViewTokenHit || report.procMountViewDivergent) &&
+                                impact.severity == MountFindingSeverity.SAFE
+                    }
+                    .mapTo(this) {
+                        MountImpactItemModel(
+                            text = it.text,
+                            status = severityStatus(it.severity),
+                        )
+                    }
             }
         }
     }
@@ -241,6 +321,59 @@ class MountCardModelMapper {
                 )
             }
         }
+    }
+
+    private fun procMountViewRow(report: MountReport): MountDetailRowModel {
+        // Keep the row visible even when another probe fails; detail stays in hiddenCopyText.
+        // 其他 probe 失败时仍保留该 row，完整 detail 通过 hiddenCopyText 取证复制。
+        val value = when {
+            report.stage == MountStage.LOADING -> "Pending"
+            report.procMountViewTokenKind == "KSU" -> "KSU mount"
+            report.procMountViewTokenKind == "magisk" -> "Magisk mount"
+            report.procMountViewTokenHit -> "Root mount"
+            report.procMountViewDivergent -> "${report.procMountViewDistinctCount} view(s)"
+            report.procMountViewProbeAvailable -> "Clean"
+            else -> "Unavailable"
+        }
+        val status = when {
+            report.stage == MountStage.LOADING -> DetectorStatus.info(InfoKind.SUPPORT)
+            report.procMountViewTokenHit -> DetectorStatus.danger()
+            report.procMountViewDivergent -> DetectorStatus.warning()
+            report.procMountViewProbeAvailable -> DetectorStatus.allClear()
+            else -> DetectorStatus.info(InfoKind.SUPPORT)
+        }
+        val detail = report.procMountViewDetail.ifBlank {
+            "The isolated helper process did not return cross-process mount view data."
+        }
+        val visibleDetail = when {
+            report.procMountViewTokenDetail.isNotBlank() -> report.procMountViewTokenDetail
+            report.procMountViewDivergent -> detail
+            else -> null
+        }
+        return MountDetailRowModel(
+            label = "Cross-process mount views",
+            value = value,
+            status = status,
+            detail = visibleDetail,
+            detailMonospace = visibleDetail != null,
+            hiddenCopyText = buildString {
+                appendLine("Cross-process mount views")
+                appendLine("Result: $value")
+                appendLine("Probe available: ${report.procMountViewProbeAvailable}")
+                appendLine("Distinct views: ${report.procMountViewDistinctCount}")
+                appendLine("Expected views: ${report.procMountViewExpectedCount}")
+                appendLine("Scanned PIDs: ${report.procMountViewPidCount}")
+                appendLine("Divergent: ${report.procMountViewDivergent}")
+                appendLine("Root token hit: ${report.procMountViewTokenHit}")
+                appendLine(
+                    "Matched token: ${report.procMountViewTokenKind.ifBlank { "None" }}",
+                )
+                appendLine(
+                    "Matched mountinfo line: ${report.procMountViewTokenDetail.ifBlank { "None" }}",
+                )
+                append("Detail: $detail")
+            },
+        )
     }
 
     private fun buildScanRows(report: MountReport): List<MountDetailRowModel> {
@@ -479,6 +612,9 @@ class MountCardModelMapper {
     }
 
     private fun hasOnlyPreloadEvidence(report: MountReport): Boolean {
+        if (report.procMountViewTokenHit || report.procMountViewDivergent) {
+            return false
+        }
         val findings = report.findings.filter {
             it.severity == MountFindingSeverity.DANGER || it.severity == MountFindingSeverity.WARNING
         }
@@ -488,10 +624,14 @@ class MountCardModelMapper {
     private fun MountReport.toDetectorStatus(): DetectorStatus {
         return when (stage) {
             MountStage.LOADING -> DetectorStatus.info(InfoKind.SUPPORT)
-            MountStage.FAILED -> DetectorStatus.info(InfoKind.ERROR)
+            MountStage.FAILED -> when {
+                dangerSignalCount > 0 -> DetectorStatus.danger()
+                warningSignalCount > 0 -> DetectorStatus.warning()
+                else -> DetectorStatus.info(InfoKind.ERROR)
+            }
             MountStage.READY -> when {
-                dangerFindings.isNotEmpty() -> DetectorStatus.danger()
-                warningFindings.isNotEmpty() -> DetectorStatus.warning()
+                dangerSignalCount > 0 -> DetectorStatus.danger()
+                warningSignalCount > 0 -> DetectorStatus.warning()
                 else -> DetectorStatus.allClear()
             }
         }

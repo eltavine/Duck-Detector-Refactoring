@@ -22,11 +22,13 @@ import java.io.File
  * Enumerates the /proc/<pid>/mountinfo view of every process visible from the current one and
  * reports how many distinct mount tables exist across processes.
  *
- * Technique ported from the PrivIsolated project: a clean observer process (an Android isolated
- * helper in the real detector) reads each other process's mountinfo. Root solutions that hide
- * mounts selectively (Magisk DenyList / KernelSU umount) make different processes see different
- * tables, so the number of distinct views exceeds the expected count (1, or 2 when a shared
- * propagation group is present). Direct root tokens in any view are reported separately.
+ * Ported from PrivIsolated: an isolated observer compares canonicalized
+ * `/proc/<pid>/mountinfo` tables to expose selective mount hiding.
+ * isolated observer 比较规范化后的 mountinfo；同一设备出现不同视图，说明 mount 可能只对
+ * 部分进程隐藏。共享传播组允许两个基线视图，因此 expected 与 observed 分开保存。
+ * Direct tokens are structured evidence, avoiding later family guesses from display text.
+ * 直接 token 单独记录，避免上层从展示文本反推 Magisk/KernelSU 家族。
+ * https://android.googlesource.com/platform/system/core/+/refs/heads/main/init/mount_namespace.cpp
  *
  * This class is intentionally free of Android framework dependencies so it can run inside the
  * isolated helper process and be unit-tested on the JVM.
@@ -37,6 +39,7 @@ data class ProcMountViewScanResult(
     val expectedViewCount: Int,
     val scannedPidCount: Int,
     val tokenHit: Boolean,
+    val tokenKind: String,
     val tokenHitDetail: String,
     val detail: String,
 ) {
@@ -45,6 +48,7 @@ data class ProcMountViewScanResult(
 }
 
 internal data class ParsedProcMount(
+    val rawLine: String,
     val mountId: Int,
     val root: String,
     val point: String,
@@ -61,6 +65,9 @@ internal data class ParsedProcMount(
 
     companion object {
         fun parse(line: String): ParsedProcMount? {
+            // Optional fields are variable-length; " - " is the kernel-defined boundary before
+            // filesystem fields. optional fields 数量不固定，不能只按空白位置解析。
+            // https://www.kernel.org/doc/html/latest/filesystems/proc.html
             val separator = line.indexOf(" - ")
             if (separator < 0) {
                 return null
@@ -80,6 +87,7 @@ internal data class ParsedProcMount(
                 ""
             }
             return ParsedProcMount(
+                rawLine = line,
                 mountId = mountId,
                 root = leftParts[3],
                 point = leftParts[4],
@@ -141,11 +149,13 @@ class ProcMountViewScanner(
         var expectedViewCount = 1
         val views = linkedSetOf<String>()
         var tokenHit = false
+        var tokenKind = ""
         var tokenHitDetail = ""
         var readablePidCount = 0
 
         pids.forEach { pid ->
-            val mounts = lineReader(pid)
+            val mounts = runCatching { lineReader(pid) }
+                .getOrDefault(emptyList())
                 .mapNotNull { line -> ParsedProcMount.parse(line) }
             if (mounts.isEmpty()) {
                 return@forEach
@@ -160,12 +170,16 @@ class ProcMountViewScanner(
                     .thenBy { it.mountId.toUInt() }
             )
 
+            // Match PrivIsolated's canonical order before hashing the table. 先规范排序再比较，
+            // 避免相同 mount tree 仅因内核枚举顺序不同而被误判成两个视图。
             val builder = StringBuilder()
             sorted.forEach { mount ->
                 val signature = mount.signature()
-                if (!tokenHit && ROOT_TOKEN_SEQUENCES.any { signature.contains(it) }) {
+                val matchedToken = ROOT_TOKEN_SEQUENCES.firstOrNull { signature.contains(it) }
+                if (!tokenHit && matchedToken != null) {
                     tokenHit = true
-                    tokenHitDetail = signature
+                    tokenKind = matchedToken
+                    tokenHitDetail = mount.rawLine
                 }
                 builder.append(signature).append('\n')
             }
@@ -179,6 +193,7 @@ class ProcMountViewScanner(
                 expectedViewCount = expectedViewCount,
                 scannedPidCount = pids.size,
                 tokenHit = false,
+                tokenKind = "",
                 tokenHitDetail = "",
                 detail = buildString {
                     append("Scanned ")
@@ -194,6 +209,7 @@ class ProcMountViewScanner(
             expectedViewCount = expectedViewCount,
             scannedPidCount = pids.size,
             tokenHit = tokenHit,
+            tokenKind = tokenKind,
             tokenHitDetail = tokenHitDetail,
             detail = buildString {
                 append("Scanned ")
@@ -220,6 +236,7 @@ class ProcMountViewScanner(
             expectedViewCount = 1,
             scannedPidCount = 0,
             tokenHit = false,
+            tokenKind = "",
             tokenHitDetail = "",
             detail = reason,
         )

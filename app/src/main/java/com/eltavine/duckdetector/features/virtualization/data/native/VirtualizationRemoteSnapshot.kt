@@ -43,6 +43,7 @@ data class VirtualizationRemoteSnapshot(
     val procMountViewPidCount: Int = 0,
     val procMountViewDivergent: Boolean = false,
     val procMountViewTokenHit: Boolean = false,
+    val procMountViewTokenKind: String = "",
     val procMountViewTokenDetail: String = "",
     val procMountViewDetail: String = "",
     val filesDir: String = "",
@@ -81,6 +82,7 @@ data class VirtualizationRemoteSnapshot(
             var procMountViewPidCount = 0
             var procMountViewDivergent = false
             var procMountViewTokenHit = false
+            var procMountViewTokenKind = ""
             var procMountViewTokenDetail = ""
             var procMountViewDetail = ""
             var filesDir = ""
@@ -89,6 +91,9 @@ data class VirtualizationRemoteSnapshot(
             var errorDetail = ""
             val findings = mutableListOf<VirtualizationNativeFinding>()
 
+            // Keep the Binder payload small and line-oriented so it is inspectable in tests/logs.
+            // Values with newlines are escaped by the producer and decoded exactly once here.
+            // 保持协议简单可审计；换行字段由 producer 转义，并在此处只 decode 一次。
             raw.lineSequence()
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
@@ -140,6 +145,7 @@ data class VirtualizationRemoteSnapshot(
                                     value.toIntOrNull() ?: 0
                                 "PROC_MOUNT_VIEW_DIVERGENT" -> procMountViewDivergent = value.asBool()
                                 "PROC_MOUNT_VIEW_TOKEN_HIT" -> procMountViewTokenHit = value.asBool()
+                                "PROC_MOUNT_VIEW_TOKEN_KIND" -> procMountViewTokenKind = value
                                 "PROC_MOUNT_VIEW_TOKEN_DETAIL" -> procMountViewTokenDetail = value
                                 "PROC_MOUNT_VIEW_DETAIL" -> procMountViewDetail = value
                                 "FILES_DIR" -> filesDir = value
@@ -173,6 +179,7 @@ data class VirtualizationRemoteSnapshot(
                 procMountViewPidCount = procMountViewPidCount,
                 procMountViewDivergent = procMountViewDivergent,
                 procMountViewTokenHit = procMountViewTokenHit,
+                procMountViewTokenKind = procMountViewTokenKind,
                 procMountViewTokenDetail = procMountViewTokenDetail,
                 procMountViewDetail = procMountViewDetail,
                 filesDir = filesDir,

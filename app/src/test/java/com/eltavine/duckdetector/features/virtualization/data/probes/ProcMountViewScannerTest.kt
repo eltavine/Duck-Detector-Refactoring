@@ -74,7 +74,8 @@ class ProcMountViewScannerTest {
 
         assertTrue(result.available)
         assertTrue(result.tokenHit)
-        assertTrue(result.tokenHitDetail.contains("magisk"))
+        assertEquals("magisk", result.tokenKind)
+        assertEquals(magiskView[1], result.tokenHitDetail)
     }
 
     @Test

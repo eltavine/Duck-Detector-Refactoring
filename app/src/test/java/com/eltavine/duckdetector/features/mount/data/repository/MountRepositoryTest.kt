@@ -22,6 +22,9 @@ import com.eltavine.duckdetector.features.mount.data.native.MountNativeBridge
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeFinding
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeSnapshot
 import com.eltavine.duckdetector.features.mount.domain.MountStage
+import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationRemoteProfile
+import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationRemoteSnapshot
+import com.eltavine.duckdetector.features.virtualization.data.service.VirtualizationIsolatedProbeManager
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -188,6 +191,37 @@ class MountRepositoryTest {
             assertTrue(report.findings.any { it.label == "Mount ID loophole" })
         }
 
+    @Test
+    fun `isolated proc mount evidence is owned by mount report`() = runBlocking {
+        val report = MountRepository(
+            nativeBridge = FakeMountNativeBridge(snapshot = cleanSnapshot()),
+            preloadResultProvider = { EarlyMountPreloadResult.empty() },
+            isolatedProbeManager = FakeIsolatedProbeManager(
+                VirtualizationRemoteSnapshot(
+                    available = true,
+                    profile = VirtualizationRemoteProfile.ISOLATED,
+                    procMountViewAvailable = true,
+                    procMountViewCount = 2,
+                    procMountViewExpected = 1,
+                    procMountViewPidCount = 40,
+                    procMountViewDivergent = true,
+                    procMountViewTokenHit = true,
+                    procMountViewTokenKind = "/adb/",
+                    procMountViewTokenDetail = "/data/adb/modules/example",
+                    procMountViewDetail = "Two views and a direct token.",
+                ),
+            ),
+        ).scan()
+
+        assertTrue(report.procMountViewProbeAvailable)
+        assertEquals(2, report.procMountViewDistinctCount)
+        assertEquals(1, report.procMountViewExpectedCount)
+        assertEquals(40, report.procMountViewPidCount)
+        assertTrue(report.procMountViewDivergent)
+        assertTrue(report.procMountViewTokenHit)
+        assertEquals("/adb/", report.procMountViewTokenKind)
+    }
+
     private fun cleanSnapshot(): MountNativeSnapshot {
         return MountNativeSnapshot(
             available = true,
@@ -229,5 +263,11 @@ class MountRepositoryTest {
         private val snapshot: MountNativeSnapshot,
     ) : MountNativeBridge() {
         override fun collectSnapshot(): MountNativeSnapshot = snapshot
+    }
+
+    private class FakeIsolatedProbeManager(
+        private val snapshot: VirtualizationRemoteSnapshot,
+    ) : VirtualizationIsolatedProbeManager() {
+        override suspend fun collectProcMountView(): VirtualizationRemoteSnapshot = snapshot
     }
 }

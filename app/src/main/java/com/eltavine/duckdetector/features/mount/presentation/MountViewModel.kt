@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.mount.presentation
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -58,6 +59,7 @@ class MountViewModel(
             }
 
             val report = repository.scan()
+            val cardModel = mapper.map(report)
             _uiState.update {
                 it.copy(
                     stage = if (report.stage == MountStage.FAILED) {
@@ -66,18 +68,19 @@ class MountViewModel(
                         MountUiStage.READY
                     },
                     report = report,
-                    cardModel = mapper.map(report),
+                    cardModel = cardModel,
                 )
             }
         }
     }
 
     companion object {
-        fun factory(): ViewModelProvider.Factory {
+        fun factory(context: Context): ViewModelProvider.Factory {
+            val appContext = context.applicationContext
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MountViewModel(MountRepository()) as T
+                    return MountViewModel(MountRepository(appContext)) as T
                 }
             }
         }

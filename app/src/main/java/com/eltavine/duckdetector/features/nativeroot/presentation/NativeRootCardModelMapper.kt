@@ -77,8 +77,6 @@ class NativeRootCardModelMapper {
                 report.magiskDetected -> "Magisk native indicators detected"
                 report.rootDetected -> "Root indicators detected"
                 report.hasDangerFindings -> "${report.dangerFindingCount} runtime root signal(s)"
-                report.procMountViewTokenHit -> "Root mount token exposed across process views"
-                report.procMountViewDivergent -> "Hidden mount view divergence across processes"
                 report.mountAnchorDriftCount > 0 -> "Isolated mount drift suggests namespace tampering"
                 report.mountDriftSignalCount > 0 -> "Isolated-process namespace drift needs review"
                 report.ksuManagerPackagePresent && report.ksuManagerTraitHitCount > 0 ->
@@ -584,30 +582,6 @@ class NativeRootCardModelMapper {
                     },
                 ),
                 NativeRootDetailRowModel(
-                    "Proc mount views",
-                    if (report.procMountViewProbeAvailable) report.procMountViewDistinctCount.toString() else "N/A",
-                    when {
-                        report.procMountViewTokenHit -> DetectorStatus.danger()
-                        report.procMountViewDivergent -> DetectorStatus.warning()
-                        report.procMountViewProbeAvailable -> DetectorStatus.allClear()
-                        else -> DetectorStatus.info(InfoKind.SUPPORT)
-                    },
-                ),
-                NativeRootDetailRowModel(
-                    "Proc view expected",
-                    if (report.procMountViewProbeAvailable) report.procMountViewExpectedCount.toString() else "N/A",
-                    when {
-                        report.procMountViewDivergent -> DetectorStatus.warning()
-                        report.procMountViewProbeAvailable -> DetectorStatus.allClear()
-                        else -> DetectorStatus.info(InfoKind.SUPPORT)
-                    },
-                ),
-                NativeRootDetailRowModel(
-                    "Proc view pids",
-                    if (report.procMountViewProbeAvailable) report.procMountViewPidCount.toString() else "N/A",
-                    DetectorStatus.info(InfoKind.SUPPORT),
-                ),
-                NativeRootDetailRowModel(
                     "Manager package",
                     when {
                         report.ksuManagerPackagePresent -> "Present"
@@ -760,7 +734,6 @@ class NativeRootCardModelMapper {
             "susfsSideChannel",
             "selfProcessIoc",
             "isolatedMountDrift",
-            "procMountViewDivergence",
             "ksuManagerFingerprint",
             "runtimeArtifacts",
             "cgroupLeakage",
@@ -827,7 +800,6 @@ class NativeRootCardModelMapper {
     private fun NativeRootReport.hasRuntimeReducedCoverage(): Boolean {
         return !cgroupAvailable ||
                 !isolatedMountProbeAvailable ||
-                !procMountViewProbeAvailable ||
                 ksuManagerVisibilityRestricted
     }
 }

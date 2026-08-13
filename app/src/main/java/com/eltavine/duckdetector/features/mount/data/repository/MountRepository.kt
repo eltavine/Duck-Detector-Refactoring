@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.mount.data.repository
 
+import android.content.Context
 import com.eltavine.duckdetector.core.startup.preload.EarlyMountPreloadResult
 import com.eltavine.duckdetector.core.startup.preload.EarlyMountPreloadSignal
 import com.eltavine.duckdetector.core.startup.preload.EarlyMountPreloadStore
@@ -32,13 +33,19 @@ import com.eltavine.duckdetector.features.mount.domain.MountMethodOutcome
 import com.eltavine.duckdetector.features.mount.domain.MountMethodResult
 import com.eltavine.duckdetector.features.mount.domain.MountReport
 import com.eltavine.duckdetector.features.mount.domain.MountStage
+import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationRemoteProfile
+import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationRemoteSnapshot
+import com.eltavine.duckdetector.features.virtualization.data.service.VirtualizationIsolatedProbeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class MountRepository(
+    context: Context? = null,
     private val nativeBridge: MountNativeBridge = MountNativeBridge(),
     private val preloadResultProvider: () -> EarlyMountPreloadResult = EarlyMountPreloadStore::currentResult,
     private val shellTmpConcealmentProbe: ShellTmpConcealmentProbe = ShellTmpConcealmentProbe(),
+    private val isolatedProbeManager: VirtualizationIsolatedProbeManager =
+        VirtualizationIsolatedProbeManager(context?.applicationContext),
 ) {
 
     suspend fun scan(): MountReport = withContext(Dispatchers.Default) {
@@ -48,8 +55,9 @@ class MountRepository(
             }
     }
 
-    private fun scanInternal(): MountReport {
+    private suspend fun scanInternal(): MountReport {
         val snapshot = nativeBridge.collectSnapshot()
+        val procMountView = isolatedProbeManager.collectProcMountView()
         val preloadResult = sanitizePreloadResult(
             result = preloadResultProvider(),
             snapshot = snapshot,
@@ -57,6 +65,7 @@ class MountRepository(
         val shellTmpResult = shellTmpConcealmentProbe.run()
         if (!snapshot.available) {
             return MountReport.failed("Native mount snapshot was unavailable.")
+                .withProcMountView(procMountView)
         }
 
         val findings = buildFindings(snapshot, preloadResult, shellTmpResult)
@@ -85,6 +94,22 @@ class MountRepository(
             findings = findings,
             impacts = impacts,
             methods = methods,
+        ).withProcMountView(procMountView)
+    }
+
+    private fun MountReport.withProcMountView(snapshot: VirtualizationRemoteSnapshot): MountReport {
+        val available = snapshot.profile == VirtualizationRemoteProfile.ISOLATED &&
+                snapshot.procMountViewAvailable
+        return copy(
+            procMountViewProbeAvailable = available,
+            procMountViewDistinctCount = snapshot.procMountViewCount,
+            procMountViewExpectedCount = snapshot.procMountViewExpected,
+            procMountViewPidCount = snapshot.procMountViewPidCount,
+            procMountViewDivergent = snapshot.procMountViewDivergent,
+            procMountViewTokenHit = snapshot.procMountViewTokenHit,
+            procMountViewTokenKind = snapshot.procMountViewTokenKind,
+            procMountViewTokenDetail = snapshot.procMountViewTokenDetail,
+            procMountViewDetail = snapshot.procMountViewDetail.ifBlank { snapshot.errorDetail },
         )
     }
 

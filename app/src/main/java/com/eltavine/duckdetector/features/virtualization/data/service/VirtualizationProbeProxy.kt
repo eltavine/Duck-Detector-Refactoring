@@ -42,6 +42,25 @@ class VirtualizationProbeProxy(
         }
     }
 
+    fun collectProcMountView(): String {
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        return try {
+            data.writeInterfaceToken(VirtualizationProbeProtocol.DESCRIPTOR)
+            remote.transact(
+                VirtualizationProbeProtocol.TRANSACTION_COLLECT_PROC_MOUNT_VIEW,
+                data,
+                reply,
+                0,
+            )
+            reply.readException()
+            reply.readString().orEmpty()
+        } finally {
+            data.recycle()
+            reply.recycle()
+        }
+    }
+
     fun isNativeAvailable(): Boolean {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()

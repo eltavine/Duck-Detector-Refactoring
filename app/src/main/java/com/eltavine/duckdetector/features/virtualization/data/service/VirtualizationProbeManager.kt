@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.os.Build
 import com.eltavine.duckdetector.features.virtualization.data.native.SacrificialSyscallPackResult
 import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationNativeBridge
 import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationRemoteProfile
@@ -37,10 +38,29 @@ open class VirtualizationProbeManager(
     private val nativeBridge: VirtualizationNativeBridge = VirtualizationNativeBridge(),
 ) {
 
-    open suspend fun collect(): VirtualizationRemoteSnapshot {
+    open suspend fun collect(): VirtualizationRemoteSnapshot = collectRemote(
+        timeoutMs = DETECTION_TIMEOUT_MS,
+        payloadCollector = VirtualizationProbeProxy::collectSnapshot,
+    )
+
+    open suspend fun collectProcMountView(): VirtualizationRemoteSnapshot = collectRemote(
+        timeoutMs = PROC_MOUNT_VIEW_TIMEOUT_MS,
+        payloadCollector = VirtualizationProbeProxy::collectProcMountView,
+    )
+
+    private suspend fun collectRemote(
+        timeoutMs: Long,
+        payloadCollector: (VirtualizationProbeProxy) -> String,
+    ): VirtualizationRemoteSnapshot {
         val appContext = context?.applicationContext ?: return VirtualizationRemoteSnapshot()
-        return withTimeoutOrNull(DETECTION_TIMEOUT_MS) {
-            performRemoteCollection(appContext)
+        // Match PrivIsolated's named isolated instance. The manifest flag supplies the isolated
+        // UID, while bindIsolatedService gives ActivityManager a stable instance identity and
+        // mirrors the reference app's lifecycle.
+        // 对齐 PrivIsolated 的 named isolated instance：manifest flag 提供 isolated UID，
+        // bindIsolatedService 提供稳定 instance identity，并复用原版 lifecycle。
+        // https://developer.android.com/reference/android/content/Context#bindIsolatedService(android.content.Intent,%20int,%20java.lang.String,java.util.concurrent.Executor,android.content.ServiceConnection)
+        return withTimeoutOrNull(timeoutMs) {
+            performRemoteCollection(appContext, payloadCollector)
         } ?: VirtualizationRemoteSnapshot(
             available = false,
             errorDetail = "Virtualization helper process timed out.",
@@ -79,11 +99,12 @@ open class VirtualizationProbeManager(
 
     private suspend fun performRemoteCollection(
         context: Context,
+        payloadCollector: (VirtualizationProbeProxy) -> String,
     ): VirtualizationRemoteSnapshot {
         val snapshot = performRemoteCall(
             context = context,
             onConnected = { proxy ->
-                VirtualizationRemoteSnapshot.parse(proxy.collectSnapshot())
+                VirtualizationRemoteSnapshot.parse(payloadCollector(proxy))
             },
             onNullBinder = {
                 VirtualizationRemoteSnapshot(
@@ -147,12 +168,30 @@ open class VirtualizationProbeManager(
                 }
             }
 
+            override fun onNullBinding(name: ComponentName?) {
+                finish(onNullBinder())
+            }
+
             override fun onServiceDisconnected(name: ComponentName?) = Unit
         }
 
         val intent = Intent(context, serviceClass)
+        // AUTO_CREATE keeps the helper alive for this snapshot; finish/cancellation unbind it so
+        // a failed Binder call cannot leave an isolated process retained.
         bound = runCatching {
-            context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            if (expectedProfile == VirtualizationRemoteProfile.ISOLATED &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ) {
+                context.bindIsolatedService(
+                    intent,
+                    Context.BIND_AUTO_CREATE,
+                    ISOLATED_INSTANCE_NAME,
+                    context.mainExecutor,
+                    connection,
+                )
+            } else {
+                context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            }
         }.getOrDefault(false)
         if (!bound) {
             finish(onError("The dedicated virtualization probe process could not be bound."))
@@ -168,6 +207,8 @@ open class VirtualizationProbeManager(
     }
 
     companion object {
+        private const val ISOLATED_INSTANCE_NAME = "duck_mount_view"
         private const val DETECTION_TIMEOUT_MS = 6_000L
+        private const val PROC_MOUNT_VIEW_TIMEOUT_MS = 15_000L
     }
 }

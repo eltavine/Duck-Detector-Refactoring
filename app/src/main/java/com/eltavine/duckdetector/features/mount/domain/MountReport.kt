@@ -88,6 +88,15 @@ data class MountReport(
     val impacts: List<MountImpact>,
     val methods: List<MountMethodResult>,
     val errorMessage: String? = null,
+    val procMountViewProbeAvailable: Boolean = false,
+    val procMountViewDistinctCount: Int = 0,
+    val procMountViewExpectedCount: Int = 1,
+    val procMountViewPidCount: Int = 0,
+    val procMountViewDivergent: Boolean = false,
+    val procMountViewTokenHit: Boolean = false,
+    val procMountViewTokenKind: String = "",
+    val procMountViewTokenDetail: String = "",
+    val procMountViewDetail: String = "",
 ) {
     val artifactRows: List<MountFinding>
         get() = findings.filter { it.group == MountFindingGroup.ARTIFACTS }
@@ -106,6 +115,12 @@ data class MountReport(
 
     val warningFindings: List<MountFinding>
         get() = findings.filter { it.severity == MountFindingSeverity.WARNING }
+
+    val dangerSignalCount: Int
+        get() = dangerFindings.size + if (procMountViewTokenHit) 1 else 0
+
+    val warningSignalCount: Int
+        get() = warningFindings.size + if (procMountViewDivergent && !procMountViewTokenHit) 1 else 0
 
     companion object {
         fun loading(): MountReport {

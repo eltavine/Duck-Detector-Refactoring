@@ -451,7 +451,7 @@ private fun AppReadyShell(
     val kernelCheckFactory = remember { KernelCheckViewModel.factory() }
     val lsposedFactory = remember(context) { LSPosedViewModel.factory(context) }
     val memoryFactory = remember { MemoryViewModel.factory() }
-    val mountFactory = remember { MountViewModel.factory() }
+    val mountFactory = remember(context) { MountViewModel.factory(context) }
     val nativeRootFactory = remember(context) { NativeRootViewModel.factory(context) }
     val playIntegrityFixFactory = remember { PlayIntegrityFixViewModel.factory() }
     val selinuxFactory = remember(context) { SelinuxViewModel.factory(context) }

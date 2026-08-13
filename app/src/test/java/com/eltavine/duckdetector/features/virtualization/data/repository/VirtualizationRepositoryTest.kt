@@ -352,6 +352,28 @@ class VirtualizationRepositoryTest {
     }
 
     @Test
+    fun `unavailable isolated identity snapshot does not create virtualization drift`() = runBlocking {
+        val report = repository(
+            nativeSnapshot = VirtualizationNativeSnapshot(
+                available = true,
+                mountNamespaceInode = "mnt:[1]",
+                apexMountKey = "10|0:22|/|/apex|tmpfs|tmpfs",
+                vendorMountKey = "20|254:29|/|/vendor|erofs|/dev/block/dm-29",
+            ),
+            isolatedSnapshot = VirtualizationRemoteSnapshot(
+                available = false,
+                profile = VirtualizationRemoteProfile.ISOLATED,
+                errorDetail = "Identity probe failed.",
+            ),
+        ).scanInternal()
+
+        assertFalse(report.isolatedProcessAvailable)
+        assertEquals(0, report.mountAnchorDriftCount)
+        assertTrue(report.consistencyRows.none { it.label == "Isolated mount anchor drift" })
+        assertTrue(report.consistencyRows.none { it.label == "Isolated process stayed clean" })
+    }
+
+    @Test
     fun `namespace drift without comparable anchors stays warning`() = runBlocking {
         val report = repository(
             nativeSnapshot = VirtualizationNativeSnapshot(

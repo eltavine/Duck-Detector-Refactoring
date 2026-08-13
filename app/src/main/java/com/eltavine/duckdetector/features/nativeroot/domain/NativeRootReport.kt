@@ -116,12 +116,6 @@ data class NativeRootReport(
     val ksuManagerPackagePresent: Boolean = false,
     val ksuManagerTraitHitCount: Int = 0,
     val ksuManagerVisibilityRestricted: Boolean = false,
-    val procMountViewProbeAvailable: Boolean = false,
-    val procMountViewDistinctCount: Int = 0,
-    val procMountViewExpectedCount: Int = 1,
-    val procMountViewPidCount: Int = 0,
-    val procMountViewDivergent: Boolean = false,
-    val procMountViewTokenHit: Boolean = false,
 ) {
     val directFindings: List<NativeRootFinding>
         get() = findings.filter { it.group == NativeRootGroup.SYSCALL || it.group == NativeRootGroup.SIDE_CHANNEL }

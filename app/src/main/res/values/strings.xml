@@ -82,6 +82,7 @@ limitations under the License.
     <string name="update_open_failed">No browser is available to open GitHub</string>
     <string name="tee_diagnostic_clipboard_label">TEE diagnostic detail</string>
     <string name="tee_diagnostic_copied_toast">Diagnostic detail copied</string>
+    <string name="mount_diagnostic_clipboard_label">Cross-process mount view detail</string>
     <string name="author_summary_eltavine">Contributed UI, C++, ASM and Kotlin.</string>
     <string name="author_summary_baka">TEE &amp; Zygisk</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>

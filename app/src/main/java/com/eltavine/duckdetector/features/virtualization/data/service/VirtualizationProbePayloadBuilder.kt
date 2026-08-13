@@ -64,21 +64,10 @@ internal object VirtualizationProbePayloadBuilder {
                 appendLine("APEX_MOUNT_KEY=${snapshot.apexMountKey.encodeValue()}")
                 appendLine("SYSTEM_MOUNT_KEY=${snapshot.systemMountKey.encodeValue()}")
                 appendLine("VENDOR_MOUNT_KEY=${snapshot.vendorMountKey.encodeValue()}")
-                if (profile == VirtualizationRemoteProfile.ISOLATED) {
-                    val mountView = ProcMountViewScanner().scan()
-                    appendLine("PROC_MOUNT_VIEW_AVAILABLE=${if (mountView.available) 1 else 0}")
-                    appendLine("PROC_MOUNT_VIEW_COUNT=${mountView.distinctViewCount}")
-                    appendLine("PROC_MOUNT_VIEW_EXPECTED=${mountView.expectedViewCount}")
-                    appendLine("PROC_MOUNT_VIEW_PIDS=${mountView.scannedPidCount}")
-                    appendLine("PROC_MOUNT_VIEW_DIVERGENT=${if (mountView.divergent) 1 else 0}")
-                    appendLine("PROC_MOUNT_VIEW_TOKEN_HIT=${if (mountView.tokenHit) 1 else 0}")
-                    appendLine(
-                        "PROC_MOUNT_VIEW_TOKEN_DETAIL=${mountView.tokenHitDetail.encodeValue()}",
-                    )
-                    appendLine("PROC_MOUNT_VIEW_DETAIL=${mountView.detail.encodeValue()}")
-                }
-                // Isolated processes do not have the regular app data directory. Accessing
-                // filesDir/cacheDir here throws ENOENT and discards the mount-view payload.
+                // Isolated services lack normal app-private storage; filesDir/cacheDir can throw
+                // ENOENT and erase the payload. Keep storage-only probes out of this branch.
+                // isolated service 没有普通 app-private storage，不能让预期 ENOENT 抹掉 mount 证据。
+                // https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/core/res/res/values/attrs_manifest.xml
                 if (profile != VirtualizationRemoteProfile.ISOLATED) {
                     appendLine("FILES_DIR=${appContext.filesDir.absolutePath.encodeValue()}")
                     appendLine("CACHE_DIR=${appContext.cacheDir.absolutePath.encodeValue()}")
@@ -104,6 +93,27 @@ internal object VirtualizationProbePayloadBuilder {
                 appendLine("NATIVE_AVAILABLE=0")
                 appendLine("ERROR=${(throwable.message ?: "Remote snapshot failed.").encodeValue()}")
             }
+        }
+    }
+
+    fun buildProcMountViewPayload(profile: VirtualizationRemoteProfile): String {
+        if (profile != VirtualizationRemoteProfile.ISOLATED) {
+            return "AVAILABLE=0\nPROFILE=${profile.name}\nERROR=Isolated profile required.\n"
+        }
+        val mountView = ProcMountViewScanner().scan()
+        return buildString {
+            appendLine("AVAILABLE=1")
+            appendLine("PROFILE=${profile.name}")
+            appendLine("NATIVE_AVAILABLE=0")
+            appendLine("PROC_MOUNT_VIEW_AVAILABLE=${if (mountView.available) 1 else 0}")
+            appendLine("PROC_MOUNT_VIEW_COUNT=${mountView.distinctViewCount}")
+            appendLine("PROC_MOUNT_VIEW_EXPECTED=${mountView.expectedViewCount}")
+            appendLine("PROC_MOUNT_VIEW_PIDS=${mountView.scannedPidCount}")
+            appendLine("PROC_MOUNT_VIEW_DIVERGENT=${if (mountView.divergent) 1 else 0}")
+            appendLine("PROC_MOUNT_VIEW_TOKEN_HIT=${if (mountView.tokenHit) 1 else 0}")
+            appendLine("PROC_MOUNT_VIEW_TOKEN_KIND=${mountView.tokenKind.encodeValue()}")
+            appendLine("PROC_MOUNT_VIEW_TOKEN_DETAIL=${mountView.tokenHitDetail.encodeValue()}")
+            appendLine("PROC_MOUNT_VIEW_DETAIL=${mountView.detail.encodeValue()}")
         }
     }
 

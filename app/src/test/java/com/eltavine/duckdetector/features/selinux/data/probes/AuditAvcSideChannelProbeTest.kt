@@ -104,4 +104,27 @@ class AuditAvcSideChannelProbeTest {
         assertEquals("su-related AVC", result.hits.single().label)
         assertEquals("comm=su", result.hits.single().value)
     }
+
+    @Test
+    fun `self generated data adb avc is excluded`() {
+        val result = probe.evaluateSuspiciousActors(
+            """
+                08-14 14:00:00.000 1234 1234 W auditd : type=1400 audit(0.0:123): avc: denied { search } for comm="DefaultDispatch" name="adb" dev="dm-57" ino=154 scontext=u:r:untrusted_app:s0:c123,c257,c512,c768 tcontext=u:object_r:system_data_root_file:s0 tclass=dir permissive=0 app=com.eltavine.duckdetector
+            """.trimIndent(),
+        )
+
+        assertTrue(result.hits.isEmpty())
+    }
+
+    @Test
+    fun `self app marker does not hide suspicious actor`() {
+        val result = probe.evaluateSuspiciousActors(
+            """
+                08-14 14:00:00.000 1234 1234 W auditd : type=1400 audit(0.0:124): avc: denied { open } for comm="su" name="adb" dev="dm-57" ino=154 scontext=u:r:untrusted_app:s0:c123,c257,c512,c768 tcontext=u:object_r:system_data_root_file:s0 tclass=dir permissive=0 app=com.eltavine.duckdetector
+            """.trimIndent(),
+        )
+
+        assertEquals(1, result.hits.size)
+        assertEquals("comm=su", result.hits.single().value)
+    }
 }

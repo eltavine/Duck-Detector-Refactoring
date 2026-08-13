@@ -74,6 +74,7 @@ class VirtualizationRemoteSnapshotTest {
             PROC_MOUNT_VIEW_PIDS=47
             PROC_MOUNT_VIEW_DIVERGENT=1
             PROC_MOUNT_VIEW_TOKEN_HIT=1
+            PROC_MOUNT_VIEW_TOKEN_KIND=magisk
             PROC_MOUNT_VIEW_TOKEN_DETAIL=/magisk /system overlay rw
             PROC_MOUNT_VIEW_DETAIL=Scanned 47 pid(s), 3 distinct view(s), expected 1.
             """.trimIndent(),
@@ -86,6 +87,7 @@ class VirtualizationRemoteSnapshotTest {
         assertEquals(47, snapshot.procMountViewPidCount)
         assertTrue(snapshot.procMountViewDivergent)
         assertTrue(snapshot.procMountViewTokenHit)
+        assertEquals("magisk", snapshot.procMountViewTokenKind)
         assertEquals("/magisk /system overlay rw", snapshot.procMountViewTokenDetail)
         assertTrue(snapshot.procMountViewDetail.contains("3 distinct view(s)"))
     }

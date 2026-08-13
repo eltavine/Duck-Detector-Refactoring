@@ -168,23 +168,37 @@ class AuditAvcSideChannelProbe {
     private fun looksLikeForeignAvcLeak(
         line: String,
     ): Boolean {
-        if (parseCanonicalSignature(line) == null) {
-            return false
-        }
-        val normalized = line.lowercase()
+        val record = parseCanonicalRecord(line) ?: return false
+        return looksLikeForeignAvcLeak(record)
+    }
+
+    private fun looksLikeForeignAvcLeak(
+        record: AuditAvcRecord,
+    ): Boolean {
+        val normalized = record.line.lowercase()
         if (
             normalized.contains("zn-auditpatch") ||
             normalized.contains("libauditpatch.so") ||
-            normalized.contains("logd plt hook success")
+            normalized.contains("logd plt hook success") ||
+            isKnownSelfGeneratedAudit(record)
         ) {
             return false
         }
         return true
     }
 
-    private fun looksLikeForeignAvcLeak(
+    private fun isKnownSelfGeneratedAudit(
         record: AuditAvcRecord,
-    ): Boolean = looksLikeForeignAvcLeak(record.line)
+    ): Boolean {
+        val signature = record.signature
+        return SELF_APP_AUDIT_MARKER.containsMatchIn(record.line) &&
+                record.comm.equals("DefaultDispatch", ignoreCase = true) &&
+                record.name.equals("adb", ignoreCase = true) &&
+                signature.permission.equals("search", ignoreCase = true) &&
+                signature.scontext.startsWith("u:r:untrusted_app:") &&
+                signature.tcontext.equals("u:object_r:system_data_root_file:s0", ignoreCase = true) &&
+                signature.tclass.equals("dir", ignoreCase = true)
+    }
 
     private fun hasSuspiciousActor(
         record: AuditAvcRecord,
@@ -249,6 +263,10 @@ class AuditAvcSideChannelProbe {
 
     private companion object {
         private const val MAX_HITS = 3
+        private val SELF_APP_AUDIT_MARKER = Regex(
+            "(?:^|\\s)app=com\\.eltavine\\.duckdetector(?:\\s|$)",
+            RegexOption.IGNORE_CASE,
+        )
         private val PERMISSION_REGEX =
             Regex("""avc:\s*denied\s*\{\s*([^}]+)\s*\}""", RegexOption.IGNORE_CASE)
         private val COMM_REGEX = Regex("comm=\"([^\"]+)\"", RegexOption.IGNORE_CASE)

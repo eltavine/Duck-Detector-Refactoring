@@ -21,6 +21,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
+import android.os.Process
 import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationNativeBridge
 import com.eltavine.duckdetector.features.virtualization.data.native.VirtualizationRemoteProfile
 
@@ -37,6 +38,8 @@ abstract class BaseVirtualizationProbeService : Service() {
             reply: Parcel?,
             flags: Int,
         ): Boolean {
+            // Keep the Binder surface narrow and enforce the descriptor before running probes.
+            // 只暴露必要操作，并在执行 probe 前校验 descriptor，保持与 AIDL 的边界语义一致。
             return when (code) {
                 INTERFACE_TRANSACTION -> {
                     reply?.writeString(VirtualizationProbeProtocol.DESCRIPTOR)
@@ -46,7 +49,8 @@ abstract class BaseVirtualizationProbeService : Service() {
                 VirtualizationProbeProtocol.TRANSACTION_COLLECT_SNAPSHOT -> {
                     data.enforceInterface(VirtualizationProbeProtocol.DESCRIPTOR)
                     reply?.writeNoException()
-                    reply?.writeString(buildSnapshotPayload())
+                    val payload = buildSnapshotPayload()
+                    reply?.writeString(payload)
                     true
                 }
 
@@ -54,6 +58,14 @@ abstract class BaseVirtualizationProbeService : Service() {
                     data.enforceInterface(VirtualizationProbeProtocol.DESCRIPTOR)
                     reply?.writeNoException()
                     reply?.writeInt(if (nativeBridge.isNativeAvailable()) 1 else 0)
+                    true
+                }
+
+                VirtualizationProbeProtocol.TRANSACTION_COLLECT_PROC_MOUNT_VIEW -> {
+                    data.enforceInterface(VirtualizationProbeProtocol.DESCRIPTOR)
+                    reply?.writeNoException()
+                    val payload = VirtualizationProbePayloadBuilder.buildProcMountViewPayload(profile)
+                    reply?.writeString(payload)
                     true
                 }
 
@@ -113,7 +125,16 @@ abstract class BaseVirtualizationProbeService : Service() {
         }
     }
 
-    override fun onBind(intent: Intent?): IBinder = binder
+    override fun onBind(intent: Intent?): IBinder? {
+        // The reference service refuses a non-isolated bind. Keep the same fail-closed boundary
+        // for the isolated profile even though the manifest already requests isolatedProcess.
+        val allowed = profile != VirtualizationRemoteProfile.ISOLATED || Process.isIsolated()
+        return if (!allowed) {
+            null
+        } else {
+            binder
+        }
+    }
 
     private fun buildSnapshotPayload(): String {
         return VirtualizationProbePayloadBuilder.buildSnapshotPayload(
