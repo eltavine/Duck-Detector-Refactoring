@@ -140,6 +140,30 @@ class TeeReportReducerTest {
     }
 
     @Test
+    fun `skipped mgf1 checks do not become crypto failures`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                keyMintCapability = KeyMintCapabilityResult(
+                    executed = true,
+                    crypto = KeyMintCryptoCapabilityResult(
+                        rsaOaepMgf1Executed = false,
+                        rsaOaepMgf1Ok = false,
+                        rsaOaepMgf1Detail = "Skipped because security levels disagree.",
+                        rsaOaepMgf1Sha1Executed = false,
+                        rsaOaepMgf1Sha1Ok = false,
+                        rsaOaepMgf1Sha1Detail = "Skipped because security levels disagree.",
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "KeyMint crypto" && it.level == TeeSignalLevel.INFO
+        })
+    }
+
+    @Test
     fun `keymint crypto row hides full diagnostic behind copy payload`() {
         val report = reducer.reduce(
             baseArtifacts(
@@ -323,6 +347,29 @@ class TeeReportReducerTest {
             it.title == "KeyMint VINTF" &&
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("did not match", ignoreCase = true)
+        })
+    }
+
+    @Test
+    fun `keymint runtime identity mismatch becomes explicit supplementary failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                vintfKeyMintVersion = VintfKeyMintVersionResult(
+                    readable = true,
+                    anomalyKind = VintfKeyMintVersionAnomalyKind.MISMATCH,
+                    attestationVersion = 100,
+                    keymasterVersion = 300,
+                    detail = "Attestation and keymaster versions disagree on KeyMint runtime identity.",
+                ),
+            ),
+        )
+
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.FAIL, report.supplementaryReviewLevel)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "KeyMint runtime identity" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("AOSP single-runtime mapping")
         })
     }
 

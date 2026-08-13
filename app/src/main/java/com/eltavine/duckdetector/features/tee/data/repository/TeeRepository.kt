@@ -266,10 +266,30 @@ class TeeRepository(
         val aesGcm = async { aesGcmProbe.inspect(useStrongBox = useStrongBox) }
         val lifecycle = async { lifecycleProbe.inspect(useStrongBox = useStrongBox) }
         val keyMintCapability = async {
+            // KeyMint operations are obtained from one explicit IKeystoreSecurityLevel (TEE or
+            // StrongBox). If the attestation record names different security levels for the two
+            // version fields, testing either binder instance would test the wrong identity.
+            // KeyMint 操作来自一个明确的 IKeystoreSecurityLevel（TEE 或 StrongBox）。如果
+            // attestation record 的两个版本字段属于不同 security level，选择任一 binder
+            // 实例都会测错对象，因此 MGF1 子探针必须 skip，由独立一致性证据报 FAIL。
+            //
+            // AOSP references:
+            // system/hardware/interfaces/keystore2/aidl/android/system/keystore2/IKeystoreService.aidl
+            // https://android.googlesource.com/platform/system/hardware/interfaces/+/refs/heads/main/keystore2/aidl/android/system/keystore2/IKeystoreService.aidl
+            // system/hardware/interfaces/keystore2/aidl/android/system/keystore2/IKeystoreSecurityLevel.aidl
+            // https://android.googlesource.com/platform/system/hardware/interfaces/+/refs/heads/main/keystore2/aidl/android/system/keystore2/IKeystoreSecurityLevel.aidl
             val tierConsistent = snapshot.attestationTier == null || snapshot.keymasterTier == null ||
                 snapshot.attestationTier == snapshot.keymasterTier
             val nativeKeyMintObserved = listOfNotNull(snapshot.attestationVersion, snapshot.keymasterVersion)
                 .any { it >= 100 }
+            // AIDL KeyMint projects both attestation fields from the same interface version, while
+            // legacy Keymaster uses the explicit 2->1, 3->2, 4->3, 41->4 mapping below.
+            // AIDL KeyMint 的两个 attestation 字段来自同一个接口版本；legacy Keymaster 则使用
+            // 下方 AOSP 明确定义的 2->1、3->2、4->3、41->4 映射。
+            val runtimeIdentityConsistent = keyMintRuntimeIdentityConsistent(
+                attestationVersion = snapshot.attestationVersion,
+                keymasterVersion = snapshot.keymasterVersion,
+            )
             keyMintCapabilityProbe.inspect(
                 attestationVersion = snapshot.attestationVersion,
                 keymasterVersion = snapshot.keymasterVersion,
@@ -287,6 +307,7 @@ class TeeRepository(
                         it.instance == if (useStrongBox) "strongbox" else "default"
                 },
                 securityLevelsConsistent = tierConsistent,
+                runtimeIdentityConsistent = runtimeIdentityConsistent,
                 useStrongBox = useStrongBox,
             )
         }
@@ -404,6 +425,43 @@ class TeeRepository(
     }
 
 }
+
+internal fun keyMintRuntimeIdentityConsistent(
+    attestationVersion: Int?,
+    keymasterVersion: Int?,
+): Boolean {
+    if (attestationVersion == null || keymasterVersion == null) {
+        return true
+    }
+    val attestationIsKeyMint = attestationVersion >= KEYMINT_VERSION_FAMILY_BASE
+    val keymasterIsKeyMint = keymasterVersion >= KEYMINT_VERSION_FAMILY_BASE
+    if (attestationIsKeyMint != keymasterIsKeyMint) {
+        return false
+    }
+    if (attestationIsKeyMint) {
+        return attestationVersion == keymasterVersion
+    }
+    // keymasterVersion keeps the legacy Keymaster encoding (2, 3, 4, 41).
+    // attestationVersion is a separate attestation-record semantic (1, 2, 3, 4);
+    // this table is an AOSP-defined cross-field relationship, not linear arithmetic.
+    // keymasterVersion 保留旧 Keymaster 编码（2、3、4、41），attestationVersion 是独立的
+    // attestation record 语义（1、2、3、4）；这里是 AOSP 定义的跨字段映射，不是线性换算。
+    //
+    // AOSP references:
+    // system/keymaster/include/keymaster/km_openssl/attestation_record.h
+    // https://android.googlesource.com/platform/system/keymaster/+/refs/heads/main/include/keymaster/km_openssl/attestation_record.h
+    // hardware/interfaces/keymaster/4.0/vts/functional/keymaster_hidl_hal_test.cpp
+    // https://android.googlesource.com/platform/hardware/interfaces/+/refs/heads/main/keymaster/4.0/vts/functional/keymaster_hidl_hal_test.cpp
+    return LEGACY_KEYMASTER_TO_ATTESTATION_VERSION[keymasterVersion] == attestationVersion
+}
+
+private const val KEYMINT_VERSION_FAMILY_BASE = 100
+private val LEGACY_KEYMASTER_TO_ATTESTATION_VERSION = mapOf(
+    2 to 1,
+    3 to 2,
+    4 to 3,
+    41 to 4,
+)
 
 private fun GrantDomainFullChainSplitResult.hasDanger(): Boolean {
     return anomalyKind == GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT ||

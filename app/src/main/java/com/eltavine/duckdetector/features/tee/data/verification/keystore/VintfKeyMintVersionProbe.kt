@@ -27,6 +27,7 @@ import org.xml.sax.InputSource
 class VintfKeyMintVersionProbe(
     private val manifestDirs: List<String> = VINTF_MANIFEST_DIRS,
     private val manifestFiles: List<String> = VINTF_MANIFEST_FILES,
+    private val vendorApiLevelReader: VendorApiLevelReader = ReflectionVendorApiLevelReader(),
 ) {
 
     fun inspect(snapshot: AttestationSnapshot): VintfKeyMintVersionResult {
@@ -39,6 +40,11 @@ class VintfKeyMintVersionProbe(
         // StrongBox、或者 Keymaster 和 KeyMint 交叉比较，最后得出一个“看起来匹配、其实对象错了”的结论。
         val versionFamilyMismatch = actualKeymasterVersion != null && actualAttestationVersion != null &&
             (actualKeymasterVersion >= 100) != (actualAttestationVersion >= 100)
+        val keyMintRuntimeIdentityMismatch = actualKeymasterVersion != null &&
+            actualAttestationVersion != null &&
+            actualKeymasterVersion >= 100 &&
+            actualAttestationVersion >= 100 &&
+            actualKeymasterVersion != actualAttestationVersion
         val tierMismatch = snapshot.attestationTier != null && snapshot.keymasterTier != null &&
             snapshot.attestationTier != snapshot.keymasterTier
         val keyMintAttestation = maxOf(actualKeymasterVersion ?: 0, actualAttestationVersion ?: 0) >= 100
@@ -62,30 +68,54 @@ class VintfKeyMintVersionProbe(
             }
         }
         val hasActualVersion = actualKeymasterVersion != null || actualAttestationVersion != null
-        val mismatch = comparedDeclarations.isNotEmpty() &&
+        val requiresVendorApiLevel = hasActualVersion && comparedDeclarations.any {
+            it.family == VintfKeyMintVersionFamily.KEYMINT_AIDL
+        }
+        val vendorApiLevel = if (requiresVendorApiLevel) {
+            vendorApiLevelReader.read()
+        } else {
+            VendorApiLevelResult.unused()
+        }
+        val vendorApiUnavailable = requiresVendorApiLevel && vendorApiLevel.level == null
+        val mismatch = !vendorApiUnavailable &&
+            comparedDeclarations.isNotEmpty() &&
             hasActualVersion &&
-            comparedDeclarations.none { it.matches(actualKeymasterVersion, actualAttestationVersion) }
+            comparedDeclarations.none {
+                it.matches(
+                    keymasterVersion = actualKeymasterVersion,
+                    attestationVersion = actualAttestationVersion,
+                    vendorApiLevel = vendorApiLevel.level,
+                )
+            }
         val anomalyKind = when {
-            tierMismatch || versionFamilyMismatch || mismatch -> VintfKeyMintVersionAnomalyKind.MISMATCH
-            manifest.unreadablePaths.isNotEmpty() -> VintfKeyMintVersionAnomalyKind.UNREADABLE
+            tierMismatch || versionFamilyMismatch || keyMintRuntimeIdentityMismatch || mismatch ->
+                VintfKeyMintVersionAnomalyKind.MISMATCH
+            manifest.unreadablePaths.isNotEmpty() || vendorApiUnavailable ->
+                VintfKeyMintVersionAnomalyKind.UNREADABLE
             comparedDeclarations.isEmpty() -> VintfKeyMintVersionAnomalyKind.NO_DECLARATION
             !hasActualVersion -> VintfKeyMintVersionAnomalyKind.NO_ATTESTED_VERSION
             else -> VintfKeyMintVersionAnomalyKind.NONE
         }
 
         return VintfKeyMintVersionResult(
-            readable = manifest.unreadablePaths.isEmpty(),
+            readable = manifest.unreadablePaths.isEmpty() && !vendorApiUnavailable,
             anomalyKind = anomalyKind,
             declarations = manifest.declarations,
             comparedDeclarations = comparedDeclarations,
             unreadablePaths = manifest.unreadablePaths,
             attestationVersion = actualAttestationVersion,
             keymasterVersion = actualKeymasterVersion,
+            vendorApiLevel = vendorApiLevel.level,
+            vendorApiDetail = vendorApiLevel.detail,
             detail = when {
                 tierMismatch -> "Attestation and keymaster security levels disagree: " +
                     "attestation=${snapshot.attestationTier}, keymaster=${snapshot.keymasterTier}."
                 versionFamilyMismatch -> "Attestation and keymaster versions disagree on HAL family: " +
                     "attestation=$actualAttestationVersion, keymaster=$actualKeymasterVersion."
+                keyMintRuntimeIdentityMismatch -> "Attestation and keymaster versions disagree on KeyMint " +
+                    "runtime identity: attestation=$actualAttestationVersion, keymaster=$actualKeymasterVersion."
+                vendorApiUnavailable -> "KeyMint AIDL version comparison was incomplete because the " +
+                    "vendor API level could not be determined. ${vendorApiLevel.detail}"
                 else -> detailFor(
                     anomalyKind = anomalyKind,
                     comparedDeclarations = comparedDeclarations,
@@ -126,9 +156,21 @@ class VintfKeyMintVersionProbe(
         val declarations = mutableListOf<VintfKeyMintVersionDeclaration>()
         files.values.forEach { file ->
             val xml = runCatching { file.readText() }.getOrElse { throwable ->
-                unreadablePaths += "${file.absolutePath}: ${describe(throwable)}"
+                if (isPotentialKeyMintManifestPath(file.absolutePath, includeAggregateManifest = true)) {
+                    unreadablePaths += "${file.absolutePath}: ${describe(throwable)}"
+                }
                 null
             } ?: return@forEach
+            // Vendor VINTF directories sometimes contain non-XML fragments for unrelated HALs.
+            // Parsing every *.xml file lets those malformed fragments poison an otherwise complete
+            // KeyMint result. Only target-bearing fragments participate in this focused probe;
+            // malformed KeyMint/Keymaster fragments still fail closed as UNREADABLE.
+            // 部分厂商会把其他 HAL 的非 XML 碎片放进 VINTF 目录。若无差别解析全部 *.xml，
+            // 无关文件的语法错误会污染已经完整匹配的 KeyMint 结果。这里只解析带目标标识的片段；
+            // 真正属于 KeyMint/Keymaster 的损坏片段仍按 UNREADABLE 处理。
+            if (!isPotentialKeyMintManifest(file.absolutePath, xml)) {
+                return@forEach
+            }
             declarations += runCatching { parseManifest(file.absolutePath, xml) }.getOrElse { throwable ->
                 unreadablePaths += "${file.absolutePath}: ${describe(throwable)}"
                 emptyList()
@@ -210,6 +252,21 @@ class VintfKeyMintVersionProbe(
 
     private fun describe(throwable: Throwable): String {
         return "${throwable.javaClass.simpleName}: ${throwable.message ?: "no message"}"
+    }
+
+    private fun isPotentialKeyMintManifest(path: String, xml: String): Boolean {
+        return isPotentialKeyMintManifestPath(path, includeAggregateManifest = false) ||
+            KEYSTORE_HAL_MARKERS.any { marker -> xml.contains(marker, ignoreCase = true) }
+    }
+
+    private fun isPotentialKeyMintManifestPath(
+        path: String,
+        includeAggregateManifest: Boolean,
+    ): Boolean {
+        val name = File(path).name
+        return name.contains("keymint", ignoreCase = true) ||
+            name.contains("keymaster", ignoreCase = true) ||
+            (includeAggregateManifest && name.equals("manifest.xml", ignoreCase = true))
     }
 
     private data class ManifestReadResult(
@@ -350,6 +407,13 @@ class VintfKeyMintVersionProbe(
         private const val DEFAULT_INSTANCE = "default"
         private const val STRONGBOX_INSTANCE = "strongbox"
         private const val DEFAULT_AIDL_VERSION = "1"
+        internal const val STRICT_KEYMINT_VENDOR_API_THRESHOLD = 202504
+        private val KEYSTORE_HAL_MARKERS = listOf(
+            KEYMINT_HAL_NAME,
+            KEYMASTER_HAL_NAME,
+            KEYMINT_INTERFACE_NAME,
+            KEYMASTER_INTERFACE_NAME,
+        )
         private val HIDL_FQNAME_REGEX = Regex("^@([0-9]+(?:\\.[0-9]+)?)::([^/]+)/(.+)$")
 
         private fun expectedLegacyVersions(version: String): Pair<Int, Int>? {
@@ -407,9 +471,40 @@ data class VintfKeyMintVersionDeclaration(
         get() = "$halName/$interfaceName/$instance@$vintfVersion -> " +
             "keymaster=$expectedKeymasterVersion,attestation=$expectedAttestationVersion"
 
-    fun matches(keymasterVersion: Int?, attestationVersion: Int?): Boolean {
-        return (keymasterVersion == null || keymasterVersion == expectedKeymasterVersion) &&
-            (attestationVersion == null || attestationVersion == expectedAttestationVersion)
+    fun matches(
+        keymasterVersion: Int?,
+        attestationVersion: Int?,
+        vendorApiLevel: Int?,
+    ): Boolean {
+        return when (family) {
+            VintfKeyMintVersionFamily.KEYMINT_AIDL -> {
+                vendorApiLevel ?: return false
+                if (keymasterVersion == null || attestationVersion == null) {
+                    return false
+                }
+                val versions = listOf(keymasterVersion, attestationVersion)
+                if (vendorApiLevel > VintfKeyMintVersionProbe.STRICT_KEYMINT_VENDOR_API_THRESHOLD) {
+                    versions.all { version -> version == expectedKeymasterVersion }
+                } else {
+                    // This mirrors KeyMint VTS check_attestation_version() for both fields.
+                    // Both attestationVersion and keymasterVersion may lag the AIDL declaration
+                    // only on vendor API <= 36, and must remain 100-based and <= aidlVersion * 100.
+                    // 这里对两个字段复刻 VTS 的同一套规则：只有 vendor API <= 36 才允许实现版本
+                    // 低于 AIDL 声明，且版本必须是 100 的倍数并且不超过 aidlVersion * 100。
+                    //
+                    // AOSP references:
+                    // hardware/interfaces/security/keymint/aidl/vts/functional/KeyMintAidlTestBase.cpp
+                    // https://android.googlesource.com/platform/hardware/interfaces/+/refs/heads/main/security/keymint/aidl/vts/functional/KeyMintAidlTestBase.cpp
+                    versions.all { version ->
+                        version >= 100 && version % 100 == 0 && version <= expectedKeymasterVersion
+                    }
+                }
+            }
+            VintfKeyMintVersionFamily.KEYMASTER_HIDL -> {
+                (keymasterVersion == null || keymasterVersion == expectedKeymasterVersion) &&
+                    (attestationVersion == null || attestationVersion == expectedAttestationVersion)
+            }
+        }
     }
 }
 
@@ -421,6 +516,8 @@ data class VintfKeyMintVersionResult(
     val unreadablePaths: List<String> = emptyList(),
     val attestationVersion: Int? = null,
     val keymasterVersion: Int? = null,
+    val vendorApiLevel: Int? = null,
+    val vendorApiDetail: String = "Vendor API level was not required.",
     val detail: String,
 ) {
     val diagnosticCopyText: String
@@ -437,6 +534,12 @@ data class VintfKeyMintVersionResult(
             append("keymasterVersion=")
             append(keymasterVersion ?: "null")
             append('\n')
+            append("vendorApiLevel=")
+            append(vendorApiLevel ?: "null")
+            append('\n')
+            append("vendorApiDetail=")
+            append(vendorApiDetail)
+            append('\n')
             append("comparedDeclarations=")
             append(comparedDeclarations.joinToString { it.summary }.ifBlank { "none" })
             append('\n')
@@ -448,4 +551,80 @@ data class VintfKeyMintVersionResult(
             append('\n')
             append(detail)
         }
+}
+
+fun interface VendorApiLevelReader {
+    fun read(): VendorApiLevelResult
+}
+
+data class VendorApiLevelResult(
+    val level: Int?,
+    val detail: String,
+) {
+    companion object {
+        fun unused(): VendorApiLevelResult = VendorApiLevelResult(
+            level = null,
+            detail = "Vendor API level was not required.",
+        )
+    }
+}
+
+internal fun resolveVendorApiLevel(readProperty: (String) -> String?): VendorApiLevelResult {
+    // This intentionally mirrors KeyMint VTS get_vendor_api_level(), rather than using
+    // Build.VERSION.SDK_INT or a different init/libvendorsupport interpretation:
+    //   ro.vendor.api_level
+    //   else ro.board.api_level
+    //   else ro.board.first_api_level
+    //   productApi = ro.product.first_api_level ?: ro.build.version.sdk
+    //   if boardApi is absent, return productApi; otherwise return min(productApi, boardApi).
+    // 这里刻意复刻 KeyMint VTS 的 get_vendor_api_level()，不能用 Build.VERSION.SDK_INT 或另一套
+    // init/libvendorsupport 语义替代：vendor 属性优先；board 两个属性缺失时直接返回 product；
+    // board 存在时返回 min(productApi, boardApi)。
+    //
+    // AOSP reference:
+    // hardware/interfaces/security/keymint/aidl/vts/functional/KeyMintAidlTestBase.cpp
+    // https://android.googlesource.com/platform/hardware/interfaces/+/refs/heads/main/security/keymint/aidl/vts/functional/KeyMintAidlTestBase.cpp
+    fun property(name: String): Int? = readProperty(name)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.toIntOrNull()
+        ?.takeIf { it >= 0 }
+
+    property("ro.vendor.api_level")?.let { level ->
+        return VendorApiLevelResult(level, "source=ro.vendor.api_level")
+    }
+
+    val boardApiLevel = property("ro.board.api_level")
+        ?: property("ro.board.first_api_level")
+    val productApiLevel = property("ro.product.first_api_level")
+        ?: property("ro.build.version.sdk")
+        ?: return VendorApiLevelResult(
+            level = null,
+            detail = "Missing ro.product.first_api_level and ro.build.version.sdk.",
+        )
+
+    return if (boardApiLevel == null) {
+        VendorApiLevelResult(productApiLevel, "source=productApi, boardApi=absent")
+    } else {
+        VendorApiLevelResult(
+            level = minOf(productApiLevel, boardApiLevel),
+            detail = "source=min(productApi=$productApiLevel, boardApi=$boardApiLevel)",
+        )
+    }
+}
+
+private class ReflectionVendorApiLevelReader : VendorApiLevelReader {
+    override fun read(): VendorApiLevelResult {
+        return runCatching {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("get", String::class.java)
+            resolveVendorApiLevel { name -> method.invoke(null, name) as? String }
+        }.getOrElse { throwable ->
+            VendorApiLevelResult(
+                level = null,
+                detail = "SystemProperties unavailable: ${throwable.javaClass.simpleName}: " +
+                    (throwable.message ?: "no message"),
+            )
+        }
+    }
 }

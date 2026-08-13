@@ -56,6 +56,7 @@ class KeyMintCapabilityProbe(
         declaredKeyMintVersion: Int? = null,
         legacyKeymasterDeclared: Boolean = false,
         securityLevelsConsistent: Boolean = true,
+        runtimeIdentityConsistent: Boolean = true,
         useStrongBox: Boolean = false,
     ): KeyMintCapabilityResult {
         val hmac = hmacSha256(useStrongBox)
@@ -69,20 +70,21 @@ class KeyMintCapabilityProbe(
         val rsaPssPkcs1 = rsaPssPkcs1Rejected(useStrongBox)
         val rsaOaepPkcs1 = rsaOaepPkcs1Rejected(useStrongBox)
         val rsaPkcs1Oaep = rsaPkcs1OaepRejected(useStrongBox)
+        val backend = classifyKeyMintBackend(
+            attestationVersion = attestationVersion,
+            keymasterVersion = keymasterVersion,
+            declaredKeyMintVersion = declaredKeyMintVersion,
+            legacyKeymasterDeclared = legacyKeymasterDeclared,
+            runtimeIdentityConsistent = runtimeIdentityConsistent,
+        )
         val rsaOaepMgf1 = rsaOaepMgf1Sha256(
-            attestationVersion,
-            keymasterVersion,
-            declaredKeyMintVersion,
-            legacyKeymasterDeclared,
-            securityLevelsConsistent,
+            backend = backend,
+            securityLevelsConsistent = securityLevelsConsistent,
             useStrongBox,
         )
         val rsaOaepMgf1Sha1 = rsaOaepMgf1Sha1Rejected(
-            attestationVersion,
-            keymasterVersion,
-            declaredKeyMintVersion,
-            legacyKeymasterDeclared,
-            securityLevelsConsistent,
+            backend = backend,
+            securityLevelsConsistent = securityLevelsConsistent,
             useStrongBox,
         )
         val rsaOaepSha256 = rsaOaepSha256RoundTrip(useStrongBox)
@@ -159,6 +161,7 @@ class KeyMintCapabilityProbe(
                 declaredKeyMintVersion = declaredKeyMintVersion,
                 legacyKeymasterDeclared = legacyKeymasterDeclared,
                 securityLevelsConsistent = securityLevelsConsistent,
+                runtimeIdentityConsistent = runtimeIdentityConsistent,
                 checks = listOf(
                     KeyMintDiagnosticEntry("HMAC-SHA256", hmac.executed, hmac.ok, hmac.detail, hmac.diagnostic),
                     KeyMintDiagnosticEntry("Single-use EC", limitedUseEc.executed, limitedUseEc.ok, limitedUseEc.detail, limitedUseEc.diagnostic),
@@ -573,15 +576,17 @@ class KeyMintCapabilityProbe(
     }
 
     private fun rsaOaepMgf1Sha256(
-        attestationVersion: Int?,
-        keymasterVersion: Int?,
-        declaredKeyMintVersion: Int?,
-        legacyKeymasterDeclared: Boolean,
+        backend: KeyMintBackendDecision,
         securityLevelsConsistent: Boolean,
         useStrongBox: Boolean,
     ): CheckResult {
-        if (!securityLevelsConsistent) {
-            return CheckResult(false, "Attestation and keymaster security levels disagree.")
+        val plan = resolveMgf1ProbePlan(backend, securityLevelsConsistent)
+        if (plan.mode == Mgf1ProbeMode.SKIP) {
+            return CheckResult(
+                ok = true,
+                detail = plan.detail,
+                executed = false,
+            )
         }
         // We intentionally do not trust UI/API level alone here.
         // AndroidKeyStore only exposes MGF-digest configuration from newer framework APIs, but the
@@ -594,15 +599,7 @@ class KeyMintCapabilityProbe(
         // https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/keystore/java/android/security/keystore2/AndroidKeyStoreRSACipherSpi.java
         // hardware/interfaces/security/keymint/aidl/vts/functional/KeyMintTest.cpp
         // https://android.googlesource.com/platform/hardware/interfaces/+/refs/heads/main/security/keymint/aidl/vts/functional/KeyMintTest.cpp
-        val keyMintVersion = deriveObservedKeyMintVersion(
-            attestationVersion,
-            keymasterVersion,
-            declaredKeyMintVersion,
-        ) ?: KEYMINT_VERSION_1
-        if (
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            legacyKeymasterDeclared
-        ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return CheckResult(
                 ok = true,
                 detail = "RSA-OAEP MGF1 digest probe requires a native KeyMint 1+ backend.",
@@ -618,11 +615,12 @@ class KeyMintCapabilityProbe(
         ) { rawKey ->
             val capability = evaluateRsaOaepMgf1Capability(
                 authorizations = rawKey.authorizations,
-                attestationVersion,
-                keymasterVersion,
-                keyMintVersion,
+                attestationVersion = backend.attestationVersion,
+                keymasterVersion = backend.keymasterVersion,
+                declaredKeyMintVersion = backend.version,
                 expectedSecurityLevel = rawKey.expectedSecurityLevel,
                 returnedSecurityLevel = rawKey.returnedSecurityLevel,
+                probeMode = plan.mode,
             )
             if (!capability.shouldExecute) {
                 CheckResult(
@@ -652,25 +650,19 @@ class KeyMintCapabilityProbe(
     }
 
     private fun rsaOaepMgf1Sha1Rejected(
-        attestationVersion: Int?,
-        keymasterVersion: Int?,
-        declaredKeyMintVersion: Int?,
-        legacyKeymasterDeclared: Boolean,
+        backend: KeyMintBackendDecision,
         securityLevelsConsistent: Boolean,
         useStrongBox: Boolean,
     ): CheckResult {
-        if (!securityLevelsConsistent) {
-            return CheckResult(false, "Attestation and keymaster security levels disagree.")
+        val plan = resolveMgf1ProbePlan(backend, securityLevelsConsistent)
+        if (plan.mode == Mgf1ProbeMode.SKIP) {
+            return CheckResult(
+                ok = true,
+                detail = plan.detail,
+                executed = false,
+            )
         }
-        val keyMintVersion = deriveObservedKeyMintVersion(
-            attestationVersion,
-            keymasterVersion,
-            declaredKeyMintVersion,
-        ) ?: KEYMINT_VERSION_1
-        if (
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            legacyKeymasterDeclared
-        ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return CheckResult(
                 ok = true,
                 detail = "RSA-OAEP MGF1 authorization probe requires a native KeyMint 1+ backend.",
@@ -686,11 +678,12 @@ class KeyMintCapabilityProbe(
         ) { rawKey ->
             val capability = evaluateRsaOaepMgf1Capability(
                 authorizations = rawKey.authorizations,
-                attestationVersion,
-                keymasterVersion,
-                keyMintVersion,
+                attestationVersion = backend.attestationVersion,
+                keymasterVersion = backend.keymasterVersion,
+                declaredKeyMintVersion = backend.version,
                 expectedSecurityLevel = rawKey.expectedSecurityLevel,
                 returnedSecurityLevel = rawKey.returnedSecurityLevel,
+                probeMode = plan.mode,
             )
             if (!capability.shouldExecute) {
                 CheckResult(
@@ -1128,6 +1121,7 @@ class KeyMintCapabilityProbe(
         declaredKeyMintVersion: Int?,
         legacyKeymasterDeclared: Boolean,
         securityLevelsConsistent: Boolean,
+        runtimeIdentityConsistent: Boolean,
         checks: List<KeyMintDiagnosticEntry>,
     ): String = buildString {
         appendLine("keymint-capability-diagnostic=v1")
@@ -1138,6 +1132,7 @@ class KeyMintCapabilityProbe(
         appendLine("declaredKeyMintVersion=${declaredKeyMintVersion ?: "null"}")
         appendLine("legacyKeymasterDeclared=$legacyKeymasterDeclared")
         appendLine("securityLevelsConsistent=$securityLevelsConsistent")
+        appendLine("runtimeIdentityConsistent=$runtimeIdentityConsistent")
         appendLine("checks:")
         checks.forEach { check ->
             appendLine("- ${check.name}: executed=${check.executed}, ok=${check.ok}, detail=${check.detail}")
@@ -1291,6 +1286,139 @@ internal data class AuthorizationSummary(
     val securityLevel: Int?,
 )
 
+internal enum class KeyMintBackendFamily {
+    LEGACY_KEYMASTER,
+    KEYMINT,
+    UNKNOWN,
+    CONFLICT,
+}
+
+internal data class KeyMintBackendDecision(
+    val family: KeyMintBackendFamily,
+    val version: Int?,
+    val attestationVersion: Int?,
+    val keymasterVersion: Int?,
+    val skipDetail: String,
+)
+
+internal enum class Mgf1ProbeMode {
+    // No operation is attempted when the target backend cannot be identified unambiguously.
+    // 无法唯一识别目标 backend 时不发起操作，避免把“没测”伪装成“密码学失败”。
+    SKIP,
+    // KeyMint 1/2: VTS validates begin/finish behavior but does not require the MGF digest
+    // authorization to be echoed in key characteristics.
+    // KeyMint 1/2：VTS 验证 begin/finish 行为，但不要求 key characteristics 回显 MGF digest。
+    OPERATION_ONLY,
+    // KeyMint 3+: VTS additionally requires the exact hardware-enforced MGF digest set.
+    // KeyMint 3+：VTS 额外要求精确的、由硬件层强制的 MGF digest 集合。
+    CHARACTERISTICS_AND_OPERATION,
+}
+
+internal data class Mgf1ProbePlan(
+    val mode: Mgf1ProbeMode,
+    val detail: String,
+)
+
+internal fun resolveMgf1ProbePlan(
+    backend: KeyMintBackendDecision,
+    securityLevelsConsistent: Boolean,
+): Mgf1ProbePlan {
+    if (backend.family != KeyMintBackendFamily.KEYMINT) {
+        return Mgf1ProbePlan(Mgf1ProbeMode.SKIP, backend.skipDetail)
+    }
+    if (!securityLevelsConsistent) {
+        // IKeystoreSecurityLevel operations are scoped to one selected TEE/StrongBox instance.
+        // If attestation and keymaster tiers disagree, running against either instance cannot
+        // establish the MGF1 behavior of the identity described by the certificate.
+        // IKeystoreSecurityLevel 操作绑定到一个明确的 TEE/StrongBox 实例。若 attestation 与
+        // keymaster tier 冲突，无论选择哪个实例，都不能证明证书所描述身份的 MGF1 行为。
+        return Mgf1ProbePlan(
+            Mgf1ProbeMode.SKIP,
+            "RSA-OAEP MGF1 skipped because attestation and keymaster security levels disagree.",
+        )
+    }
+    val version = backend.version ?: return Mgf1ProbePlan(
+        Mgf1ProbeMode.SKIP,
+        "RSA-OAEP MGF1 skipped because the native KeyMint version was unavailable.",
+    )
+    // AOSP references for the version split and exact characteristics expectation:
+    // hardware/interfaces/security/keymint/aidl/vts/functional/KeyMintTest.cpp
+    // https://android.googlesource.com/platform/hardware/interfaces/+/refs/heads/main/security/keymint/aidl/vts/functional/KeyMintTest.cpp
+    // hardware/interfaces/security/keymint/aidl/android/hardware/security/keymint/Tag.aidl
+    // https://android.googlesource.com/platform/hardware/interfaces/+/refs/heads/main/security/keymint/aidl/android/hardware/security/keymint/Tag.aidl
+    return if (version < KEYMINT_VERSION_3) {
+        Mgf1ProbePlan(
+            Mgf1ProbeMode.OPERATION_ONLY,
+            "KeyMint 1/2 uses raw keystore2 operation checks.",
+        )
+    } else {
+        Mgf1ProbePlan(
+            Mgf1ProbeMode.CHARACTERISTICS_AND_OPERATION,
+            "KeyMint 3+ requires exact MGF1 characteristics and raw operation checks.",
+        )
+    }
+}
+
+internal fun classifyKeyMintBackend(
+    attestationVersion: Int?,
+    keymasterVersion: Int?,
+    declaredKeyMintVersion: Int?,
+    legacyKeymasterDeclared: Boolean,
+    runtimeIdentityConsistent: Boolean,
+): KeyMintBackendDecision {
+    // The 100-based values are native KeyMint attestation encodings. Legacy values use a
+    // different Keymaster family, and VINTF is only a declaration fallback. Conflicting signals
+    // therefore produce CONFLICT/SKIP instead of choosing whichever value is numerically larger.
+    // 100-based 数值属于原生 KeyMint attestation 编码；legacy 数值属于另一套 Keymaster 家族，
+    // VINTF 也只是声明兜底。信号冲突时必须 CONFLICT/SKIP，不能随意取数值更大的那个。
+    val actualVersions = listOfNotNull(attestationVersion, keymasterVersion)
+    val nativeVersions = actualVersions.filter { it >= KEYMINT_VERSION_1 }
+    val legacyVersions = actualVersions.filter { it in 0 until KEYMINT_VERSION_1 }
+    val hasIdentityConflict = !runtimeIdentityConsistent ||
+        (nativeVersions.isNotEmpty() && legacyVersions.isNotEmpty()) ||
+        (declaredKeyMintVersion != null && legacyVersions.isNotEmpty()) ||
+        (legacyKeymasterDeclared && nativeVersions.isNotEmpty())
+    if (hasIdentityConflict) {
+        return KeyMintBackendDecision(
+            family = KeyMintBackendFamily.CONFLICT,
+            version = nativeVersions.maxOrNull() ?: declaredKeyMintVersion,
+            attestationVersion = attestationVersion,
+            keymasterVersion = keymasterVersion,
+            skipDetail = "RSA-OAEP MGF1 skipped because runtime identity signals conflict.",
+        )
+    }
+    if (nativeVersions.isNotEmpty() || declaredKeyMintVersion != null) {
+        return KeyMintBackendDecision(
+            family = KeyMintBackendFamily.KEYMINT,
+            // VINTF is a declaration, not the observed implementation version. Prefer the
+            // attested/keymaster value whenever one exists; use VINTF only as a family/version
+            // fallback when the runtime did not expose any version at all.
+            // VINTF 是声明，不是实际运行时版本。只要运行时有版本，就优先使用 attestation/
+            // keymaster 的真实值；只有完全没有运行时版本时才使用 VINTF 作为兜底。
+            version = nativeVersions.maxOrNull() ?: declaredKeyMintVersion,
+            attestationVersion = attestationVersion,
+            keymasterVersion = keymasterVersion,
+            skipDetail = "",
+        )
+    }
+    if (legacyVersions.isNotEmpty() || legacyKeymasterDeclared) {
+        return KeyMintBackendDecision(
+            family = KeyMintBackendFamily.LEGACY_KEYMASTER,
+            version = null,
+            attestationVersion = attestationVersion,
+            keymasterVersion = keymasterVersion,
+            skipDetail = "RSA-OAEP MGF1 skipped for legacy Keymaster/km_compat.",
+        )
+    }
+    return KeyMintBackendDecision(
+        family = KeyMintBackendFamily.UNKNOWN,
+        version = null,
+        attestationVersion = attestationVersion,
+        keymasterVersion = keymasterVersion,
+        skipDetail = "RSA-OAEP MGF1 skipped because the backend family could not be established.",
+    )
+}
+
 internal fun evaluateRsaOaepMgf1Capability(
     authorizations: List<AuthorizationSummary>,
     attestationVersion: Int?,
@@ -1298,6 +1426,7 @@ internal fun evaluateRsaOaepMgf1Capability(
     declaredKeyMintVersion: Int? = null,
     expectedSecurityLevel: Int = KEYMINT_SECURITY_LEVEL_TRUSTED_ENVIRONMENT,
     returnedSecurityLevel: Int = expectedSecurityLevel,
+    probeMode: Mgf1ProbeMode? = null,
 ): RsaOaepMgf1Capability {
     // KeyMint 3+ tightened the contract: the allowed MGF digests must be surfaced back through
     // hardware-enforced key characteristics, and VTS compares the exact set.
@@ -1331,7 +1460,12 @@ internal fun evaluateRsaOaepMgf1Capability(
         keymasterVersion,
         declaredKeyMintVersion,
     )
-    if (keyMintVersion == null || keyMintVersion < 100) {
+    val validationMode = probeMode ?: when {
+        keyMintVersion == null || keyMintVersion < KEYMINT_VERSION_1 -> Mgf1ProbeMode.SKIP
+        keyMintVersion < KEYMINT_VERSION_3 -> Mgf1ProbeMode.OPERATION_ONLY
+        else -> Mgf1ProbeMode.CHARACTERISTICS_AND_OPERATION
+    }
+    if (validationMode == Mgf1ProbeMode.SKIP) {
         return RsaOaepMgf1Capability(
             supported = false,
             shouldExecute = false,
@@ -1347,7 +1481,7 @@ internal fun evaluateRsaOaepMgf1Capability(
             diagnostic = diagnostic,
         )
     }
-    if (keyMintVersion < 300) {
+    if (validationMode == Mgf1ProbeMode.OPERATION_ONLY) {
         return RsaOaepMgf1Capability(
             supported = true,
             shouldExecute = true,
@@ -1433,18 +1567,19 @@ internal fun deriveObservedKeyMintVersion(
     keymasterVersion: Int?,
     declaredKeyMintVersion: Int? = null,
 ): Int? {
-    // We take the highest native-KeyMint-family signal we have, because the device can lie in one
-    // channel (attestation blob, framework wrapper, or VINTF) while still exposing a newer backend in
-    // another. Using the max avoids downgrading a KeyMint 3 device into the looser KeyMint 1/2 path.
-    // 这里取“最高的 KeyMint 家族版本信号”，是为了防止单一信号源被篡改或过旧时，把本应走严格
-    // KeyMint 3+ 语义的设备误降级到 KeyMint 1/2 的宽松路径。
-    return listOfNotNull(attestationVersion, keymasterVersion, declaredKeyMintVersion)
-        .filter { it >= 100 }
-        .maxOrNull()
+    // Runtime attestation/keymaster values describe the selected backend. VINTF is only a
+    // fallback when both runtime values are absent; it must not upgrade a real KeyMint 2
+    // implementation into a stricter KeyMint 3 path just because the declaration is newer.
+    // 运行时 attestation/keymaster 值描述当前选中的 backend。只有两个运行时值都缺失时才用
+    // VINTF 兜底；不能因为声明较新，就把真实 KeyMint 2 升级到更严格的 KeyMint 3 路径。
+    return listOfNotNull(attestationVersion, keymasterVersion)
+        .firstOrNull { it >= KEYMINT_VERSION_1 }
+        ?: declaredKeyMintVersion?.takeIf { it >= KEYMINT_VERSION_1 }
 }
 
 private const val KEYMINT_DIGEST_NONE = 0
 private const val KEYMINT_VERSION_1 = 100
+private const val KEYMINT_VERSION_3 = 300
 private const val KEYMINT_DIGEST_SHA_256 = 4
 private const val KEYMINT_DIGEST_SHA_224 = 3
 private const val KEYMINT_ERROR_INCOMPATIBLE_MGF_DIGEST = -78

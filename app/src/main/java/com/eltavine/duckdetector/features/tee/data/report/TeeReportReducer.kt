@@ -287,11 +287,22 @@ class TeeReportReducer(
                 )
             }
             if (artifacts.vintfKeyMintVersion.anomalyKind == VintfKeyMintVersionAnomalyKind.MISMATCH) {
+                // This is reported separately from the crypto capability row. A version/tier
+                // identity mismatch means the target backend cannot be selected unambiguously;
+                // it is evidence about identity, not evidence that an MGF1 operation executed.
+                // 这里必须与 crypto capability 分开报告。版本/tier 身份冲突表示无法唯一选中
+                // backend，它是“身份不一致”证据，不是“MGF1 已执行且失败”证据。
+                val runtimeIdentityMismatch = keyMintRuntimeIdentityMismatch(artifacts)
                 add(
                     fact(
-                        "KeyMint VINTF",
-                        "VINTF KeyMint version diverged from attestation. " +
-                            vintfKeyMintVersionValue(artifacts),
+                        if (runtimeIdentityMismatch) "KeyMint runtime identity" else "KeyMint VINTF",
+                        if (runtimeIdentityMismatch) {
+                            "Attestation and keymaster versions violate the AOSP single-runtime mapping. " +
+                                vintfKeyMintVersionValue(artifacts)
+                        } else {
+                            "VINTF KeyMint version diverged from attestation. " +
+                                vintfKeyMintVersionValue(artifacts)
+                        },
                         TeeSignalLevel.FAIL,
                         hiddenCopyText = artifacts.vintfKeyMintVersion.diagnosticCopyText,
                     )
@@ -1071,7 +1082,11 @@ class TeeReportReducer(
                     )
                     add(
                         fact(
-                            "KeyMint VINTF",
+                            if (keyMintRuntimeIdentityMismatch(artifacts)) {
+                                "KeyMint runtime identity"
+                            } else {
+                                "KeyMint VINTF"
+                            },
                             vintfKeyMintVersionValue(artifacts),
                             vintfKeyMintVersionLevel(artifacts),
                             hiddenCopyText = artifacts.vintfKeyMintVersion.diagnosticCopyText,
@@ -2940,11 +2955,22 @@ class TeeReportReducer(
         VintfKeyMintVersionAnomalyKind.NO_ATTESTED_VERSION -> TeeSignalLevel.INFO
     }
 
+    private fun keyMintRuntimeIdentityMismatch(artifacts: TeeScanArtifacts): Boolean {
+        val attestationVersion = artifacts.vintfKeyMintVersion.attestationVersion ?: return false
+        val keymasterVersion = artifacts.vintfKeyMintVersion.keymasterVersion ?: return false
+        return attestationVersion >= 100 &&
+            keymasterVersion >= 100 &&
+            attestationVersion != keymasterVersion
+    }
+
     private fun vintfKeyMintVersionValue(artifacts: TeeScanArtifacts): String {
         val result = artifacts.vintfKeyMintVersion
         return when (result.anomalyKind) {
-            VintfKeyMintVersionAnomalyKind.MISMATCH ->
+            VintfKeyMintVersionAnomalyKind.MISMATCH -> if (keyMintRuntimeIdentityMismatch(artifacts)) {
+                "Attestation and keymaster versions violate the AOSP single-runtime mapping. ${result.detail}"
+            } else {
                 "VINTF declaration did not match attested version. ${result.detail}"
+            }
             VintfKeyMintVersionAnomalyKind.NONE ->
                 "VINTF declaration matched attested KeyMint version. ${result.detail}"
             VintfKeyMintVersionAnomalyKind.UNREADABLE ->
