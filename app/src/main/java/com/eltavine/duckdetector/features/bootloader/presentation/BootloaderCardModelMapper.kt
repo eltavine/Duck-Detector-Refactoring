@@ -27,6 +27,7 @@ import com.eltavine.duckdetector.features.bootloader.domain.BootloaderReport
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderStage
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderState
 import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderCardModel
+import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderCardAssessment
 import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderDetailRowModel
 import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderHeaderFactModel
 import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderImpactItemModel
@@ -42,6 +43,7 @@ class BootloaderCardModelMapper {
             title = "Bootloader",
             subtitle = buildSubtitle(report),
             status = report.toDetectorStatus(),
+            assessment = report.toCardAssessment(),
             verdict = buildVerdict(report),
             summary = buildSummary(report),
             headerFacts = buildHeaderFacts(report),
@@ -138,7 +140,7 @@ class BootloaderCardModelMapper {
                 BootloaderHeaderFactModel(
                     label = "State",
                     value = stateLabel(report.state),
-                    status = report.toDetectorStatus(),
+                    status = report.authoritativeStateStatus(),
                 ),
                 BootloaderHeaderFactModel(
                     label = "Proof",
@@ -420,7 +422,7 @@ class BootloaderCardModelMapper {
     )
 
     private fun List<BootloaderFinding>.areWidevineOnly(): Boolean {
-        return isNotEmpty() && all { finding -> finding.id.startsWith("widevine_") }
+        return isNotEmpty() && all { finding -> finding.id.startsWith(WIDEVINE_FINDING_PREFIX) }
     }
 
     private fun severityStatus(severity: BootloaderFindingSeverity): DetectorStatus {
@@ -508,5 +510,38 @@ class BootloaderCardModelMapper {
                 else -> DetectorStatus.allClear()
             }
         }
+    }
+
+    private fun BootloaderReport.toCardAssessment(): BootloaderCardAssessment {
+        val widevineFindings = findings.filter { finding ->
+            finding.id.startsWith(WIDEVINE_FINDING_PREFIX)
+        }
+        return when {
+            widevineFindings.any { it.severity == BootloaderFindingSeverity.DANGER } ->
+                BootloaderCardAssessment.CONSISTENCY_CONFLICT
+
+            widevineFindings.any { it.severity == BootloaderFindingSeverity.WARNING } ->
+                BootloaderCardAssessment.CONSISTENCY_REVIEW
+
+            else -> BootloaderCardAssessment.AUTHORITATIVE
+        }
+    }
+
+    // Card severity may include Widevine; the State fact remains authoritative.
+    private fun BootloaderReport.authoritativeStateStatus(): DetectorStatus {
+        return when (state) {
+            BootloaderState.VERIFIED -> DetectorStatus.allClear()
+            BootloaderState.SELF_SIGNED,
+            BootloaderState.LOCKED_UNKNOWN -> DetectorStatus.warning()
+
+            BootloaderState.UNLOCKED,
+            BootloaderState.FAILED_VERIFICATION -> DetectorStatus.danger()
+
+            BootloaderState.UNKNOWN -> DetectorStatus.info(InfoKind.SUPPORT)
+        }
+    }
+
+    private companion object {
+        const val WIDEVINE_FINDING_PREFIX = "widevine_"
     }
 }

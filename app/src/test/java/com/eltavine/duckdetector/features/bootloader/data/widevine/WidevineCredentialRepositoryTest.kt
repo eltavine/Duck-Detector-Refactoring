@@ -19,7 +19,6 @@ package com.eltavine.duckdetector.features.bootloader.data.widevine
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFindingGroup
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFindingSeverity
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderMethodOutcome
-import com.eltavine.duckdetector.features.bootloader.domain.BootloaderState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -27,7 +26,7 @@ import org.junit.Test
 class WidevineCredentialRepositoryTest {
 
     @Test
-    fun `sentinel warning makes a verified bootloader state unknown`() {
+    fun `sentinel maps to consistency warning without a bootloader state result`() {
         val repository = repository(snapshot(systemId = WIDEVINE_SENTINEL_SYSTEM_ID))
 
         val evidence = repository.inspect(
@@ -43,10 +42,6 @@ class WidevineCredentialRepositoryTest {
             evidence.findings.single { it.id == "widevine_credential" }.severity,
         )
         assertEquals(BootloaderMethodOutcome.WARNING, evidence.method.outcome)
-        assertEquals(
-            BootloaderState.UNKNOWN,
-            evidence.resolveBootloaderState(BootloaderState.VERIFIED),
-        )
         assertEquals(1, evidence.anomalyCount)
         assertEquals(BootloaderFindingSeverity.WARNING, evidence.impacts.single().severity)
     }
@@ -88,31 +83,6 @@ class WidevineCredentialRepositoryTest {
         val credential = evidence.findings.single { it.id == "widevine_credential" }
         assertEquals(BootloaderFindingSeverity.DANGER, credential.severity)
         assertEquals(BootloaderMethodOutcome.DANGER, evidence.method.outcome)
-        assertEquals(
-            BootloaderState.UNLOCKED,
-            evidence.resolveBootloaderState(BootloaderState.VERIFIED),
-        )
-    }
-
-    @Test
-    fun `Widevine never weakens an existing authoritative failure state`() {
-        val warningEvidence = repository(
-            snapshot(systemId = WIDEVINE_SENTINEL_SYSTEM_ID),
-        ).inspect(
-            WidevineBootContext(
-                rootOfTrustUnlocked = false,
-                bootStateAppearsLocked = true,
-            ),
-        )
-
-        assertEquals(
-            BootloaderState.UNLOCKED,
-            warningEvidence.resolveBootloaderState(BootloaderState.UNLOCKED),
-        )
-        assertEquals(
-            BootloaderState.FAILED_VERIFICATION,
-            warningEvidence.resolveBootloaderState(BootloaderState.FAILED_VERIFICATION),
-        )
     }
 
     @Test

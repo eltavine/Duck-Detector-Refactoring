@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -62,6 +63,9 @@ fun DetectorCardFrame(
     summary: String,
     leadingIcon: ImageVector,
     modifier: Modifier = Modifier,
+    leadingBadgeIcon: ImageVector? = null,
+    leadingBadgeStatus: DetectorStatus? = null,
+    leadingBadgeContentDescription: String? = null,
     expanded: Boolean? = null,
     onExpandedChange: ((Boolean) -> Unit)? = null,
     headerFacts: @Composable ColumnScope.() -> Unit = {},
@@ -70,6 +74,7 @@ fun DetectorCardFrame(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val appearance = rememberStatusAppearance(status)
+    val leadingBadgeAppearance = rememberStatusAppearance(leadingBadgeStatus ?: status)
     var internalExpanded by rememberSaveable(title) { mutableStateOf(false) }
     val isExpanded = expanded ?: internalExpanded
     val toggleDescription = stringResource(
@@ -123,6 +128,25 @@ fun DetectorCardFrame(
                         contentDescription = null,
                         tint = appearance.iconTint,
                     )
+                    leadingBadgeIcon?.let { badgeIcon ->
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(22.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    shape = CircleShape,
+                                )
+                                .padding(3.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = badgeIcon,
+                                contentDescription = leadingBadgeContentDescription,
+                                tint = leadingBadgeAppearance.iconTint,
+                            )
+                        }
+                    }
                 }
 
                 IconButton(

@@ -18,10 +18,17 @@ package com.eltavine.duckdetector.features.bootloader.ui.model
 
 import com.eltavine.duckdetector.core.ui.model.DetectorStatus
 
+enum class BootloaderCardAssessment {
+    AUTHORITATIVE,
+    CONSISTENCY_REVIEW,
+    CONSISTENCY_CONFLICT,
+}
+
 data class BootloaderCardModel(
     val title: String,
     val subtitle: String,
     val status: DetectorStatus,
+    val assessment: BootloaderCardAssessment,
     val verdict: String,
     val summary: String,
     val headerFacts: List<BootloaderHeaderFactModel>,
@@ -32,7 +39,17 @@ data class BootloaderCardModel(
     val impactItems: List<BootloaderImpactItemModel>,
     val methodRows: List<BootloaderDetailRowModel>,
     val scanRows: List<BootloaderDetailRowModel>,
-)
+) {
+    val showConsistencyQuestionIcon: Boolean
+        get() = assessment != BootloaderCardAssessment.AUTHORITATIVE
+
+    val assessmentStatus: DetectorStatus?
+        get() = when (assessment) {
+            BootloaderCardAssessment.AUTHORITATIVE -> null
+            BootloaderCardAssessment.CONSISTENCY_REVIEW -> DetectorStatus.warning()
+            BootloaderCardAssessment.CONSISTENCY_CONFLICT -> DetectorStatus.danger()
+        }
+}
 
 data class BootloaderHeaderFactModel(
     val label: String,

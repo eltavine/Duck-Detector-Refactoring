@@ -29,6 +29,8 @@ limitations under the License.
     <string name="dashboard_additional">Additional</string>
     <string name="dashboard_detectors">Detectors</string>
     <string name="card_expand">Expand card</string>
+    <string name="bootloader_widevine_consistency_review">Widevine consistency needs review</string>
+    <string name="bootloader_widevine_consistency_conflict">Critical Widevine consistency conflict</string>
     <string name="card_collapse">Collapse card</string>
     <string name="card_action_view_details">View details</string>
     <string name="card_action_review_evidence">Review evidence</string>

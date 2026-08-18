@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.rounded.CrisisAlert
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.VerifiedUser
@@ -38,12 +39,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
+import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderCardAssessment
 import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderCardModel
 import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderDetailRowModel
 import com.eltavine.duckdetector.features.bootloader.ui.model.BootloaderHeaderFactModel
@@ -55,6 +59,14 @@ fun BootloaderDetectorCard(
     model: BootloaderCardModel,
     modifier: Modifier = Modifier,
 ) {
+    val consistencyDescription = when (model.assessment) {
+        BootloaderCardAssessment.AUTHORITATIVE -> null
+        BootloaderCardAssessment.CONSISTENCY_REVIEW ->
+            stringResource(R.string.bootloader_widevine_consistency_review)
+
+        BootloaderCardAssessment.CONSISTENCY_CONFLICT ->
+            stringResource(R.string.bootloader_widevine_consistency_conflict)
+    }
     DetectorCardFrame(
         title = model.title,
         subtitle = model.subtitle,
@@ -62,6 +74,13 @@ fun BootloaderDetectorCard(
         verdict = model.verdict,
         summary = model.summary,
         leadingIcon = Icons.Rounded.VerifiedUser,
+        leadingBadgeIcon = if (model.showConsistencyQuestionIcon) {
+            Icons.Rounded.QuestionMark
+        } else {
+            null
+        },
+        leadingBadgeStatus = model.assessmentStatus,
+        leadingBadgeContentDescription = consistencyDescription,
         modifier = modifier,
         headerFacts = {
             BootloaderCollapsedOverview(model = model)
