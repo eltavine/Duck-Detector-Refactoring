@@ -18,11 +18,13 @@ package com.eltavine.duckdetector.features.bootloader.data.widevine
 
 import android.media.MediaDrm
 import android.media.MediaDrm.MediaDrmStateException
-import android.media.MediaDrmException
+import android.media.MediaDrm.SessionException
+import android.media.MediaDrmThrowable
 import android.media.NotProvisionedException
 import android.media.ResourceBusyException
 import android.media.UnsupportedSchemeException
 import android.os.Build
+import androidx.annotation.RequiresApi
 import java.util.UUID
 
 internal fun interface WidevineCredentialSource {
@@ -32,13 +34,15 @@ internal fun interface WidevineCredentialSource {
 internal interface WidevineMediaDrmFactory {
     fun isCryptoSchemeSupported(): Boolean
 
+    fun isHardwareSecureAllSupported(): Boolean
+
     fun create(): WidevineMediaDrmClient
 }
 
 internal interface WidevineMediaDrmClient : AutoCloseable {
     fun getPropertyString(name: String): String
 
-    fun openHardwareSecureAllSession(): ByteArray
+    fun openMaximumSecuritySession(): ByteArray
 
     fun getSecurityLevel(sessionId: ByteArray): WidevineSessionSecurityLevel
 
@@ -49,16 +53,30 @@ internal interface WidevineMediaDrmClient : AutoCloseable {
     fun closeSession(sessionId: ByteArray)
 }
 
+internal data class WidevineDrmErrorMetadata(
+    val errorCode: Int? = null,
+    val vendorError: Int? = null,
+    val oemError: Int? = null,
+    val errorContext: Int? = null,
+    val transient: Boolean? = null,
+)
+
+internal fun interface WidevineDrmErrorMetadataReader {
+    fun read(throwable: Exception): WidevineDrmErrorMetadata
+}
+
 internal class WidevineCredentialProbe(
     private val mediaDrmFactory: WidevineMediaDrmFactory = AndroidWidevineMediaDrmFactory,
     private val nativePropertyReader: WidevineNativePropertyReader = WidevineNativeBridge(),
+    private val errorMetadataReader: WidevineDrmErrorMetadataReader =
+        AndroidWidevineDrmErrorMetadataReader,
 ) : WidevineCredentialSource {
 
     override fun collect(): WidevineCredentialSnapshot {
         val errors = mutableListOf<WidevineDrmError>()
         val supported = try {
             mediaDrmFactory.isCryptoSchemeSupported()
-        } catch (throwable: Throwable) {
+        } catch (throwable: Exception) {
             errors += sanitizeError(WidevineDrmErrorStage.SUPPORT_CHECK, throwable)
             return WidevineCredentialSnapshot(errors = errors)
         }
@@ -66,6 +84,12 @@ internal class WidevineCredentialProbe(
             return WidevineCredentialSnapshot(schemeSupported = false)
         }
 
+        val hardwareSecureAllSupported = try {
+            mediaDrmFactory.isHardwareSecureAllSupported()
+        } catch (throwable: Exception) {
+            errors += sanitizeError(WidevineDrmErrorStage.SESSION_CAPABILITY, throwable)
+            null
+        }
         val nativeSnapshot = nativePropertyReader.readProperties()
         var javaSecurityLevel = WidevinePropertyRead()
         var javaSystemId = WidevinePropertyRead()
@@ -80,7 +104,7 @@ internal class WidevineCredentialProbe(
         try {
             mediaDrm = try {
                 mediaDrmFactory.create()
-            } catch (throwable: Throwable) {
+            } catch (throwable: Exception) {
                 errors += sanitizeError(WidevineDrmErrorStage.CREATE, throwable)
                 null
             }
@@ -100,9 +124,18 @@ internal class WidevineCredentialProbe(
                 }
 
                 try {
-                    sessionId = mediaDrm.openHardwareSecureAllSession()
-                    sessionStatus = WidevineOperationStatus.SUCCESS
-                } catch (throwable: Throwable) {
+                    val openedSession = mediaDrm.openMaximumSecuritySession()
+                    if (openedSession.isEmpty()) {
+                        errors += WidevineDrmError(
+                            stage = WidevineDrmErrorStage.SESSION_OPEN,
+                            kind = WidevineDrmErrorKind.INVALID_SESSION_ID,
+                        )
+                        sessionStatus = WidevineOperationStatus.FAILURE
+                    } else {
+                        sessionId = openedSession
+                        sessionStatus = WidevineOperationStatus.SUCCESS
+                    }
+                } catch (throwable: Exception) {
                     val error = sanitizeError(WidevineDrmErrorStage.SESSION_OPEN, throwable)
                     errors += error
                     sessionStatus = error.toOperationStatus()
@@ -111,7 +144,7 @@ internal class WidevineCredentialProbe(
                 sessionId?.let { openedSession ->
                     try {
                         actualSecurityLevel = mediaDrm.getSecurityLevel(openedSession)
-                    } catch (throwable: Throwable) {
+                    } catch (throwable: Exception) {
                         errors += sanitizeError(
                             WidevineDrmErrorStage.SESSION_SECURITY_LEVEL,
                             throwable,
@@ -122,7 +155,7 @@ internal class WidevineCredentialProbe(
                 try {
                     credentialAvailable = mediaDrm.hasDeviceUniqueId()
                     credentialStatus = WidevineOperationStatus.SUCCESS
-                } catch (throwable: Throwable) {
+                } catch (throwable: Exception) {
                     val error = sanitizeError(
                         WidevineDrmErrorStage.CREDENTIAL_AVAILABILITY,
                         throwable,
@@ -135,7 +168,7 @@ internal class WidevineCredentialProbe(
                     try {
                         mediaDrm.generateTestKeyRequest(openedSession)
                         keyRequestStatus = WidevineOperationStatus.SUCCESS
-                    } catch (throwable: Throwable) {
+                    } catch (throwable: Exception) {
                         val error = sanitizeError(WidevineDrmErrorStage.KEY_REQUEST, throwable)
                         errors += error
                         keyRequestStatus = error.toOperationStatus()
@@ -145,24 +178,30 @@ internal class WidevineCredentialProbe(
         } finally {
             val client = mediaDrm
             val openedSession = sessionId
-            if (client != null && openedSession != null) {
-                try {
-                    client.closeSession(openedSession)
-                } catch (throwable: Throwable) {
-                    errors += sanitizeError(WidevineDrmErrorStage.SESSION_CLOSE, throwable)
+            try {
+                if (client != null && openedSession != null) {
+                    try {
+                        client.closeSession(openedSession)
+                    } catch (throwable: Exception) {
+                        errors += sanitizeError(WidevineDrmErrorStage.SESSION_CLOSE, throwable)
+                    } finally {
+                        openedSession.fill(0)
+                    }
                 }
-            }
-            if (client != null) {
-                try {
-                    client.close()
-                } catch (throwable: Throwable) {
-                    errors += sanitizeError(WidevineDrmErrorStage.RELEASE, throwable)
+            } finally {
+                if (client != null) {
+                    try {
+                        client.close()
+                    } catch (throwable: Exception) {
+                        errors += sanitizeError(WidevineDrmErrorStage.RELEASE, throwable)
+                    }
                 }
             }
         }
 
         return WidevineCredentialSnapshot(
             schemeSupported = true,
+            hardwareSecureAllSupported = hardwareSecureAllSupported,
             javaSecurityLevel = javaSecurityLevel,
             javaSystemId = javaSystemId,
             native = nativeSnapshot,
@@ -181,11 +220,20 @@ internal class WidevineCredentialProbe(
         block: () -> String,
     ): WidevinePropertyRead {
         return try {
-            WidevinePropertyRead(
-                status = WidevinePropertyStatus.AVAILABLE,
-                value = block(),
-            )
-        } catch (throwable: Throwable) {
+            val value = block()
+            if (value.isValidWidevinePropertyValue()) {
+                WidevinePropertyRead(
+                    status = WidevinePropertyStatus.AVAILABLE,
+                    value = value,
+                )
+            } else {
+                errors += WidevineDrmError(
+                    stage = stage,
+                    kind = WidevineDrmErrorKind.INVALID_PROPERTY_VALUE,
+                )
+                WidevinePropertyRead(status = WidevinePropertyStatus.ERROR)
+            }
+        } catch (throwable: Exception) {
             val error = sanitizeError(stage, throwable)
             errors += error
             WidevinePropertyRead(
@@ -200,56 +248,41 @@ internal class WidevineCredentialProbe(
 
     private fun sanitizeError(
         stage: WidevineDrmErrorStage,
-        throwable: Throwable,
+        throwable: Exception,
     ): WidevineDrmError {
         val stateException = throwable as? MediaDrmStateException
-        val mediaDrmException = throwable as? MediaDrmException
+        val sessionException = throwable as? SessionException
+        val numericMetadata = try {
+            errorMetadataReader.read(throwable)
+        } catch (_: Exception) {
+            WidevineDrmErrorMetadata()
+        }
+        val unsupportedProperty = stage.isPropertyStage() && (
+            throwable is IllegalArgumentException ||
+                throwable is UnsupportedOperationException ||
+                stateException != null &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                numericMetadata.errorCode == MediaDrm.ErrorCodes.ERROR_UNSUPPORTED_OPERATION
+        )
         return WidevineDrmError(
             stage = stage,
             kind = when {
                 throwable is UnsupportedSchemeException -> WidevineDrmErrorKind.UNSUPPORTED_SCHEME
                 throwable is NotProvisionedException -> WidevineDrmErrorKind.NOT_PROVISIONED
                 throwable is ResourceBusyException -> WidevineDrmErrorKind.RESOURCE_BUSY
-                throwable is IllegalArgumentException && stage.isPropertyStage() ->
-                    WidevineDrmErrorKind.UNSUPPORTED_PROPERTY
+                sessionException != null && numericMetadata.transient == true ->
+                    WidevineDrmErrorKind.RESOURCE_BUSY
 
-                throwable is UnsupportedOperationException && stage.isPropertyStage() ->
-                    WidevineDrmErrorKind.UNSUPPORTED_PROPERTY
-
-                stateException != null -> WidevineDrmErrorKind.STATE
+                unsupportedProperty -> WidevineDrmErrorKind.UNSUPPORTED_PROPERTY
+                stateException != null || sessionException != null -> WidevineDrmErrorKind.STATE
                 else -> WidevineDrmErrorKind.RUNTIME
             },
-            errorCode = stateException?.sanitizedErrorCode(),
-            vendorError = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                mediaDrmException?.vendorError
-            } else {
-                null
-            },
-            oemError = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                mediaDrmException?.oemError
-            } else {
-                null
-            },
-            errorContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                mediaDrmException?.errorContext
-            } else {
-                null
-            },
-            transient = if (stateException != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                stateException.isTransient
-            } else {
-                null
-            },
+            errorCode = numericMetadata.errorCode,
+            vendorError = numericMetadata.vendorError,
+            oemError = numericMetadata.oemError,
+            errorContext = numericMetadata.errorContext,
+            transient = numericMetadata.transient,
         )
-    }
-
-    private fun MediaDrmStateException.sanitizedErrorCode(): Int? {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return errorCode
-        }
-        val match = LEGACY_DIAGNOSTIC_ERROR.find(diagnosticInfo) ?: return null
-        val magnitude = match.groupValues[2].toIntOrNull() ?: return null
-        return if (match.groupValues[1].isNotEmpty()) -magnitude else magnitude
     }
 
     private fun WidevineDrmErrorStage.isPropertyStage(): Boolean {
@@ -277,7 +310,69 @@ internal class WidevineCredentialProbe(
     private companion object {
         const val PROPERTY_SECURITY_LEVEL = "securityLevel"
         const val PROPERTY_SYSTEM_ID = "systemId"
-        val LEGACY_DIAGNOSTIC_ERROR = Regex("error_(neg_)?(\\d+)")
+    }
+}
+
+private object AndroidWidevineDrmErrorMetadataReader : WidevineDrmErrorMetadataReader {
+
+    override fun read(throwable: Exception): WidevineDrmErrorMetadata {
+        val stateException = throwable as? MediaDrmStateException
+        val sessionException = throwable as? SessionException
+        val api34Metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            Api34.read(throwable)
+        } else {
+            WidevineDrmErrorMetadata()
+        }
+        return api34Metadata.copy(
+            errorCode = when {
+                stateException != null -> stateException.sanitizedErrorCode()
+                sessionException != null -> sessionException.sanitizedErrorCode()
+                else -> null
+            },
+            transient = when {
+                stateException != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                    stateException.isTransient
+
+                sessionException != null -> sessionException.isTransientCompat()
+                else -> null
+            },
+        )
+    }
+
+    private fun MediaDrmStateException.sanitizedErrorCode(): Int? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return errorCode
+        }
+        val match = LEGACY_DIAGNOSTIC_ERROR.find(diagnosticInfo) ?: return null
+        val magnitude = match.groupValues[2].toIntOrNull() ?: return null
+        return if (match.groupValues[1].isNotEmpty()) -magnitude else magnitude
+    }
+
+    @Suppress("DEPRECATION")
+    private fun SessionException.sanitizedErrorCode(): Int = errorCode
+
+    @Suppress("DEPRECATION")
+    private fun SessionException.isTransientCompat(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            isTransient
+        } else {
+            errorCode == SessionException.ERROR_RESOURCE_CONTENTION
+        }
+    }
+
+    private val LEGACY_DIAGNOSTIC_ERROR = Regex("error_(neg_)?(\\d+)")
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private object Api34 {
+        fun read(throwable: Throwable): WidevineDrmErrorMetadata {
+            val mediaDrmThrowable = throwable as? MediaDrmThrowable
+                ?: return WidevineDrmErrorMetadata()
+            return WidevineDrmErrorMetadata(
+                vendorError = mediaDrmThrowable.vendorError,
+                oemError = mediaDrmThrowable.oemError,
+                errorContext = mediaDrmThrowable.errorContext,
+            )
+        }
     }
 }
 
@@ -286,6 +381,14 @@ private object AndroidWidevineMediaDrmFactory : WidevineMediaDrmFactory {
 
     override fun isCryptoSchemeSupported(): Boolean {
         return MediaDrm.isCryptoSchemeSupported(widevineUuid)
+    }
+
+    override fun isHardwareSecureAllSupported(): Boolean {
+        return MediaDrm.isCryptoSchemeSupported(
+            widevineUuid,
+            WIDEVINE_TEST_MIME_TYPE,
+            MediaDrm.SECURITY_LEVEL_HW_SECURE_ALL,
+        )
     }
 
     override fun create(): WidevineMediaDrmClient {
@@ -299,8 +402,8 @@ private class AndroidWidevineMediaDrmClient(
 
     override fun getPropertyString(name: String): String = mediaDrm.getPropertyString(name)
 
-    override fun openHardwareSecureAllSession(): ByteArray {
-        return mediaDrm.openSession(MediaDrm.SECURITY_LEVEL_HW_SECURE_ALL)
+    override fun openMaximumSecuritySession(): ByteArray {
+        return mediaDrm.openSession()
     }
 
     override fun getSecurityLevel(sessionId: ByteArray): WidevineSessionSecurityLevel {
@@ -325,17 +428,23 @@ private class AndroidWidevineMediaDrmClient(
     }
 
     override fun hasDeviceUniqueId(): Boolean {
-        return mediaDrm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID).isNotEmpty()
+        val deviceUniqueId = mediaDrm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID)
+        return try {
+            deviceUniqueId.isNotEmpty()
+        } finally {
+            deviceUniqueId.fill(0)
+        }
     }
 
     override fun generateTestKeyRequest(sessionId: ByteArray) {
-        mediaDrm.getKeyRequest(
+        val request = mediaDrm.getKeyRequest(
             sessionId,
-            TEST_PSSH,
-            TEST_MIME_TYPE,
+            TEST_PSSH.copyOf(),
+            WIDEVINE_TEST_MIME_TYPE,
             MediaDrm.KEY_TYPE_STREAMING,
             hashMapOf(),
         )
+        request.data.fill(0)
     }
 
     override fun closeSession(sessionId: ByteArray) {
@@ -347,8 +456,6 @@ private class AndroidWidevineMediaDrmClient(
     }
 
     private companion object {
-        const val TEST_MIME_TYPE = "video/mp4"
-
         // Common Encryption PSSH v0 with the Widevine system ID and a fixed non-secret test KID.
         val TEST_PSSH = intArrayOf(
             0x00, 0x00, 0x00, 0x32,
@@ -363,3 +470,5 @@ private class AndroidWidevineMediaDrmClient(
         ).map(Int::toByte).toByteArray()
     }
 }
+
+private const val WIDEVINE_TEST_MIME_TYPE = "video/mp4"

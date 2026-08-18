@@ -17,6 +17,8 @@
 package com.eltavine.duckdetector.features.bootloader.data.widevine
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidevineCredentialClassifierTest {
@@ -57,7 +59,17 @@ class WidevineCredentialClassifierTest {
     }
 
     @Test
-    fun `sentinel system id without advertised L1 does not trigger sentinel rule`() {
+    fun `sentinel comparison does not accept padded property values`() {
+        val assessment = classifier.classify(
+            snapshot(systemId = " $WIDEVINE_SENTINEL_SYSTEM_ID "),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.SAFE, assessment.credential().severity)
+    }
+
+    @Test
+    fun `sentinel system id without advertised L1 is partial`() {
         val assessment = classifier.classify(
             snapshot(
                 systemId = WIDEVINE_SENTINEL_SYSTEM_ID,
@@ -67,11 +79,12 @@ class WidevineCredentialClassifierTest {
             lockedContext,
         )
 
-        assertEquals(WidevineAssessmentSeverity.SAFE, assessment.credential().severity)
+        assertEquals(WidevineAssessmentSeverity.SUPPORT, assessment.credential().severity)
+        assertEquals("Partial", assessment.credential().value)
     }
 
     @Test
-    fun `sentinel with independently confirmed unlock is danger`() {
+    fun `independent RootOfTrust unlock does not escalate sentinel`() {
         val assessment = classifier.classify(
             snapshot(systemId = WIDEVINE_SENTINEL_SYSTEM_ID),
             WidevineBootContext(
@@ -80,8 +93,10 @@ class WidevineCredentialClassifierTest {
             ),
         )
 
-        assertEquals(WidevineAssessmentSeverity.DANGER, assessment.credential().severity)
-        assertEquals("Unlock impact confirmed", assessment.credential().value)
+        assertEquals(WidevineAssessmentSeverity.WARNING, assessment.credential().severity)
+        assertEquals("Sentinel system ID", assessment.credential().value)
+        assertTrue(assessment.credential().detail.contains("independent RootOfTrust state is unlocked"))
+        assertFalse(assessment.impact?.detail.orEmpty().contains("confirms", ignoreCase = true))
     }
 
     @Test
@@ -95,11 +110,11 @@ class WidevineCredentialClassifierTest {
         )
 
         assertEquals(WidevineAssessmentSeverity.DANGER, assessment.credential().severity)
-        assertEquals("Session downgrade", assessment.credential().value)
+        assertEquals("Corroborated anomaly", assessment.credential().value)
     }
 
     @Test
-    fun `L1 session downgrade is danger without sentinel`() {
+    fun `L1 lower session is warning without sentinel`() {
         val assessment = classifier.classify(
             snapshot(
                 systemId = "38497",
@@ -108,11 +123,86 @@ class WidevineCredentialClassifierTest {
             lockedContext,
         )
 
-        assertEquals(WidevineAssessmentSeverity.DANGER, assessment.credential().severity)
+        assertEquals(WidevineAssessmentSeverity.WARNING, assessment.credential().severity)
+        assertEquals("Lower security session", assessment.credential().value)
     }
 
     @Test
-    fun `non transient L1 hardware session failure is danger`() {
+    fun `L1 lower session remains warning when system id is unavailable`() {
+        val assessment = classifier.classify(
+            snapshot(
+                systemId = "38497",
+                actualLevel = WidevineSessionSecurityLevel.HW_SECURE_DECODE,
+            ).copy(
+                javaSystemId = WidevinePropertyRead(WidevinePropertyStatus.UNSUPPORTED),
+            ),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.WARNING, assessment.credential().severity)
+        assertEquals("Lower security session", assessment.credential().value)
+    }
+
+    @Test
+    fun `documented lower maximum session is support when HW secure all is unsupported`() {
+        val assessment = classifier.classify(
+            snapshot(
+                systemId = "38497",
+                hardwareSecureAllSupported = false,
+                actualLevel = WidevineSessionSecurityLevel.HW_SECURE_DECODE,
+            ),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.SUPPORT, assessment.credential().severity)
+        assertEquals("Maximum security constrained", assessment.credential().value)
+    }
+
+    @Test
+    fun `documented lower maximum session does not escalate sentinel`() {
+        val assessment = classifier.classify(
+            snapshot(
+                systemId = WIDEVINE_SENTINEL_SYSTEM_ID,
+                hardwareSecureAllSupported = false,
+                actualLevel = WidevineSessionSecurityLevel.SW_SECURE_CRYPTO,
+            ),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.WARNING, assessment.credential().severity)
+        assertEquals("Sentinel system ID", assessment.credential().value)
+    }
+
+    @Test
+    fun `unknown advertised security level is partial rather than clean`() {
+        val assessment = classifier.classify(
+            snapshot(
+                systemId = "38497",
+                securityLevel = "vendor-defined",
+            ),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.SUPPORT, assessment.credential().severity)
+        assertEquals("Partial", assessment.credential().value)
+    }
+
+    @Test
+    fun `unknown actual session level is partial rather than a confirmed downgrade`() {
+        val assessment = classifier.classify(
+            snapshot(
+                systemId = "38497",
+                actualLevel = WidevineSessionSecurityLevel.UNKNOWN,
+            ),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.SUPPORT, assessment.credential().severity)
+        assertEquals("Partial", assessment.credential().value)
+    }
+
+    @Test
+    fun `non transient L1 hardware session failure is support only`() {
         val assessment = classifier.classify(
             snapshot(
                 systemId = "38497",
@@ -123,12 +213,12 @@ class WidevineCredentialClassifierTest {
             lockedContext,
         )
 
-        assertEquals(WidevineAssessmentSeverity.DANGER, assessment.credential().severity)
-        assertEquals("Hardware session failed", assessment.credential().value)
+        assertEquals(WidevineAssessmentSeverity.SUPPORT, assessment.credential().severity)
+        assertEquals("Session inconclusive", assessment.credential().value)
     }
 
     @Test
-    fun `sentinel with provisioning failure is danger`() {
+    fun `provisioning failure does not escalate sentinel`() {
         val assessment = classifier.classify(
             snapshot(
                 systemId = WIDEVINE_SENTINEL_SYSTEM_ID,
@@ -138,12 +228,12 @@ class WidevineCredentialClassifierTest {
             lockedContext,
         )
 
-        assertEquals(WidevineAssessmentSeverity.DANGER, assessment.credential().severity)
-        assertEquals("Invalid credential", assessment.credential().value)
+        assertEquals(WidevineAssessmentSeverity.WARNING, assessment.credential().severity)
+        assertEquals("Sentinel system ID", assessment.credential().value)
     }
 
     @Test
-    fun `sentinel with non transient local key request failure is danger`() {
+    fun `local key request failure does not escalate sentinel`() {
         val assessment = classifier.classify(
             snapshot(
                 systemId = WIDEVINE_SENTINEL_SYSTEM_ID,
@@ -152,8 +242,8 @@ class WidevineCredentialClassifierTest {
             lockedContext,
         )
 
-        assertEquals(WidevineAssessmentSeverity.DANGER, assessment.credential().severity)
-        assertEquals("Invalid credential", assessment.credential().value)
+        assertEquals(WidevineAssessmentSeverity.WARNING, assessment.credential().severity)
+        assertEquals("Sentinel system ID", assessment.credential().value)
     }
 
     @Test
@@ -169,7 +259,23 @@ class WidevineCredentialClassifierTest {
         )
 
         assertEquals(WidevineAssessmentSeverity.SUPPORT, assessment.credential().severity)
-        assertEquals("Inconclusive", assessment.credential().value)
+        assertEquals("Session inconclusive", assessment.credential().value)
+    }
+
+    @Test
+    fun `unsupported maximum security session is support only`() {
+        val assessment = classifier.classify(
+            snapshot(
+                systemId = "38497",
+                sessionStatus = WidevineOperationStatus.UNSUPPORTED,
+                actualLevel = null,
+                keyRequestStatus = WidevineOperationStatus.NOT_ATTEMPTED,
+            ),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.SUPPORT, assessment.credential().severity)
+        assertEquals("Session inconclusive", assessment.credential().value)
     }
 
     @Test
@@ -201,6 +307,21 @@ class WidevineCredentialClassifierTest {
     }
 
     @Test
+    fun `Java and native property formatting difference is warning`() {
+        val assessment = classifier.classify(
+            snapshot(systemId = "38497").copy(
+                native = snapshot(systemId = "38497").native.copy(
+                    securityLevel = property("l1"),
+                ),
+            ),
+            lockedContext,
+        )
+
+        assertEquals(WidevineAssessmentSeverity.WARNING, assessment.parity().severity)
+        assertEquals("Mismatch", assessment.parity().value)
+    }
+
+    @Test
     fun `native unavailability only reduces coverage`() {
         val assessment = classifier.classify(
             snapshot(systemId = "38497").copy(native = WidevineNativeSnapshot()),
@@ -215,6 +336,7 @@ class WidevineCredentialClassifierTest {
         systemId: String,
         securityLevel: String = "L1",
         nativeSystemId: String = systemId,
+        hardwareSecureAllSupported: Boolean? = true,
         sessionStatus: WidevineOperationStatus = WidevineOperationStatus.SUCCESS,
         actualLevel: WidevineSessionSecurityLevel? = WidevineSessionSecurityLevel.HW_SECURE_ALL,
         credentialStatus: WidevineOperationStatus = WidevineOperationStatus.SUCCESS,
@@ -223,6 +345,7 @@ class WidevineCredentialClassifierTest {
     ): WidevineCredentialSnapshot {
         return WidevineCredentialSnapshot(
             schemeSupported = true,
+            hardwareSecureAllSupported = hardwareSecureAllSupported,
             javaSecurityLevel = property(securityLevel),
             javaSystemId = property(systemId),
             native = WidevineNativeSnapshot(

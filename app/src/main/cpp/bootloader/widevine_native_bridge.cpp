@@ -18,10 +18,15 @@
 #include <media/NdkMediaDrm.h>
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 
 namespace {
+
+    // Widevine securityLevel and systemId are short ASCII properties.
+    constexpr size_t MAX_PROPERTY_VALUE_LENGTH = 64;
 
     constexpr std::array<uint8_t, 16> WIDEVINE_UUID = {
             0xed, 0xef, 0x8b, 0xa9,
@@ -41,13 +46,34 @@ namespace {
 
     using MediaDrmPtr = std::unique_ptr<AMediaDrm, MediaDrmReleaser>;
 
-    void set_string(JNIEnv *env, jobjectArray output, jsize index, const std::string &value) {
+    bool copy_property_value(const char *value, std::string *output) {
+        if (value == nullptr || output == nullptr) {
+            return false;
+        }
+        output->clear();
+        for (size_t index = 0; index <= MAX_PROPERTY_VALUE_LENGTH; ++index) {
+            const auto character = static_cast<unsigned char>(value[index]);
+            if (character == '\0') {
+                return index > 0;
+            }
+            if (index == MAX_PROPERTY_VALUE_LENGTH || character < 0x20 || character > 0x7e) {
+                output->clear();
+                return false;
+            }
+            output->push_back(static_cast<char>(character));
+        }
+        output->clear();
+        return false;
+    }
+
+    bool set_string(JNIEnv *env, jobjectArray output, jsize index, const std::string &value) {
         jstring java_value = env->NewStringUTF(value.c_str());
         if (java_value == nullptr) {
-            return;
+            return false;
         }
         env->SetObjectArrayElement(output, index, java_value);
         env->DeleteLocalRef(java_value);
+        return !env->ExceptionCheck();
     }
 
 }  // namespace
@@ -69,45 +95,60 @@ Java_com_eltavine_duckdetector_features_bootloader_data_widevine_WidevineNativeB
     }
 
     if (!AMediaDrm_isCryptoSchemeSupported(WIDEVINE_UUID.data(), nullptr)) {
-        set_string(env, output, 0, "0");
+        if (!set_string(env, output, 0, "0")) {
+            return nullptr;
+        }
         return output;
     }
 
     MediaDrmPtr media_drm(AMediaDrm_createByUUID(WIDEVINE_UUID.data()));
     if (media_drm == nullptr) {
-        set_string(env, output, 0, "0");
+        if (!set_string(env, output, 0, "0")) {
+            return nullptr;
+        }
         return output;
     }
 
     const char *security_level_pointer = nullptr;
-    const media_status_t security_level_status = AMediaDrm_getPropertyString(
+    media_status_t security_level_status = AMediaDrm_getPropertyString(
             media_drm.get(),
             "securityLevel",
             &security_level_pointer
     );
-    const std::string security_level =
-            security_level_status == AMEDIA_OK && security_level_pointer != nullptr
-            ? security_level_pointer
-            : "";
+    std::string security_level;
+    if (security_level_status == AMEDIA_OK &&
+        !copy_property_value(security_level_pointer, &security_level)) {
+        security_level_status = AMEDIA_ERROR_MALFORMED;
+    }
 
     const char *system_id_pointer = nullptr;
-    const media_status_t system_id_status = AMediaDrm_getPropertyString(
+    media_status_t system_id_status = AMediaDrm_getPropertyString(
             media_drm.get(),
             "systemId",
             &system_id_pointer
     );
-    const std::string system_id = system_id_status == AMEDIA_OK && system_id_pointer != nullptr
-                                  ? system_id_pointer
-                                  : "";
-
-    set_string(env, output, 0, "1");
-    set_string(env, output, 1, std::to_string(security_level_status));
-    if (security_level_status == AMEDIA_OK) {
-        set_string(env, output, 2, security_level);
+    std::string system_id;
+    if (system_id_status == AMEDIA_OK &&
+        !copy_property_value(system_id_pointer, &system_id)) {
+        system_id_status = AMEDIA_ERROR_MALFORMED;
     }
-    set_string(env, output, 3, std::to_string(system_id_status));
+
+    if (!set_string(env, output, 0, "1") ||
+        !set_string(env, output, 1, std::to_string(security_level_status))) {
+        return nullptr;
+    }
+    if (security_level_status == AMEDIA_OK) {
+        if (!set_string(env, output, 2, security_level)) {
+            return nullptr;
+        }
+    }
+    if (!set_string(env, output, 3, std::to_string(system_id_status))) {
+        return nullptr;
+    }
     if (system_id_status == AMEDIA_OK) {
-        set_string(env, output, 4, system_id);
+        if (!set_string(env, output, 4, system_id)) {
+            return nullptr;
+        }
     }
     return output;
 }

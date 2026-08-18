@@ -637,7 +637,11 @@ class BootloaderRepository(
 
             addAll(widevineEvidence.impacts)
 
-            if (findings.none { it.severity == BootloaderFindingSeverity.DANGER || it.severity == BootloaderFindingSeverity.WARNING }) {
+            if (findings.none {
+                    it.severity == BootloaderFindingSeverity.DANGER ||
+                        it.severity == BootloaderFindingSeverity.WARNING
+                }
+            ) {
                 add(
                     BootloaderImpact(
                         text = "No bootloader or verified-boot signal suggested an unlocked or obviously contradictory boot chain.",

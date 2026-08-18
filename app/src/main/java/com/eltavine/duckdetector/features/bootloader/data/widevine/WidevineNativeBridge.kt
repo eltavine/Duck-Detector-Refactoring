@@ -23,8 +23,13 @@ internal fun interface WidevineNativePropertyReader {
 internal class WidevineNativeBridge : WidevineNativePropertyReader {
 
     override fun readProperties(): WidevineNativeSnapshot {
-        return runCatching { parse(nativeReadProperties()) }
-            .getOrDefault(WidevineNativeSnapshot())
+        return try {
+            parse(nativeReadProperties())
+        } catch (_: LinkageError) {
+            WidevineNativeSnapshot()
+        } catch (_: Exception) {
+            WidevineNativeSnapshot()
+        }
     }
 
     internal fun parse(raw: Array<String?>): WidevineNativeSnapshot {
@@ -34,6 +39,14 @@ internal class WidevineNativeBridge : WidevineNativePropertyReader {
 
         val securityStatus = raw[INDEX_SECURITY_STATUS].toStatusCode()
         val systemIdStatus = raw[INDEX_SYSTEM_ID_STATUS].toStatusCode()
+        if (securityStatus == MEDIA_ERROR_INVALID_OBJECT &&
+            systemIdStatus == MEDIA_ERROR_INVALID_OBJECT
+        ) {
+            return WidevineNativeSnapshot(
+                securityLevelStatusCode = securityStatus,
+                systemIdStatusCode = systemIdStatus,
+            )
+        }
         return WidevineNativeSnapshot(
             available = true,
             securityLevel = propertyRead(securityStatus, raw[INDEX_SECURITY_VALUE]),
@@ -45,12 +58,16 @@ internal class WidevineNativeBridge : WidevineNativePropertyReader {
 
     private fun propertyRead(statusCode: Int?, value: String?): WidevinePropertyRead {
         return when {
-            statusCode == MEDIA_STATUS_OK -> WidevinePropertyRead(
-                status = WidevinePropertyStatus.AVAILABLE,
-                value = value,
-            )
+            statusCode == MEDIA_STATUS_OK && value?.isValidWidevinePropertyValue() == true ->
+                WidevinePropertyRead(
+                    status = WidevinePropertyStatus.AVAILABLE,
+                    value = value,
+                )
 
-            statusCode != null -> WidevinePropertyRead(WidevinePropertyStatus.UNSUPPORTED)
+            statusCode == MEDIA_ERROR_UNSUPPORTED ||
+                statusCode == MEDIA_ERROR_INVALID_PARAMETER ->
+                WidevinePropertyRead(WidevinePropertyStatus.UNSUPPORTED)
+
             else -> WidevinePropertyRead(WidevinePropertyStatus.ERROR)
         }
     }
@@ -61,6 +78,10 @@ internal class WidevineNativeBridge : WidevineNativePropertyReader {
 
     private companion object {
         const val MEDIA_STATUS_OK = 0
+        const val MEDIA_ERROR_UNSUPPORTED = -10002
+        const val MEDIA_ERROR_INVALID_OBJECT = -10003
+        // NdkMediaDrm maps DRM_CANNOT_HANDLE (including unknown vendor properties) to this code.
+        const val MEDIA_ERROR_INVALID_PARAMETER = -10004
         const val PAYLOAD_FIELD_COUNT = 5
         const val INDEX_AVAILABLE = 0
         const val INDEX_SECURITY_STATUS = 1
@@ -69,7 +90,13 @@ internal class WidevineNativeBridge : WidevineNativePropertyReader {
         const val INDEX_SYSTEM_ID_VALUE = 4
 
         init {
-            runCatching { System.loadLibrary("duckdetector") }
+            try {
+                System.loadLibrary("duckdetector")
+            } catch (_: LinkageError) {
+                // The Java MediaDrm path remains available when the optional native path cannot load.
+            } catch (_: SecurityException) {
+                // A runtime loading policy can disable parity collection without disabling the probe.
+            }
         }
     }
 }

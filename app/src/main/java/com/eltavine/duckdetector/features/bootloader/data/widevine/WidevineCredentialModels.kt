@@ -17,6 +17,13 @@
 package com.eltavine.duckdetector.features.bootloader.data.widevine
 
 internal const val WIDEVINE_SENTINEL_SYSTEM_ID = "2147483647"
+internal const val MAX_WIDEVINE_PROPERTY_VALUE_LENGTH = 64
+
+internal fun String.isValidWidevinePropertyValue(): Boolean {
+    return isNotEmpty() &&
+        length <= MAX_WIDEVINE_PROPERTY_VALUE_LENGTH &&
+        all { character -> character.code in 0x20..0x7e }
+}
 
 internal enum class WidevinePropertyStatus {
     NOT_ATTEMPTED,
@@ -51,6 +58,7 @@ internal enum class WidevineSessionSecurityLevel {
 
 internal enum class WidevineDrmErrorStage {
     SUPPORT_CHECK,
+    SESSION_CAPABILITY,
     CREATE,
     JAVA_SECURITY_LEVEL,
     JAVA_SYSTEM_ID,
@@ -65,6 +73,8 @@ internal enum class WidevineDrmErrorStage {
 internal enum class WidevineDrmErrorKind {
     UNSUPPORTED_SCHEME,
     UNSUPPORTED_PROPERTY,
+    INVALID_PROPERTY_VALUE,
+    INVALID_SESSION_ID,
     NOT_PROVISIONED,
     RESOURCE_BUSY,
     STATE,
@@ -96,6 +106,7 @@ internal data class WidevineNativeSnapshot(
  */
 internal data class WidevineCredentialSnapshot(
     val schemeSupported: Boolean? = null,
+    val hardwareSecureAllSupported: Boolean? = null,
     val javaSecurityLevel: WidevinePropertyRead = WidevinePropertyRead(),
     val javaSystemId: WidevinePropertyRead = WidevinePropertyRead(),
     val native: WidevineNativeSnapshot = WidevineNativeSnapshot(),

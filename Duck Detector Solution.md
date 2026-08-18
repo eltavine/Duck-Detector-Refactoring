@@ -18,8 +18,10 @@ Verified boot
 -通过可信执行环境检测(tee)
 
 检测到Widevine L1凭据一致性异常
--该结果表示DRM凭据、硬件会话或Java/native属性存在矛盾，不能单独证明当前bootloader已解锁
--锁定设备也可能因历史解锁、ROM转换或OEM预配缺陷出现该结果，应结合RootOfTrust和boot属性判断
+-精确sentinel属性、明确支持HW_SECURE_ALL却返回较低最大会话级别，或Java/native属性不一致作为DRM一致性信号
+-Android允许不支持请求等级时选择下一较低等级，VirtualDevice也可调整最大等级；能力预检未确认HW_SECURE_ALL时不将较低会话判为异常
+-Provisioning、显式安全级别会话请求或本地key request失败仅表示检测不完整，不等于凭据无效
+-Widevine Warning/Danger会同步影响整体Bootloader卡片严重度，但不会改写BootloaderState，也不能证明当前解锁状态或解锁导致了DRM异常
 
 **TEE**
 可信执行环境检测与预期不符

@@ -31,7 +31,7 @@ internal class WidevineCredentialClassifier {
         return WidevineCredentialAssessment(
             findings = findings,
             methodSummary = when (methodSeverity) {
-                WidevineAssessmentSeverity.DANGER -> "Credential anomaly"
+                WidevineAssessmentSeverity.DANGER -> "DRM inconsistency"
                 WidevineAssessmentSeverity.WARNING -> "Needs review"
                 WidevineAssessmentSeverity.SUPPORT -> "Partial"
                 WidevineAssessmentSeverity.SAFE -> "Consistent"
@@ -40,7 +40,7 @@ internal class WidevineCredentialClassifier {
             methodDetail = findings.joinToString("\n") { finding ->
                 "${finding.label}: ${finding.value}. ${finding.detail}"
             },
-            impact = buildImpact(credentialFinding, parityFinding, bootContext),
+            impact = buildImpact(credentialFinding, parityFinding),
         )
     }
 
@@ -59,24 +59,31 @@ internal class WidevineCredentialClassifier {
         val securityLevel = snapshot.javaSecurityLevel.normalizedSecurityLevel()
         val systemId = snapshot.javaSystemId.normalizedSystemId()
         if (snapshot.javaSecurityLevel.status != WidevinePropertyStatus.AVAILABLE ||
-            snapshot.javaSystemId.status != WidevinePropertyStatus.AVAILABLE ||
-            securityLevel == null ||
-            systemId == null
+            securityLevel == null
         ) {
             return credentialFinding(
-                value = "Properties unavailable",
+                value = "Security level unavailable",
                 severity = WidevineAssessmentSeverity.SUPPORT,
                 detail = buildDetail(snapshot, bootContext),
             )
         }
 
         val advertisedL1 = securityLevel == ADVERTISED_L1
-        val sentinel = advertisedL1 && systemId == WIDEVINE_SENTINEL_SYSTEM_ID
+        val systemIdAvailable = snapshot.javaSystemId.status == WidevinePropertyStatus.AVAILABLE &&
+            systemId != null
+        val sentinel = snapshot.javaSecurityLevel.status == WidevinePropertyStatus.AVAILABLE &&
+            snapshot.javaSystemId.status == WidevinePropertyStatus.AVAILABLE &&
+            snapshot.javaSecurityLevel.value == ADVERTISED_L1 &&
+            snapshot.javaSystemId.value == WIDEVINE_SENTINEL_SYSTEM_ID
         val sessionDowngrade = advertisedL1 &&
+            snapshot.hardwareSecureAllSupported == true &&
             snapshot.sessionStatus == WidevineOperationStatus.SUCCESS &&
-            snapshot.actualSessionSecurityLevel != null &&
-            snapshot.actualSessionSecurityLevel != WidevineSessionSecurityLevel.HW_SECURE_ALL
-        val hardSessionFailure = advertisedL1 && snapshot.sessionStatus in setOf(
+            snapshot.actualSessionSecurityLevel.isKnownBelowHardwareSecureAll()
+        val constrainedMaximumSession = advertisedL1 &&
+            snapshot.hardwareSecureAllSupported != true &&
+            snapshot.sessionStatus == WidevineOperationStatus.SUCCESS &&
+            snapshot.actualSessionSecurityLevel.isKnownBelowHardwareSecureAll()
+        val inconclusiveSessionFailure = advertisedL1 && snapshot.sessionStatus in setOf(
             WidevineOperationStatus.NOT_PROVISIONED,
             WidevineOperationStatus.UNSUPPORTED,
             WidevineOperationStatus.FAILURE,
@@ -84,38 +91,11 @@ internal class WidevineCredentialClassifier {
         val sessionLevelFailure = advertisedL1 && snapshot.errors.any { error ->
             error.stage == WidevineDrmErrorStage.SESSION_SECURITY_LEVEL && error.transient != true
         }
-        val sentinelCredentialFailure = sentinel && (
-            snapshot.credentialStatus == WidevineOperationStatus.SUCCESS &&
-                snapshot.credentialAvailable == false ||
-                snapshot.credentialStatus == WidevineOperationStatus.NOT_PROVISIONED ||
-                snapshot.credentialStatus == WidevineOperationStatus.FAILURE ||
-                snapshot.keyRequestStatus == WidevineOperationStatus.NOT_PROVISIONED ||
-                snapshot.keyRequestStatus == WidevineOperationStatus.FAILURE
-            )
-        val independentlyConfirmedUnlock = sentinel && bootContext.rootOfTrustUnlocked
 
         val detail = buildDetail(snapshot, bootContext)
         return when {
-            sessionDowngrade -> credentialFinding(
-                value = "Session downgrade",
-                severity = WidevineAssessmentSeverity.DANGER,
-                detail = detail,
-            )
-
-            hardSessionFailure -> credentialFinding(
-                value = "Hardware session failed",
-                severity = WidevineAssessmentSeverity.DANGER,
-                detail = detail,
-            )
-
-            sentinelCredentialFailure -> credentialFinding(
-                value = "Invalid credential",
-                severity = WidevineAssessmentSeverity.DANGER,
-                detail = detail,
-            )
-
-            independentlyConfirmedUnlock -> credentialFinding(
-                value = "Unlock impact confirmed",
+            sentinel && sessionDowngrade -> credentialFinding(
+                value = "Corroborated anomaly",
                 severity = WidevineAssessmentSeverity.DANGER,
                 detail = detail,
             )
@@ -126,22 +106,43 @@ internal class WidevineCredentialClassifier {
                 detail = detail,
             )
 
-            sessionLevelFailure -> credentialFinding(
-                value = "Session level unavailable",
+            sessionDowngrade -> credentialFinding(
+                value = "Lower security session",
                 severity = WidevineAssessmentSeverity.WARNING,
                 detail = detail,
             )
 
             snapshot.sessionStatus == WidevineOperationStatus.RESOURCE_BUSY ||
-                snapshot.sessionStatus == WidevineOperationStatus.TRANSIENT_ERROR ->
+                snapshot.sessionStatus == WidevineOperationStatus.TRANSIENT_ERROR ||
+                inconclusiveSessionFailure ->
                 credentialFinding(
-                    value = "Inconclusive",
+                    value = "Session inconclusive",
                     severity = WidevineAssessmentSeverity.SUPPORT,
                     detail = detail,
                 )
 
-            snapshot.sessionStatus == WidevineOperationStatus.SUCCESS &&
-                snapshot.actualSessionSecurityLevel != null &&
+            sessionLevelFailure -> credentialFinding(
+                value = "Session level unavailable",
+                severity = WidevineAssessmentSeverity.SUPPORT,
+                detail = detail,
+            )
+
+            constrainedMaximumSession -> credentialFinding(
+                value = "Maximum security constrained",
+                severity = WidevineAssessmentSeverity.SUPPORT,
+                detail = detail,
+            )
+
+            !systemIdAvailable -> credentialFinding(
+                value = "System ID unavailable",
+                severity = WidevineAssessmentSeverity.SUPPORT,
+                detail = detail,
+            )
+
+            advertisedL1 &&
+                snapshot.hardwareSecureAllSupported == true &&
+                snapshot.sessionStatus == WidevineOperationStatus.SUCCESS &&
+                snapshot.actualSessionSecurityLevel == WidevineSessionSecurityLevel.HW_SECURE_ALL &&
                 snapshot.credentialStatus == WidevineOperationStatus.SUCCESS &&
                 snapshot.credentialAvailable == true &&
                 snapshot.keyRequestStatus == WidevineOperationStatus.SUCCESS ->
@@ -170,16 +171,14 @@ internal class WidevineCredentialClassifier {
             )
         }
 
-        val javaSecurity = snapshot.javaSecurityLevel.normalizedSecurityLevel()
-        val nativeSecurity = snapshot.native.securityLevel.normalizedSecurityLevel()
-        val javaSystemId = snapshot.javaSystemId.normalizedSystemId()
-        val nativeSystemId = snapshot.native.systemId.normalizedSystemId()
         val securityComparable = snapshot.javaSecurityLevel.status == WidevinePropertyStatus.AVAILABLE &&
             snapshot.native.securityLevel.status == WidevinePropertyStatus.AVAILABLE
         val systemIdComparable = snapshot.javaSystemId.status == WidevinePropertyStatus.AVAILABLE &&
             snapshot.native.systemId.status == WidevinePropertyStatus.AVAILABLE
-        val securityMismatch = securityComparable && javaSecurity != nativeSecurity
-        val systemIdMismatch = systemIdComparable && javaSystemId != nativeSystemId
+        val securityMismatch = securityComparable &&
+            snapshot.javaSecurityLevel.value != snapshot.native.securityLevel.value
+        val systemIdMismatch = systemIdComparable &&
+            snapshot.javaSystemId.value != snapshot.native.systemId.value
 
         if (securityMismatch || systemIdMismatch) {
             val fields = buildList {
@@ -219,7 +218,15 @@ internal class WidevineCredentialClassifier {
             append(snapshot.javaSecurityLevel.normalizedSecurityLevel().displayValue())
             append("; Java system ID: ")
             append(snapshot.javaSystemId.normalizedSystemId().displayValue())
-            append("; actual session: ")
+            append("; video/mp4 HW_SECURE_ALL capability: ")
+            append(
+                when (snapshot.hardwareSecureAllSupported) {
+                    true -> "SUPPORTED"
+                    false -> "UNSUPPORTED"
+                    null -> "UNAVAILABLE"
+                },
+            )
+            append("; maximum session: ")
             append(snapshot.actualSessionSecurityLevel?.name ?: snapshot.sessionStatus.name)
             append("; credential availability: ")
             append(
@@ -236,9 +243,9 @@ internal class WidevineCredentialClassifier {
             append("; boot context: ")
             append(
                 when {
-                    bootContext.rootOfTrustUnlocked -> "RootOfTrust confirms unlocked"
-                    bootContext.bootStateAppearsLocked -> "boot state appears locked"
-                    else -> "boot state is inconclusive"
+                    bootContext.rootOfTrustUnlocked -> "independent RootOfTrust state is unlocked"
+                    bootContext.bootStateAppearsLocked -> "independent boot state appears locked"
+                    else -> "independent boot state is inconclusive"
                 },
             )
             if (snapshot.errors.isNotEmpty()) {
@@ -259,28 +266,29 @@ internal class WidevineCredentialClassifier {
     private fun buildImpact(
         credential: WidevineAssessmentFinding,
         parity: WidevineAssessmentFinding,
-        bootContext: WidevineBootContext,
     ): WidevineAssessmentFinding? {
         return when {
             credential.severity == WidevineAssessmentSeverity.DANGER ->
                 WidevineAssessmentFinding(
                     id = "widevine_impact",
                     label = "Widevine impact",
-                    value = "Operational inconsistency",
+                    value = "Auxiliary DRM inconsistency",
                     severity = WidevineAssessmentSeverity.DANGER,
-                    detail = "The advertised L1 state conflicts with independent credential, session, or RootOfTrust evidence. This confirms a DRM credential anomaly, not a standalone bootloader-state verdict.",
+                    detail = "The exact sentinel and a lower maximum-session level were observed even though the capability check reported video/mp4 HW_SECURE_ALL support. This is a stronger DRM inconsistency, but it neither determines bootloader state nor establishes causality.",
                 )
 
             credential.severity == WidevineAssessmentSeverity.WARNING ->
                 WidevineAssessmentFinding(
                     id = "widevine_impact",
                     label = "Widevine impact",
-                    value = "Credential anomaly",
+                    value = "Auxiliary DRM signal",
                     severity = WidevineAssessmentSeverity.WARNING,
-                    detail = if (bootContext.bootStateAppearsLocked) {
-                        "A locked-looking boot state with the exact Widevine sentinel may reflect historical unlocking, ROM conversion, spoofing, or an OEM provisioning defect."
-                    } else {
-                        "The exact Widevine sentinel is suspicious but does not independently establish the current bootloader lock state."
+                    detail = when (credential.value) {
+                        "Sentinel system ID" ->
+                            "The exact Widevine sentinel is suspicious, but it does not establish invalid credentials, the current bootloader state, or causality."
+
+                        else ->
+                            "The maximum-security session resolved below HW_SECURE_ALL even though the capability check reported support. This needs review but is not proof of invalid credentials or an unlocked bootloader."
                     },
                 )
 
@@ -334,6 +342,13 @@ internal class WidevineCredentialClassifier {
     }
 
     private fun String?.displayValue(): String = this ?: "unavailable"
+
+    private fun WidevineSessionSecurityLevel?.isKnownBelowHardwareSecureAll(): Boolean {
+        return this == WidevineSessionSecurityLevel.SW_SECURE_CRYPTO ||
+            this == WidevineSessionSecurityLevel.SW_SECURE_DECODE ||
+            this == WidevineSessionSecurityLevel.HW_SECURE_CRYPTO ||
+            this == WidevineSessionSecurityLevel.HW_SECURE_DECODE
+    }
 
     private fun WidevineDrmError.numericDescription(): String {
         return buildString {

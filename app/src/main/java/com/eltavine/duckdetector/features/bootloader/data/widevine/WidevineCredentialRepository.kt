@@ -36,8 +36,11 @@ internal class WidevineCredentialRepository(
 ) {
 
     fun inspect(bootContext: WidevineBootContext): WidevineBootloaderEvidence {
-        val snapshot = runCatching { source.collect() }
-            .getOrDefault(WidevineCredentialSnapshot())
+        val snapshot = try {
+            source.collect()
+        } catch (_: Exception) {
+            WidevineCredentialSnapshot()
+        }
         val assessment = classifier.classify(snapshot, bootContext)
         return WidevineBootloaderEvidence(
             findings = assessment.findings.map { finding ->

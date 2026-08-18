@@ -76,8 +76,18 @@ class BootloaderCardModelMapper {
             BootloaderStage.LOADING -> "Scanning boot state and verified boot evidence"
             BootloaderStage.FAILED -> "Bootloader scan failed"
             BootloaderStage.READY -> when {
-                report.dangerFindings.isNotEmpty() -> "${report.dangerFindings.size} critical boot integrity signal(s)"
-                report.warningFindings.isNotEmpty() -> "${report.warningFindings.size} boot state signal(s) need review"
+                report.dangerFindings.isNotEmpty() -> if (report.dangerFindings.areWidevineOnly()) {
+                    "${report.dangerFindings.size} critical DRM consistency signal(s)"
+                } else {
+                    "${report.dangerFindings.size} critical boot integrity signal(s)"
+                }
+
+                report.warningFindings.isNotEmpty() -> if (report.warningFindings.areWidevineOnly()) {
+                    "${report.warningFindings.size} DRM consistency signal(s) need review"
+                } else {
+                    "${report.warningFindings.size} boot state signal(s) need review"
+                }
+
                 report.state == BootloaderState.VERIFIED && report.evidenceMode == BootloaderEvidenceMode.ATTESTATION ->
                     "Locked and attested verified"
 
@@ -99,10 +109,10 @@ class BootloaderCardModelMapper {
 
             BootloaderStage.READY -> when {
                 report.dangerFindings.isNotEmpty() ->
-                    "Unlocked state, attestation contradictions, broken certificate trust, verified-boot failures, or an operational Widevine L1 inconsistency indicate reduced device trust."
+                    "Unlocked state, attestation contradictions, broken certificate trust, verified-boot failures, or a corroborated Widevine DRM inconsistency indicate reduced device trust."
 
                 report.warningFindings.isNotEmpty() ->
-                    "The boot chain is not obviously broken, but custom-root, software-only, Widevine credential, or cross-source coherence signals still need review."
+                    "The boot chain is not obviously broken, but custom-root, software-only, Widevine DRM, or cross-source coherence signals still need review."
 
                 report.evidenceMode == BootloaderEvidenceMode.PROPERTIES_ONLY ->
                     "Boot properties look conservative, but the result falls back to software-readable signals because attestation RootOfTrust was unavailable."
@@ -294,7 +304,11 @@ class BootloaderCardModelMapper {
                     label = "Cross-checks",
                     value = report.consistencyFindingCount.toString(),
                     status = if (report.consistencyFindingCount > 0) {
-                        if (report.dangerFindings.any { it.group.name == "CONSISTENCY" }) DetectorStatus.danger() else DetectorStatus.warning()
+                        if (report.dangerFindings.any { it.group.name == "CONSISTENCY" }) {
+                            DetectorStatus.danger()
+                        } else {
+                            DetectorStatus.warning()
+                        }
                     } else {
                         DetectorStatus.allClear()
                     },
@@ -404,6 +418,10 @@ class BootloaderCardModelMapper {
         "Attestation chain",
         "Hardware-backed",
     )
+
+    private fun List<BootloaderFinding>.areWidevineOnly(): Boolean {
+        return isNotEmpty() && all { finding -> finding.id.startsWith("widevine_") }
+    }
 
     private fun severityStatus(severity: BootloaderFindingSeverity): DetectorStatus {
         return when (severity) {

@@ -47,7 +47,7 @@ class WidevineCredentialRepositoryTest {
     }
 
     @Test
-    fun `RootOfTrust unlock escalates sentinel evidence to danger`() {
+    fun `RootOfTrust unlock remains separate from sentinel evidence`() {
         val repository = repository(snapshot(systemId = WIDEVINE_SENTINEL_SYSTEM_ID))
 
         val evidence = repository.inspect(
@@ -58,9 +58,30 @@ class WidevineCredentialRepositoryTest {
         )
 
         assertEquals(
-            BootloaderFindingSeverity.DANGER,
+            BootloaderFindingSeverity.WARNING,
             evidence.findings.single { it.id == "widevine_credential" }.severity,
         )
+        assertEquals(BootloaderMethodOutcome.WARNING, evidence.method.outcome)
+    }
+
+    @Test
+    fun `corroborated Widevine anomaly maps to danger`() {
+        val repository = repository(
+            snapshot(
+                systemId = WIDEVINE_SENTINEL_SYSTEM_ID,
+                actualLevel = WidevineSessionSecurityLevel.SW_SECURE_CRYPTO,
+            ),
+        )
+
+        val evidence = repository.inspect(
+            WidevineBootContext(
+                rootOfTrustUnlocked = false,
+                bootStateAppearsLocked = true,
+            ),
+        )
+
+        val credential = evidence.findings.single { it.id == "widevine_credential" }
+        assertEquals(BootloaderFindingSeverity.DANGER, credential.severity)
         assertEquals(BootloaderMethodOutcome.DANGER, evidence.method.outcome)
     }
 
@@ -86,11 +107,15 @@ class WidevineCredentialRepositoryTest {
         )
     }
 
-    private fun snapshot(systemId: String): WidevineCredentialSnapshot {
+    private fun snapshot(
+        systemId: String,
+        actualLevel: WidevineSessionSecurityLevel = WidevineSessionSecurityLevel.HW_SECURE_ALL,
+    ): WidevineCredentialSnapshot {
         val securityLevel = WidevinePropertyRead(WidevinePropertyStatus.AVAILABLE, "L1")
         val id = WidevinePropertyRead(WidevinePropertyStatus.AVAILABLE, systemId)
         return WidevineCredentialSnapshot(
             schemeSupported = true,
+            hardwareSecureAllSupported = true,
             javaSecurityLevel = securityLevel,
             javaSystemId = id,
             native = WidevineNativeSnapshot(
@@ -101,7 +126,7 @@ class WidevineCredentialRepositoryTest {
                 systemIdStatusCode = 0,
             ),
             sessionStatus = WidevineOperationStatus.SUCCESS,
-            actualSessionSecurityLevel = WidevineSessionSecurityLevel.HW_SECURE_ALL,
+            actualSessionSecurityLevel = actualLevel,
             credentialStatus = WidevineOperationStatus.SUCCESS,
             credentialAvailable = true,
             keyRequestStatus = WidevineOperationStatus.SUCCESS,

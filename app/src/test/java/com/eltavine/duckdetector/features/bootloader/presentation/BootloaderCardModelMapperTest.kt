@@ -100,7 +100,7 @@ class BootloaderCardModelMapperTest {
     }
 
     @Test
-    fun `Widevine credential warning is presented without changing verified state`() {
+    fun `Widevine warning colors the card without changing verified state`() {
         val model = mapper.map(
             report = report(
                 findings = listOf(
@@ -120,11 +120,13 @@ class BootloaderCardModelMapperTest {
                         outcome = BootloaderMethodOutcome.WARNING,
                     ),
                 ),
+                consistencyFindingCount = 1,
             ),
         )
 
         assertEquals("Verified", model.headerFacts.single { it.label == "State" }.value)
         assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals("1 DRM consistency signal(s) need review", model.verdict)
         assertEquals(
             DetectorStatus.warning(),
             model.consistencyRows.single { it.label == "Widevine credential" }.status,
@@ -133,6 +135,47 @@ class BootloaderCardModelMapperTest {
             DetectorStatus.warning(),
             model.methodRows.single { it.label == "Widevine credential" }.status,
         )
+        assertEquals(
+            DetectorStatus.warning(),
+            model.scanRows.single { it.label == "Cross-checks" }.status,
+        )
+    }
+
+    @Test
+    fun `Widevine danger colors the card without changing verified state`() {
+        val model = mapper.map(
+            report = report(
+                findings = listOf(
+                    BootloaderFinding(
+                        id = "widevine_credential",
+                        label = "Widevine credential",
+                        value = "Corroborated anomaly",
+                        group = BootloaderFindingGroup.CONSISTENCY,
+                        severity = BootloaderFindingSeverity.DANGER,
+                    ),
+                ),
+                methods = listOf(
+                    BootloaderMethodResult(
+                        label = "Widevine credential",
+                        summary = "DRM inconsistency",
+                        outcome = BootloaderMethodOutcome.DANGER,
+                    ),
+                ),
+                consistencyFindingCount = 1,
+            ),
+        )
+
+        assertEquals("Verified", model.headerFacts.single { it.label == "State" }.value)
+        assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals("1 critical DRM consistency signal(s)", model.verdict)
+        assertEquals(
+            DetectorStatus.danger(),
+            model.consistencyRows.single { it.label == "Widevine credential" }.status,
+        )
+        assertEquals(
+            DetectorStatus.danger(),
+            model.scanRows.single { it.label == "Cross-checks" }.status,
+        )
     }
 
     private fun report(
@@ -140,6 +183,7 @@ class BootloaderCardModelMapperTest {
         attestationChainLength: Int = 2,
         findings: List<BootloaderFinding> = emptyList(),
         methods: List<BootloaderMethodResult> = emptyList(),
+        consistencyFindingCount: Int = 0,
     ): BootloaderReport {
         return BootloaderReport(
             stage = BootloaderStage.READY,
@@ -155,7 +199,7 @@ class BootloaderCardModelMapperTest {
             nativePropertyHitCount = 4,
             rawBootParamHitCount = 2,
             sourceMismatchCount = 0,
-            consistencyFindingCount = 0,
+            consistencyFindingCount = consistencyFindingCount,
             findings = findings,
             impacts = emptyList(),
             methods = methods,
