@@ -17,6 +17,10 @@ Verified boot
 -通过resetprop弱隐藏
 -通过可信执行环境检测(tee)
 
+检测到Widevine L1凭据一致性异常
+-该结果表示DRM凭据、硬件会话或Java/native属性存在矛盾，不能单独证明当前bootloader已解锁
+-锁定设备也可能因历史解锁、ROM转换或OEM预配缺陷出现该结果，应结合RootOfTrust和boot属性判断
+
 **TEE**
 可信执行环境检测与预期不符
 -使用Oh My Keymint模块或近期更新的keystone伪装模块

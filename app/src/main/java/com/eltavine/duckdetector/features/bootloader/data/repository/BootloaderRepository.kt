@@ -19,6 +19,9 @@ package com.eltavine.duckdetector.features.bootloader.data.repository
 import android.content.Context
 import android.os.Build
 import com.eltavine.duckdetector.features.bootloader.data.rules.BootloaderCatalog
+import com.eltavine.duckdetector.features.bootloader.data.widevine.WidevineBootContext
+import com.eltavine.duckdetector.features.bootloader.data.widevine.WidevineBootloaderEvidence
+import com.eltavine.duckdetector.features.bootloader.data.widevine.WidevineCredentialRepository
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderEvidenceMode
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFinding
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFindingGroup
@@ -59,6 +62,7 @@ class BootloaderRepository(
     private val appContext = context.applicationContext
     private val trustAnalyzer = CertificateTrustAnalyzer(GoogleAttestationRootStore(appContext))
     private val bootConsistencyProbe = BootConsistencyProbe()
+    private val widevineCredentialRepository = WidevineCredentialRepository()
 
     suspend fun scan(): BootloaderReport = withContext(Dispatchers.Default) {
         runCatching { scanInternal() }
@@ -87,6 +91,14 @@ class BootloaderRepository(
         val propertyContext = BootloaderPropertyContext.from(readsByProperty)
         val evidenceMode = resolveEvidenceMode(attestation, propertyContext)
         val state = resolveState(attestation, propertyContext)
+        val widevineEvidence = widevineCredentialRepository.inspect(
+            WidevineBootContext(
+                rootOfTrustUnlocked = isRootOfTrustUnlocked(attestation),
+                bootStateAppearsLocked = state == BootloaderState.VERIFIED ||
+                    state == BootloaderState.SELF_SIGNED ||
+                    state == BootloaderState.LOCKED_UNKNOWN,
+            ),
+        )
         val sourceSignals = consistencyUtils.buildSourceMismatchSignals(readsByProperty.values)
         val consistencySignals = consistencyUtils.buildConsistencySignals(
             readsByProperty = readsByProperty,
@@ -97,7 +109,14 @@ class BootloaderRepository(
             addAll(buildStateFindings(state, evidenceMode, attestation, trust, propertyContext))
             addAll(buildAttestationFindings(attestation, trust))
             addAll(buildPropertyFindings(propertyContext, readsByProperty))
-            addAll(buildConsistencyFindings(bootConsistency, sourceSignals, consistencySignals))
+            addAll(
+                buildConsistencyFindings(
+                    bootConsistency,
+                    sourceSignals,
+                    consistencySignals,
+                    widevineEvidence,
+                ),
+            )
         }
         val impacts = buildImpacts(
             state = state,
@@ -106,6 +125,7 @@ class BootloaderRepository(
             propertyContext = propertyContext,
             bootConsistency = bootConsistency,
             findings = findings,
+            widevineEvidence = widevineEvidence,
         )
         val observedPropertyCount = readsByProperty
             .filterKeys { it in coreProperties }
@@ -135,6 +155,7 @@ class BootloaderRepository(
             sourceSignals = sourceSignals,
             consistencySignals = consistencySignals,
             propertyContext = propertyContext,
+            widevineEvidence = widevineEvidence,
         )
 
         if (findings.isEmpty() && attestation.errorMessage != null && observedPropertyCount == 0) {
@@ -158,7 +179,8 @@ class BootloaderRepository(
             consistencyFindingCount = bootloaderConsistencyCount(
                 bootConsistency,
                 sourceSignals,
-                consistencySignals
+                consistencySignals,
+                widevineEvidence,
             ),
             findings = findings,
             impacts = impacts,
@@ -451,6 +473,7 @@ class BootloaderRepository(
         bootConsistency: BootConsistencyResult,
         sourceSignals: List<SystemPropertySignal>,
         consistencySignals: List<SystemPropertySignal>,
+        widevineEvidence: WidevineBootloaderEvidence,
     ): List<BootloaderFinding> {
         val findings = mutableListOf<BootloaderFinding>()
 
@@ -534,6 +557,7 @@ class BootloaderRepository(
                 group = BootloaderFindingGroup.CONSISTENCY,
             )
         }
+        findings += widevineEvidence.findings
 
         return findings
     }
@@ -545,6 +569,7 @@ class BootloaderRepository(
         propertyContext: BootloaderPropertyContext,
         bootConsistency: BootConsistencyResult,
         findings: List<BootloaderFinding>,
+        widevineEvidence: WidevineBootloaderEvidence,
     ): List<BootloaderImpact> {
         return buildList {
             when (state) {
@@ -610,6 +635,8 @@ class BootloaderRepository(
                 )
             }
 
+            addAll(widevineEvidence.impacts)
+
             if (findings.none { it.severity == BootloaderFindingSeverity.DANGER || it.severity == BootloaderFindingSeverity.WARNING }) {
                 add(
                     BootloaderImpact(
@@ -644,6 +671,7 @@ class BootloaderRepository(
         sourceSignals: List<SystemPropertySignal>,
         consistencySignals: List<SystemPropertySignal>,
         propertyContext: BootloaderPropertyContext,
+        widevineEvidence: WidevineBootloaderEvidence,
     ): List<BootloaderMethodResult> {
         return listOf(
             BootloaderMethodResult(
@@ -774,6 +802,7 @@ class BootloaderRepository(
                 },
                 detail = "Raw-boot, lock-state, partition-verity, and build-profile coherence checks.",
             ),
+            widevineEvidence.method,
         )
     }
 
@@ -1131,6 +1160,7 @@ class BootloaderRepository(
         bootConsistency: BootConsistencyResult,
         sourceSignals: List<SystemPropertySignal>,
         consistencySignals: List<SystemPropertySignal>,
+        widevineEvidence: WidevineBootloaderEvidence,
     ): Int {
         val bootCount = listOf(
             bootConsistency.vbmetaDigestMismatch,
@@ -1139,7 +1169,14 @@ class BootloaderRepository(
             bootConsistency.verifiedBootKeyAllZeros,
             bootConsistency.verifiedStateUnlockedMismatch,
         ).count { it }
-        return bootCount + sourceSignals.size + consistencySignals.size
+        return bootCount + sourceSignals.size + consistencySignals.size +
+            widevineEvidence.anomalyCount
+    }
+
+    private fun isRootOfTrustUnlocked(snapshot: AttestationSnapshot): Boolean {
+        val rootOfTrust = snapshot.rootOfTrust ?: return false
+        return rootOfTrust.deviceLocked == false ||
+            rootOfTrust.verifiedBootState.equals("Unverified", ignoreCase = true)
     }
 
     private fun hasAttestation(snapshot: AttestationSnapshot): Boolean {

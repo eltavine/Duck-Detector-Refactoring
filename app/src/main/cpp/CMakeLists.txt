@@ -56,6 +56,10 @@ set(SYSTEM_PROPERTIES_SOURCES
     systemproperties/native_bridge.cpp
 )
 
+set(BOOTLOADER_SOURCES
+    bootloader/widevine_native_bridge.cpp
+)
+
 set(MOUNT_SOURCES
     mount/detector_core.cpp
     mount/native_bridge.cpp
@@ -167,6 +171,7 @@ add_library(duckdetector SHARED
     ${CUSTOM_ROM_SOURCES}
     ${KERNEL_CHECK_SOURCES}
     ${SYSTEM_PROPERTIES_SOURCES}
+    ${BOOTLOADER_SOURCES}
     ${MOUNT_SOURCES}
     ${PRELOAD_SOURCES}
     ${MEMORY_SOURCES}
@@ -203,4 +208,5 @@ target_link_libraries(duckdetector
     EGL
     GLESv2
     log
+    mediandk
 )

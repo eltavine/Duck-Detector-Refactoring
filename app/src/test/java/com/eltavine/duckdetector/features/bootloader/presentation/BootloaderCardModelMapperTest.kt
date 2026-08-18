@@ -99,6 +99,42 @@ class BootloaderCardModelMapperTest {
         )
     }
 
+    @Test
+    fun `Widevine credential warning is presented without changing verified state`() {
+        val model = mapper.map(
+            report = report(
+                findings = listOf(
+                    BootloaderFinding(
+                        id = "widevine_credential",
+                        label = "Widevine credential",
+                        value = "Sentinel system ID",
+                        group = BootloaderFindingGroup.CONSISTENCY,
+                        severity = BootloaderFindingSeverity.WARNING,
+                        detail = "DRM credential anomaly; not standalone unlock proof.",
+                    ),
+                ),
+                methods = listOf(
+                    BootloaderMethodResult(
+                        label = "Widevine credential",
+                        summary = "Needs review",
+                        outcome = BootloaderMethodOutcome.WARNING,
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals("Verified", model.headerFacts.single { it.label == "State" }.value)
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals(
+            DetectorStatus.warning(),
+            model.consistencyRows.single { it.label == "Widevine credential" }.status,
+        )
+        assertEquals(
+            DetectorStatus.warning(),
+            model.methodRows.single { it.label == "Widevine credential" }.status,
+        )
+    }
+
     private fun report(
         trustRoot: TeeTrustRoot = TeeTrustRoot.GOOGLE,
         attestationChainLength: Int = 2,

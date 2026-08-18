@@ -65,7 +65,7 @@ class BootloaderCardModelMapper {
 
     private fun buildSubtitle(report: BootloaderReport): String {
         return when (report.stage) {
-            BootloaderStage.LOADING -> "attestation + boot props + raw boot consistency"
+            BootloaderStage.LOADING -> "attestation + boot props + DRM consistency"
             BootloaderStage.FAILED -> "local bootloader scan failed"
             BootloaderStage.READY -> "${report.checkedPropertyCount} props · ${report.attestationChainLength} certs · ${report.consistencyFindingCount} cross-checks"
         }
@@ -92,17 +92,17 @@ class BootloaderCardModelMapper {
     private fun buildSummary(report: BootloaderReport): String {
         return when (report.stage) {
             BootloaderStage.LOADING ->
-                "Attestation RootOfTrust, certificate trust, boot properties, raw androidboot parameters, and source consistency checks are collecting local evidence."
+                "Attestation RootOfTrust, certificate trust, boot properties, raw androidboot parameters, and Widevine credential consistency checks are collecting local evidence."
 
             BootloaderStage.FAILED ->
                 report.errorMessage ?: "Bootloader scan failed before evidence could be assembled."
 
             BootloaderStage.READY -> when {
                 report.dangerFindings.isNotEmpty() ->
-                    "Unlocked state, attestation contradictions, broken certificate trust, or verified-boot failures indicate reduced boot-chain trust."
+                    "Unlocked state, attestation contradictions, broken certificate trust, verified-boot failures, or an operational Widevine L1 inconsistency indicate reduced device trust."
 
                 report.warningFindings.isNotEmpty() ->
-                    "The boot chain is not obviously broken, but the evidence still shows custom-root, software-only, or coherence signals worth reviewing."
+                    "The boot chain is not obviously broken, but custom-root, software-only, Widevine credential, or cross-source coherence signals still need review."
 
                 report.evidenceMode == BootloaderEvidenceMode.PROPERTIES_ONLY ->
                     "Boot properties look conservative, but the result falls back to software-readable signals because attestation RootOfTrust was unavailable."
@@ -375,7 +375,9 @@ class BootloaderCardModelMapper {
     private fun consistencyPlaceholders(): List<String> = listOf(
         "Attested hash vs vbmeta digest",
         "Verified boot coherence",
-        "Property source mismatch"
+        "Property source mismatch",
+        "Widevine credential",
+        "Widevine Java/native parity",
     )
 
     private fun methodPlaceholders(): List<String> = listOf(
@@ -389,6 +391,7 @@ class BootloaderCardModelMapper {
         "Raw boot params",
         "Source consistency",
         "Cross-check rules",
+        "Widevine credential",
     )
 
     private fun scanPlaceholders(): List<String> = listOf(
