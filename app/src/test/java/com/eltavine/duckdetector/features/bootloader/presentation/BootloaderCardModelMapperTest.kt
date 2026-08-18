@@ -100,9 +100,10 @@ class BootloaderCardModelMapperTest {
     }
 
     @Test
-    fun `Widevine warning colors the card without changing verified state`() {
+    fun `Widevine warning colors the card and renders unknown state`() {
         val model = mapper.map(
             report = report(
+                state = BootloaderState.UNKNOWN,
                 findings = listOf(
                     BootloaderFinding(
                         id = "widevine_credential",
@@ -110,7 +111,7 @@ class BootloaderCardModelMapperTest {
                         value = "Sentinel system ID",
                         group = BootloaderFindingGroup.CONSISTENCY,
                         severity = BootloaderFindingSeverity.WARNING,
-                        detail = "DRM credential anomaly; not standalone unlock proof.",
+                        detail = "DRM credential anomaly made the state inconclusive.",
                     ),
                 ),
                 methods = listOf(
@@ -124,7 +125,7 @@ class BootloaderCardModelMapperTest {
             ),
         )
 
-        assertEquals("Verified", model.headerFacts.single { it.label == "State" }.value)
+        assertEquals("Unknown", model.headerFacts.single { it.label == "State" }.value)
         assertEquals(DetectorStatus.warning(), model.status)
         assertEquals("1 DRM consistency signal(s) need review", model.verdict)
         assertEquals(
@@ -142,9 +143,10 @@ class BootloaderCardModelMapperTest {
     }
 
     @Test
-    fun `Widevine danger colors the card without changing verified state`() {
+    fun `Widevine danger colors the card and renders unlocked state`() {
         val model = mapper.map(
             report = report(
+                state = BootloaderState.UNLOCKED,
                 findings = listOf(
                     BootloaderFinding(
                         id = "widevine_credential",
@@ -165,7 +167,7 @@ class BootloaderCardModelMapperTest {
             ),
         )
 
-        assertEquals("Verified", model.headerFacts.single { it.label == "State" }.value)
+        assertEquals("Unlocked", model.headerFacts.single { it.label == "State" }.value)
         assertEquals(DetectorStatus.danger(), model.status)
         assertEquals("1 critical DRM consistency signal(s)", model.verdict)
         assertEquals(
@@ -179,6 +181,7 @@ class BootloaderCardModelMapperTest {
     }
 
     private fun report(
+        state: BootloaderState = BootloaderState.VERIFIED,
         trustRoot: TeeTrustRoot = TeeTrustRoot.GOOGLE,
         attestationChainLength: Int = 2,
         findings: List<BootloaderFinding> = emptyList(),
@@ -187,7 +190,7 @@ class BootloaderCardModelMapperTest {
     ): BootloaderReport {
         return BootloaderReport(
             stage = BootloaderStage.READY,
-            state = BootloaderState.VERIFIED,
+            state = state,
             evidenceMode = BootloaderEvidenceMode.ATTESTATION,
             trustRoot = trustRoot,
             tier = TeeTier.TEE,

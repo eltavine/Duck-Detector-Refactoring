@@ -22,6 +22,7 @@ import com.eltavine.duckdetector.features.bootloader.data.rules.BootloaderCatalo
 import com.eltavine.duckdetector.features.bootloader.data.widevine.WidevineBootContext
 import com.eltavine.duckdetector.features.bootloader.data.widevine.WidevineBootloaderEvidence
 import com.eltavine.duckdetector.features.bootloader.data.widevine.WidevineCredentialRepository
+import com.eltavine.duckdetector.features.bootloader.data.widevine.resolveBootloaderState
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderEvidenceMode
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFinding
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFindingGroup
@@ -90,15 +91,16 @@ class BootloaderRepository(
         val bootConsistency = bootConsistencyProbe.inspect(attestation)
         val propertyContext = BootloaderPropertyContext.from(readsByProperty)
         val evidenceMode = resolveEvidenceMode(attestation, propertyContext)
-        val state = resolveState(attestation, propertyContext)
+        val baseState = resolveState(attestation, propertyContext)
         val widevineEvidence = widevineCredentialRepository.inspect(
             WidevineBootContext(
                 rootOfTrustUnlocked = isRootOfTrustUnlocked(attestation),
-                bootStateAppearsLocked = state == BootloaderState.VERIFIED ||
-                    state == BootloaderState.SELF_SIGNED ||
-                    state == BootloaderState.LOCKED_UNKNOWN,
+                bootStateAppearsLocked = baseState == BootloaderState.VERIFIED ||
+                    baseState == BootloaderState.SELF_SIGNED ||
+                    baseState == BootloaderState.LOCKED_UNKNOWN,
             ),
         )
+        val state = widevineEvidence.resolveBootloaderState(baseState)
         val sourceSignals = consistencyUtils.buildSourceMismatchSignals(readsByProperty.values)
         val consistencySignals = consistencyUtils.buildConsistencySignals(
             readsByProperty = readsByProperty,
@@ -106,7 +108,16 @@ class BootloaderRepository(
         )
 
         val findings = buildList {
-            addAll(buildStateFindings(state, evidenceMode, attestation, trust, propertyContext))
+            addAll(
+                buildStateFindings(
+                    state,
+                    baseState,
+                    evidenceMode,
+                    attestation,
+                    trust,
+                    propertyContext,
+                ),
+            )
             addAll(buildAttestationFindings(attestation, trust))
             addAll(buildPropertyFindings(propertyContext, readsByProperty))
             addAll(
@@ -120,6 +131,7 @@ class BootloaderRepository(
         }
         val impacts = buildImpacts(
             state = state,
+            baseState = baseState,
             evidenceMode = evidenceMode,
             trust = trust,
             propertyContext = propertyContext,
@@ -247,6 +259,7 @@ class BootloaderRepository(
 
     private fun buildStateFindings(
         state: BootloaderState,
+        baseState: BootloaderState,
         evidenceMode: BootloaderEvidenceMode,
         attestation: AttestationSnapshot,
         trust: CertificateTrustResult,
@@ -260,7 +273,7 @@ class BootloaderRepository(
                     value = stateLabel(state, evidenceMode),
                     group = BootloaderFindingGroup.STATE,
                     severity = stateSeverity(state),
-                    detail = stateDetail(state, evidenceMode),
+                    detail = stateDetail(state, baseState, evidenceMode),
                 ),
             )
             add(
@@ -564,6 +577,7 @@ class BootloaderRepository(
 
     private fun buildImpacts(
         state: BootloaderState,
+        baseState: BootloaderState,
         evidenceMode: BootloaderEvidenceMode,
         trust: CertificateTrustResult,
         propertyContext: BootloaderPropertyContext,
@@ -575,7 +589,11 @@ class BootloaderRepository(
             when (state) {
                 BootloaderState.UNLOCKED -> add(
                     BootloaderImpact(
-                        text = "Unlocked bootloaders allow custom boot images and can disable or bypass normal verified-boot guarantees.",
+                        text = if (baseState != BootloaderState.UNLOCKED) {
+                            "A danger-level Widevine inconsistency escalated the bootloader result to unlocked."
+                        } else {
+                            "Unlocked bootloaders allow custom boot images and can disable or bypass normal verified-boot guarantees."
+                        },
                         severity = BootloaderFindingSeverity.DANGER,
                     ),
                 )
@@ -826,8 +844,20 @@ class BootloaderRepository(
 
     private fun stateDetail(
         state: BootloaderState,
+        baseState: BootloaderState,
         evidenceMode: BootloaderEvidenceMode,
     ): String {
+        if (state != baseState) {
+            return when (state) {
+                BootloaderState.UNLOCKED ->
+                    "A danger-level Widevine consistency anomaly escalated the bootloader state to unlocked."
+
+                BootloaderState.UNKNOWN ->
+                    "A warning-level Widevine consistency anomaly made the bootloader state inconclusive."
+
+                else -> "Widevine consistency evidence changed the bootloader state."
+            }
+        }
         return when (state) {
             BootloaderState.VERIFIED -> if (evidenceMode == BootloaderEvidenceMode.PROPERTIES_ONLY) {
                 "Boot properties indicate a locked device and do not contradict a verified boot chain, but attestation RootOfTrust was unavailable."

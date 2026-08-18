@@ -274,7 +274,7 @@ internal class WidevineCredentialClassifier {
                     label = "Widevine impact",
                     value = "Auxiliary DRM inconsistency",
                     severity = WidevineAssessmentSeverity.DANGER,
-                    detail = "The exact sentinel and a lower maximum-session level were observed even though the capability check reported video/mp4 HW_SECURE_ALL support. This is a stronger DRM inconsistency, but it neither determines bootloader state nor establishes causality.",
+                    detail = "The exact sentinel and a lower maximum-session level were observed despite video/mp4 HW_SECURE_ALL support. This policy classifies the bootloader as unlocked but does not establish why the DRM path diverged.",
                 )
 
             credential.severity == WidevineAssessmentSeverity.WARNING ->
@@ -285,10 +285,10 @@ internal class WidevineCredentialClassifier {
                     severity = WidevineAssessmentSeverity.WARNING,
                     detail = when (credential.value) {
                         "Sentinel system ID" ->
-                            "The exact Widevine sentinel is suspicious, but it does not establish invalid credentials, the current bootloader state, or causality."
+                            "The exact Widevine sentinel makes the bootloader state inconclusive until corroborated."
 
                         else ->
-                            "The maximum-security session resolved below HW_SECURE_ALL even though the capability check reported support. This needs review but is not proof of invalid credentials or an unlocked bootloader."
+                            "The maximum-security session resolved below HW_SECURE_ALL despite reported support, making the bootloader state inconclusive."
                     },
                 )
 

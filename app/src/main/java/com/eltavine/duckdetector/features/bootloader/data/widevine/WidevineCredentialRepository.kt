@@ -22,6 +22,7 @@ import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFindingSev
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderImpact
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderMethodOutcome
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderMethodResult
+import com.eltavine.duckdetector.features.bootloader.domain.BootloaderState
 
 internal data class WidevineBootloaderEvidence(
     val findings: List<BootloaderFinding>,
@@ -29,6 +30,23 @@ internal data class WidevineBootloaderEvidence(
     val method: BootloaderMethodResult,
     val anomalyCount: Int,
 )
+
+internal fun WidevineBootloaderEvidence.resolveBootloaderState(
+    baseState: BootloaderState,
+): BootloaderState {
+    // Preserve stronger boot failures; Widevine escalates every other state.
+    if (baseState == BootloaderState.UNLOCKED ||
+        baseState == BootloaderState.FAILED_VERIFICATION
+    ) {
+        return baseState
+    }
+    return when (method.outcome) {
+        BootloaderMethodOutcome.DANGER -> BootloaderState.UNLOCKED
+        BootloaderMethodOutcome.WARNING -> BootloaderState.UNKNOWN
+        BootloaderMethodOutcome.CLEAN,
+        BootloaderMethodOutcome.SUPPORT -> baseState
+    }
+}
 
 internal class WidevineCredentialRepository(
     private val source: WidevineCredentialSource = WidevineCredentialProbe(),
