@@ -122,18 +122,9 @@ namespace duckdetector::nativeroot {
             );
         }
 
-        if (driver_fd_count == 0 && fdwrapper_count == 0 && result.findings.empty() &&
-            !context.empty()) {
-            result.findings.push_back(
-                    Finding{
-                            .group = "PROCESS",
-                            .label = "Self SELinux context",
-                            .value = context,
-                            .detail = "The current app process context stayed outside the KernelSU su domain.",
-                            .severity = Severity::kInfo,
-                    }
-            );
-        }
+        // A clean result must not become a finding: PROCESS findings are counted as runtime
+        // hits by the Kotlin layer. The context still flows through extra_text -> SELF_CONTEXT.
+        // 干净结果不能生成 finding：PROCESS 组会被 Kotlin 层计为 runtime 命中；context 仍经 SELF_CONTEXT 上报。
 
         result.checked_count = 2;
         result.denied_count = 0;
