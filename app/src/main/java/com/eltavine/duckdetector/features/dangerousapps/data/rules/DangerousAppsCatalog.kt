@@ -58,6 +58,9 @@ object DangerousAppsCatalog {
             pkg("com.sukisu.ultra", "SuKiSu Ultra"),
             pkg("com.resukisu.resukisu", "ReSukisu"),
             pkg("com.linux.permissionmanager", "SKRoot"),
+            pkg("com.rootmynothing.app", "Root My Nothing"),
+            pkg("dev.busung.s25uroot", "S25U Root"),
+            pkg("com.alex193a.rootmypixel", "Root My Pixel"),
         )
         addCategory(
             DangerousAppCategory.LOCATION_SPOOF,

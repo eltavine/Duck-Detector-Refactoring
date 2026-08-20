@@ -68,6 +68,8 @@ class NativeRootCardModelMapper {
             NativeRootStage.LOADING -> "Scanning kernel-root indicators"
             NativeRootStage.FAILED -> "Native Root scan failed"
             NativeRootStage.READY -> when {
+                report.tempRootCveExploitDetected -> "Temp root exploit (CVE-2026-43499) detected"
+                report.tempRootDetected -> "Temp root artifacts detected in /data/local/tmp"
                 report.kernelSuDetected && report.aPatchDetected -> "KernelSU and APatch indicators detected"
                 report.selfSuDomain -> "Current app already runs in KernelSU su domain"
                 report.kernelSuDetected && report.ksuSupercallProbeHit -> "KernelSU detected via ksu_driver"
@@ -424,6 +426,8 @@ class NativeRootCardModelMapper {
                     "Kernel hits",
                     "Properties checked",
                     "Property hits",
+                    "Temp root checked",
+                    "Temp root hits",
                     "Native library",
                 ),
                 DetectorStatus.info(InfoKind.SUPPORT),
@@ -458,6 +462,8 @@ class NativeRootCardModelMapper {
                     "Kernel hits",
                     "Properties checked",
                     "Property hits",
+                    "Temp root checked",
+                    "Temp root hits",
                     "Native library",
                 ),
                 DetectorStatus.info(InfoKind.ERROR),
@@ -676,6 +682,20 @@ class NativeRootCardModelMapper {
                     },
                 ),
                 NativeRootDetailRowModel(
+                    "Temp root checked",
+                    report.tempRootArtifactCheckCount.toString(),
+                    DetectorStatus.info(InfoKind.SUPPORT),
+                ),
+                NativeRootDetailRowModel(
+                    "Temp root hits",
+                    report.tempRootArtifactHitCount.toString(),
+                    when {
+                        report.tempRootDetected -> DetectorStatus.danger()
+                        report.tempRootArtifactCheckCount > 0 -> DetectorStatus.allClear()
+                        else -> DetectorStatus.info(InfoKind.SUPPORT)
+                    },
+                ),
+                NativeRootDetailRowModel(
                     "Native library",
                     if (report.nativeAvailable) "Loaded" else "Unavailable",
                     if (report.nativeAvailable) DetectorStatus.allClear() else DetectorStatus.info(
@@ -739,6 +759,7 @@ class NativeRootCardModelMapper {
             "cgroupLeakage",
             "kernelTraces",
             "propertyResidue",
+            "tempRootArtifacts",
             "nativeLibrary",
             "signalSummary",
         ).map { label ->

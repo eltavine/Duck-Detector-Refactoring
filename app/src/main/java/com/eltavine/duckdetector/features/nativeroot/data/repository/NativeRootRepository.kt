@@ -28,6 +28,8 @@ import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceD
 import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceDriftProbeResult
 import com.eltavine.duckdetector.features.nativeroot.data.probes.RootProcessAuditProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.ShellTmpMetadataProbe
+import com.eltavine.duckdetector.features.nativeroot.data.probes.TempRootArtifactProbe
+import com.eltavine.duckdetector.features.nativeroot.data.probes.TempRootArtifactProbeResult
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFinding
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFindingSeverity
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootGroup
@@ -49,6 +51,7 @@ class NativeRootRepository(
     ),
     private val kernelSuManagerFingerprintProbe: KernelSuManagerFingerprintProbe =
         KernelSuManagerFingerprintProbe(context?.applicationContext),
+    private val tempRootArtifactProbe: TempRootArtifactProbe = TempRootArtifactProbe(),
 ) {
 
     suspend fun scan(): NativeRootReport = withContext(Dispatchers.IO) {
@@ -69,13 +72,15 @@ class NativeRootRepository(
         val cgroupResult = cgroupProcessLeakProbe.run()
         val mountNamespaceResult = mountNamespaceDriftProbe.run()
         val managerFingerprintResult = kernelSuManagerFingerprintProbe.run()
+        val tempRootArtifactResult = tempRootArtifactProbe.run()
         val findings =
             nativeFindings +
                     shellTmpResult.findings +
                     rootProcessResult.findings +
                     cgroupResult.findings +
                     mountNamespaceResult.findings +
-                    managerFingerprintResult.findings
+                    managerFingerprintResult.findings +
+                    tempRootArtifactResult.findings
 
         return NativeRootReport(
             stage = NativeRootStage.READY,
@@ -112,6 +117,7 @@ class NativeRootRepository(
                 cgroupResult = cgroupResult,
                 mountNamespaceResult = mountNamespaceResult,
                 managerFingerprintResult = managerFingerprintResult,
+                tempRootArtifactResult = tempRootArtifactResult,
             ),
             kernelPatchSideChannel = snapshot.kernelPatchSideChannel,
             ksuSupercallAttempted = snapshot.ksuSupercallAttempted,
@@ -134,6 +140,10 @@ class NativeRootRepository(
             ksuManagerPackagePresent = managerFingerprintResult.packagePresent,
             ksuManagerTraitHitCount = managerFingerprintResult.traitHitCount,
             ksuManagerVisibilityRestricted = managerFingerprintResult.visibilityRestricted,
+            tempRootDetected = tempRootArtifactResult.tempRootDetected,
+            tempRootCveExploitDetected = tempRootArtifactResult.cveExploitDetected,
+            tempRootArtifactHitCount = tempRootArtifactResult.hitCount,
+            tempRootArtifactCheckCount = tempRootArtifactResult.checkedCount,
         )
     }
 
@@ -145,6 +155,7 @@ class NativeRootRepository(
         cgroupResult: CgroupProcessLeakProbeResult,
         mountNamespaceResult: MountNamespaceDriftProbeResult,
         managerFingerprintResult: KernelSuManagerFingerprintProbeResult,
+        tempRootArtifactResult: TempRootArtifactProbeResult,
     ): List<NativeRootMethodResult> {
         val directFindings =
             findings.filter { it.group == NativeRootGroup.SYSCALL || it.group == NativeRootGroup.SIDE_CHANNEL }
@@ -430,6 +441,21 @@ class NativeRootRepository(
                     else -> NativeRootMethodOutcome.SUPPORT
                 },
                 detail = "Read a small catalog of root-specific properties such as ro.kernel.ksu and APatch/KernelPatch variants.",
+            ),
+            NativeRootMethodResult(
+                label = "tempRootArtifacts",
+                summary = when {
+                    tempRootArtifactResult.cveExploitDetected -> "CVE-2026-43499"
+                    tempRootArtifactResult.tempRootDetected -> "${tempRootArtifactResult.hitCount} hit(s)"
+                    tempRootArtifactResult.available -> "Clean"
+                    else -> "Unavailable"
+                },
+                outcome = when {
+                    tempRootArtifactResult.tempRootDetected -> NativeRootMethodOutcome.DETECTED
+                    tempRootArtifactResult.available -> NativeRootMethodOutcome.CLEAN
+                    else -> NativeRootMethodOutcome.SUPPORT
+                },
+                detail = "Scans /data/local/tmp for temp root exploit artifacts (ksud, temp_su, ksu-helper, ksu-payload, libcve43499root.so). Files matching CVE-2026-43499 pattern indicate an active temporary root escalation.",
             ),
             NativeRootMethodResult(
                 label = "nativeLibrary",
