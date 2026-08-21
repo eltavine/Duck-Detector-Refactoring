@@ -24,6 +24,8 @@ import com.eltavine.duckdetector.features.mount.domain.MountMethodOutcome
 import com.eltavine.duckdetector.features.mount.domain.MountMethodResult
 import com.eltavine.duckdetector.features.mount.domain.MountReport
 import com.eltavine.duckdetector.features.mount.domain.MountStage
+import com.eltavine.duckdetector.features.mount.domain.MountZygoteNextReport
+import com.eltavine.duckdetector.features.mount.domain.MountZygoteNextState
 import com.eltavine.duckdetector.features.mount.ui.model.MountCardModel
 import com.eltavine.duckdetector.features.mount.ui.model.MountDetailRowModel
 import com.eltavine.duckdetector.features.mount.ui.model.MountHeaderFactModel
@@ -41,7 +43,10 @@ class MountCardModelMapper {
             verdict = buildVerdict(report),
             summary = buildSummary(report),
             headerFacts = buildHeaderFacts(report),
-            procMountViewRows = listOf(procMountViewRow(report)),
+            procMountViewRows = listOf(
+                procMountViewRow(report),
+                zygoteNextMountViewRow(report),
+            ),
             artifactRows = buildRows(
                 report.stage,
                 report.artifactRows,
@@ -86,8 +91,8 @@ class MountCardModelMapper {
         return when (report.stage) {
             MountStage.LOADING -> "Scanning runtime mount visibility"
             MountStage.FAILED -> when {
-                report.procMountViewTokenHit -> "${report.dangerSignalCount} critical mount signal(s)"
-                report.procMountViewDivergent -> "${report.warningSignalCount} mount signal(s) need review"
+                report.dangerSignalCount > 0 -> "${report.dangerSignalCount} critical mount signal(s)"
+                report.warningSignalCount > 0 -> "${report.warningSignalCount} mount signal(s) need review"
                 else -> "Mount scan failed"
             }
             MountStage.READY -> when {
@@ -110,6 +115,9 @@ class MountCardModelMapper {
                 "Mount table, mountinfo, memory maps, filesystem type, and path-based root artifact probes are collecting local evidence."
 
             MountStage.FAILED -> when {
+                report.zygoteNext.leakDetected ->
+                    "The Android 17 zygote_next mount view exposed root-managed mount records."
+
                 report.procMountViewTokenHit ->
                     "A visible process mount table contains a direct root-managed mount token."
 
@@ -119,7 +127,9 @@ class MountCardModelMapper {
                 else -> report.errorMessage ?: "Mount scan failed before evidence could be assembled."
             }
 
-            MountStage.READY -> if (report.procMountViewTokenHit) {
+            MountStage.READY -> if (report.zygoteNext.leakDetected) {
+                "The Android 17 zygote_next native isolated-service path exposed root-managed mount records."
+            } else if (report.procMountViewTokenHit) {
                 "A visible process mount table contains a direct root-managed mount token."
             } else if (report.procMountViewDivergent) {
                 "Cross-process mount tables diverge from the isolated-process baseline."
@@ -143,7 +153,7 @@ class MountCardModelMapper {
     private fun buildHeaderFacts(report: MountReport): List<MountHeaderFactModel> {
         return when (report.stage) {
             MountStage.LOADING -> placeholderFacts("Pending", DetectorStatus.info(InfoKind.SUPPORT))
-            MountStage.FAILED -> if (report.procMountViewTokenHit || report.procMountViewDivergent) {
+            MountStage.FAILED -> if (report.dangerSignalCount > 0 || report.warningSignalCount > 0) {
                 listOf(
                     MountHeaderFactModel(
                         label = "Critical",
@@ -243,6 +253,14 @@ class MountCardModelMapper {
             )
 
             MountStage.FAILED -> buildList {
+                if (report.zygoteNext.leakDetected) {
+                    add(
+                        MountImpactItemModel(
+                            text = "A root-managed mount remained visible from the Android 17 zygote_next native isolated process.",
+                            status = DetectorStatus.danger(),
+                        ),
+                    )
+                }
                 if (report.procMountViewTokenHit) {
                     add(
                         MountImpactItemModel(
@@ -267,6 +285,14 @@ class MountCardModelMapper {
             }
 
             MountStage.READY -> buildList {
+                if (report.zygoteNext.leakDetected) {
+                    add(
+                        MountImpactItemModel(
+                            text = "A root-managed mount remained visible from the Android 17 zygote_next native isolated process.",
+                            status = DetectorStatus.danger(),
+                        ),
+                    )
+                }
                 if (report.procMountViewTokenHit) {
                     add(
                         MountImpactItemModel(
@@ -284,7 +310,9 @@ class MountCardModelMapper {
                 }
                 report.impacts
                     .filterNot { impact ->
-                        (report.procMountViewTokenHit || report.procMountViewDivergent) &&
+                        (report.zygoteNext.leakDetected ||
+                                report.procMountViewTokenHit ||
+                                report.procMountViewDivergent) &&
                                 impact.severity == MountFindingSeverity.SAFE
                     }
                     .mapTo(this) {
@@ -374,6 +402,111 @@ class MountCardModelMapper {
                 append("Detail: $detail")
             },
         )
+    }
+
+    private fun zygoteNextMountViewRow(report: MountReport): MountDetailRowModel {
+        val result = report.zygoteNext
+        val value = when (result.state) {
+            MountZygoteNextState.PENDING -> "Pending"
+            MountZygoteNextState.UNSUPPORTED -> "Requires Android 17"
+            MountZygoteNextState.UNAVAILABLE -> "Unavailable"
+            MountZygoteNextState.READY -> when {
+                result.leakDetected -> "Root mount"
+                !result.hasInitNamespaceCoverage -> "Coverage unverified"
+                else -> "Clean"
+            }
+        }
+        val status = when (result.state) {
+            MountZygoteNextState.PENDING,
+            MountZygoteNextState.UNSUPPORTED,
+            MountZygoteNextState.UNAVAILABLE -> DetectorStatus.info(InfoKind.SUPPORT)
+
+            MountZygoteNextState.READY -> when {
+                result.leakDetected -> DetectorStatus.danger()
+                !result.hasInitNamespaceCoverage -> DetectorStatus.info(InfoKind.SUPPORT)
+                else -> DetectorStatus.allClear()
+            }
+        }
+        val markerDetail = result.dangerousMarkers.joinToString("\n") { marker ->
+            "${marker.labels.joinToString("+")}: ${marker.rawLine}"
+        }
+        val detail = when {
+            markerDetail.isNotBlank() -> markerDetail
+            result.state == MountZygoteNextState.UNAVAILABLE -> result.errorDetail
+            result.state == MountZygoteNextState.READY && !result.hasInitNamespaceCoverage ->
+                result.namespaceAssessmentDetail
+
+            else -> null
+        }
+        return MountDetailRowModel(
+            label = "Zygote next mount view",
+            value = value,
+            status = status,
+            detail = detail,
+            detailMonospace = markerDetail.isNotBlank(),
+            hiddenCopyText = buildZygoteNextCopyText(result, value),
+        )
+    }
+
+    private fun buildZygoteNextCopyText(
+        result: MountZygoteNextReport,
+        value: String,
+    ): String {
+        return buildString {
+            appendLine("Zygote next mount view")
+            appendLine("Result: $value")
+            appendLine("State: ${result.state}")
+            appendLine("SDK: ${result.sdkInt}")
+            appendLine("Main namespace: ${namespaceLabel(result.mainNamespaceInode)}")
+            appendLine("Main propagation: ${result.mainPropagation.ifBlank { "Unclassified" }}")
+            appendLine(
+                "Main mount IDs: root=${mountIdLabel(result.mainRootMountId)}, " +
+                    "range=${mountIdRange(result.mainMinimumMountId, result.mainMaximumMountId)}",
+            )
+            appendLine("Main mount entries: ${result.mainMountCount}")
+            appendLine("Isolated namespace: ${namespaceLabel(result.isolatedNamespaceInode)}")
+            appendLine(
+                "Isolated propagation: ${result.isolatedPropagation.ifBlank { "Unclassified" }}",
+            )
+            appendLine(
+                "Isolated mount IDs: root=${mountIdLabel(result.isolatedRootMountId)}, " +
+                    "range=${mountIdRange(result.isolatedMinimumMountId, result.isolatedMaximumMountId)}",
+            )
+            appendLine("Isolated mount entries: ${result.isolatedMountCount}")
+            appendLine("Namespace assessment: ${result.namespaceAssessment}")
+            appendLine("Init-managed namespace coverage: ${result.hasInitNamespaceCoverage}")
+            appendLine("Shared-view contrast: ${result.contrastObserved}")
+            appendLine("Root marker leak: ${result.leakDetected}")
+            appendLine("Main markers:")
+            appendMarkers(result.mainMarkers)
+            appendLine("Isolated markers:")
+            appendMarkers(result.isolatedMarkers)
+            append("Detail: ${result.errorDetail.ifBlank { "None" }}")
+        }
+    }
+
+    private fun mountIdLabel(value: Long): String {
+        return value.takeIf { it > 0L }?.toString() ?: "Unreadable"
+    }
+
+    private fun mountIdRange(minimum: Long, maximum: Long): String {
+        return if (minimum > 0L && maximum >= minimum) "$minimum..$maximum" else "Unreadable"
+    }
+
+    private fun StringBuilder.appendMarkers(
+        markers: List<com.eltavine.duckdetector.features.mount.domain.MountZygoteNextMarker>,
+    ) {
+        if (markers.isEmpty()) {
+            appendLine("None")
+            return
+        }
+        markers.forEach { marker ->
+            appendLine("${marker.labels.joinToString("+")}: ${marker.rawLine}")
+        }
+    }
+
+    private fun namespaceLabel(inode: Long): String {
+        return if (inode == 0L) "Unreadable" else "mnt:[$inode]"
     }
 
     private fun buildScanRows(report: MountReport): List<MountDetailRowModel> {
@@ -502,6 +635,7 @@ class MountCardModelMapper {
 
     private fun methodLabels(): List<String> = listOf(
         "Startup preload",
+        "Zygote next mount view",
         "Path probes",
         "Shell tmp view",
         "/proc/self/mounts",
@@ -612,7 +746,10 @@ class MountCardModelMapper {
     }
 
     private fun hasOnlyPreloadEvidence(report: MountReport): Boolean {
-        if (report.procMountViewTokenHit || report.procMountViewDivergent) {
+        if (report.zygoteNext.leakDetected ||
+            report.procMountViewTokenHit ||
+            report.procMountViewDivergent
+        ) {
             return false
         }
         val findings = report.findings.filter {

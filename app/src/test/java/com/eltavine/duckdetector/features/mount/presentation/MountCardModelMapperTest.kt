@@ -121,8 +121,8 @@ class MountCardModelMapperTest {
     fun `loading placeholders include startup preload rows`() {
         val model = mapper.map(MountReport.loading())
 
-        assertEquals("Cross-process mount views", model.procMountViewRows.single().label)
-        assertEquals("Pending", model.procMountViewRows.single().value)
+        val row = model.procMountViewRows.single { it.label == "Cross-process mount views" }
+        assertEquals("Pending", row.value)
         assertTrue(model.methodRows.any { it.label == "Startup preload" })
         assertEquals("Startup preload", model.scanRows.first().label)
         assertTrue(model.methodRows.none { it.label == "Cross-process mount views" })
@@ -141,7 +141,7 @@ class MountCardModelMapperTest {
             ),
         )
 
-        val row = model.procMountViewRows.single()
+        val row = model.procMountViewRows.single { it.label == "Cross-process mount views" }
         assertEquals("Clean", row.value)
         assertEquals(DetectorStatus.allClear(), row.status)
         assertNull(row.detail)
@@ -166,7 +166,7 @@ class MountCardModelMapperTest {
             ),
         )
 
-        val row = model.procMountViewRows.single()
+        val row = model.procMountViewRows.single { it.label == "Cross-process mount views" }
         assertEquals("KSU mount", row.value)
         assertEquals(DetectorStatus.danger(), row.status)
         assertEquals(DetectorStatus.danger(), model.status)
@@ -215,7 +215,7 @@ class MountCardModelMapperTest {
         assertEquals("1 critical mount signal(s)", model.verdict)
         assertEquals(
             "KSU mount",
-            model.procMountViewRows.single().value,
+            model.procMountViewRows.single { it.label == "Cross-process mount views" }.value,
         )
     }
 

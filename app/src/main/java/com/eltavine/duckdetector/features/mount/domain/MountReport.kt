@@ -65,6 +65,150 @@ data class MountMethodResult(
     val detail: String? = null,
 )
 
+enum class MountZygoteNextState {
+    PENDING,
+    UNSUPPORTED,
+    UNAVAILABLE,
+    READY,
+}
+
+enum class MountZygoteNextNamespaceAssessment {
+    INIT_MANAGED,
+    UNVERIFIED,
+}
+
+data class MountZygoteNextMarker(
+    val labels: List<String>,
+    val mountPoint: String,
+    val mountRoot: String,
+    val fileSystemType: String,
+    val source: String,
+    val rawLine: String,
+) {
+    val dangerous: Boolean
+        get() = labels.any { it != DEBUG_RAMDISK_LABEL }
+
+    companion object {
+        private const val DEBUG_RAMDISK_LABEL = "debug_ramdisk"
+    }
+}
+
+data class MountZygoteNextReport(
+    val state: MountZygoteNextState,
+    val sdkInt: Int,
+    val mainNamespaceInode: Long = 0L,
+    val mainPropagation: String = "",
+    val mainRootMountId: Long = 0L,
+    val mainMinimumMountId: Long = 0L,
+    val mainMaximumMountId: Long = 0L,
+    val mainMountCount: Int = 0,
+    val mainMarkers: List<MountZygoteNextMarker> = emptyList(),
+    val isolatedNamespaceInode: Long = 0L,
+    val isolatedPropagation: String = "",
+    val isolatedRootMountId: Long = 0L,
+    val isolatedMinimumMountId: Long = 0L,
+    val isolatedMaximumMountId: Long = 0L,
+    val isolatedMountCount: Int = 0,
+    val isolatedMarkers: List<MountZygoteNextMarker> = emptyList(),
+    val errorDetail: String = "",
+) {
+    val dangerousMarkers: List<MountZygoteNextMarker>
+        get() = isolatedMarkers.filter(MountZygoteNextMarker::dangerous)
+
+    val leakDetected: Boolean
+        get() = state == MountZygoteNextState.READY && dangerousMarkers.isNotEmpty()
+
+    /**
+     * AOSP init makes the root mount shared before creating its bootstrap/default namespaces.
+     * Classic zygote clones that view and recursively changes its root to slave, while zygote_next
+     * and its native descendants only fork and retain init's default namespace. The kernel assigns
+     * fresh mount IDs while cloning a namespace. IDs can be reused, so ordering is corroborating
+     * evidence only and is never accepted without the independent propagation contrast.
+     */
+    val namespaceAssessment: MountZygoteNextNamespaceAssessment
+        get() {
+            if (state != MountZygoteNextState.READY) {
+                return MountZygoteNextNamespaceAssessment.UNVERIFIED
+            }
+            return if (
+                namespaceSeparated &&
+                propagationMatchesAosp &&
+                mountIdOrderingMatchesAosp
+            ) {
+                MountZygoteNextNamespaceAssessment.INIT_MANAGED
+            } else {
+                MountZygoteNextNamespaceAssessment.UNVERIFIED
+            }
+        }
+
+    val hasInitNamespaceCoverage: Boolean
+        get() = namespaceAssessment == MountZygoteNextNamespaceAssessment.INIT_MANAGED
+
+    val namespaceAssessmentDetail: String
+        get() {
+            if (hasInitNamespaceCoverage) {
+                return "The native view matches AOSP's init-managed default namespace: " +
+                    "it is distinct from the classic app namespace, its root is shared and " +
+                    "non-slave, the classic root is slave, and its root/minimum mount IDs are older."
+            }
+            val reasons = buildList {
+                if (!namespaceSeparated) add("namespace identities are missing or equal")
+                if (!isolatedRootIsSharedNonSlave) {
+                    add("native root is not shared and non-slave")
+                }
+                if (!mainRootIsSlaveNonShared) {
+                    add("classic app root is not slave and non-shared")
+                }
+                if (!mountIdOrderingMatchesAosp) {
+                    add("native root/minimum mount IDs are not older than the classic app IDs")
+                }
+            }
+            return "Init-managed namespace coverage is unverified" +
+                if (reasons.isEmpty()) "." else ": ${reasons.joinToString()}."
+        }
+
+    val contrastObserved: Boolean
+        get() = hasInitNamespaceCoverage
+
+    private val namespaceSeparated: Boolean
+        get() = mainNamespaceInode > 0L && isolatedNamespaceInode > 0L &&
+            mainNamespaceInode != isolatedNamespaceInode
+
+    private val propagationMatchesAosp: Boolean
+        get() = isolatedRootIsSharedNonSlave && mainRootIsSlaveNonShared
+
+    private val isolatedRootIsSharedNonSlave: Boolean
+        get() {
+            val fields = propagationFields(isolatedPropagation)
+            return fields.any { it.startsWith("shared:") } &&
+                fields.none { it.startsWith("master:") }
+        }
+
+    private val mainRootIsSlaveNonShared: Boolean
+        get() {
+            val fields = propagationFields(mainPropagation)
+            return fields.any { it.startsWith("master:") } &&
+                fields.none { it.startsWith("shared:") }
+        }
+
+    private val mountIdOrderingMatchesAosp: Boolean
+        get() = isolatedRootMountId > 0L && mainRootMountId > isolatedRootMountId &&
+            isolatedMinimumMountId > 0L && mainMinimumMountId > isolatedMinimumMountId
+
+    private fun propagationFields(value: String): List<String> {
+        return value.split(' ').filter(String::isNotBlank)
+    }
+
+    companion object {
+        fun pending(): MountZygoteNextReport {
+            return MountZygoteNextReport(
+                state = MountZygoteNextState.PENDING,
+                sdkInt = 0,
+            )
+        }
+    }
+}
+
 data class MountReport(
     val stage: MountStage,
     val nativeAvailable: Boolean,
@@ -88,6 +232,7 @@ data class MountReport(
     val impacts: List<MountImpact>,
     val methods: List<MountMethodResult>,
     val errorMessage: String? = null,
+    val zygoteNext: MountZygoteNextReport = MountZygoteNextReport.pending(),
     val procMountViewProbeAvailable: Boolean = false,
     val procMountViewDistinctCount: Int = 0,
     val procMountViewExpectedCount: Int = 1,
@@ -117,7 +262,9 @@ data class MountReport(
         get() = findings.filter { it.severity == MountFindingSeverity.WARNING }
 
     val dangerSignalCount: Int
-        get() = dangerFindings.size + if (procMountViewTokenHit) 1 else 0
+        get() = dangerFindings.size +
+                (if (procMountViewTokenHit) 1 else 0) +
+                (if (zygoteNext.leakDetected) 1 else 0)
 
     val warningSignalCount: Int
         get() = warningFindings.size + if (procMountViewDivergent && !procMountViewTokenHit) 1 else 0

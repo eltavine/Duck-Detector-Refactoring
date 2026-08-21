@@ -77,6 +77,12 @@ limitations under the License.
             android:exported="false"
             android:isolatedProcess="true" />
         <service
+            android:name=".features.mount.data.zygotenext.ZygoteNextProbeService"
+            android:exported="false"
+            android:isolatedProcess="true"
+            android:nativeService="true"
+            tools:targetApi="37" />
+        <service
             android:name=".features.selinux.data.service.SelinuxContextValidityCarrierService"
             android:exported="false"
             android:isolatedProcess="true"
