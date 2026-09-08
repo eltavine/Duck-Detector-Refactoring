@@ -44,52 +44,83 @@ import java.util.Locale
 class DashboardExportFormatter {
 
     fun format(state: DashboardUiState): String = buildString {
-        appendLine("========================================")
-        appendLine("  Duck Detector — Security Scan Report")
-        appendLine("========================================")
-        appendLine()
-        appendLine("App Version : ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-        appendLine("Build Hash  : ${BuildConfig.BUILD_HASH}")
-        appendLine("Build Time  : ${formatBuildTimeUtc(BuildConfig.BUILD_TIME_UTC)} (UTC)")
-        appendLine("Report Time : ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss (z)", Locale.US).format(Date())}")
-        appendLine()
+        appendBanner(state)
+        appendExecutiveSummary(state)
+        appendTopFindings(state)
+        appendDetectorCards(state)
+        appendDeviceInfo(state.deviceInfoCard)
+        appendFooter()
+    }
 
-        appendLine("----- OVERVIEW -----")
-        appendLine("Status  : ${state.overview.headline}")
-        appendLine("Summary : ${state.overview.summary}")
+    private fun StringBuilder.appendBanner(state: DashboardUiState) {
+        val deviceInfo = state.deviceInfoCard
+        val brand = deviceInfo.headerFacts.firstOrNull { it.label.equals("brand", true) }?.value
+        val model = deviceInfo.headerFacts.firstOrNull { it.label.equals("model", true) }?.value
+        val android = deviceInfo.headerFacts.firstOrNull { it.label.equals("android", true) }?.value
+        val sdk = deviceInfo.headerFacts.firstOrNull { it.label.equals("sdk", true) }?.value
+
+        appendLine("================================================================================")
+        appendLine("                      DUCK DETECTOR — SECURITY SCAN REPORT                      ")
+        appendLine("================================================================================")
+        if (!brand.isNullOrBlank() && !model.isNullOrBlank()) {
+            val osStr = if (!android.isNullOrBlank()) " (Android $android, API ${sdk ?: "unknown"})" else ""
+            appendLine("  Target Device  : $brand $model$osStr")
+        }
+        appendLine("  App Version    : ${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
+        appendLine("  Build Commit   : ${BuildConfig.BUILD_HASH}")
+        appendLine("  Build Time     : ${formatBuildTimeUtc(BuildConfig.BUILD_TIME_UTC)} (UTC)")
+        appendLine("  Report Time    : ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss (z)", Locale.US).format(Date())}")
         appendLine()
-        appendLine("Metrics:")
+    }
+
+    private fun StringBuilder.appendExecutiveSummary(state: DashboardUiState) {
+        appendLine("--------------------------------------------------------------------------------")
+        appendLine("  EXECUTIVE SUMMARY")
+        appendLine("--------------------------------------------------------------------------------")
+        val badge = severityBadge(state.overview.status.severity)
+        appendLine("  Overall Status : $badge ${state.overview.headline}")
+        appendLine("  Summary        : ${state.overview.summary}")
+        appendLine()
+        appendLine("  Scan Statistics:")
         state.overview.metrics.forEach { metric ->
-            appendLine("  ${metric.label}: ${metric.value}")
+            val icon = when (metric.label.lowercase()) {
+                "danger" -> "[✖]"
+                "warning" -> "[▲]"
+                "ready" -> "[✔]"
+                else -> "[·]"
+            }
+            appendLine("    $icon ${metric.label.padEnd(9)}: ${metric.value}")
         }
         appendLine()
+    }
 
-        appendLine("----- TOP FINDINGS -----")
+    private fun StringBuilder.appendTopFindings(state: DashboardUiState) {
+        appendLine("--------------------------------------------------------------------------------")
+        appendLine("  TOP FINDINGS")
+        appendLine("--------------------------------------------------------------------------------")
         if (state.topFindings.isEmpty()) {
-            appendLine("  (none)")
+            appendLine("  (No security threats or warnings detected)")
         } else {
             state.topFindings.forEach { finding ->
-                val severity = severityLabel(finding.status.severity)
-                appendLine("  [$severity] ${finding.detectorTitle}")
-                appendLine("    ${finding.headline}")
-                appendLine("    ${finding.detail}")
+                val badge = severityBadge(finding.status.severity)
+                appendLine("  $badge ${finding.detectorTitle}")
+                appendLine("    Headline : ${finding.headline}")
+                if (finding.detail.isNotBlank() && finding.detail != finding.headline) {
+                    appendLine("    Details  :")
+                    finding.detail.trim().lines().map { it.trimEnd() }.filter { it.isNotBlank() }.forEach { line ->
+                        appendLine("      $line")
+                    }
+                }
+                appendLine()
             }
         }
-        appendLine()
+    }
 
-        appendLine("----- DETECTOR CARDS -----")
+    private fun StringBuilder.appendDetectorCards(state: DashboardUiState) {
         state.detectorCards.forEach { entry ->
             appendDetectorCard(entry)
         }
         appendLine()
-
-        appendLine("----- DEVICE INFO -----")
-        appendDeviceInfo(state.deviceInfoCard)
-        appendLine()
-
-        appendLine("========================================")
-        appendLine("  End of report")
-        appendLine("========================================")
     }
 
     private fun StringBuilder.appendDetectorCard(entry: DashboardDetectorCardEntry) {
@@ -112,18 +143,18 @@ class DashboardExportFormatter {
         }
     }
 
-    private fun StringBuilder.appendCardHeader(title: String, verdict: String, statusLabel: String) {
+    private fun StringBuilder.appendCardHeader(title: String, verdict: String, severity: DetectionSeverity) {
         appendLine()
-        appendLine("  [$statusLabel] $title")
-        appendLine("  Verdict: $verdict")
+        appendLine("--------------------------------------------------------------------------------")
+        val badge = severityBadge(severity)
+        appendLine("  $badge $title")
+        appendLine("  Verdict      : $verdict")
     }
 
     private fun StringBuilder.appendHeaderFacts(facts: List<Pair<String, String>>) {
         if (facts.isEmpty()) return
-        appendLine("  Header facts:")
-        facts.forEach { (label, value) ->
-            appendLine("    $label: $value")
-        }
+        val formatted = facts.joinToString("  |  ") { "${it.first}: ${it.second}" }
+        appendLine("  Quick Facts  : $formatted")
     }
 
     private fun StringBuilder.appendDetailRows(
@@ -131,30 +162,75 @@ class DashboardExportFormatter {
         rows: List<Triple<String, String, String?>>,
     ) {
         if (rows.isEmpty()) return
-        appendLine("  $sectionTitle:")
+        appendLine()
+        appendLine("  [$sectionTitle]")
         rows.forEach { (label, value, detail) ->
-            val line = StringBuilder("    $label: $value")
-            if (!detail.isNullOrBlank() && detail != value) {
-                line.append(" ($detail)")
+            formatDetailRow(label, value, detail)
+        }
+    }
+
+    private fun StringBuilder.formatDetailRow(label: String, value: String, detail: String?) {
+        val trimmedValue = value.trim()
+        val hasValue = trimmedValue.isNotBlank()
+        val trimmedDetail = detail?.trim()
+        val hasDetail = !trimmedDetail.isNullOrBlank() && trimmedDetail != trimmedValue
+
+        if (!hasValue && !hasDetail) {
+            appendLine("    • $label")
+            return
+        }
+
+        if (!hasValue && hasDetail) {
+            appendLine("    • $label")
+            formatDetailContent(trimmedDetail)
+            return
+        }
+
+        if (!hasDetail) {
+            appendLine("    • $label: $trimmedValue")
+            return
+        }
+
+        val detailLines = trimmedDetail.lines().map { it.trimEnd() }.filter { it.isNotBlank() }
+        if (detailLines.size == 1 && detailLines[0].length <= 60 && !detailLines[0].contains(" = ") && !detailLines[0].contains(" | ")) {
+            appendLine("    • $label: $trimmedValue (${detailLines[0]})")
+        } else {
+            appendLine("    • $label: $trimmedValue")
+            detailLines.forEach { line ->
+                appendLine("        $line")
             }
-            appendLine(line.toString())
+        }
+    }
+
+    private fun StringBuilder.formatDetailContent(detail: String) {
+        detail.lines().map { it.trimEnd() }.filter { it.isNotBlank() }.forEach { line ->
+            appendLine("        $line")
         }
     }
 
     private fun StringBuilder.appendImpactItems(
+        sectionTitle: String = "Impact & Guidance",
         items: List<String>,
     ) {
         if (items.isEmpty()) return
+        appendLine()
+        appendLine("  [$sectionTitle]")
         items.forEach { text ->
-            appendLine("    • $text")
+            val lines = text.trim().lines().map { it.trimEnd() }.filter { it.isNotBlank() }
+            if (lines.isNotEmpty()) {
+                appendLine("    • ${lines.first()}")
+                lines.drop(1).forEach { line ->
+                    appendLine("      $line")
+                }
+            }
         }
     }
 
-    private fun severityLabel(severity: DetectionSeverity): String = when (severity) {
-        DetectionSeverity.DANGER -> "DANGER"
-        DetectionSeverity.WARNING -> "WARNING"
-        DetectionSeverity.INFO -> "INFO"
-        DetectionSeverity.ALL_CLEAR -> "CLEAR"
+    private fun severityBadge(severity: DetectionSeverity): String = when (severity) {
+        DetectionSeverity.DANGER -> "[✖ DANGER]"
+        DetectionSeverity.WARNING -> "[▲ WARNING]"
+        DetectionSeverity.INFO -> "[ℹ INFO]"
+        DetectionSeverity.ALL_CLEAR -> "[✔ CLEAR]"
     }
 
     private fun headerFactsToPairs(facts: List<*>): List<Pair<String, String>> {
@@ -203,7 +279,7 @@ class DashboardExportFormatter {
     }
 
     private fun StringBuilder.appendBootloader(model: BootloaderCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("State", detailRowsToTriples(model.stateRows))
         appendDetailRows("Attestation", detailRowsToTriples(model.attestationRows))
@@ -212,13 +288,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendMount(model: MountCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Artifacts", detailRowsToTriples(model.artifactRows))
         appendDetailRows("Runtime", detailRowsToTriples(model.runtimeRows))
@@ -227,13 +302,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendCustomRom(model: CustomRomCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Build", detailRowsToTriples(model.buildRows))
         appendDetailRows("Runtime", detailRowsToTriples(model.runtimeRows))
@@ -241,13 +315,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendSelinux(model: SelinuxCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("State", detailRowsToTriples(model.stateRows))
         appendDetailRows("Policy", detailRowsToTriples(model.policyRows))
@@ -255,19 +328,17 @@ class DashboardExportFormatter {
         appendDetailRows("Device", detailRowsToTriples(model.deviceRows))
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
         if (model.policyNotes.isNotEmpty()) {
-            appendLine("  Policy notes:")
-            appendImpactItems(impactItemsToStrings(model.policyNotes))
+            appendImpactItems("Policy Notes", impactItemsToStrings(model.policyNotes))
         }
         if (model.auditNotes.isNotEmpty()) {
-            appendLine("  Audit notes:")
-            appendImpactItems(impactItemsToStrings(model.auditNotes))
+            appendImpactItems("Audit Notes", impactItemsToStrings(model.auditNotes))
         }
         if (model.references.isNotEmpty()) {
-            appendLine("  References:")
+            appendLine()
+            appendLine("  [References]")
             model.references.forEach { ref ->
                 appendLine("    • $ref")
             }
@@ -275,40 +346,62 @@ class DashboardExportFormatter {
     }
 
     private fun StringBuilder.appendDangerousApps(model: DangerousAppsCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         if (model.hmaAlert != null) {
-            appendLine("  HMA Alert: ${model.hmaAlert.title}")
-            appendLine("    ${model.hmaAlert.summary}")
+            appendLine()
+            appendLine("  [HMA Alert: ${model.hmaAlert.title}]")
+            appendLine("    Summary: ${model.hmaAlert.summary}")
             if (model.hmaAlert.hiddenPackages.isNotEmpty()) {
-                appendLine("    Hidden packages:")
+                appendLine("    Hidden Packages:")
                 model.hmaAlert.hiddenPackages.forEach { pkg ->
-                    appendLine("      ${pkg.appName} (${pkg.packageName}) methods: ${pkg.methods.joinToString()}")
+                    appendLine("      • ${pkg.appName} (${pkg.packageName}) [methods: ${pkg.methods.joinToString()}]")
                 }
             }
         }
         if (model.packageItems.isNotEmpty()) {
-            appendLine("  Packages:")
+            appendLine()
+            appendLine("  [Detected Packages]")
             model.packageItems.forEach { pkg ->
-                appendLine("    ${pkg.appName} (${pkg.packageName}) methods: ${pkg.methods.joinToString()}")
+                appendLine("    • ${pkg.appName} (${pkg.packageName}) [methods: ${pkg.methods.joinToString()}]")
             }
         }
         if (model.context.isNotEmpty()) {
-            appendLine("  Context:")
+            appendLine()
+            appendLine("  [Context & Inventory]")
             model.context.forEach { ctx ->
-                appendLine("    ${ctx.label}: ${ctx.value}")
+                appendLine("    • ${ctx.label}: ${ctx.value}")
             }
         }
         if (model.targetApps.isNotEmpty()) {
-            appendLine("  Target apps:")
-            model.targetApps.forEach { app ->
-                appendLine("    ${app.appName} (${app.packageName}) [${app.category}]")
+            appendLine()
+            val byCategory = model.targetApps.groupBy { it.category }
+            appendLine("  [Monitored Package Catalog (${model.targetApps.size} targets across ${byCategory.size} categories)]")
+            byCategory.forEach { (category, apps) ->
+                appendLine("    • $category (${apps.size}):")
+                formatWrappedList("        ", apps.map { "${it.appName} (${it.packageName})" })
             }
         }
     }
 
+    private fun StringBuilder.formatWrappedList(indent: String, items: List<String>) {
+        var currentLine = StringBuilder(indent)
+        items.forEachIndexed { index, item ->
+            val suffix = if (index < items.lastIndex) ", " else ""
+            if (currentLine.length + item.length + suffix.length > 95 && currentLine.trim().isNotEmpty()) {
+                appendLine(currentLine.toString())
+                currentLine = StringBuilder(indent).append(item).append(suffix)
+            } else {
+                currentLine.append(item).append(suffix)
+            }
+        }
+        if (currentLine.trim().isNotEmpty()) {
+            appendLine(currentLine.toString())
+        }
+    }
+
     private fun StringBuilder.appendKernelCheck(model: KernelCheckCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Identity", detailRowsToTriples(model.identityRows))
         appendDetailRows("Anomalies", detailRowsToTriples(model.anomalyRows))
@@ -316,13 +409,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendMemory(model: MemoryCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Hooks", detailRowsToTriples(model.hookRows))
         appendDetailRows("Mapping", detailRowsToTriples(model.mappingRows))
@@ -330,13 +422,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendLSPosed(model: LSPosedCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Runtime", detailRowsToTriples(model.runtimeRows))
         appendDetailRows("Binder", detailRowsToTriples(model.binderRows))
@@ -346,13 +437,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendNativeRoot(model: NativeRootCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Native", detailRowsToTriples(model.nativeRows))
         appendDetailRows("Runtime", detailRowsToTriples(model.runtimeRows))
@@ -361,13 +451,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendPlayIntegrityFix(model: PlayIntegrityFixCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Properties", detailRowsToTriples(model.propertyRows))
         appendDetailRows("Consistency", detailRowsToTriples(model.consistencyRows))
@@ -375,50 +464,55 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendTee(model: TeeCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         if (model.highlightSignals.isNotEmpty()) {
-            appendLine("  Highlight signals:")
+            appendLine()
+            appendLine("  [Highlight Signals]")
             model.highlightSignals.forEach { signal ->
-                appendLine("    ${signal.label}: ${signal.value}")
+                appendLine("    • ${signal.label}: ${signal.value}")
             }
         }
         model.factGroups.forEach { group ->
-            appendLine("  ${group.title}:")
+            appendLine()
+            appendLine("  [${group.title}]")
             group.rows.forEach { row ->
-                appendLine("    ${row.label}: ${row.value}")
+                val lines = row.value.trim().lines().map { it.trimEnd() }.filter { it.isNotBlank() }
+                if (lines.size <= 1) {
+                    appendLine("    • ${row.label}: ${row.value.trim()}")
+                } else {
+                    appendLine("    • ${row.label}:")
+                    lines.forEach { l ->
+                        appendLine("        $l")
+                    }
+                }
             }
         }
-        appendLine("  Network: ${model.networkState.summary}")
-        appendLine("  Certificate count: ${model.certificateSummary.count}")
-        if (model.exportText.isNotBlank()) {
-            appendLine()
-            appendLine("  --- TEE detailed export ---")
-            appendLine(model.exportText)
-        }
+        appendLine()
+        appendLine("  [Environment & Network]")
+        appendLine("    • Network Status    : ${model.networkState.summary}")
+        appendLine("    • Certificate Count : ${model.certificateSummary.count}")
     }
 
     private fun StringBuilder.appendSu(model: SuCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Artifacts", detailRowsToTriples(model.artifactRows))
         appendDetailRows("Context", detailRowsToTriples(model.contextRows))
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendSystemProperties(model: SystemPropertiesCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Core", detailRowsToTriples(model.coreRows))
         appendDetailRows("Boot", detailRowsToTriples(model.bootRows))
@@ -429,13 +523,12 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
     }
 
     private fun StringBuilder.appendVirtualization(model: VirtualizationCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("Environment", detailRowsToTriples(model.environmentRows))
         appendDetailRows("Runtime", detailRowsToTriples(model.runtimeRows))
@@ -445,11 +538,11 @@ class DashboardExportFormatter {
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         appendDetailRows("Scan", detailRowsToTriples(model.scanRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
         if (model.references.isNotEmpty()) {
-            appendLine("  References:")
+            appendLine()
+            appendLine("  [References]")
             model.references.forEach { ref ->
                 appendLine("    • $ref")
             }
@@ -457,17 +550,17 @@ class DashboardExportFormatter {
     }
 
     private fun StringBuilder.appendZygisk(model: ZygiskCardModel) {
-        appendCardHeader(model.title, model.verdict, severityLabel(model.status.severity))
+        appendCardHeader(model.title, model.verdict, model.status.severity)
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         appendDetailRows("State", detailRowsToTriples(model.stateRows))
         appendDetailRows("Signals", detailRowsToTriples(model.signalRows))
         appendDetailRows("Methods", detailRowsToTriples(model.methodRows))
         if (model.impactItems.isNotEmpty()) {
-            appendLine("  Impact:")
-            appendImpactItems(impactItemsToStrings(model.impactItems))
+            appendImpactItems("Impact & Guidance", impactItemsToStrings(model.impactItems))
         }
         if (model.references.isNotEmpty()) {
-            appendLine("  References:")
+            appendLine()
+            appendLine("  [References]")
             model.references.forEach { ref ->
                 appendLine("    • $ref")
             }
@@ -475,13 +568,27 @@ class DashboardExportFormatter {
     }
 
     private fun StringBuilder.appendDeviceInfo(model: DeviceInfoCardModel) {
-        appendLine("  ${model.title}")
+        appendLine()
+        appendLine("================================================================================")
+        appendLine("  DEVICE & SYSTEM SPECIFICATIONS")
+        appendLine("================================================================================")
         appendHeaderFacts(headerFactsToPairs(model.headerFacts))
         model.sections.forEach { section ->
-            appendLine("  ${section.title}:")
+            appendLine()
+            appendLine("  [${section.title}]")
+            val maxLabelLen = section.rows.maxOfOrNull { it.label.length } ?: 16
+            val padLen = (maxLabelLen + 2).coerceIn(16, 28)
             section.rows.forEach { row ->
-                appendLine("    ${row.label}: ${row.value}")
+                val paddedLabel = row.label.padEnd(padLen)
+                appendLine("    • $paddedLabel: ${row.value}")
             }
         }
+    }
+
+    private fun StringBuilder.appendFooter() {
+        appendLine()
+        appendLine("================================================================================")
+        appendLine("                                 END OF REPORT                                  ")
+        appendLine("================================================================================")
     }
 }

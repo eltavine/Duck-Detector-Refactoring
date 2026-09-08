@@ -7,7 +7,7 @@
       "asm",
       "kotlin"
     ],
-    "contributions": 79,
+    "contributions": 116,
     "name": "eltavine",
     "avatarAssetPath": "github_contributors/avatars/eltavine.jpg",
     "summaryKey": "author_summary_eltavine",
@@ -59,24 +59,24 @@
     "login": "AlexLiuDev233"
   },
   {
+    "profileUrl": "https://github.com/Searchur",
+    "contributionKeys": [
+      "ui",
+      "kotlin"
+    ],
+    "contributions": 5,
+    "name": "Searchur",
+    "avatarAssetPath": "github_contributors/avatars/searchur.jpg",
+    "summaryKey": "author_summary_searchur",
+    "login": "Searchur"
+  },
+  {
     "profileUrl": "https://github.com/vvb2060",
     "contributionKeys": [],
     "contributions": 4,
     "name": "vvb2060",
     "avatarAssetPath": "github_contributors/avatars/vvb2060.jpg",
     "login": "vvb2060"
-  },
-  {
-    "profileUrl": "https://github.com/Searchur",
-    "contributionKeys": [
-      "ui",
-      "kotlin"
-    ],
-    "contributions": 4,
-    "name": "Searchur",
-    "avatarAssetPath": "github_contributors/avatars/searchur.jpg",
-    "summaryKey": "author_summary_searchur",
-    "login": "Searchur"
   },
   {
     "profileUrl": "https://github.com/wxxsfxyzm",

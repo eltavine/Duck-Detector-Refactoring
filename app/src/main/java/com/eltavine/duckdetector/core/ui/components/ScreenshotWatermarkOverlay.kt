@@ -38,7 +38,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
 @Composable
 fun ScreenshotWatermarkOverlay(
     modifier: Modifier = Modifier,
@@ -55,23 +54,18 @@ fun ScreenshotWatermarkOverlay(
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60_000L) // Update every minute
-            currentTimeMillis = System.currentTimeMillis()
+            val now = System.currentTimeMillis()
+            currentTimeMillis = now
+            val delayMillis = (60_000L - (now % 60_000L)).coerceAtLeast(1_000L)
+            delay(delayMillis)
         }
     }
 
-    val dateFormat = remember { SimpleDateFormat("MMM d. yy HH:mm", Locale.getDefault()) }
-    val timeString = remember(currentTimeMillis) {
-        val date = Date(currentTimeMillis)
-        val day = dateFormat.format(date)
-        val d = java.util.Calendar.getInstance().apply { time = date }.get(java.util.Calendar.DAY_OF_MONTH)
-        val suffix = if (d in 11..13) "ᵗʰ" else when (d % 10) { 1 -> "ˢᵗ"; 2 -> "ⁿᵈ"; 3 -> "ʳᵈ"; else -> "ᵗʰ" }
-        day.replaceFirst(Regex("""\d+\."""), "$d$suffix")
+    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    val timeLine = remember(currentTimeMillis) {
+        dateFormat.format(Date(currentTimeMillis))
     }
-    val versionPrefix = remember(BuildConfig.VERSION_NAME) {
-        versionDatePrefix(BuildConfig.VERSION_NAME)
-    }
-    val versionSuffix = BuildConfig.BUILD_HASH.take(7)
+    val versionLine = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
 
     val isDarkTheme = isSystemInDarkTheme()
 
@@ -96,22 +90,12 @@ fun ScreenshotWatermarkOverlay(
             }
 
             val lineHeight = paint.fontSpacing
-            val smallPaint = android.graphics.Paint(paint).apply {
-                textSize = textSizePx * 0.72f
-            }
-            val prefixWidth = paint.measureText(versionPrefix)
-            val suffixWidth = smallPaint.measureText(versionSuffix)
-            val suffixBgPaint = android.graphics.Paint().apply {
-                color = android.graphics.Color.argb(
-                    (alpha * 0.1f * 255).toInt(),
-                    colorValue, colorValue, colorValue
-                )
-                style = android.graphics.Paint.Style.FILL
-            }
-            val maxTextWidth = maxOf(
-                prefixWidth + suffixWidth,
-                paint.measureText(timeString)
-            )
+            val width1 = paint.measureText(versionLine)
+            val width2 = paint.measureText(timeLine)
+            val maxTextWidth = maxOf(width1, width2)
+            val offset1 = (maxTextWidth - width1) / 2f
+            val offset2 = (maxTextWidth - width2) / 2f
+
             val safeHSpacing = maxOf(spacingPx, maxTextWidth * 1.3f)
             val safeVSpacing = maxOf(spacingPx * 0.6f, lineHeight * 2.5f)
 
@@ -124,30 +108,12 @@ fun ScreenshotWatermarkOverlay(
             while (y < endY) {
                 var x = startX
                 while (x < endX) {
-                    drawContext.canvas.nativeCanvas.drawText(versionPrefix, x, y, paint)
-                    drawContext.canvas.nativeCanvas.drawRect(
-                        x + prefixWidth - suffixWidth * 0.05f,
-                        y - lineHeight * 0.45f,
-                        x + prefixWidth + suffixWidth * 1.05f,
-                        y + lineHeight * 0.1f,
-                        suffixBgPaint
-                    )
-                    drawContext.canvas.nativeCanvas.drawText(versionSuffix, x + prefixWidth, y, smallPaint)
-                    drawContext.canvas.nativeCanvas.drawText(timeString, x + prefixWidth * 0.3f, y + lineHeight, paint)
+                    drawContext.canvas.nativeCanvas.drawText(versionLine, x + offset1, y, paint)
+                    drawContext.canvas.nativeCanvas.drawText(timeLine, x + offset2, y + lineHeight, paint)
                     x += safeHSpacing
                 }
                 y += safeVSpacing
             }
         }
-    }
-}
-
-private fun versionDatePrefix(versionName: String): String {
-    val datePart = versionName.substringBefore('-')
-    val segments = datePart.split('.')
-    return if (segments.size >= 3) {
-        segments.take(3).joinToString(".")
-    } else {
-        datePart
     }
 }

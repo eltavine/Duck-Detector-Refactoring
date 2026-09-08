@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.dashboard.ui
 
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -89,6 +90,9 @@ import com.eltavine.duckdetector.features.tee.ui.model.TeeFooterActionId
 import com.eltavine.duckdetector.features.virtualization.ui.card.VirtualizationDetectorCard
 import com.eltavine.duckdetector.features.zygisk.ui.card.ZygiskDetectorCard
 import com.eltavine.duckdetector.ui.theme.ShapeTokens
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun DashboardScreen(
@@ -149,7 +153,7 @@ fun DashboardScreen(
             item {
                 ExportButton(
                     onClick = {
-                        exportLauncher.launch("duck_detector_report.txt")
+                        exportLauncher.launch(generateExportReportFileName())
                     },
                 )
             }
@@ -388,6 +392,16 @@ private fun ExportButton(
     }
 }
 
+internal fun generateExportReportFileName(
+    model: String = Build.MODEL,
+    nowEpochMillis: Long = System.currentTimeMillis(),
+): String {
+    val sanitizedModel = model.trim().ifBlank { "unknown" }
+        .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(nowEpochMillis))
+    return "duck_detector_report_${sanitizedModel}_$timestamp.txt"
+}
+
 @Composable
 private fun BrandMetaLine(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -498,8 +512,48 @@ private fun DashboardOverviewCard(
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (model.title.contains('\n')) {
+                val titleLines = model.title.lines()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (model.showTitleIcon) {
+                            Icon(
+                                imageVector = Icons.Outlined.Timer,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                        }
+                        WrapSafeText(
+                            text = titleLines[0],
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    if (titleLines.size > 1 && titleLines[1].isNotBlank()) {
+                        WrapSafeText(
+                            text = titleLines[1],
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -523,25 +577,27 @@ private fun DashboardOverviewCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        if (model.showTitleIcon) {
-                            Icon(
-                                imageVector = Icons.Outlined.Timer,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp),
+                    if (!model.title.contains('\n')) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            if (model.showTitleIcon) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Timer,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
+                            WrapSafeText(
+                                text = model.title,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        WrapSafeText(
-                            text = model.title,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                     WrapSafeText(
                         text = model.headline,
