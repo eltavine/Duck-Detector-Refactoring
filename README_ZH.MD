@@ -1,120 +1,144 @@
-
-  <img src="logo.png" alt="DuckDetector Logo" width="600px">
-
-  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-minSdk%2029-3DDC84?logo=android&logoColor=white&style=flat-square" alt="Android"></a>
-  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/targetSdk-37-3DDC84?logo=android&logoColor=white&style=flat-square" alt="targetSdk"></a>
-  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white&style=flat-square" alt="Kotlin"></a>
-  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white&style=flat-square" alt="Jetpack Compose"></a>
-  <img src="https://img.shields.io/badge/NDK-30.0.14904198-555555?style=flat-square" alt="NDK">
-  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="Downloads"></a>
+<p align="center">
+  <img src="logo.png" alt="DuckDetector 标志" width="600">
 </p>
 
-**DuckDetector** 是一个专注于**本地端、设备侧**证据收集的 Android 安全检测应用程序。它旨在识别 Root 相关的篡改、运行时 Hook、挂载操作（Mount）、密钥库可信度（Attestation Trust）以及虚拟化执行环境。
-本应用结合了 **Jetpack Compose UI** 界面、**模块化 Kotlin 检测包** 以及 **底层 C++ / 汇编探针**，通过结构化的卡片形式展示详细的检测结果、方法覆盖范围及扫描状态摘要。
+<p align="center">
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/stargazers"><img src="https://img.shields.io/github/stars/eltavine/Duck-Detector-Refactoring?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/network/members"><img src="https://img.shields.io/github/forks/eltavine/Duck-Detector-Refactoring?style=social" alt="GitHub Forks"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/v/release/eltavine/Duck-Detector-Refactoring?style=flat-square&logo=github" alt="最新版本"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly"><img src="https://img.shields.io/badge/release-nightly-2F81F7?style=flat-square&logo=github" alt="Nightly 版本"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/downloads/eltavine/Duck-Detector-Refactoring/total?style=flat-square" alt="版本下载量"></a>
+  <a href="https://t.me/duck_detector"><img src="https://img.shields.io/badge/Telegram-Channel-2CA5E0?logo=telegram&logoColor=white&style=flat-square" alt="Telegram 频道"></a>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/blob/main/LICENSE"><img src="https://img.shields.io/github/license/eltavine/Duck-Detector-Refactoring?style=flat-square" alt="开源协议"></a>
+</p>
 
-# ⚠️ **开发规范 / Development Rules**
+<p align="center">
+  <strong><a href="README.MD">English</a></strong> &nbsp; <strong><a href="README_ZH.MD">简体中文</a></strong>
+</p>
 
-在更改代码、工作流程或提交历史记录之前，请阅读 [CODING_STANDARDS.md](./CODING_STANDARDS.md)。
-> changing code, workflows, or commit history.
+<p align="center"><strong>基于 Kotlin 与原生探针的 Android 设备侧环境完整性诊断工具。</strong></p>
 
+# 项目概述
 
-# ✨ 项目亮点 / Highlights
-- 🧩 **模块化检测架构 (Modular Architecture)**：具有特定功能的独立模块，各模块均包含其专属的 Repository、Mapper、ViewModel 和卡片 UI。
-- ⚡ **原生启动预载 (Native Preload)**：通过透明的 `NativeActivity` 启动器实现底层及早预载，以捕捉极早期的挂载（Mount）和虚拟化痕迹。
-- 🛡️ **底层 C++ 与汇编探针 (Native Probes)**：利用 C++ 和汇编实现的系统调用（Syscall）级别、时间敏感型、挂载和运行时可见性检查。
-- 🔄 **跨进程与隔离进程验证 (Cross-Process Validation)**：通过多进程、隔离进程（Isolated Process）协同校验，降低对单一信号的依赖。
-- 🔒 **纯本地离线优先 (Local & Privacy-First)**：默认情况下，TEE 吊销检查使用内置的静态快照。仅在用户手动于设置中开启“在线刷新”时才会访问网络。
----
-# 🔍 检测覆盖范围 / Detector Coverage
-目前应用已支持以下安全领域的启发式检测：
-> `Bootloader` · `Custom ROM` · `Dangerous Apps` · `Kernel Check` · `LSPosed` · `Memory` · `Mount` · `Native Root` · `Play Integrity Fix` · `SELinux` · `SU` · `System Properties` · `TEE` · `Virtualization` · `Zygisk`
-此外，项目内置 `dashboard`（仪表盘）、`settings`（设置）和 `deviceinfo`（设备信息）等辅助模块，提供数据聚合、用户控制和设备上下文展示。
----
-# 📱 兼容性 / Compatibility
+DuckDetector 在 Android 设备上采集并关联与安全相关的证据，用于发现启动状态变化、Root 与 SU 痕迹、运行时注入或 Hook、挂载命名空间异常、系统属性篡改、可疑应用、KeyStore 与证明链异常，以及虚拟化迹象。
 
-| 维度 / Target | 详情与说明 / Notes |
+应用由 Jetpack Compose 界面、按功能组织的 Kotlin 代码和 C++/汇编原生库组成。检测结果是用于诊断的信号，不代表对设备“安全”或“已受损”的权威认证。
+
+# 检测范围
+
+当前覆盖以下功能域：
+
+`Bootloader` · `Custom ROM` · `Dangerous Apps` · `Kernel Check` · `LSPosed` · `Memory` · `Mount` · `Native Root` · `Play Integrity Fix` · `SELinux` · `SU` · `System Properties` · `TEE` · `Virtualization` · `Zygisk`
+
+其中，`Play Integrity Fix` 检测的是与完整性伪装修改相关的本地迹象，并不会返回 Google Play Integrity API 的官方判定。TEE 模块检查 Android KeyStore 与设备证明证据，包括证书链、安全级别、吊销数据，以及设备支持时的部分 KeyMint、StrongBox 和 Soter 行为。
+
+项目还包含仪表盘、设备信息、设置、更新检查、通知、开源许可和通用 UI 等辅助功能包。
+
+# 工作方式
+
+- **按功能组织：** 每个检测域就近维护采集逻辑、领域模型、报告映射和界面代码。
+- **启动早期采集：** 透明的 `NativeActivity` 在 `MainActivity` 之前运行，记录早期挂载与虚拟化证据。
+- **原生探针：** 共享原生库负责直接系统调用、`/proc` 检查、计时测量、链接器与运行时可见性检查，以及特定架构的汇编路径。
+- **进程隔离：** 部分 Zygisk、虚拟化、SELinux 和 TEE 检查运行在独立进程或隔离服务中，用于对照不同进程边界下的证据。
+- **证据关联：** 仪表盘分别展示检测项与覆盖状态，不将单个启发式信号视为确定结论。
+
+# 兼容性
+
+| 项目 | 说明 |
 | :--- | :--- |
-| **Android 版本** | 支持 Android 10+ (`minSdk 29`)，基于 `targetSdk 37` / `compileSdk 37.0` 构建。 |
-| **架构支持 (ABI)** | 底层探针通过 NDK 层实现；部分低level的陷阱拦截（Trap paths）主要针对 `arm64-v8a` 架构进行了优化。 |
-| **环境要求** | 无需 Root 权限即可运行，适用于纯净官方系统及各种定制/修改过的环境。 |
-| **覆盖度表现** | 当 OEM 厂商或严格的沙盒规则限制访问时，部分检查可能会降级为 `support`、`unavailable` 或低覆盖度状态。 |
-| **网络依赖** | 默认完全本地化。内置 TEE 吊销凭证离线运行，仅在手动刷新网络源时产生流量。 |
+| **Android** | 支持 Android 10 及以上版本（`minSdk 29`），使用 Android API 37 编译并作为目标版本。 |
+| **ABI** | 为 `arm64-v8a`、`armeabi-v7a`、`x86` 和 `x86_64` 提供原生系统调用路径；部分计时与虚拟化陷阱探针仅适用于 `arm64-v8a`。 |
+| **权限** | 应用无需 Root 权限，但 Android 权限、包可见性和平台沙盒仍会限制可观测范围。 |
+| **设备差异** | OEM 修改、内核配置、Android 版本和沙盒策略可能导致探针显示不支持、不可用或低置信度。 |
+| **网络使用** | 核心设备扫描在本地运行。TEE 吊销检查始终包含内置快照；下载 Google 最新吊销数据需要用户授权。应用还会在冷启动后以及用户从设置页操作时访问 GitHub 检查 Nightly 更新。 |
 
----
-## 🎨 用户界面 / User Interface
-- **Compose 仪表盘**：包含检测卡片、扫描状态摘要、高危发现（Top findings）以及详情展开行。
-- **一致性卡片设计**：统一的共享卡片样式，确保长标签、检测状态和证据字符串在不同模块中均有极佳的可读性。
-- **独立设置与信息流**：将高级控制、环境上下文与主检测逻辑分离，保证界面清爽。
----
-## 📁 架构快照 / Architecture Snapshot
+# 项目结构
+
 ```text
 Duck-Detector-Refactoring/
 ├─ app/
 │  ├─ src/main/java/com/eltavine/duckdetector/
-│  │  ├─ core/            # 核心公共组件与基础底座
-│  │  ├─ features/        # 各检测特征模块
-│  │  └─ ui/              # 全局通用 UI 与主题
-│  └─ src/main/cpp/       # 底层 C++ / 汇编探针源码
-├─ build-logic/           # Gradle 复合构建逻辑
-├─ gradle/                # Gradle 包装器配置
-├─ scripts/               # 自动化或辅助脚本
+│  │  ├─ core/            # 通用平台能力与 UI 基础设施
+│  │  ├─ features/        # 检测功能与辅助功能包
+│  │  └─ ui/              # 应用外壳、导航与主题
+│  └─ src/main/cpp/       # C++、JNI 与各架构汇编代码
+├─ build-logic/           # 约定插件与资源生成任务
+├─ gradle/                # 版本目录与 Gradle Wrapper 文件
+├─ scripts/               # 仓库维护脚本
 ├─ build.gradle.kts
 └─ settings.gradle.kts
 ```
-绝大多数检测功能模块（Features）均遵循以下清晰的包结构：
- * domain：报告和结果的数据模型（Models）。
- * data：仓库（Repositories）、探针、原生桥接（Native Bridges）和系统服务助手。
- * presentation：数据映射器（Mappers）和 UI 状态状态机（UI-state reducers）。
- * ui：检测卡片组件和专属于该模块的 UI 模型。
-> 💡 所有的原生探针都位于 app/src/main/cpp 下，最终编译成一个共享动态链接库（.so），用于预载捕获、挂载检查、虚拟化快照、渲染器校验以及低级别陷阱拦截。
-> 
-## 🛠️ 编译与构建 / Build
-### 环境依赖 / Requirements
- * **Android Studio** (推荐最新稳定版)
- * Android SDK 37.0 & Android Build Tools 37.0.0
- * **JDK** 17
- * Android **NDK** 30.0.14904198
- * **CMake** 4.1.2
-### 常用构建命令 / Build Commands
-**编译 Debug 版本：**
+
+功能包会在适用时遵循以下边界：
+
+- `data`：探针、解析器、Repository、JNI 桥接和 Android 服务访问
+- `domain`：报告、结果模型和状态定义
+- `presentation`：ViewModel、报告到 UI 的映射和界面状态
+- `ui`：Compose 卡片、页面和功能专用展示模型
+
+原生源码最终编译为共享库 `libduckdetector.so`，Kotlin 代码通过各功能域的 JNI 桥接读取原生结果。
+
+# 构建
+
+## 环境要求
+
+- Android Studio，并安装 Android SDK Platform 37 与 Build Tools 37.0.0
+- JDK 17
+- Android NDK 30.0.16138531
+- CMake 4.1.2
+
+依赖与工具版本以 [`gradle.properties`](./gradle.properties) 和 [`gradle/libs.versions.toml`](./gradle/libs.versions.toml) 为准。
+
+## 常用命令
+
 ```bash
-# Windows 环境
-gradlew.bat :app:assembleDebug
-# Linux / macOS 环境
+# macOS / Linux
 ./gradlew :app:assembleDebug
+
+# Windows
+gradlew.bat :app:assembleDebug
 ```
-**日常开发校验命令（推荐）：**
+
+本地完整校验可执行：
+
 ```bash
-# 验证 Kotlin 编译、运行单元测试并打包
 ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug
 ```
-> 🔐 **签名说明**：Release 版本的自动签名受到环境参数 ANDROID_KEYSTORE_PATH、ANDROID_KEYSTORE_PASSWORD、ANDROID_KEY_ALIAS 和 ANDROID_KEY_PASSWORD 的控制。当这四个环境变量完整存在时，构建系统将自动启用 ciRelease 签名配置。
-> 
-## 🔒 隐私与局限性 / Privacy & Limits
- * **本地化安全**：检测逻辑主要在设备本地运行，不收集或上传您的敏感隐私数据。
- * **非侵入式**：应用本身**不需要** Root 权限即可正常工作。
- * **启发式检测**：所有安全检测均基于启发式算法（Heuristics）。任何单一信号都不应孤立地作为绝对的可信凭证。
- * **硬件与厂商限制**：因 OEM 策略或沙盒规则，部分探针在特定机型上可能报告降级状态。部分低级底层检查依赖于 arm64-v8a ABI 架构。
-## 📈 项目状态与趋势 / Status & Stars
+
+参与开发前请阅读 [`CODING_STANDARDS.md`](./CODING_STANDARDS.md)。
+
+## Release 签名
+
+只有同时设置以下四个环境变量时，构建才会使用 `ciRelease` 签名配置：
+
+- `ANDROID_KEYSTORE_PATH`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+未完整配置时，本地 `release` 构建会使用 debug 密钥签名，不能将该产物视为官方发布版本。
+
+# 隐私与限制
+
+- 检测在设备端执行，但项目不声称能够发现所有经过修改的运行环境。
+- 具备联网能力的功能包括：经用户授权的 TEE 吊销数据刷新、GitHub 更新元数据与变更记录检查，以及用户主动打开的外部链接。
+- 启发式结果可能出现误报、漏报、不支持的检查或证据不完整。
+- 硬件 KeyStore、StrongBox、Binder 行为、`/proc`、SELinux、挂载命名空间等底层接口会因设备和系统版本而异。
+
+# 项目趋势
 
 <a href="https://www.star-history.com/?repos=eltavine%2FDuck-Detector-Refactoring&type=date&legend=top-left">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=eltavine/Duck-Detector-Refactoring&type=date&theme=dark&legend=top-left&sealed_token=z8Kbufd8a78_gJi-_n_U1dbqg3bT3wexECwhrq7Vx1QpfiXBUdPXV5w_rUQSnu86aVeWxIJJENg8tVTng5ul8xki40oK_UhKF3-_gZgvrhWzbtd7OKm9kg" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=eltavine/Duck-Detector-Refactoring&type=date&legend=top-left&sealed_token=z8Kbufd8a78_gJi-_n_U1dbqg3bT3wexECwhrq7Vx1QpfiXBUdPXV5w_rUQSnu86aVeWxIJJENg8tVTng5ul8xki40oK_UhKF3-_gZgvrhWzbtd7OKm9kg" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=eltavine/Duck-Detector-Refactoring&type=date&legend=top-left&sealed_token=z8Kbufd8a78_gJi-_n_U1dbqg3bT3wexECwhrq7Vx1QpfiXBUdPXV5w_rUQSnu86aVeWxIJJENg8tVTng5ul8xki40oK_UhKF3-_gZgvrhWzbtd7OKm9kg" />
+   <img alt="Star 历史趋势图" src="https://api.star-history.com/chart?repos=eltavine/Duck-Detector-Refactoring&type=date&legend=top-left&sealed_token=z8Kbufd8a78_gJi-_n_U1dbqg3bT3wexECwhrq7Vx1QpfiXBUdPXV5w_rUQSnu86aVeWxIJJENg8tVTng5ul8xki40oK_UhKF3-_gZgvrhWzbtd7OKm9kg" />
  </picture>
 </a>
 
-## ⚖️ 免责声明 / Disclaimer
-```text
-本软件按“原样”提供，不提供任何明示或暗示的保证。本程序仅供教育、诊断和安全研究目的使用。
-开发者对因使用本应用程序而导致的任何直接或间接损坏、数据丢失或系统不稳定不承担责任。
-依赖启发式安全检测的风险由您自行承担。
-This software is provided "as is", without warranty of any kind. It is designed
-for educational, diagnostic, and security research purposes only. The developers
-assume no liability for direct or indirect damage, data loss, or system
-instability resulting from use of this application. Relying on heuristic
-security detection is at your own risk.
-```
-## 📄 开源协议 / License
-本项目基于 **Apache License 2.0** 协议开源。
+# 免责声明
+
+本软件按“原样”提供，不附带任何形式的保证，仅用于教育、诊断和安全研究。开发者不对使用本软件造成的损坏、数据丢失或系统不稳定承担责任。解释启发式结果时，应同时考虑设备、系统版本和实际可用的探针覆盖范围。
+
+# 开源协议
+
+DuckDetector 基于 [Apache License 2.0](./LICENSE) 开源。
