@@ -93,6 +93,7 @@ import com.eltavine.duckdetector.ui.theme.ShapeTokens
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun DashboardScreen(
@@ -398,7 +399,11 @@ internal fun generateExportReportFileName(
 ): String {
     val sanitizedModel = model.trim().ifBlank { "unknown" }
         .replace(Regex("[^a-zA-Z0-9._-]"), "_")
-    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(nowEpochMillis))
+    // Filenames are machine-readable and must not vary with the device language/locale.
+    val timestampFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+    val timestamp = timestampFormat.format(Date(nowEpochMillis))
     return "duck_detector_report_${sanitizedModel}_$timestamp.txt"
 }
 

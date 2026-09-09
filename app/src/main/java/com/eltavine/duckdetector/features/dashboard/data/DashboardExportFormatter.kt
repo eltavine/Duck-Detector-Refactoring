@@ -497,6 +497,22 @@ class DashboardExportFormatter {
         appendLine("  [Environment & Network]")
         appendLine("    • Network Status    : ${model.networkState.summary}")
         appendLine("    • Certificate Count : ${model.certificateSummary.count}")
+        model.certificateSummary.certificates.forEachIndexed { index, certificate ->
+            appendLine("    • Certificate ${index + 1}       : ${certificate.slotLabel}")
+            appendLine("        Subject           : ${certificate.subject}")
+            appendLine("        Issuer            : ${certificate.issuer}")
+            appendLine("        Serial Number     : ${certificate.serialNumber}")
+            appendLine("        Validity          : ${certificate.validFrom} to ${certificate.validUntil}")
+            appendLine("        Signature          : ${certificate.signatureAlgorithm}")
+            appendLine("        Public Key        : ${certificate.publicKeySummary}")
+        }
+        if (model.exportText.isNotBlank()) {
+            appendLine()
+            appendLine("  [TEE Detailed Export]")
+            model.exportText.trimEnd().lines().forEach { line ->
+                appendLine("    $line")
+            }
+        }
     }
 
     private fun StringBuilder.appendSu(model: SuCardModel) {
