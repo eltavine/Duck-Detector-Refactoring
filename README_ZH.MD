@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="logo.png" alt="DuckDetector 标志" width="600">
-</p>
-
-<p align="center">
   <a href="https://github.com/eltavine/Duck-Detector-Refactoring/stargazers"><img src="https://img.shields.io/github/stars/eltavine/Duck-Detector-Refactoring?style=social" alt="GitHub Stars"></a>
   <a href="https://github.com/eltavine/Duck-Detector-Refactoring/network/members"><img src="https://img.shields.io/github/forks/eltavine/Duck-Detector-Refactoring?style=social" alt="GitHub Forks"></a>
   <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases"><img src="https://img.shields.io/github/v/release/eltavine/Duck-Detector-Refactoring?style=flat-square&logo=github" alt="最新版本"></a>
