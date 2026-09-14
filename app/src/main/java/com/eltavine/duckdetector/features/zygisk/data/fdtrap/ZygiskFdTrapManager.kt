@@ -138,6 +138,15 @@ class ZygiskFdTrapManager(
                 }
             }
 
+            override fun onNullBinding(name: ComponentName?) {
+                finish(
+                    ZygiskFdTrapDetectionResult.fromResultCode(
+                        resultCode = ZygiskFdTrapNativeBridge.RESULT_BIND_FAILED,
+                        detail = "Detector service returned a null binder.",
+                    ),
+                )
+            }
+
             override fun onServiceDisconnected(name: ComponentName?) = Unit
         }
 

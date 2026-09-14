@@ -113,6 +113,10 @@ open class SelinuxContextValidityCarrierManager(
                 }
             }
 
+            override fun onNullBinding(name: ComponentName?) {
+                finish(onNullBinder())
+            }
+
             override fun onServiceDisconnected(name: ComponentName?) = Unit
         }
 
