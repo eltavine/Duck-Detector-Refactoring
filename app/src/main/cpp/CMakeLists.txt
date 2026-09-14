@@ -98,6 +98,7 @@ set(NATIVE_ROOT_SOURCES
     nativeroot/cgroup_bridge.cpp
     nativeroot/probes/prctl_probe.cpp
     nativeroot/probes/kernelpatch_nr_supercall_latency_probe.cpp
+    nativeroot/probes/kernelpatch_superkey_probe.cpp
     nativeroot/probes/devpts_abnormal_permission_probe.cpp
     nativeroot/probes/permission_boundary_probe.cpp
     nativeroot/probes/ksu_supercall_probe.cpp

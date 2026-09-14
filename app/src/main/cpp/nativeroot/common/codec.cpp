@@ -80,6 +80,10 @@ namespace duckdetector::nativeroot {
         output << "PRCTL_HIT=" << (snapshot.prctl_probe_hit ? '1' : '0') << '\n';
         output << "KERNELPATCH_SIDE_CHANNEL_ATTACK=" << (snapshot.kernelpatch_side_channel_detected ? '1' : '0') << '\n';
         output << "KERNELPATCH_SIDE_CHANNEL_DETAIL=" << escape_value(snapshot.kernelpatch_side_channel_detail) << '\n';
+        output << "KERNELPATCH_SUPERKEY=" << (snapshot.kernelpatch_superkey_detected ? '1' : '0') << '\n';
+        output << "KERNELPATCH_SUPERKEY_CHECKED=" << snapshot.kernelpatch_superkey_checked_count << '\n';
+        output << "KERNELPATCH_SUPERKEY_HITS=" << snapshot.kernelpatch_superkey_hit_count << '\n';
+        output << "KERNELPATCH_SUPERKEY_DETAIL=" << escape_value(snapshot.kernelpatch_superkey_detail) << '\n';
         output << "DEVPTS_ABNORMAL_PERMISSION_FOUND=" << (snapshot.devpts_abnormal_permission_detected ? '1' : '0') << '\n';
         output << "DEVPTS_ABNORMAL_PERMISSION_AVAILABLE=" << (snapshot.devpts_abnormal_permission_available ? '1' : '0') << '\n';
         output << "DEVPTS_ABNORMAL_PERMISSION_CHECKED=" << snapshot.devpts_abnormal_permission_checked_count << '\n';

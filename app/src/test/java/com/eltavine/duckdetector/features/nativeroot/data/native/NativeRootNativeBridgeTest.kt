@@ -37,6 +37,12 @@ class NativeRootNativeBridgeTest {
                 SUSFS=0
                 KSU_VERSION=12000
                 PRCTL_HIT=1
+                KERNELPATCH_SIDE_CHANNEL_ATTACK=1
+                KERNELPATCH_SIDE_CHANNEL_DETAIL=Full: 8.1 us, Empty: 3.2 us, Diff: 4.9 us
+                KERNELPATCH_SUPERKEY=1
+                KERNELPATCH_SUPERKEY_CHECKED=4
+                KERNELPATCH_SUPERKEY_HITS=3
+                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 3, pre-resident: 0, control resident: 0, mincore errors: 0
                 DEVPTS_ABNORMAL_PERMISSION_FOUND=1
                 DEVPTS_ABNORMAL_PERMISSION_AVAILABLE=0
                 DEVPTS_ABNORMAL_PERMISSION_CHECKED=2
@@ -79,6 +85,11 @@ class NativeRootNativeBridgeTest {
         assertTrue(snapshot.kernelSuDetected)
         assertTrue(snapshot.magiskDetected)
         assertEquals(12000L, snapshot.kernelSuVersion)
+        assertTrue(snapshot.kernelPatchSideChannel)
+        assertTrue(snapshot.kernelPatchSuperkey)
+        assertEquals(4, snapshot.kernelPatchSuperkeyCheckedCount)
+        assertEquals(3, snapshot.kernelPatchSuperkeyHitCount)
+        assertTrue(snapshot.kernelPatchSuperkeyDetail.contains("page faulted in: 3"))
         assertTrue(snapshot.devptsAbnormalPermission)
         assertFalse(snapshot.devptsAbnormalPermissionAvailable)
         assertEquals(2, snapshot.devptsAbnormalPermissionCheckedCount)
@@ -100,6 +111,40 @@ class NativeRootNativeBridgeTest {
         assertEquals(4, snapshot.findings.size)
         assertEquals("PROPERTY", snapshot.findings.last().group)
         assertTrue(snapshot.findings.last().detail.contains('\n'))
+    }
+
+    @Test
+    fun `parse keeps clean superkey state non-detecting`() {
+        val snapshot = bridge.parse(
+            """
+                AVAILABLE=1
+                KERNELPATCH_SUPERKEY=0
+                KERNELPATCH_SUPERKEY_CHECKED=4
+                KERNELPATCH_SUPERKEY_HITS=0
+                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 0, pre-resident: 0, control resident: 0, mincore errors: 0
+            """.trimIndent(),
+        )
+
+        assertTrue(snapshot.available)
+        assertFalse(snapshot.kernelPatchSuperkey)
+        assertEquals(4, snapshot.kernelPatchSuperkeyCheckedCount)
+        assertEquals(0, snapshot.kernelPatchSuperkeyHitCount)
+    }
+
+    @Test
+    fun `parse preserves control resident guard result without detection`() {
+        val snapshot = bridge.parse(
+            """
+                AVAILABLE=1
+                KERNELPATCH_SUPERKEY=0
+                KERNELPATCH_SUPERKEY_CHECKED=4
+                KERNELPATCH_SUPERKEY_HITS=0
+                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 0, pre-resident: 0, control resident: 1, mincore errors: 0
+            """.trimIndent(),
+        )
+
+        assertFalse(snapshot.kernelPatchSuperkey)
+        assertTrue(snapshot.kernelPatchSuperkeyDetail.contains("control resident: 1"))
     }
 
     @Test

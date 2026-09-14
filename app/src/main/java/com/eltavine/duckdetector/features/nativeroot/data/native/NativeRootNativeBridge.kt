@@ -76,6 +76,16 @@ class NativeRootNativeBridge {
             "PRCTL_HIT" -> copy(prctlProbeHit = value.asBool())
             "KERNELPATCH_SIDE_CHANNEL_ATTACK" -> copy(kernelPatchSideChannel = value.asBool())
             "KERNELPATCH_SIDE_CHANNEL_DETAIL" -> copy(kernelPatchSideChannelDetail = value.decodeValue())
+            "KERNELPATCH_SUPERKEY" -> copy(kernelPatchSuperkey = value.asBool())
+            "KERNELPATCH_SUPERKEY_CHECKED" -> copy(
+                kernelPatchSuperkeyCheckedCount = value.toIntOrNull() ?: kernelPatchSuperkeyCheckedCount
+            )
+
+            "KERNELPATCH_SUPERKEY_HITS" -> copy(
+                kernelPatchSuperkeyHitCount = value.toIntOrNull() ?: kernelPatchSuperkeyHitCount
+            )
+
+            "KERNELPATCH_SUPERKEY_DETAIL" -> copy(kernelPatchSuperkeyDetail = value.decodeValue())
             "DEVPTS_ABNORMAL_PERMISSION_FOUND" -> copy(devptsAbnormalPermission = value.asBool())
             "DEVPTS_ABNORMAL_PERMISSION_AVAILABLE" -> copy(devptsAbnormalPermissionAvailable = value.asBool())
             "DEVPTS_ABNORMAL_PERMISSION_CHECKED" -> copy(

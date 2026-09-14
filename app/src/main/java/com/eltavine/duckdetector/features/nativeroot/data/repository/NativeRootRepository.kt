@@ -120,6 +120,10 @@ class NativeRootRepository(
                 tempRootArtifactResult = tempRootArtifactResult,
             ),
             kernelPatchSideChannel = snapshot.kernelPatchSideChannel,
+            kernelPatchSuperkey = snapshot.kernelPatchSuperkey,
+            kernelPatchSuperkeyCheckedCount = snapshot.kernelPatchSuperkeyCheckedCount,
+            kernelPatchSuperkeyHitCount = snapshot.kernelPatchSuperkeyHitCount,
+            kernelPatchSuperkeyDetail = snapshot.kernelPatchSuperkeyDetail,
             ksuSupercallAttempted = snapshot.ksuSupercallAttempted,
             ksuSupercallProbeHit = snapshot.ksuSupercallProbeHit,
             ksuSupercallBlocked = snapshot.ksuSupercallBlocked,
@@ -222,6 +226,26 @@ class NativeRootRepository(
                     append("Therefore, it can repeatedly ping __NR_supercall using only \\0 and 128 bytes of \"A\" and compare the time difference to detect KernelPatch. \n")
                     append("This problem already fix in KernelPatch commit 84169d5d6be12e589ccac81d71dcebb80b22043a \n")
                     append("Test Result: ${snapshot.kernelPatchSideChannelDetail}")
+                },
+            ),
+            NativeRootMethodResult(
+                label = "kernelpatch superkey",
+                summary = when {
+                    snapshot.kernelPatchSuperkey -> "Detected"
+                    snapshot.kernelPatchSuperkeyCheckedCount == 0 -> "Unavailable"
+                    else -> "Clean"
+                },
+                outcome = when {
+                    snapshot.kernelPatchSuperkey -> NativeRootMethodOutcome.DETECTED
+                    snapshot.kernelPatchSuperkeyCheckedCount == 0 -> NativeRootMethodOutcome.SUPPORT
+                    else -> NativeRootMethodOutcome.CLEAN
+                },
+                detail = buildString {
+                    append("Passes __NR_supercall an untouched anonymous page together with a length the kernel rejects before it derives a user pointer, ")
+                    append("so a stock kernel never reads arg0 and the page keeps its empty PTE.\n")
+                    append("KernelPatch reads arg0 to compare it against the superkey ahead of the syscall body, which faults the page in; mincore then reports it resident.\n")
+                    append("This is a state check, so it does not depend on timing, CPU frequency, or a specific KernelPatch version.\n")
+                    append("Test Result: ${snapshot.kernelPatchSuperkeyDetail}")
                 },
             ),
             NativeRootMethodResult(
