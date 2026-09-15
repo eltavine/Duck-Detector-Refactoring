@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <sys/utsname.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -54,6 +55,45 @@ namespace duckdetector::nativeroot {
             std::uint8_t map_failed = 0;
             std::uint8_t mincore_failed = 0;
         };
+
+        struct KernelScope {
+            bool version_known = false;
+            bool faulting_uaccess_scope = false;
+            std::string release;
+        };
+
+        KernelScope inspect_kernel_scope() {
+            KernelScope scope{};
+            struct utsname uts{};
+
+            // Use the raw syscall rather than libc so a userspace uname hook
+            // cannot silently widen the range in which an absent hit is
+            // interpreted as a trustworthy negative.
+            if (syscall(__NR_uname, &uts) != 0) {
+                return scope;
+            }
+
+            scope.release = uts.release;
+
+            int major = 0;
+            int minor = 0;
+            int patch = 0;
+            const int parsed = sscanf(uts.release, "%d.%d.%d", &major, &minor, &patch);
+            if (parsed < 2) {
+                return scope;
+            }
+
+            scope.version_known = true;
+
+            // Keep the negative-verdict scope deliberately conservative.
+            // KernelPatch can use a nofault uaccess path on newer kernels, for
+            // which reading arg0 does not have to populate the anonymous page's
+            // PTE. The PR's validated/intended scope is <= 6.6, so 6.7+ stays
+            // unavailable unless a positive residency hit is observed.
+            scope.faulting_uaccess_scope =
+                    major < 6 || (major == 6 && minor <= 6);
+            return scope;
+        }
 
         static inline void *map_fresh_page(const std::size_t page_size) {
             return mmap(
@@ -88,13 +128,12 @@ namespace duckdetector::nativeroot {
         // check rather than a timing one.
         //
         // This only holds while the handler reaches the read through the normal
-        // uaccess path. KernelPatch switches to strncpy_from_user_nofault()
-        // once strncpy_from_user_nofault is available (kver >= 6.7), and that
-        // path runs with pagefault_disable() set, so a page with no PTE is not
-        // faulted in and the residency bit never flips. The measurement below
-        // cannot see that case, which is why the reported detail says nothing
-        // about the kernel version: an absent hit is not evidence of absence
-        // above that boundary.
+        // uaccess path. KernelPatch can switch to a nofault uaccess path on
+        // newer kernels; that path may read arg0 without faulting an untouched
+        // anonymous page in. A positive residency hit therefore remains strong
+        // evidence on any version, but an absent hit is only promoted to a
+        // trustworthy negative inside the conservative <= 6.6 scope checked
+        // by inspect_kernel_scope().
         void measure_residency(SuperkeyResult &out_result) {
             const long page_size_long = sysconf(_SC_PAGESIZE);
             const std::size_t page_size = page_size_long > 0
@@ -243,27 +282,43 @@ namespace duckdetector::nativeroot {
 
         result.checked_count = residency.checked;
 
-        // A run is only usable when the control page existed, stayed
-        // non-resident, every residency read succeeded, every attempt started
-        // from a page that was genuinely non-resident, and at least one attempt
-        // completed. Without that, an absent hit says nothing.
-        const bool usable =
+        const KernelScope kernel_scope = inspect_kernel_scope();
+
+        // Measurement validity and semantic validity are intentionally
+        // separate. Even a technically perfect mincore run cannot support a
+        // Clean verdict on kernels where KernelPatch may use nofault uaccess.
+        //
+        // Require all attempts to complete. map_failed is included explicitly:
+        // the result struct and comments already treat a failed page mapping as
+        // an invalid attempt, so allowing 3/4 attempts to become Clean would
+        // contradict that contract.
+        const bool measurement_valid =
                 residency.control_failed == 0 &&
                 residency.control_resident == 0 &&
+                residency.map_failed == 0 &&
                 residency.mincore_failed == 0 &&
                 residency.pre_resident == 0 &&
-                residency.checked > 0;
+                residency.checked == kAttempts;
+
+        const bool usable =
+                measurement_valid &&
+                kernel_scope.version_known &&
+                kernel_scope.faulting_uaccess_scope;
 
         if (usable) {
             result.aux_flags |= kSuperkeyAuxUsable;
         }
 
-        char detail[320];
+        const char *kernel_release =
+                kernel_scope.release.empty() ? "<unknown>" : kernel_scope.release.c_str();
+
+        char detail[448];
         snprintf(
                 detail,
                 sizeof(detail),
                 "Probed attempts: %u, page faulted in: %u, pre-resident: %u, control resident: %u, "
-                "control unmapped: %u, page unmapped: %u, mincore errors: %u, usable: %s",
+                "control unmapped: %u, page unmapped: %u, mincore errors: %u, "
+                "kernel: %s, faulting-uaccess scope: %s, usable: %s",
                 static_cast<unsigned>(residency.checked),
                 static_cast<unsigned>(residency.hit),
                 static_cast<unsigned>(residency.pre_resident),
@@ -271,6 +326,9 @@ namespace duckdetector::nativeroot {
                 static_cast<unsigned>(residency.control_failed),
                 static_cast<unsigned>(residency.map_failed),
                 static_cast<unsigned>(residency.mincore_failed),
+                kernel_release,
+                kernel_scope.version_known && kernel_scope.faulting_uaccess_scope
+                        ? "yes" : "no",
                 usable ? "yes" : "no"
         );
 

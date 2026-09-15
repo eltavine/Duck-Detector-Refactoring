@@ -246,8 +246,8 @@ class NativeRootRepository(
                     append("so a stock kernel never reads arg0 and the page keeps its empty PTE.\n")
                     append("KernelPatch reads arg0 to compare it against the superkey ahead of the syscall body, which faults the page in; mincore then reports it resident.\n")
                     append("This is a state check, so it does not depend on timing or CPU frequency.\n")
-                    append("It only applies while the handler reaches arg0 through the normal uaccess path. Once KernelPatch uses strncpy_from_user_nofault (kver >= 6.7), a page with no PTE is not faulted in, so a hit is still conclusive but an absent hit is not evidence of absence.\n")
-                    append("A run with no control page, a resident control page, or a failed residency read is reported as Unavailable rather than Clean.\n")
+                    append("A positive residency hit is conclusive on any kernel version, but a negative result is only treated as Clean inside the probe's conservative faulting-uaccess scope (kernel <= 6.6). Kernel 6.7+, or an unparseable kernel release, is reported as Unavailable instead of turning a known nofault blind spot into a false Clean verdict.\n")
+                    append("A run with a failed page mapping, no control page, a resident control page, a pre-resident attempt, an incomplete attempt set, or a failed residency read is also reported as Unavailable rather than Clean.\n")
                     append("Test Result: ${snapshot.kernelPatchSuperkeyDetail}")
                 },
             ),
