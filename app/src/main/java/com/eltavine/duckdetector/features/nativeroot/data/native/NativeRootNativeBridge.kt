@@ -77,6 +77,7 @@ class NativeRootNativeBridge {
             "KERNELPATCH_SIDE_CHANNEL_ATTACK" -> copy(kernelPatchSideChannel = value.asBool())
             "KERNELPATCH_SIDE_CHANNEL_DETAIL" -> copy(kernelPatchSideChannelDetail = value.decodeValue())
             "KERNELPATCH_SUPERKEY" -> copy(kernelPatchSuperkey = value.asBool())
+            "KERNELPATCH_SUPERKEY_AVAILABLE" -> copy(kernelPatchSuperkeyAvailable = value.asBool())
             "KERNELPATCH_SUPERKEY_CHECKED" -> copy(
                 kernelPatchSuperkeyCheckedCount = value.toIntOrNull() ?: kernelPatchSuperkeyCheckedCount
             )

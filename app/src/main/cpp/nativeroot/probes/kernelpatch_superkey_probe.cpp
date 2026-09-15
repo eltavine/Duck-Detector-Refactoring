@@ -41,11 +41,17 @@ namespace duckdetector::nativeroot {
         // user pointer from arg0.
         constexpr long kInvalidLength = -1;
 
+        // Only complete attempts are counted here. A page that failed to map,
+        // was already resident before the syscall, or whose residency could not
+        // be read back afterwards is tracked separately and makes the run
+        // unusable rather than clean.
         struct SuperkeyResult {
             std::uint8_t checked = 0;
             std::uint8_t hit = 0;
             std::uint8_t pre_resident = 0;
             std::uint8_t control_resident = 0;
+            std::uint8_t control_failed = 0;
+            std::uint8_t map_failed = 0;
             std::uint8_t mincore_failed = 0;
         };
 
@@ -80,6 +86,15 @@ namespace duckdetector::nativeroot {
         // pointer, so arg0 stays untouched and the page keeps its empty PTE.
         // Nothing is dereferenced on the stock path, which makes this a state
         // check rather than a timing one.
+        //
+        // This only holds while the handler reaches the read through the normal
+        // uaccess path. KernelPatch switches to strncpy_from_user_nofault()
+        // once strncpy_from_user_nofault is available (kver >= 6.7), and that
+        // path runs with pagefault_disable() set, so a page with no PTE is not
+        // faulted in and the residency bit never flips. The measurement below
+        // cannot see that case, which is why the reported detail says nothing
+        // about the kernel version: an absent hit is not evidence of absence
+        // above that boundary.
         void measure_residency(SuperkeyResult &out_result) {
             const long page_size_long = sysconf(_SC_PAGESIZE);
             const std::size_t page_size = page_size_long > 0
@@ -88,21 +103,26 @@ namespace duckdetector::nativeroot {
 
             // Never handed to the syscall, so it has to stay non-resident. If
             // it does not, mincore is not reporting what this check assumes.
+            // A missing control is not the same as a passing one, so a failed
+            // mapping is recorded rather than skipped.
             void *control = map_fresh_page(page_size);
-            const bool control_mapped = control != MAP_FAILED;
+            if (control == MAP_FAILED) {
+                out_result.control_failed = 1;
+                return;
+            }
 
             for (int i = 0; i < kAttempts; i++) {
                 void *page = map_fresh_page(page_size);
                 if (page == MAP_FAILED) {
+                    out_result.map_failed++;
                     continue;
                 }
-
-                out_result.checked++;
 
                 bool query_failed = false;
                 if (is_page_resident(page, page_size, query_failed)) {
                     // A fresh anonymous mapping has no PTE yet, so a resident
-                    // report here means the measurement cannot be trusted.
+                    // report here means the measurement basis cannot be
+                    // trusted.
                     out_result.pre_resident++;
                     munmap(page, page_size);
                     continue;
@@ -116,26 +136,29 @@ namespace duckdetector::nativeroot {
                 syscall(kSupercallNr, page, kInvalidLength);
 
                 query_failed = false;
-                if (is_page_resident(page, page_size, query_failed)) {
-                    out_result.hit++;
-                }
+                const bool resident_after = is_page_resident(page, page_size, query_failed);
                 if (query_failed) {
+                    // The syscall ran but its effect could not be read back, so
+                    // this does not count as a completed measurement.
                     out_result.mincore_failed++;
+                } else {
+                    out_result.checked++;
+                    if (resident_after) {
+                        out_result.hit++;
+                    }
                 }
 
                 munmap(page, page_size);
             }
 
-            if (control_mapped) {
-                bool query_failed = false;
-                if (is_page_resident(control, page_size, query_failed)) {
-                    out_result.control_resident = 1;
-                }
-                if (query_failed) {
-                    out_result.mincore_failed++;
-                }
-                munmap(control, page_size);
+            bool query_failed = false;
+            if (is_page_resident(control, page_size, query_failed)) {
+                out_result.control_resident = 1;
             }
+            if (query_failed) {
+                out_result.mincore_failed++;
+            }
+            munmap(control, page_size);
         }
 
         bool run_attempts_in_child(
@@ -207,7 +230,10 @@ namespace duckdetector::nativeroot {
                         .group = "SECCOMP",
                         .label = "System Call Filtered",
                         .value = "SIGSYS Received",
-                        .detail = "Syscall 45 was blocked by Seccomp on ARM64.",
+                        // The parent only observes that the child died from
+                        // SIGSYS, not which syscall raised it, so the syscall
+                        // number is not claimed here.
+                        .detail = "The child process was killed by SIGSYS, so the probe was blocked by Seccomp on ARM64.",
                         .severity = Severity::kDanger,
                     }
                 );
@@ -217,27 +243,43 @@ namespace duckdetector::nativeroot {
 
         result.checked_count = residency.checked;
 
-        char detail[256];
+        // A run is only usable when the control page existed, stayed
+        // non-resident, every residency read succeeded, every attempt started
+        // from a page that was genuinely non-resident, and at least one attempt
+        // completed. Without that, an absent hit says nothing.
+        const bool usable =
+                residency.control_failed == 0 &&
+                residency.control_resident == 0 &&
+                residency.mincore_failed == 0 &&
+                residency.pre_resident == 0 &&
+                residency.checked > 0;
+
+        if (usable) {
+            result.aux_flags |= kSuperkeyAuxUsable;
+        }
+
+        char detail[320];
         snprintf(
                 detail,
                 sizeof(detail),
-                "Probed attempts: %u, page faulted in: %u, pre-resident: %u, control resident: %u, mincore errors: %u",
+                "Probed attempts: %u, page faulted in: %u, pre-resident: %u, control resident: %u, "
+                "control unmapped: %u, page unmapped: %u, mincore errors: %u, usable: %s",
                 static_cast<unsigned>(residency.checked),
                 static_cast<unsigned>(residency.hit),
                 static_cast<unsigned>(residency.pre_resident),
                 static_cast<unsigned>(residency.control_resident),
-                static_cast<unsigned>(residency.mincore_failed)
+                static_cast<unsigned>(residency.control_failed),
+                static_cast<unsigned>(residency.map_failed),
+                static_cast<unsigned>(residency.mincore_failed),
+                usable ? "yes" : "no"
         );
 
         result.extra_text = detail;
 
-        // Without a clean control the residency report could come from mincore
-        // semantics instead of the syscall, so the run is reported as
-        // unavailable rather than clean.
-        if (residency.control_resident != 0 || residency.mincore_failed != 0) {
-            return result;
-        }
-
+        // A single resident page is conclusive on its own: nothing but the
+        // supercall handler can read a page this run never touched, so a hit is
+        // reported even if the rest of the run looked anomalous. Validity only
+        // guards the opposite direction, an absent hit.
         if (residency.hit > 0) {
             result.flags.apatch = true;
             result.hit_count = residency.hit;

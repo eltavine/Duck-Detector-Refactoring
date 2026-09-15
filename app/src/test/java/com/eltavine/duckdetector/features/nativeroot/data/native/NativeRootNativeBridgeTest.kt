@@ -40,6 +40,7 @@ class NativeRootNativeBridgeTest {
                 KERNELPATCH_SIDE_CHANNEL_ATTACK=1
                 KERNELPATCH_SIDE_CHANNEL_DETAIL=Full: 8.1 us, Empty: 3.2 us, Diff: 4.9 us
                 KERNELPATCH_SUPERKEY=1
+                KERNELPATCH_SUPERKEY_AVAILABLE=1
                 KERNELPATCH_SUPERKEY_CHECKED=4
                 KERNELPATCH_SUPERKEY_HITS=3
                 KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 3, pre-resident: 0, control resident: 0, mincore errors: 0
@@ -87,6 +88,7 @@ class NativeRootNativeBridgeTest {
         assertEquals(12000L, snapshot.kernelSuVersion)
         assertTrue(snapshot.kernelPatchSideChannel)
         assertTrue(snapshot.kernelPatchSuperkey)
+        assertTrue(snapshot.kernelPatchSuperkeyAvailable)
         assertEquals(4, snapshot.kernelPatchSuperkeyCheckedCount)
         assertEquals(3, snapshot.kernelPatchSuperkeyHitCount)
         assertTrue(snapshot.kernelPatchSuperkeyDetail.contains("page faulted in: 3"))
@@ -119,32 +121,58 @@ class NativeRootNativeBridgeTest {
             """
                 AVAILABLE=1
                 KERNELPATCH_SUPERKEY=0
+                KERNELPATCH_SUPERKEY_AVAILABLE=1
                 KERNELPATCH_SUPERKEY_CHECKED=4
                 KERNELPATCH_SUPERKEY_HITS=0
-                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 0, pre-resident: 0, control resident: 0, mincore errors: 0
+                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 0, pre-resident: 0, control resident: 0, control unmapped: 0, page unmapped: 0, mincore errors: 0, usable: yes
             """.trimIndent(),
         )
 
         assertTrue(snapshot.available)
         assertFalse(snapshot.kernelPatchSuperkey)
+        assertTrue(snapshot.kernelPatchSuperkeyAvailable)
         assertEquals(4, snapshot.kernelPatchSuperkeyCheckedCount)
         assertEquals(0, snapshot.kernelPatchSuperkeyHitCount)
     }
 
     @Test
-    fun `parse preserves control resident guard result without detection`() {
+    fun `parse keeps unusable control guard result unavailable despite a positive checked count`() {
+        // A resident control page means the run is unusable. The native side
+        // still reports completed attempts in CHECKED, so AVAILABLE is what
+        // has to carry the distinction; otherwise this would read as Clean.
         val snapshot = bridge.parse(
             """
                 AVAILABLE=1
                 KERNELPATCH_SUPERKEY=0
+                KERNELPATCH_SUPERKEY_AVAILABLE=0
                 KERNELPATCH_SUPERKEY_CHECKED=4
                 KERNELPATCH_SUPERKEY_HITS=0
-                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 0, pre-resident: 0, control resident: 1, mincore errors: 0
+                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 0, pre-resident: 0, control resident: 1, control unmapped: 0, page unmapped: 0, mincore errors: 0, usable: no
             """.trimIndent(),
         )
 
         assertFalse(snapshot.kernelPatchSuperkey)
-        assertTrue(snapshot.kernelPatchSuperkeyDetail.contains("control resident: 1"))
+        assertFalse(snapshot.kernelPatchSuperkeyAvailable)
+        assertEquals(4, snapshot.kernelPatchSuperkeyCheckedCount)
+        assertTrue(snapshot.kernelPatchSuperkeyDetail.contains("usable: no"))
+    }
+
+    @Test
+    fun `parse keeps mincore error result unavailable`() {
+        val snapshot = bridge.parse(
+            """
+                AVAILABLE=1
+                KERNELPATCH_SUPERKEY=0
+                KERNELPATCH_SUPERKEY_AVAILABLE=0
+                KERNELPATCH_SUPERKEY_CHECKED=4
+                KERNELPATCH_SUPERKEY_HITS=0
+                KERNELPATCH_SUPERKEY_DETAIL=Probed attempts: 4, page faulted in: 0, pre-resident: 0, control resident: 0, control unmapped: 0, page unmapped: 0, mincore errors: 1, usable: no
+            """.trimIndent(),
+        )
+
+        assertFalse(snapshot.kernelPatchSuperkey)
+        assertFalse(snapshot.kernelPatchSuperkeyAvailable)
+        assertTrue(snapshot.kernelPatchSuperkeyDetail.contains("mincore errors: 1"))
     }
 
     @Test

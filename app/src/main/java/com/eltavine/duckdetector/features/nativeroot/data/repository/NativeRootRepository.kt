@@ -121,6 +121,7 @@ class NativeRootRepository(
             ),
             kernelPatchSideChannel = snapshot.kernelPatchSideChannel,
             kernelPatchSuperkey = snapshot.kernelPatchSuperkey,
+            kernelPatchSuperkeyAvailable = snapshot.kernelPatchSuperkeyAvailable,
             kernelPatchSuperkeyCheckedCount = snapshot.kernelPatchSuperkeyCheckedCount,
             kernelPatchSuperkeyHitCount = snapshot.kernelPatchSuperkeyHitCount,
             kernelPatchSuperkeyDetail = snapshot.kernelPatchSuperkeyDetail,
@@ -232,19 +233,21 @@ class NativeRootRepository(
                 label = "kernelpatch superkey",
                 summary = when {
                     snapshot.kernelPatchSuperkey -> "Detected"
-                    snapshot.kernelPatchSuperkeyCheckedCount == 0 -> "Unavailable"
+                    !snapshot.kernelPatchSuperkeyAvailable -> "Unavailable"
                     else -> "Clean"
                 },
                 outcome = when {
                     snapshot.kernelPatchSuperkey -> NativeRootMethodOutcome.DETECTED
-                    snapshot.kernelPatchSuperkeyCheckedCount == 0 -> NativeRootMethodOutcome.SUPPORT
+                    !snapshot.kernelPatchSuperkeyAvailable -> NativeRootMethodOutcome.SUPPORT
                     else -> NativeRootMethodOutcome.CLEAN
                 },
                 detail = buildString {
                     append("Passes __NR_supercall an untouched anonymous page together with a length the kernel rejects before it derives a user pointer, ")
                     append("so a stock kernel never reads arg0 and the page keeps its empty PTE.\n")
                     append("KernelPatch reads arg0 to compare it against the superkey ahead of the syscall body, which faults the page in; mincore then reports it resident.\n")
-                    append("This is a state check, so it does not depend on timing, CPU frequency, or a specific KernelPatch version.\n")
+                    append("This is a state check, so it does not depend on timing or CPU frequency.\n")
+                    append("It only applies while the handler reaches arg0 through the normal uaccess path. Once KernelPatch uses strncpy_from_user_nofault (kver >= 6.7), a page with no PTE is not faulted in, so a hit is still conclusive but an absent hit is not evidence of absence.\n")
+                    append("A run with no control page, a resident control page, or a failed residency read is reported as Unavailable rather than Clean.\n")
                     append("Test Result: ${snapshot.kernelPatchSuperkeyDetail}")
                 },
             ),

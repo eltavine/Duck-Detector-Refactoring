@@ -97,6 +97,7 @@ data class NativeRootReport(
     val errorMessage: String? = null,
     val kernelPatchSideChannel: Boolean = false,
     val kernelPatchSuperkey: Boolean = false,
+    val kernelPatchSuperkeyAvailable: Boolean = false,
     val kernelPatchSuperkeyCheckedCount: Int = 0,
     val kernelPatchSuperkeyHitCount: Int = 0,
     val kernelPatchSuperkeyDetail: String = "",

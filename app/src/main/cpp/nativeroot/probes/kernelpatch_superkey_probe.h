@@ -21,6 +21,12 @@
 
 namespace duckdetector::nativeroot {
 
+    // Set in ProbeResult::aux_flags when the run produced at least one
+    // trustworthy residency measurement. It is kept separate from
+    // checked_count so that an unusable run (no control page, control page
+    // resident, mincore error) is reported as unavailable rather than clean.
+    constexpr long kSuperkeyAuxUsable = 1L << 0;
+
     ProbeResult run_kernelpatch_superkey_check();
 
 }  // namespace duckdetector::nativeroot
