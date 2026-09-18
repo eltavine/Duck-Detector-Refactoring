@@ -125,6 +125,12 @@ data class NativeRootReport(
     val tempRootCveExploitDetected: Boolean = false,
     val tempRootArtifactHitCount: Int = 0,
     val tempRootArtifactCheckCount: Int = 0,
+    val ksuThroneHuntAvailable: Boolean = false,
+    val ksuThroneHuntWatchDenied: Boolean = false,
+    val ksuThroneHuntPackageDirectory: String = "",
+    val ksuThroneHuntOpenCount: Int = 0,
+    val ksuThroneHuntAccessCount: Int = 0,
+    val ksuThroneHuntStimulusApplied: Boolean = false,
 ) {
     val directFindings: List<NativeRootFinding>
         get() = findings.filter { it.group == NativeRootGroup.SYSCALL || it.group == NativeRootGroup.SIDE_CHANNEL }
@@ -156,6 +162,14 @@ data class NativeRootReport(
 
     val hasWarningFindings: Boolean
         get() = warningFindingCount > 0
+
+    // The throne hunt traversal opens the package directory inode before iterating it, so a
+    // directory-level IN_OPEN/IN_ACCESS pair is the detectable surface.
+    val ksuThroneHuntHitCount: Int
+        get() = ksuThroneHuntOpenCount + ksuThroneHuntAccessCount
+
+    val ksuThroneHuntDetected: Boolean
+        get() = ksuThroneHuntStimulusApplied && ksuThroneHuntHitCount > 0
 
     val detectedFamilies: List<String>
         get() = buildList {

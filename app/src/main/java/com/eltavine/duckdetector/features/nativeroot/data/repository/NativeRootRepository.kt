@@ -24,6 +24,9 @@ import com.eltavine.duckdetector.features.nativeroot.data.probes.CgroupProcessLe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.CgroupProcessLeakProbeResult
 import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuManagerFingerprintProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuManagerFingerprintProbeResult
+import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntProbe
+import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntProbeResult
+import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntRound
 import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceDriftProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceDriftProbeResult
 import com.eltavine.duckdetector.features.nativeroot.data.probes.RootProcessAuditProbe
@@ -52,6 +55,10 @@ class NativeRootRepository(
     private val kernelSuManagerFingerprintProbe: KernelSuManagerFingerprintProbe =
         KernelSuManagerFingerprintProbe(context?.applicationContext),
     private val tempRootArtifactProbe: TempRootArtifactProbe = TempRootArtifactProbe(),
+    private val throneHuntRound: KernelSuThroneHuntRound = KernelSuThroneHuntRound(
+        context?.applicationContext
+    ),
+    private val throneHuntProbe: KernelSuThroneHuntProbe = KernelSuThroneHuntProbe(),
 ) {
 
     suspend fun scan(): NativeRootReport = withContext(Dispatchers.IO) {
@@ -73,6 +80,10 @@ class NativeRootRepository(
         val mountNamespaceResult = mountNamespaceDriftProbe.run()
         val managerFingerprintResult = kernelSuManagerFingerprintProbe.run()
         val tempRootArtifactResult = tempRootArtifactProbe.run()
+        // The throne hunt round is the only probe that mutates observable system state, so it runs
+        // last and keeps its watch/verdict split explicit.
+        val throneHuntRoundResult = throneHuntRound.run()
+        val throneHuntResult = throneHuntProbe.run(throneHuntRoundResult)
         val findings =
             nativeFindings +
                     shellTmpResult.findings +
@@ -80,7 +91,8 @@ class NativeRootRepository(
                     cgroupResult.findings +
                     mountNamespaceResult.findings +
                     managerFingerprintResult.findings +
-                    tempRootArtifactResult.findings
+                    tempRootArtifactResult.findings +
+                    throneHuntResult.findings
 
         return NativeRootReport(
             stage = NativeRootStage.READY,
@@ -118,6 +130,7 @@ class NativeRootRepository(
                 mountNamespaceResult = mountNamespaceResult,
                 managerFingerprintResult = managerFingerprintResult,
                 tempRootArtifactResult = tempRootArtifactResult,
+                throneHuntResult = throneHuntResult,
             ),
             kernelPatchSideChannel = snapshot.kernelPatchSideChannel,
             kernelPatchSuperkey = snapshot.kernelPatchSuperkey,
@@ -149,6 +162,12 @@ class NativeRootRepository(
             tempRootCveExploitDetected = tempRootArtifactResult.cveExploitDetected,
             tempRootArtifactHitCount = tempRootArtifactResult.hitCount,
             tempRootArtifactCheckCount = tempRootArtifactResult.checkedCount,
+            ksuThroneHuntAvailable = throneHuntResult.available,
+            ksuThroneHuntWatchDenied = throneHuntResult.watchDenied,
+            ksuThroneHuntPackageDirectory = throneHuntResult.packageDirectory,
+            ksuThroneHuntOpenCount = throneHuntResult.directoryOpenCount,
+            ksuThroneHuntAccessCount = throneHuntResult.directoryAccessCount,
+            ksuThroneHuntStimulusApplied = throneHuntRoundResult.stimulusApplied,
         )
     }
 
@@ -161,6 +180,7 @@ class NativeRootRepository(
         mountNamespaceResult: MountNamespaceDriftProbeResult,
         managerFingerprintResult: KernelSuManagerFingerprintProbeResult,
         tempRootArtifactResult: TempRootArtifactProbeResult,
+        throneHuntResult: KernelSuThroneHuntProbeResult,
     ): List<NativeRootMethodResult> {
         val directFindings =
             findings.filter { it.group == NativeRootGroup.SYSCALL || it.group == NativeRootGroup.SIDE_CHANNEL }
@@ -405,6 +425,31 @@ class NativeRootRepository(
                     if (managerFingerprintResult.detail.isNotBlank()) {
                         append("\n")
                         append(managerFingerprintResult.detail)
+                    }
+                },
+            ),
+            NativeRootMethodResult(
+                label = "ksuThroneHunt",
+                summary = when {
+                    throneHuntResult.hitCount > 0 -> "${throneHuntResult.hitCount} hit(s)"
+                    !throneHuntResult.available -> "Unavailable"
+                    throneHuntResult.watchDenied -> "Watch denied"
+                    else -> "Clean"
+                },
+                outcome = when {
+                    throneHuntResult.hitCount > 0 -> NativeRootMethodOutcome.DETECTED
+                    !throneHuntResult.available -> NativeRootMethodOutcome.SUPPORT
+                    throneHuntResult.watchDenied -> NativeRootMethodOutcome.SUPPORT
+                    else -> NativeRootMethodOutcome.CLEAN
+                },
+                detail = buildString {
+                    append("Rewrites /data/system/packages.list through the zero-permission setMimeGroup path ")
+                    append("and watches the app's own /data/app package directory from the app_zygote carrier. ")
+                    append("KernelSU's pkg_observer reacts to the packages.list rewrite by running ")
+                    append("track_throne -> search_manager(\"/data/app\", 2), which opens and iterates our package ")
+                    append("directory inode; that traversal is what the inherited watch reports.\n")
+                    if (throneHuntResult.detail.isNotBlank()) {
+                        append(throneHuntResult.detail)
                     }
                 },
             ),

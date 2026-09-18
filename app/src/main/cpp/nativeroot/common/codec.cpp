@@ -132,4 +132,24 @@ namespace duckdetector::nativeroot {
         return output.str();
     }
 
+    std::string encode_throne_hunt_watch(const ThroneHuntWatchResult &result) {
+        std::ostringstream output;
+        output << "WATCH_INSTALLED=" << (result.watch_installed ? '1' : '0') << '\n';
+        output << "WATCH_DESCRIPTOR=" << result.watch_descriptor << '\n';
+        output << "WATCH_ERRNO=" << result.error_number << '\n';
+        output << "WATCH_PACKAGE_DIR=" << escape_value(result.package_directory) << '\n';
+        output << "WATCH_DETAIL=" << escape_value(result.detail) << '\n';
+        return output.str();
+    }
+
+    std::string encode_throne_hunt_event_summary(const ThroneHuntEventSummary &summary) {
+        std::ostringstream output;
+        output << "EVENT_DIRECTORY_OPEN=" << summary.directory_open_count << '\n';
+        output << "EVENT_DIRECTORY_ACCESS=" << summary.directory_access_count << '\n';
+        output << "EVENT_RAW=" << summary.raw_event_count << '\n';
+        output << "EVENT_INVALID=" << summary.invalid_count << '\n';
+        output << "EVENT_DETAIL=" << escape_value(summary.detail) << '\n';
+        return output.str();
+    }
+
 }  // namespace duckdetector::nativeroot

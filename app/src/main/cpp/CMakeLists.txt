@@ -97,6 +97,7 @@ set(NATIVE_ROOT_SOURCES
     nativeroot/common/codec.cpp
     nativeroot/common/io_utils.cpp
     nativeroot/cgroup_bridge.cpp
+    nativeroot/throne_hunt_native_bridge.cpp
     nativeroot/probes/prctl_probe.cpp
     nativeroot/probes/kernelpatch_nr_supercall_latency_probe.cpp
     nativeroot/probes/kernelpatch_superkey_probe.cpp
@@ -105,6 +106,7 @@ set(NATIVE_ROOT_SOURCES
     nativeroot/probes/ksu_supercall_probe.cpp
     nativeroot/probes/susfs_probe.cpp
     nativeroot/probes/self_process_ioc_probe.cpp
+    nativeroot/probes/throne_hunt_watch_probe.cpp
     nativeroot/probes/cgroup_process_probe.cpp
     nativeroot/probes/path_probe.cpp
     nativeroot/probes/process_probe.cpp

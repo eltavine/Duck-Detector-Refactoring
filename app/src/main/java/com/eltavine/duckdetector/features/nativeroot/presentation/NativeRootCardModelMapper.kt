@@ -81,6 +81,7 @@ class NativeRootCardModelMapper {
                 report.hasDangerFindings -> "${report.dangerFindingCount} runtime root signal(s)"
                 report.mountAnchorDriftCount > 0 -> "Isolated mount drift suggests namespace tampering"
                 report.mountDriftSignalCount > 0 -> "Isolated-process namespace drift needs review"
+                report.ksuThroneHuntDetected -> "KernelSU throne hunt traversal observed"
                 report.ksuManagerPackagePresent && report.ksuManagerTraitHitCount > 0 ->
                     "KernelSU manager weak fingerprint detected"
 
@@ -244,6 +245,7 @@ class NativeRootCardModelMapper {
                 listOf(
                     "Self process IOC",
                     "Isolated mount drift",
+                    "Throne hunt",
                     "Manager fingerprint",
                     "Runtime paths",
                     "Root processes",
@@ -257,6 +259,7 @@ class NativeRootCardModelMapper {
                 listOf(
                     "Self process IOC",
                     "Isolated mount drift",
+                    "Throne hunt",
                     "Manager fingerprint",
                     "Runtime paths",
                     "Root processes",
@@ -614,6 +617,21 @@ class NativeRootCardModelMapper {
                     },
                 ),
                 NativeRootDetailRowModel(
+                    "Throne hunt",
+                    when {
+                        report.ksuThroneHuntHitCount > 0 -> "${report.ksuThroneHuntHitCount} hit(s)"
+                        report.ksuThroneHuntWatchDenied -> "Watch denied"
+                        report.ksuThroneHuntAvailable -> "Clean"
+                        else -> "N/A"
+                    },
+                    when {
+                        report.ksuThroneHuntHitCount > 0 -> DetectorStatus.danger()
+                        report.ksuThroneHuntWatchDenied -> DetectorStatus.info(InfoKind.SUPPORT)
+                        report.ksuThroneHuntAvailable -> DetectorStatus.allClear()
+                        else -> DetectorStatus.info(InfoKind.SUPPORT)
+                    },
+                ),
+                NativeRootDetailRowModel(
                     "Cgroup paths",
                     if (report.cgroupAvailable) report.cgroupPathCheckCount.toString() else "N/A",
                     if (report.cgroupAvailable) DetectorStatus.allClear() else DetectorStatus.info(
@@ -754,6 +772,7 @@ class NativeRootCardModelMapper {
             "susfsSideChannel",
             "selfProcessIoc",
             "isolatedMountDrift",
+            "ksuThroneHunt",
             "ksuManagerFingerprint",
             "runtimeArtifacts",
             "cgroupLeakage",
@@ -821,6 +840,7 @@ class NativeRootCardModelMapper {
     private fun NativeRootReport.hasRuntimeReducedCoverage(): Boolean {
         return !cgroupAvailable ||
                 !isolatedMountProbeAvailable ||
+                !ksuThroneHuntAvailable ||
                 ksuManagerVisibilityRestricted
     }
 }

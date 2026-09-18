@@ -20,6 +20,9 @@ import android.app.ZygotePreload
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.system.Os
+import com.eltavine.duckdetector.features.nativeroot.data.service.ThroneHuntCarrierPayloadCodec
+import com.eltavine.duckdetector.features.nativeroot.data.service.ThroneHuntCarrierState
+import com.eltavine.duckdetector.features.nativeroot.data.service.ThroneHuntWatchInstaller
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityBridge
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValidityPayloadCodec
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxContextValiditySnapshot
@@ -37,6 +40,7 @@ class AppZygotePreload : ZygotePreload {
 
     override fun doPreload(appInfo: ApplicationInfo) {
         val payload = try {
+            installThroneHuntWatch(appInfo)
             val currentUid = Os.getuid()
             val baseSnapshot = collectBaseSnapshot(currentUid, appInfo.uid)
             val snapshot = augmentPreloadSnapshot(
@@ -59,6 +63,15 @@ class AppZygotePreload : ZygotePreload {
             }
         }
         SelinuxContextValidityBridge.setPreloadedRawData(payload)
+    }
+
+    // KernelSU's pkg_observer reacts to a /data/system/packages.list rewrite by running
+    // track_throne -> search_manager("/data/app", 2), which opens and iterates every package
+    // directory inode. Watching our own package directory from app_zygote is what makes that
+    // kernel-side traversal observable, so the watch is installed here rather than in the child.
+    private fun installThroneHuntWatch(appInfo: ApplicationInfo) {
+        val state = ThroneHuntWatchInstaller.install(appInfo)
+        ThroneHuntWatchInstaller.publish(state)
     }
 
     private fun collectBaseSnapshot(

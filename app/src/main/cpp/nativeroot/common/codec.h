@@ -20,10 +20,17 @@
 #include <string>
 
 #include "nativeroot/common/types.h"
+#include "nativeroot/probes/throne_hunt_watch_probe.h"
 
 namespace duckdetector::nativeroot {
 
     std::string encode_snapshot(const Snapshot &snapshot);
+
+    // The throne hunt watch is set up in the app_zygote preload and drained from the isolated
+    // child, so it needs its own payload rather than a Snapshot field.
+    std::string encode_throne_hunt_watch(const ThroneHuntWatchResult &result);
+
+    std::string encode_throne_hunt_event_summary(const ThroneHuntEventSummary &summary);
 
 }  // namespace duckdetector::nativeroot
 
