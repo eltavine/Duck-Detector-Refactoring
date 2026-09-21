@@ -166,6 +166,15 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
                 "generateGithubContributorsAsset",
                 GenerateGithubContributorsAssetTask::class.java,
             ) {
+                refreshEnabled.set(
+                    providers.gradleProperty("duckdetector.githubContributors.refresh")
+                        .map(String::toBoolean)
+                        .orElse(
+                            providers.environmentVariable("DUCKDETECTOR_GITHUB_CONTRIBUTORS_REFRESH")
+                                .map(String::toBoolean)
+                        )
+                        .orElse(false)
+                )
                 endpointUrl.set(
                     providers.gradleProperty("duckdetector.githubContributors.url")
                         .orElse(GITHUB_CONTRIBUTORS_API_URL)

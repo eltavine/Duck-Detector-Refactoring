@@ -42,8 +42,15 @@ internal const val GITHUB_CONTRIBUTORS_API_URL =
 abstract class GenerateGithubContributorsAssetTask : DefaultTask() {
 
     init {
-        outputs.upToDateWhen { false }
+        // Only a refreshing run may ignore up-to-date checks. This task hangs off preBuild and
+        // talks to github.com directly, so an unconditional re-run made every build - including
+        // offline and pull-request builds that have no reason to care who the contributors are -
+        // wait on the network. The committed asset is the fallback, matching GenerateTeeCrlAssetTask.
+        outputs.upToDateWhen { !refreshEnabled.get() }
     }
+
+    @get:Input
+    abstract val refreshEnabled: Property<Boolean>
 
     @get:Input
     abstract val endpointUrl: Property<String>
@@ -72,6 +79,17 @@ abstract class GenerateGithubContributorsAssetTask : DefaultTask() {
         val contributorsFile = contributorsAssetFile.get().asFile
         contributorsFile.parentFile?.mkdirs()
         val avatarDirectory = avatarOutputDirectory.get().asFile.apply { mkdirs() }
+
+        if (!refreshEnabled.get()) {
+            if (!contributorsFile.isFile) {
+                contributorsFile.writeText("[]", Charsets.UTF_8)
+            }
+            logger.lifecycle(
+                "GitHub contributors sync skipped; pass " +
+                    "-Pduckdetector.githubContributors.refresh=true to refresh the asset."
+            )
+            return
+        }
 
         runCatching { fetchRemoteSnapshot(contributorsFile, avatarDirectory) }
             .onFailure { failure ->
