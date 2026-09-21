@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.kernelcheck.data.native
 
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 class KernelCheckNativeBridge(
@@ -35,6 +36,8 @@ class KernelCheckNativeBridge(
         if (raw.isBlank()) {
             return KernelCheckNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         val entries = raw.lineSequence()
             .map { it.trim() }

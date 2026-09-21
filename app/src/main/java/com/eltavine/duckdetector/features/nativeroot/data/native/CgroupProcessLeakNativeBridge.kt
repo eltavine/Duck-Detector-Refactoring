@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.nativeroot.data.native
 
 import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 data class CgroupProcessLeakNativePath(
@@ -74,6 +75,8 @@ class CgroupProcessLeakNativeBridge(
         if (raw.isBlank()) {
             return CgroupProcessLeakNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var available = false
         var pathCheckCount = 0

@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.selinux.data.native
 
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 open class SelinuxNativeAuditBridge(
@@ -40,6 +41,8 @@ open class SelinuxNativeAuditBridge(
         if (raw.isBlank()) {
             return SelinuxNativeAuditSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var snapshot = SelinuxNativeAuditSnapshot()
         val callbackLines = mutableListOf<String>()

@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.su.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 class SuNativeBridge(
@@ -32,6 +33,9 @@ class SuNativeBridge(
         if (raw.isBlank()) {
             return SuNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
+
         val entries = raw.lineSequence()
             .map { it.trim() }
             .filter { it.isNotEmpty() && it.contains('=') }

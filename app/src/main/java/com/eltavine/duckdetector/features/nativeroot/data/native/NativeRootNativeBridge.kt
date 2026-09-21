@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.nativeroot.data.native
 
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 class NativeRootNativeBridge(
@@ -33,6 +34,8 @@ class NativeRootNativeBridge(
         if (raw.isBlank()) {
             return NativeRootNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var snapshot = NativeRootNativeSnapshot()
         val findings = mutableListOf<NativeRootNativeFinding>()

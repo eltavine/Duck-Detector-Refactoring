@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.zygisk.data.native
 
 import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 class ZygiskNativeBridge(
@@ -39,6 +40,8 @@ class ZygiskNativeBridge(
         if (raw.isBlank()) {
             return ZygiskNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var snapshot = ZygiskNativeSnapshot()
         val traces = mutableListOf<ZygiskNativeTrace>()

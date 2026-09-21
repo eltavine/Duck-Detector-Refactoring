@@ -52,7 +52,7 @@ class SelinuxNativeAuditBridgeTest {
     @Test
     fun `parse restores escaped newlines and tabs in callback lines`() {
         val snapshot = bridge.parse(
-            "LINE=avc: denied { read } for pid=1\\tcomm=\"duck\"\\nscontext=u:r:app:s0",
+            "AVAILABLE=1\nLINE=avc: denied { read } for pid=1\\tcomm=\"duck\"\\nscontext=u:r:app:s0",
         )
 
         assertEquals(1, snapshot.callbackLines.size)
@@ -65,7 +65,12 @@ class SelinuxNativeAuditBridgeTest {
     @Test
     fun `parse restores an escaped backslash without inventing a newline`() {
         // The native side sends backslash, backslash, n for a literal backslash followed by 'n'.
-        val snapshot = bridge.parse("""FAILURE_REASON=path C:\\not-a-newline""")
+        val snapshot = bridge.parse(
+            """
+            AVAILABLE=1
+            FAILURE_REASON=path C:\\not-a-newline
+            """.trimIndent(),
+        )
 
         assertEquals("""path C:\not-a-newline""", snapshot.failureReason)
     }

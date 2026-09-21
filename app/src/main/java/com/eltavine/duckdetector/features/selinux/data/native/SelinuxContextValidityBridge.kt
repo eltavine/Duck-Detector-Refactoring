@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.selinux.data.native
 
 import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentPayloadCodec
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
@@ -43,6 +44,8 @@ open class SelinuxContextValidityBridge(
         if (raw.isBlank()) {
             return SelinuxContextValiditySnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var snapshot = SelinuxContextValiditySnapshot()
         val notes = mutableListOf<String>()

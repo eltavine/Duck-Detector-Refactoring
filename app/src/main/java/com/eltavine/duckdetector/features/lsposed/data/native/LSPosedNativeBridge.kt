@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.lsposed.data.native
 
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 class LSPosedNativeBridge(
@@ -33,6 +34,8 @@ class LSPosedNativeBridge(
         if (raw.isBlank()) {
             return LSPosedNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var snapshot = LSPosedNativeSnapshot()
         val traces = mutableListOf<LSPosedNativeTrace>()

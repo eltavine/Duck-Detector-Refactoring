@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.playintegrityfix.data.native
 
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 class PlayIntegrityFixNativeBridge(
@@ -37,6 +38,8 @@ class PlayIntegrityFixNativeBridge(
         if (raw.isBlank()) {
             return PlayIntegrityFixNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var available = false
         val properties = linkedMapOf<String, String>()

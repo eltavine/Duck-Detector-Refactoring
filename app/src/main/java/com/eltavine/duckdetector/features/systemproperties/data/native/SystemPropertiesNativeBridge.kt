@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.systemproperties.data.native
 
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 class SystemPropertiesNativeBridge(
@@ -44,6 +45,8 @@ class SystemPropertiesNativeBridge(
         if (raw.isBlank()) {
             return SystemPropertiesNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var available = false
         val libcProperties = linkedMapOf<String, String>()

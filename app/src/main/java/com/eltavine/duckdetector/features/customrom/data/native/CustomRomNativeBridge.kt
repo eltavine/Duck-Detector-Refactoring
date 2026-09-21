@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.customrom.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomFinding
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomModificationFinding
@@ -34,6 +35,8 @@ class CustomRomNativeBridge(
         if (raw.isBlank()) {
             return CustomRomNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var available = false
         var propertyAreaAvailable = false

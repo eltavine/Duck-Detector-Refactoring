@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.mount.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 open class MountNativeBridge(
@@ -32,6 +33,8 @@ open class MountNativeBridge(
         if (raw.isBlank()) {
             return MountNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var snapshot = MountNativeSnapshot()
         val findings = mutableListOf<MountNativeFinding>()

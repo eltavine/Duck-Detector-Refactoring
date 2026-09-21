@@ -57,7 +57,7 @@ class MountNativeBridgeTest {
     @Test
     fun `parse reads tab separated findings`() {
         val snapshot = bridge.parse(
-            "FINDING=OVERLAY\tDANGER\tOverlay mount\t/system\tupperdir present",
+            "AVAILABLE=1\nFINDING=OVERLAY\tDANGER\tOverlay mount\t/system\tupperdir present",
         )
 
         assertEquals(1, snapshot.findings.size)
@@ -70,8 +70,28 @@ class MountNativeBridgeTest {
     }
 
     @Test
+    fun `a payload whose availability key drifted is reported instead of read as a clean device`() {
+        val collector = NativeSnapshotCollector(
+            library = object : NativeLibraryHandle {
+                override val isLoaded: Boolean = true
+                override val loadFailureDetail: String = ""
+            },
+        )
+
+        val snapshot = collector.collect(
+            readPayload = { "IS_AVAILABLE=1\nMOUNTS_READABLE=1" },
+            parse = bridge::parse,
+            unavailable = { status -> MountNativeSnapshot(collection = status) },
+        )
+
+        assertEquals(NativeCollectionOutcome.PAYLOAD_REJECTED, snapshot.collection.outcome)
+        assertTrue(snapshot.collection.detail.contains("AVAILABLE"))
+        assertFalse(snapshot.collection.isTrustworthy)
+    }
+
+    @Test
     fun `parse drops findings that are missing columns`() {
-        val snapshot = bridge.parse("FINDING=OVERLAY\tDANGER\tOverlay mount")
+        val snapshot = bridge.parse("AVAILABLE=1\nFINDING=OVERLAY\tDANGER\tOverlay mount")
 
         assertTrue(snapshot.findings.isEmpty())
     }
