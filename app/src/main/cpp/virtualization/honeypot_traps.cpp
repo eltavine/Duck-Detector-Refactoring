@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -54,14 +55,22 @@ namespace duckdetector::virtualization {
             return static_cast<long long>(now.tv_sec) * 1000000000LL + now.tv_nsec;
         }
 
-        double coefficient_of_variation(const std::vector<long long> &samples) {
+        /**
+         * Relative spread of the samples, or nothing when no spread can be expressed.
+         *
+         * The empty result is not the same as a coefficient of zero and callers must not
+         * collapse the two. A zero mean means the samples carry no elapsed time at all, so
+         * there is nothing to take a ratio against; reporting 0.0 for that case would hand
+         * back the most uniform value the scale has for a measurement that never happened.
+         */
+        std::optional<double> coefficient_of_variation(const std::vector<long long> &samples) {
             if (samples.empty()) {
-                return 0.0;
+                return std::nullopt;
             }
             const double mean = std::accumulate(samples.begin(), samples.end(), 0.0) /
                                 static_cast<double>(samples.size());
             if (mean <= 0.0) {
-                return 0.0;
+                return std::nullopt;
             }
             double variance = 0.0;
             for (const auto sample: samples) {
@@ -240,7 +249,36 @@ namespace duckdetector::virtualization {
 
     }  // namespace
 
+    /**
+     * Looks for sched_yield timings that repeat more evenly than real scheduling tends to.
+     *
+     * The bounds below are empirical, and sched_yield gives no specification to anchor them
+     * to. Its man page puts the call's behaviour under SCHED_OTHER, which is what an Android
+     * app thread runs, explicitly outside what is specified: "Use of sched_yield() with
+     * nondeterministic scheduling policies such as SCHED_OTHER is unspecified".
+     *
+     * That same page also names the main false positive. "If the calling thread is the only
+     * thread in the highest priority list at that time, it will continue to run after a call
+     * to sched_yield()", so on an idle device no context switch happens and what is left to
+     * measure is a bare syscall round trip, which repeats closely by nature. Evenness here is
+     * therefore not by itself evidence of an emulated scheduler, which is why the bounds are
+     * set tight enough that ordinary vDSO clock jitter clears them, and why two of three
+     * attempts must agree before the consumer treats this as a signal at all.
+     */
     TrapResult run_timing_trap() {
+        // Tight enough that the jitter of the two clock reads around sched_yield normally
+        // exceeds it on its own. Loosening it would start flagging idle devices.
+        constexpr double kUniformityCeiling = 0.03;
+
+        // Guards against reading a descheduled sample window as a tidy one. A yield costing
+        // this long means the thread lost the CPU, so uniformity says nothing about the
+        // scheduler's own behaviour.
+        constexpr long long kMeanCeilingNs = 250000LL;
+
+        // Microsecond granularity, so sub-microsecond yields all land in one bucket and this
+        // does little work beyond rejecting obviously spread-out sample sets.
+        constexpr std::size_t kBucketCeiling = 2;
+
         TrapResult result = make_base_result(true);
         for (int attempt = 0; attempt < 3; ++attempt) {
             std::vector<long long> samples;
@@ -255,19 +293,42 @@ namespace duckdetector::virtualization {
             for (const auto sample: samples) {
                 buckets.insert(sample / 1000LL);
             }
-            const double cv = coefficient_of_variation(samples);
+            const std::optional<double> cv = coefficient_of_variation(samples);
             const long long mean = std::accumulate(samples.begin(), samples.end(), 0LL) /
                                    static_cast<long long>(samples.size());
-            const bool suspicious = buckets.size() <= 2 && cv < 0.03 && mean < 250000LL;
+
+            // Every sample reading as no elapsed time leaves no spread to judge, which
+            // happens where the clock is too coarse to resolve a yield. Counting the attempt
+            // would turn a measurement that did not happen into the most uniform result the
+            // scale can express, so it stays out of the completed tally and the consumer's
+            // two-attempt minimum keeps it off both verdicts.
+            if (!cv.has_value()) {
+                result.attempts.push_back(
+                        TrapAttempt{false,
+                                    "mean=0ns (no elapsed time resolved, uniformity "
+                                    "unavailable)"}
+                );
+                continue;
+            }
+
+            const bool suspicious = buckets.size() <= kBucketCeiling &&
+                                    *cv < kUniformityCeiling &&
+                                    mean < kMeanCeilingNs;
             result.completedAttempts += 1;
             if (suspicious) {
                 result.suspiciousAttempts += 1;
             }
             std::ostringstream detail;
-            detail << "mean=" << mean << "ns cv=" << cv << " unique_us_buckets=" << buckets.size();
+            detail << "mean=" << mean << "ns cv=" << *cv
+                   << " unique_us_buckets=" << buckets.size();
             result.attempts.push_back(TrapAttempt{suspicious, detail.str()});
         }
-        return finalize_result(result, "Measures scheduling jitter across three native attempts.");
+        return finalize_result(
+                result,
+                "Measures sched_yield timing evenness across three native attempts. "
+                "sched_yield is unspecified under SCHED_OTHER and returns without switching "
+                "when nothing else is runnable, so evenness alone is weak evidence."
+        );
     }
 
     TrapResult run_syscall_parity_trap() {

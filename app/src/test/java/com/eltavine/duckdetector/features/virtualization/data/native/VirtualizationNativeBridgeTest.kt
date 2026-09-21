@@ -131,6 +131,29 @@ class VirtualizationNativeBridgeTest {
     }
 
     @Test
+    fun `a trap that measured only once stays short of a clean verdict`() {
+        // Partial measurement, which the timing trap produces when some attempts resolve no
+        // elapsed time. One agreeing attempt is not enough to call the run clean, so this has
+        // to stay apart from a run where every attempt measured and agreed.
+        val result = bridge.parseTrap(
+            """
+            AVAILABLE=1
+            SUPPORTED=1
+            COMPLETED_ATTEMPTS=1
+            SUSPICIOUS_ATTEMPTS=0
+            DETAIL=partially measured
+            ATTEMPT=0	mean=0ns (no elapsed time resolved, uniformity unavailable)
+            ATTEMPT=0	mean=0ns (no elapsed time resolved, uniformity unavailable)
+            ATTEMPT=0	mean=214ns cv=0.19 unique_us_buckets=1
+            """.trimIndent(),
+        )
+
+        assertEquals(1, result.completedAttempts)
+        assertFalse(result.suspicious)
+        assertFalse(result.clean)
+    }
+
+    @Test
     fun `parses sacrificial syscall pack summary`() {
         val result = bridge.parseSacrificialSyscallPack(
             """
