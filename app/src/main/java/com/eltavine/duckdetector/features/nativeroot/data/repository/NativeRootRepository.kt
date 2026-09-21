@@ -214,7 +214,7 @@ class NativeRootRepository(
                 label = "__NR_supercall probe",
                 summary = when {
                     snapshot.kernelPatchSideChannel -> "Detected"
-                    snapshot.available -> "Clean"
+                    snapshot.available -> "No pre-fix delay"
                     else -> "Unavailable"
                 },
                 outcome = when {
@@ -223,9 +223,10 @@ class NativeRootRepository(
                     else -> NativeRootMethodOutcome.SUPPORT
                 },
                 detail = buildString {
-                    append("Ping __NR_supercall to detect KernelPatch, in older version of KernelPatch, it will use \"strncpy_from_user\" WITHOUT permission authorize, \n")
-                    append("Therefore, it can repeatedly ping __NR_supercall using only \\0 and 128 bytes of \"A\" and compare the time difference to detect KernelPatch. \n")
-                    append("This problem already fix in KernelPatch commit 84169d5d6be12e589ccac81d71dcebb80b22043a \n")
+                    append("Times __NR_supercall (syscall 45, the arm64 truncate slot KernelPatch takes over) with a 128-byte key and with an empty key. ")
+                    append("KernelPatch older than commit 84169d5d6be12e589ccac81d71dcebb80b22043a copied the key with strncpy_from_user before authorizing it, so the longer key cost measurably more.\n")
+                    append("That commit stopped copying before auth, which puts a fixed build back on the same footing as an unmodified kernel. ")
+                    append("So a result here that is not \"Detected\" rules out the older leak only, not KernelPatch itself; the superkey probe is what covers current builds.\n")
                     append("Test Result: ${snapshot.kernelPatchSideChannelDetail}")
                 },
             ),

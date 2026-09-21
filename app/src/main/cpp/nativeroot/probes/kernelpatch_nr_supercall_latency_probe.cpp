@@ -23,6 +23,7 @@
 #include <cstdint>
 
 #include <fcntl.h>
+#include <sched.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -33,8 +34,59 @@ namespace duckdetector::nativeroot {
 
     namespace {
         constexpr int kIterations = 100000;
+
+        // KernelPatch reuses the arm64 truncate slot as its supercall entry: its
+        // uapi/scdefs.h defines __NR_supercall as 45 next to the commented-out
+        // __NR3264_truncate it replaces, and the hook is installed with
+        // hook_syscalln(__NR_supercall, ...). The NDK confirms __NR_truncate is 45 on
+        // aarch64, so on an unpatched kernel these calls reach truncate instead.
         constexpr int kSupercallNr = 45;
+
+        // SUPERCALL_HELLO from the same header, and also the length an unpatched kernel
+        // takes as the truncate target size.
         constexpr unsigned long kSupercallHello = 0x1000;
+
+        // 128 bytes including the terminator, matching the "128 bytes key string" case in
+        // the KernelPatch benchmark this probe is calibrated against. The length is the
+        // signal: a vulnerable build copies the whole key before rejecting it, so shortening
+        // this buffer would shrink the very difference being measured.
+        constexpr int kKeyBufferSize = 128;
+
+        // Separates the two populations measured in KernelPatch commit 84169d5d ("patch:
+        // trying fix side channel attack"), which reports averages for the same two
+        // argument shapes this probe uses:
+        //
+        //   vulnerable build   4.281 us vs 0.460 us -> diff 3.82 us
+        //   fixed build        0.943 us vs 0.607 us -> diff 0.34 us
+        //   no KernelPatch     0.792 us vs 0.446 us -> diff 0.35 us
+        //
+        // A clean kernel therefore does show a positive difference: both calls land in
+        // truncate, and the 127-byte path costs a strncpy_from_user plus a path walk that
+        // the empty path skips by failing immediately. That baseline is an order of
+        // magnitude below the vulnerable case, and this constant sits between them.
+        //
+        // Scope, because the commit is what closed the leak: only builds older than
+        // 84169d5d are visible here. That commit stopped copying the key before
+        // authentication, which collapses the fixed build onto the clean baseline, so this
+        // probe cannot distinguish a current KernelPatch from an unmodified kernel and a
+        // difference below this constant is not evidence of a clean kernel. Detection of
+        // current builds rests on run_kernelpatch_superkey_check instead.
+        constexpr double kVulnerableDiffMicros = 3.0;
+
+        /**
+         * Fills a key buffer that an unpatched kernel cannot resolve to a real file.
+         *
+         * An unpatched kernel reads arg0 as a truncate path, so the buffer doubles as one.
+         * It is kept absolute because a bare run of 'A' bytes is relative and would resolve
+         * against the process working directory, where a file of that name would have been
+         * truncated to kSupercallHello bytes. Nothing can create this name under /, so the
+         * path walk fails before truncate reaches a write.
+         */
+        void fill_unresolvable_key(char (&buffer)[kKeyBufferSize]) {
+            memset(buffer, 'A', kKeyBufferSize - 1);
+            buffer[0] = '/';
+            buffer[kKeyBufferSize - 1] = '\0';
+        }
 
         static inline uint64_t get_cntfrq() {
             uint64_t val;
@@ -48,30 +100,71 @@ namespace duckdetector::nativeroot {
             return val;
         }
 
-        double measure_latency(const char *buffer) {
-            uint64_t start, end;
-            uint64_t total_ticks = 0;
-            const uint64_t freq = get_cntfrq();
+        /**
+         * Pins the caller to the first CPU it is already allowed on, so that both variants
+         * are timed on one core rather than wherever the scheduler places each of them.
+         */
+        bool bind_to_single_cpu() {
+            cpu_set_t affinity;
+            CPU_ZERO(&affinity);
+            if (sched_getaffinity(0, sizeof(affinity), &affinity) != 0) {
+                return false;
+            }
+            for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
+                if (!CPU_ISSET(cpu, &affinity)) {
+                    continue;
+                }
+                cpu_set_t single;
+                CPU_ZERO(&single);
+                CPU_SET(cpu, &single);
+                return sched_setaffinity(0, sizeof(single), &single) == 0;
+            }
+            return false;
+        }
 
-            if (freq == 0) return 0.0;
-
+        inline uint64_t time_one_call(const char *buffer) {
+            const uint64_t start = get_cntvct();
             syscall(kSupercallNr, buffer, kSupercallHello);
+            return get_cntvct() - start;
+        }
 
-            for (int i = 0; i < kIterations; i++) {
-                start = get_cntvct();
-                syscall(kSupercallNr, buffer, kSupercallHello);
-                end = get_cntvct();
-                
-                total_ticks += (end - start);
+        /**
+         * Times both argument shapes interleaved on the same core.
+         *
+         * Interleaving matters because the two means are compared against each other. Run
+         * back to back, any frequency or thermal drift over the measurement window landed
+         * entirely on whichever variant ran second and showed up as a difference between
+         * them. Alternating spreads that drift across both.
+         */
+        bool measure_latencies(const char *full, const char *empty, double *out_full_us,
+                               double *out_empty_us) {
+            const uint64_t freq = get_cntfrq() & 0xffff'ffffULL;
+            if (freq == 0) {
+                return false;
             }
 
-            return (static_cast<double>(total_ticks) * 1000000.0) / (static_cast<double>(freq) * kIterations);
+            // Warm up both paths so neither mean carries first-call cost.
+            time_one_call(full);
+            time_one_call(empty);
+
+            uint64_t full_ticks = 0;
+            uint64_t empty_ticks = 0;
+            for (int i = 0; i < kIterations; i++) {
+                full_ticks += time_one_call(full);
+                empty_ticks += time_one_call(empty);
+            }
+
+            const double scale = static_cast<double>(freq) * kIterations;
+            *out_full_us = (static_cast<double>(full_ticks) * 1000000.0) / scale;
+            *out_empty_us = (static_cast<double>(empty_ticks) * 1000000.0) / scale;
+            return true;
         }
 
         struct LatencyResult {
             double full_latency;
             double empty_latency;
             bool success;
+            bool pinned;
         };
 
         bool run_benchmark_in_child(LatencyResult &out_result, bool &blocked_by_seccomp) {
@@ -91,17 +184,17 @@ namespace duckdetector::nativeroot {
             if (pid == 0) {
                 close(pipe_fds[0]);
 
-                char buffer[128];
+                char key[kKeyBufferSize];
+                fill_unresolvable_key(key);
+
                 LatencyResult result{};
-
-                memset(buffer, 'A', 127);
-                buffer[127] = '\0';
-                result.full_latency = measure_latency(buffer);
-
-                memset(buffer, 0, sizeof(buffer));
-                result.empty_latency = measure_latency(buffer);
-                
-                result.success = true;
+                result.pinned = bind_to_single_cpu();
+                result.success = measure_latencies(
+                        key,
+                        "",
+                        &result.full_latency,
+                        &result.empty_latency
+                );
 
                 const ssize_t ignored = write(pipe_fds[1], &result, sizeof(result));
                 (void) ignored;
@@ -133,7 +226,7 @@ namespace duckdetector::nativeroot {
     ProbeResult run_kernelpatch_supercall_latency_check() {
         ProbeResult result;
         bool blocked = false;
-        LatencyResult latencies = {0.0, 0.0, false};
+        LatencyResult latencies{};
 
         if (!run_benchmark_in_child(latencies, blocked)) {
             if (blocked) {
@@ -155,29 +248,30 @@ namespace duckdetector::nativeroot {
         result.checked_count = 1;
         if (!latencies.success) return result;
 
-        double diff = latencies.full_latency - latencies.empty_latency;
+        const double diff = latencies.full_latency - latencies.empty_latency;
 
         char detail[256];
         snprintf(
                 detail,
                 sizeof(detail),
-                "Full: %.4f us, Empty: %.4f us, Diff: %.4f us",
+                "Key path: %.4f us, empty key: %.4f us, diff: %.4f us, same-core: %s",
                 latencies.full_latency,
                 latencies.empty_latency,
-                diff
+                diff,
+                latencies.pinned ? "yes" : "no"
         );
 
         result.extra_text = detail;
 
-        if (diff > 3.0) {
+        if (diff > kVulnerableDiffMicros) {
             result.flags.apatch = true;
             result.hit_count = 1;
 
             result.findings.push_back(
                     Finding{
                             .group = "SYSCALL",
-                            .label = "KernelPatch supercall delay",
-                            .value = "Detected",
+                            .label = "KernelPatch supercall key-length delay",
+                            .value = "Detected (pre-84169d5d build)",
                             .detail = detail,
                             .severity = Severity::kDanger,
                     }
