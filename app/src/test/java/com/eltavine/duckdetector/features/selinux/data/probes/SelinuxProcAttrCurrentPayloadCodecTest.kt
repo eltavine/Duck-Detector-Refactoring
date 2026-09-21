@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.selinux.data.probes
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SelinuxProcAttrCurrentPayloadCodecTest {
@@ -37,5 +38,43 @@ class SelinuxProcAttrCurrentPayloadCodecTest {
 
         assertNotNull(decoded)
         assertEquals(result, decoded)
+    }
+
+    @Test
+    fun `round trips separators embedded in every column`() {
+        // Kernel strings and exception messages are not ours to assume. Before the columns were
+        // escaped, a tab in any column but the last silently shifted every later column.
+        val result = SelinuxProcAttrCurrentResult(
+            label = "Magisk\tDenied",
+            targetContext = "u:r:magisk:s0\nu:r:shell:s0",
+            outcomeClass = "outcome\rclass",
+            rawMessage = "ErrnoException: path=C:\\temp\terrno=13",
+        )
+
+        val decoded = SelinuxProcAttrCurrentPayloadCodec.decode(
+            SelinuxProcAttrCurrentPayloadCodec.encode(result),
+        )
+
+        assertEquals(result, decoded)
+    }
+
+    @Test
+    fun `encode keeps the four column layout when values carry tabs`() {
+        val encoded = SelinuxProcAttrCurrentPayloadCodec.encode(
+            SelinuxProcAttrCurrentResult(
+                label = "a\tb",
+                targetContext = "c",
+                outcomeClass = "d",
+                rawMessage = "e",
+            ),
+        )
+
+        assertEquals("a\\tb\tc\td\te", encoded)
+    }
+
+    @Test
+    fun `decode rejects a payload with the wrong column count`() {
+        assertNull(SelinuxProcAttrCurrentPayloadCodec.decode("only\tthree\tcolumns"))
+        assertNull(SelinuxProcAttrCurrentPayloadCodec.decode("a\tb\tc\td\te"))
     }
 }
