@@ -5,7 +5,10 @@ name: Publish Latest GitHub Release
 on:
   push:
     tags:
-      - '*'
+      # Version tags only. A bare '*' also fired on scratch and backup tags, and because this
+      # workflow publishes with make_latest, one stray tag push was enough to promote an
+      # unintended build to the repository's latest release.
+      - 'v*'
   workflow_dispatch:
     inputs:
       tag_name:
