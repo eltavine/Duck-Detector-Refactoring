@@ -43,7 +43,9 @@ class MemoryRepository(
     private fun scanInternal(): MemoryReport {
         val snapshot = sanitizeSnapshot(nativeBridge.collectSnapshot())
         if (!snapshot.available) {
-            return MemoryReport.failed("Native memory snapshot was unavailable.")
+            return MemoryReport.failed(
+                snapshot.collection.explain("Native memory snapshot was unavailable"),
+            )
         }
 
         val findings = snapshot.findings.mapIndexed { index, finding ->
