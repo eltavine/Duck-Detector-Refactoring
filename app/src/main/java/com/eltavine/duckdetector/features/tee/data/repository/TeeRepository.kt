@@ -141,7 +141,7 @@ class TeeRepository(
     private val strongBoxProbe = StrongBoxBehaviorProbeSuite(appContext, collector)
     private val soterProbe = SoterCapabilityProbe(appContext)
 
-    suspend fun scan(): TeeReport = withContext(Dispatchers.Default) {
+    suspend fun scan(): TeeReport = withContext(Dispatchers.IO) {
         runCatching {
             val snapshot = collector.collect(useStrongBox = false)
             val trust = trustAnalyzer.inspect(snapshot.rawCertificates)

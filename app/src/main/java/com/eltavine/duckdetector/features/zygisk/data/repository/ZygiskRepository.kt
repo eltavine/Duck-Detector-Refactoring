@@ -43,7 +43,7 @@ class ZygiskRepository(
 
     private val appContext = context.applicationContext
 
-    suspend fun scan(): ZygiskReport = withContext(Dispatchers.Default) {
+    suspend fun scan(): ZygiskReport = withContext(Dispatchers.IO) {
         runCatching {
             val snapshot = nativeBridge.collectSnapshot()
             val fdTrap = if (shouldSkipFdTrap()) {

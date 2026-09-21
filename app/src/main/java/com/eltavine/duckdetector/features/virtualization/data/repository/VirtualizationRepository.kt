@@ -112,7 +112,7 @@ class VirtualizationRepository(
     },
 ) {
 
-    suspend fun scan(): VirtualizationReport = withContext(Dispatchers.Default) {
+    suspend fun scan(): VirtualizationReport = withContext(Dispatchers.IO) {
         runCatching { scanInternal() }
             .getOrElse { throwable ->
                 VirtualizationReport.failed(throwable.message ?: "Virtualization scan failed.")

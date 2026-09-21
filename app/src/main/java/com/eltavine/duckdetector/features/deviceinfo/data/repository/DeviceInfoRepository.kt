@@ -35,7 +35,7 @@ class DeviceInfoRepository(
 
     private val appContext = context.applicationContext
 
-    suspend fun scan(): DeviceInfoReport = withContext(Dispatchers.Default) {
+    suspend fun scan(): DeviceInfoReport = withContext(Dispatchers.IO) {
         runCatching {
             buildReport()
         }.getOrElse { throwable ->

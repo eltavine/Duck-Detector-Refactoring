@@ -59,7 +59,7 @@ class MountRepository(
         ZygoteNextProbeManager(context?.applicationContext),
 ) {
 
-    suspend fun scan(): MountReport = withContext(Dispatchers.Default) {
+    suspend fun scan(): MountReport = withContext(Dispatchers.IO) {
         runCatching { scanInternal() }
             .getOrElse { throwable ->
                 MountReport.failed(throwable.message ?: "Mount scan failed.")

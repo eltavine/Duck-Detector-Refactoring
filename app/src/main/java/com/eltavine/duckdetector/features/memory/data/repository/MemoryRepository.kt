@@ -33,7 +33,7 @@ class MemoryRepository(
     private val nativeBridge: MemoryNativeBridge = MemoryNativeBridge(),
 ) {
 
-    suspend fun scan(): MemoryReport = withContext(Dispatchers.Default) {
+    suspend fun scan(): MemoryReport = withContext(Dispatchers.IO) {
         runCatching { scanInternal() }
             .getOrElse { throwable ->
                 MemoryReport.failed(throwable.message ?: "Memory scan failed.")

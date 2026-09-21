@@ -64,7 +64,7 @@ class BootloaderRepository(
     private val bootConsistencyProbe = BootConsistencyProbe()
     private val widevineCredentialRepository = WidevineCredentialRepository()
 
-    suspend fun scan(): BootloaderReport = withContext(Dispatchers.Default) {
+    suspend fun scan(): BootloaderReport = withContext(Dispatchers.IO) {
         runCatching { scanInternal() }
             .getOrElse { throwable ->
                 BootloaderReport.failed(throwable.message ?: "Bootloader scan failed.")
