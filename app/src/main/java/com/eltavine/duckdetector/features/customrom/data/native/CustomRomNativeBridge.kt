@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.customrom.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomFinding
@@ -59,15 +60,15 @@ class CustomRomNativeBridge(
                 val key = line.substringBefore('=')
                 val value = line.substringAfter('=')
                 when (key) {
-                    "AVAILABLE" -> available = value != "0"
-                    "PROPAREA_AVAILABLE" -> propertyAreaAvailable = value != "0"
+                    "AVAILABLE" -> available = NativePayloadCodec.decodeFlag(value)
+                    "PROPAREA_AVAILABLE" -> propertyAreaAvailable = NativePayloadCodec.decodeFlag(value)
                     "PROPAREA_CONTEXTS" -> propertyAreaContextCount = value.toIntOrNull() ?: 0
                     "PROPAREA_AREA_ANOMALIES",
                     "PROPAREA_AREA_COUNT" -> propertyAreaAnomalyCount = value.toIntOrNull() ?: 0
 
                     "PROPAREA_ITEM_ANOMALIES",
                     "PROPAREA_ITEM_COUNT" -> propertyAreaItemCount = value.toIntOrNull() ?: 0
-                    "SYMBOL_AVAILABLE" -> symbolScanAvailable = value != "0"
+                    "SYMBOL_AVAILABLE" -> symbolScanAvailable = NativePayloadCodec.decodeFlag(value)
                     "PLATFORM" -> parseFinding(value)?.let(platformFiles::add)
                     "MODIFICATION" -> parseModificationFinding(value)?.let(modificationFindings::add)
                     "MAP" -> parseMapFinding(value)?.let(resourceInjectionFindings::add)

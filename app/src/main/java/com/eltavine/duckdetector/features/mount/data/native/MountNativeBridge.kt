@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.mount.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
@@ -123,9 +124,7 @@ open class MountNativeBridge(
         }
     }
 
-    private fun String.asBool(): Boolean {
-        return this == "1" || equals("true", ignoreCase = true)
-    }
+    private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
 
     private external fun nativeCollectSnapshot(): String
 }

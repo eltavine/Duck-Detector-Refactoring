@@ -100,9 +100,7 @@ class TeeRegisterTimerNativeBridge {
         }
     }
 
-    private fun String?.asBool(): Boolean {
-        return this == "1" || this.equals("true", ignoreCase = true)
-    }
+    private fun String?.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
 
     private external fun nativeIsRegisterTimerAvailable(): Boolean
 

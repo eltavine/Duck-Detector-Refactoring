@@ -187,9 +187,7 @@ open class SelinuxContextValidityBridge(
         }
     }
 
-    private fun String.asBool(): Boolean {
-        return this == "1" || equals("true", ignoreCase = true)
-    }
+    private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
 
     private fun String.asNullableBool(): Boolean? {
         if (isBlank() || equals("unknown", ignoreCase = true)) {

@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.nativeroot.data.native
 
 import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
@@ -100,7 +101,7 @@ class CgroupProcessLeakNativeBridge(
                             paths += CgroupProcessLeakNativePath(
                                 path = parts[0].decodeValue(),
                                 uid = uid,
-                                accessible = accessible == "1",
+                                accessible = NativePayloadCodec.decodeFlag(accessible),
                                 pidCount = pidCount,
                             )
                         }
@@ -176,7 +177,7 @@ class CgroupProcessLeakNativeBridge(
                         val key = line.substringBefore('=')
                         val value = line.substringAfter('=')
                         when (key) {
-                            "AVAILABLE" -> available = value == "1"
+                            "AVAILABLE" -> available = NativePayloadCodec.decodeFlag(value)
                             "PATH_CHECKS" -> pathCheckCount = value.toIntOrNull() ?: pathCheckCount
                             "PATH_ACCESSIBLE" -> accessiblePathCount =
                                 value.toIntOrNull() ?: accessiblePathCount

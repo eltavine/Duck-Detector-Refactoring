@@ -52,8 +52,7 @@ class PlayIntegrityFixNativeBridge(
                 val key = line.substringBefore('=')
                 val value = line.substringAfter('=')
                 when (key) {
-                    "AVAILABLE" -> available =
-                        value == "1" || value.equals("true", ignoreCase = true)
+                    "AVAILABLE" -> available = NativePayloadCodec.decodeFlag(value)
 
                     "PROP" -> {
                         val parts = value.split('|', limit = 2)

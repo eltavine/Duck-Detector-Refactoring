@@ -17,6 +17,8 @@
 package com.eltavine.duckdetector.core.native
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -25,6 +27,29 @@ import org.junit.Test
  * other fails here rather than silently corrupting a report.
  */
 class NativePayloadCodecTest {
+
+    @Test
+    fun `reads both spellings every encoder uses for a true flag`() {
+        assertTrue(NativePayloadCodec.decodeFlag("1"))
+        assertTrue(NativePayloadCodec.decodeFlag("true"))
+        assertTrue(NativePayloadCodec.decodeFlag("TRUE"))
+        assertTrue(NativePayloadCodec.decodeFlag("True"))
+    }
+
+    @Test
+    fun `reads a false flag`() {
+        assertFalse(NativePayloadCodec.decodeFlag("0"))
+        assertFalse(NativePayloadCodec.decodeFlag("false"))
+    }
+
+    @Test
+    fun `refuses to turn an unreadable flag into a positive detection`() {
+        assertFalse(NativePayloadCodec.decodeFlag(null))
+        assertFalse(NativePayloadCodec.decodeFlag(""))
+        assertFalse(NativePayloadCodec.decodeFlag(" "))
+        assertFalse(NativePayloadCodec.decodeFlag("yes"))
+        assertFalse(NativePayloadCodec.decodeFlag("2"))
+    }
 
     @Test
     fun `encodes the four structural characters`() {

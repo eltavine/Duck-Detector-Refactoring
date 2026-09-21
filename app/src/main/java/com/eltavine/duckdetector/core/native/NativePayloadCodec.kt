@@ -30,6 +30,9 @@ package com.eltavine.duckdetector.core.native
  * | CR   | `\r`  |
  * | TAB  | `\t`  |
  *
+ * A flag travels as `1` or `0` rather than a Kotlin `Boolean`, so reading one is part of this format
+ * too and lives here as [decodeFlag] instead of being restated by each bridge.
+ *
  * The C++ half lives in `cpp/common/payload_codec.h` and `NativePayloadCodecTest` pins the two
  * against each other. Keeping both sides on one table is what makes splitting a record on a raw
  * `\t` safe, and it is why an unescaped encoder silently truncates evidence rather than failing
@@ -93,6 +96,18 @@ object NativePayloadCodec {
                 index += 2
             }
         }
+    }
+
+    /**
+     * Reads the wire representation of a flag.
+     *
+     * Encoders write `1` or `0`, and a handful spell it `true` or `false`, so both are accepted.
+     * Everything else reads as false - including a key that arrived with an empty value, and a key
+     * that never arrived at all - because a flag the native side could not answer must not turn into
+     * a positive detection.
+     */
+    fun decodeFlag(value: String?): Boolean {
+        return value == "1" || value.equals("true", ignoreCase = true)
     }
 
     private fun requiresEscape(character: Char): Boolean {

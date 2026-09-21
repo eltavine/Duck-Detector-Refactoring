@@ -204,9 +204,7 @@ data class VirtualizationRemoteSnapshot(
                 .distinct()
         }
 
-        private fun String.asBool(): Boolean {
-            return this == "1" || equals("true", ignoreCase = true)
-        }
+        private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
 
         private const val LIST_SEPARATOR = "\u001f"
     }

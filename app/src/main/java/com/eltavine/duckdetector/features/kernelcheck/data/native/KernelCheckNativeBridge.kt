@@ -46,7 +46,7 @@ class KernelCheckNativeBridge(
             .toList()
 
         return KernelCheckNativeSnapshot(
-            available = entries.firstOrNull { it.first == "AVAILABLE" }?.second != "0",
+            available = NativePayloadCodec.decodeFlag(entries.firstOrNull { it.first == "AVAILABLE" }?.second),
             procVersion = entries.firstOrNull { it.first == "PROC_VERSION" }?.second?.decodeValue()
                 .orEmpty(),
             procCmdline = entries.firstOrNull { it.first == "PROC_CMDLINE" }?.second?.decodeValue()
@@ -61,8 +61,8 @@ class KernelCheckNativeBridge(
             sysctlVersion = entries.firstOrNull { it.first == "SYSCTL_VERSION" }
                 ?.second?.decodeValue()
                 .orEmpty(),
-            suspiciousCmdline = entries.firstOrNull { it.first == "CMDLINE" }?.second == "1",
-            kptrExposed = entries.firstOrNull { it.first == "KPTR" }?.second == "1",
+            suspiciousCmdline = NativePayloadCodec.decodeFlag(entries.firstOrNull { it.first == "CMDLINE" }?.second),
+            kptrExposed = NativePayloadCodec.decodeFlag(entries.firstOrNull { it.first == "KPTR" }?.second),
             findings = entries.filter { it.first == "FINDING" }.map { it.second.decodeValue() },
             cpuIdentityStatus = Arm64CpuIdentityPayloadCodec.parseStatus(
                 entries.firstOrNull { it.first == "CPU_IDENTITY_STATUS" }?.second,

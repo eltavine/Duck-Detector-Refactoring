@@ -82,9 +82,7 @@ open class SelinuxNativeAuditBridge(
         }
     }
 
-    private fun String.asBool(): Boolean {
-        return this == "1" || equals("true", ignoreCase = true)
-    }
+    private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
 
     private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 

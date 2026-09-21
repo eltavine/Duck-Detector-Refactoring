@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.su.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
@@ -43,9 +44,11 @@ class SuNativeBridge(
             .toList()
 
         return SuNativeSnapshot(
-            available = entries.firstOrNull { it.first == "AVAILABLE" }?.second != "0",
+            available = NativePayloadCodec.decodeFlag(entries.firstOrNull { it.first == "AVAILABLE" }?.second),
             selfContext = entries.firstOrNull { it.first == "SELF_CONTEXT" }?.second.orEmpty(),
-            selfContextAbnormal = entries.firstOrNull { it.first == "SELF_ABNORMAL" }?.second == "1",
+            selfContextAbnormal = NativePayloadCodec.decodeFlag(
+                entries.firstOrNull { it.first == "SELF_ABNORMAL" }?.second,
+            ),
             suspiciousProcesses = entries.filter { it.first == "PROC" }.map { it.second },
             checkedProcesses = entries.firstOrNull { it.first == "PROC_CHECKED" }?.second?.toIntOrNull()
                 ?: 0,

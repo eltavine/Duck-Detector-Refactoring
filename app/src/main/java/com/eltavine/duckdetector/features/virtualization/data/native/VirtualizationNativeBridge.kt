@@ -276,10 +276,7 @@ open class VirtualizationNativeBridge(
 
     private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 
-    private fun String?.asBool(): Boolean {
-        val value = this.orEmpty()
-        return value == "1" || value.equals("true", ignoreCase = true)
-    }
+    private fun String?.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
 
     private external fun nativeCollectSnapshot(): String
     private external fun nativeRunTimingTrap(): String

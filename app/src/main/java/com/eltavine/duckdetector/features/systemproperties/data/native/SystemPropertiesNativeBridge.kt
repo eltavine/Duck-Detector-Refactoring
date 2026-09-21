@@ -68,7 +68,7 @@ class SystemPropertiesNativeBridge(
                 val key = line.substringBefore('=')
                 val value = line.substringAfter('=')
                 when (key) {
-                    "AVAILABLE" -> available = value != "0"
+                    "AVAILABLE" -> available = NativePayloadCodec.decodeFlag(value)
                     "PROP" -> {
                         val parts = value.split('|', limit = 2)
                         if (parts.size == 2) {
@@ -92,10 +92,10 @@ class SystemPropertiesNativeBridge(
 
                     "RAW_CMDLINE" -> rawCmdline = value.decodeValue()
                     "RAW_BOOTCONFIG" -> rawBootconfig = value.decodeValue()
-                    "PROP_AREA_AVAILABLE" -> propAreaAvailable = value != "0"
+                    "PROP_AREA_AVAILABLE" -> propAreaAvailable = NativePayloadCodec.decodeFlag(value)
                     "PROP_AREA_CONTEXTS" -> propAreaContextCount = value.toIntOrNull() ?: 0
                     "PROP_AREA_HOLES" -> propAreaHoleCount = value.toIntOrNull() ?: 0
-                    "RO_HANDLE_AVAILABLE" -> readOnlyPropertyHandleAvailable = value != "0"
+                    "RO_HANDLE_AVAILABLE" -> readOnlyPropertyHandleAvailable = NativePayloadCodec.decodeFlag(value)
                     "RO_HANDLE_CHECKED" -> readOnlyPropertyHandleCheckedCount = value.toIntOrNull() ?: 0
                     "PROP_AREA_FINDING" -> {
                         val parts = value.split('|', limit = 3)
