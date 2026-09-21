@@ -198,7 +198,11 @@ if(ipo_supported)
     set_property(TARGET duckdetector PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 endif()
 
+# Warnings stay warnings rather than errors: the probes deliberately do unusual things with
+# syscalls and raw memory, so a blanket -Werror would block builds on diagnostics that need to be
+# judged case by case. Surfacing them is the point.
 target_compile_options(duckdetector PRIVATE
+    $<$<COMPILE_LANGUAGE:C,CXX>:-Wall -Wextra>
     $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-O2 -ffunction-sections -fdata-sections -fvisibility=hidden>
     $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-O2 -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden>
 )
@@ -227,6 +231,8 @@ add_library(main SHARED
 )
 
 target_compile_options(main PRIVATE
+    -Wall
+    -Wextra
     -fvisibility=hidden
     -fvisibility-inlines-hidden
 )

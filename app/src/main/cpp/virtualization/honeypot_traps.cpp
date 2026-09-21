@@ -89,7 +89,8 @@ namespace duckdetector::virtualization {
             return result;
         }
 
-        TrapResult build_unsupported_result(const std::string &detail) {
+        // Only reached from the non-arm64 fallbacks, so the arm64-v8a build compiles no call to it.
+        [[maybe_unused]] TrapResult build_unsupported_result(const std::string &detail) {
             TrapResult result;
             result.available = true;
             result.supported = false;
@@ -97,7 +98,8 @@ namespace duckdetector::virtualization {
             return result;
         }
 
-        bool g_sacrificialSyscallPackDisabled = false;
+        // Read and set only from arm64-only code paths, so other ABIs compile no reference to it.
+        [[maybe_unused]] bool g_sacrificialSyscallPackDisabled = false;
 
         std::string encode_basic_pack(
                 bool available,
@@ -113,7 +115,8 @@ namespace duckdetector::virtualization {
             return output.str();
         }
 
-        bool unsupported_syscall_errno(int err) {
+        // Used only from run_syscall_item, whose instantiations sit behind arm64-only guards.
+        [[maybe_unused]] bool unsupported_syscall_errno(int err) {
             return err == ENOSYS || err == EINVAL;
         }
 
