@@ -1862,6 +1862,45 @@ class TeeReportReducerTest {
     }
 
     @Test
+    fun `strongbox names why it could not confirm instead of only reporting not confirmed`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                strongBox = StrongBoxBehaviorResult(
+                    requested = true,
+                    advertised = true,
+                    available = false,
+                    detail = "note",
+                    keyInfoUnavailableDetail = "StrongBox reported itself unavailable during key generation.",
+                ),
+            ),
+        )
+
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "StrongBox" &&
+                    it.body.contains("Not confirmed") &&
+                    it.body.contains("reported itself unavailable")
+        })
+    }
+
+    @Test
+    fun `strongbox says only not confirmed when no reason was recorded`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                strongBox = StrongBoxBehaviorResult(
+                    requested = true,
+                    advertised = true,
+                    available = false,
+                    detail = "note",
+                ),
+            ),
+        )
+
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "StrongBox" && it.body.contains("Not confirmed")
+        })
+    }
+
+    @Test
     fun `strongbox heuristic warning stays informational`() {
         val report = reducer.reduce(
             baseArtifacts(

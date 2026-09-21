@@ -2347,7 +2347,17 @@ class TeeReportReducer(
                 }
             }
 
-            artifacts.strongBox.requested -> "Not confirmed"
+            // "Not confirmed" covers both a key that came back without StrongBox backing and a probe
+            // that never got an answer. Only the first is evidence about the device, so name the
+            // reason whenever the probe recorded one.
+            artifacts.strongBox.requested -> buildString {
+                append("Not confirmed")
+                artifacts.strongBox.keyInfoUnavailableDetail.takeIf(String::isNotBlank)?.let {
+                    append(" • ")
+                    append(it)
+                }
+            }
+
             else -> "Skipped"
         }
     }

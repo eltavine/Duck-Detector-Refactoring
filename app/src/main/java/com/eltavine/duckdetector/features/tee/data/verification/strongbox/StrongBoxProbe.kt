@@ -117,7 +117,12 @@ class StrongBoxBehaviorProbeSuite(
                 append(concurrentHandleLimit)
                 append(", p521=")
                 append(if (p521Accepted) "accepted" else "rejected")
+                if (keyInfoResult.unavailableDetail.isNotBlank()) {
+                    append(", keyInfoUnavailable=")
+                    append(keyInfoResult.unavailableDetail)
+                }
             },
+            keyInfoUnavailableDetail = keyInfoResult.unavailableDetail,
         )
     }
 
@@ -136,7 +141,11 @@ class StrongBoxBehaviorProbeSuite(
                 .setIsStrongBoxBacked(true)
             generator.initialize(builder.build())
             generator.generateKeyPair()
-            val key = keyStore.getKey(alias, null) ?: return KeyInfoResult()
+            // A non-local return here would have skipped the safeDelete in the also block below and
+            // left the generated key in the store.
+            val key = keyStore.getKey(alias, null) ?: return@runCatching KeyInfoResult(
+                unavailableDetail = "StrongBox key generation succeeded but the key was absent from the store.",
+            )
             val keyFactory = KeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
             val keyInfo = keyFactory.getKeySpec(key, KeyInfo::class.java)
             val level = keyInfoSecurityLevelLabel(
@@ -152,13 +161,20 @@ class StrongBoxBehaviorProbeSuite(
                 keyInfoLevel = level,
                 keyGenerationMillis = ((System.nanoTime() - start) / 1_000_000L).toInt(),
             )
-        }.recover {
-            if (it is StrongBoxUnavailableException) {
-                KeyInfoResult()
-            } else {
-                KeyInfoResult()
-            }
-        }.getOrDefault(KeyInfoResult()).also {
+        }.getOrElse { failure ->
+            // Both branches of the previous recover returned the same empty result, so a device with
+            // no StrongBox and a key generation that never reached StrongBox produced an identical
+            // KeyInfoResult. available is derived from keyInfoLevel and feeds a hard failure, so the
+            // two have to stay apart: StrongBoxUnavailableException is the documented answer that no
+            // StrongBox exists, while anything else leaves the question unanswered.
+            KeyInfoResult(
+                unavailableDetail = if (failure is StrongBoxUnavailableException) {
+                    "StrongBox reported itself unavailable during key generation."
+                } else {
+                    "StrongBox key generation did not complete: ${describeFailure(failure)}"
+                },
+            )
+        }.also {
             AndroidKeyStoreTools.safeDelete(keyStore, alias)
         }
     }
@@ -256,9 +272,19 @@ class StrongBoxBehaviorProbeSuite(
         }
     }
 
+    /**
+     * Names a throwable for the exported report without claiming what it implies about StrongBox.
+     */
+    private fun describeFailure(failure: Throwable): String {
+        val type = failure::class.java.simpleName
+        val message = failure.message?.takeIf(String::isNotBlank)
+        return if (message == null) type else "$type: $message"
+    }
+
     private data class KeyInfoResult(
         val keyInfoLevel: String? = null,
         val keyGenerationMillis: Int? = null,
+        val unavailableDetail: String = "",
     )
 
     private fun expectedConcurrentSigningHandleLimit(): Int {
@@ -328,6 +354,12 @@ data class StrongBoxBehaviorResult(
     val hardFailures: List<String> = emptyList(),
     val warnings: List<String> = emptyList(),
     val detail: String,
+    /**
+     * Why [keyInfoLevel] is absent, when it is absent because the question could not be answered
+     * rather than because the key came back without StrongBox backing. Empty when [keyInfoLevel] was
+     * read, so a reader can tell a device with no StrongBox apart from a probe that never ran.
+     */
+    val keyInfoUnavailableDetail: String = "",
 ) {
     val suspicious: Boolean
         get() = hardFailures.isNotEmpty() || warnings.isNotEmpty()
