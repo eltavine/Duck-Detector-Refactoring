@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.features.kernelcheck.domain.KernelCheckMethodOu
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class Arm64CpuIdentityConsistencyEvaluatorTest {
@@ -134,6 +135,35 @@ class Arm64CpuIdentityConsistencyEvaluatorTest {
 
         assertEquals(KernelCheckMethodOutcome.SUPPORT, assessment.method.outcome)
         assertEquals("Partial (1/2 CPUs)", assessment.method.summary)
+    }
+
+    @Test
+    fun `a kernel without cpuid emulation is named instead of reported as unavailable`() {
+        val assessment = evaluator.evaluate(
+            status = Arm64CpuIdentityProbeStatus.CPUID_EMULATION_UNAVAILABLE,
+            observations = listOf(
+                observation(cpu = 0, cached = 0x410fd050, mrs = null),
+                observation(cpu = 7, cached = 0x410fd480, mrs = null),
+            ),
+        )
+
+        assertNull(assessment.finding)
+        assertEquals(KernelCheckMethodOutcome.SUPPORT, assessment.method.outcome)
+        assertEquals("CPUID emulation unavailable", assessment.method.summary)
+        assertTrue(assessment.method.detail.orEmpty().contains("HWCAP_CPUID"))
+        // The cached identity each core reports is still worth showing.
+        assertTrue(assessment.method.detail.orEmpty().contains("0x410fd480"))
+    }
+
+    @Test
+    fun `an unknown future status stays a support outcome`() {
+        val assessment = evaluator.evaluate(
+            status = Arm64CpuIdentityProbeStatus.UNKNOWN,
+            observations = emptyList(),
+        )
+
+        assertNull(assessment.finding)
+        assertEquals(KernelCheckMethodOutcome.SUPPORT, assessment.method.outcome)
     }
 
     private fun observation(

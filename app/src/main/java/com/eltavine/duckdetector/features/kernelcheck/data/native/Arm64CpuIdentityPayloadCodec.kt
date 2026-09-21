@@ -20,6 +20,12 @@ enum class Arm64CpuIdentityProbeStatus {
     COMPLETED,
     UNSUPPORTED_ABI,
     AFFINITY_UNAVAILABLE,
+
+    /**
+     * The kernel does not advertise HWCAP_CPUID, so the EL0 MRS emulation that exposes MIDR_EL1 is
+     * absent and the comparison cannot run on this kernel at all.
+     */
+    CPUID_EMULATION_UNAVAILABLE,
     UNKNOWN,
 }
 

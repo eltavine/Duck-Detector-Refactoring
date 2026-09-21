@@ -50,4 +50,36 @@ class Arm64CpuIdentityPayloadCodecTest {
         assertNull(Arm64CpuIdentityPayloadCodec.parseObservation("0\t1\tSYSFS\tinvalid\t410fd4d0"))
         assertNull(Arm64CpuIdentityPayloadCodec.parseObservation("0\tmaybe\tNONE\tNA\tNA"))
     }
+
+    @Test
+    fun `status names from the native probe are parsed`() {
+        assertEquals(
+            Arm64CpuIdentityProbeStatus.COMPLETED,
+            Arm64CpuIdentityPayloadCodec.parseStatus("COMPLETED"),
+        )
+        assertEquals(
+            Arm64CpuIdentityProbeStatus.CPUID_EMULATION_UNAVAILABLE,
+            Arm64CpuIdentityPayloadCodec.parseStatus("CPUID_EMULATION_UNAVAILABLE"),
+        )
+        assertEquals(
+            Arm64CpuIdentityProbeStatus.AFFINITY_UNAVAILABLE,
+            Arm64CpuIdentityPayloadCodec.parseStatus("AFFINITY_UNAVAILABLE"),
+        )
+        assertEquals(
+            Arm64CpuIdentityProbeStatus.UNSUPPORTED_ABI,
+            Arm64CpuIdentityPayloadCodec.parseStatus("UNSUPPORTED_ABI"),
+        )
+    }
+
+    @Test
+    fun `a status this build does not know becomes unknown rather than failing`() {
+        assertEquals(
+            Arm64CpuIdentityProbeStatus.UNKNOWN,
+            Arm64CpuIdentityPayloadCodec.parseStatus("SOME_FUTURE_STATUS"),
+        )
+        assertEquals(
+            Arm64CpuIdentityProbeStatus.UNKNOWN,
+            Arm64CpuIdentityPayloadCodec.parseStatus(null),
+        )
+    }
 }

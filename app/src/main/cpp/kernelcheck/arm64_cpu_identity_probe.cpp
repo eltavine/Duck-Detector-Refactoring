@@ -30,6 +30,11 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
+#if defined(__aarch64__)
+#include <asm/hwcap.h>
+#include <sys/auxv.h>
+#endif
+
 namespace duckdetector::kernelcheck {
 
     namespace {
@@ -66,6 +71,21 @@ namespace duckdetector::kernelcheck {
             forward_sigill(signal_number, info, context);
         }
 
+        /**
+         * Reads MIDR_EL1 through the kernel's EL0 MRS emulation.
+         *
+         * This comparison is only meaningful because MIDR_EL1 is the exception among the emulated
+         * registers. Documentation/arm64/cpu-feature-registers.rst states that a visible field
+         * "holds the system wide safe value for the particular feature (except for MIDR_EL1)", and
+         * for MIDR_EL1 specifically that it "will contain the value as available on the CPU where it
+         * is fetched and is not a system wide safe value". So this tracks the core the thread is
+         * pinned to, which is why the caller sets affinity first -- the same document warns the read
+         * is otherwise racy against migration. The ID_AA64* registers must not be used this way:
+         * they are sanitised system-wide values and would compare equal on every core by design.
+         *
+         * SIGILL is still handled because the access is architecturally undefined at EL0 and the
+         * emulation is what makes it work; a kernel lacking it delivers the signal instead.
+         */
         bool read_midr_safely(std::uint32_t *midr) {
             if (midr == nullptr || pthread_mutex_lock(&g_sigill_mutex) != 0) {
                 return false;
@@ -238,6 +258,8 @@ namespace duckdetector::kernelcheck {
                     return "UNSUPPORTED_ABI";
                 case CpuIdentityProbeStatus::AffinityUnavailable:
                     return "AFFINITY_UNAVAILABLE";
+                case CpuIdentityProbeStatus::CpuidEmulationUnavailable:
+                    return "CPUID_EMULATION_UNAVAILABLE";
             }
             return "AFFINITY_UNAVAILABLE";
         }
@@ -275,7 +297,16 @@ namespace duckdetector::kernelcheck {
             return result;
         }
 
-        result.status = CpuIdentityProbeStatus::Completed;
+        // Documentation/arm64/cpu-feature-registers.rst: reading MIDR_EL1 from EL0 works only
+        // through the kernel's MRS emulation, which is advertised by HWCAP_CPUID; where it is
+        // absent the access stays undefined and is delivered as SIGILL. Consulting the capability
+        // bit keeps "this kernel exposes no CPUID emulation" distinct from "the read failed", and
+        // avoids provoking a SIGILL on every core to rediscover what the kernel already states.
+        const bool cpuid_emulation_available = (getauxval(AT_HWCAP) & HWCAP_CPUID) != 0;
+        result.status = cpuid_emulation_available
+                        ? CpuIdentityProbeStatus::Completed
+                        : CpuIdentityProbeStatus::CpuidEmulationUnavailable;
+
         for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
             if (!CPU_ISSET(cpu, &original_affinity)) {
                 continue;
@@ -289,10 +320,14 @@ namespace duckdetector::kernelcheck {
             observation.affinity_succeeded =
                     sched_setaffinity(0, sizeof(target_affinity), &target_affinity) == 0;
             if (observation.affinity_succeeded) {
+                // The cached identity is still collected without MRS emulation, so the report can
+                // show what each core reports even when no register read is possible.
                 collect_cached_identity(&observation);
-                std::uint32_t mrs_midr = 0;
-                if (read_midr_safely(&mrs_midr)) {
-                    observation.mrs_midr = mrs_midr;
+                if (cpuid_emulation_available) {
+                    std::uint32_t mrs_midr = 0;
+                    if (read_midr_safely(&mrs_midr)) {
+                        observation.mrs_midr = mrs_midr;
+                    }
                 }
             }
             result.observations.push_back(observation);

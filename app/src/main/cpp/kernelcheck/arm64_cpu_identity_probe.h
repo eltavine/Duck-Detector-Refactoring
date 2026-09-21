@@ -27,6 +27,11 @@ namespace duckdetector::kernelcheck {
         Completed,
         UnsupportedAbi,
         AffinityUnavailable,
+        /**
+         * The kernel does not advertise HWCAP_CPUID, so the EL0 MRS emulation that makes MIDR_EL1
+         * readable from userspace is absent and no per-CPU register read can succeed.
+         */
+        CpuidEmulationUnavailable,
     };
 
     enum class CachedCpuIdentitySource {

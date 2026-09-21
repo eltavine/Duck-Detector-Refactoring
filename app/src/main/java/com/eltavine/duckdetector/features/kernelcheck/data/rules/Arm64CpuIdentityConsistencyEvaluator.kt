@@ -90,6 +90,23 @@ class Arm64CpuIdentityConsistencyEvaluator {
                 detail = "The current thread's CPU affinity could not be read, so a same-CPU comparison was not safe.",
             )
 
+            // A kernel without the MRS emulation can never answer this, which is a different state
+            // from a read that was attempted and failed.
+            status == Arm64CpuIdentityProbeStatus.CPUID_EMULATION_UNAVAILABLE -> supportMethod(
+                summary = "CPUID emulation unavailable",
+                detail = buildString {
+                    append(
+                        "The kernel does not advertise HWCAP_CPUID, so EL0 has no MRS emulation " +
+                            "for MIDR_EL1 and no register value exists to compare against the " +
+                            "cached identity.",
+                    )
+                    if (detail.isNotBlank()) {
+                        append('\n')
+                        append(detail)
+                    }
+                },
+            )
+
             else -> supportMethod(
                 summary = "Unavailable",
                 detail = detail.ifBlank {
