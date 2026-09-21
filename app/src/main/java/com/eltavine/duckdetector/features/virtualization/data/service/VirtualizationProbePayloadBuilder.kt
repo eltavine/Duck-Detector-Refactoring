@@ -75,13 +75,13 @@ internal object VirtualizationProbePayloadBuilder {
                 appendLine("CODE_PATH=${appContext.applicationInfo.sourceDir.encodeValue()}")
                 snapshot.findings.forEach { finding ->
                     append("FINDING=")
-                    append(finding.group)
+                    append(finding.group.encodeValue())
                     append('\t')
-                    append(finding.severity)
+                    append(finding.severity.encodeValue())
                     append('\t')
-                    append(finding.label)
+                    append(finding.label.encodeValue())
                     append('\t')
-                    append(finding.value)
+                    append(finding.value.encodeValue())
                     append('\t')
                     appendLine(finding.detail.encodeValue())
                 }

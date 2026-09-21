@@ -63,6 +63,22 @@ class VirtualizationRemoteSnapshotTest {
     }
 
     @Test
+    fun `keeps the finding columns aligned when a renderer string carries a separator`() {
+        val snapshot = VirtualizationRemoteSnapshot.parse(
+            "AVAILABLE=1\n" +
+                "FINDING=RUNTIME\tWARNING\tGraphics renderer\t" +
+                "gfxstream\\ttab\\nnewline\tGoogle",
+        )
+
+        val finding = snapshot.findings.single()
+        assertEquals("RUNTIME", finding.group)
+        assertEquals("WARNING", finding.severity)
+        assertEquals("Graphics renderer", finding.label)
+        assertEquals("gfxstream\ttab\nnewline", finding.value)
+        assertEquals("Google", finding.detail)
+    }
+
+    @Test
     fun `parse handles proc mount view divergence fields`() {
         val snapshot = VirtualizationRemoteSnapshot.parse(
             """

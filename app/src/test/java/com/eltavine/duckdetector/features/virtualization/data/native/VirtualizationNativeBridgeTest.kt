@@ -69,6 +69,22 @@ class VirtualizationNativeBridgeTest {
     }
 
     @Test
+    fun `keeps the finding columns aligned when a mapped path carries a separator`() {
+        val snapshot = bridge.parseSnapshot(
+            "AVAILABLE=1\n" +
+                "FINDING=TRANSLATION\tWARNING\tMapped translation library\t" +
+                "/data/local/tmp/lib\\ttab\\nnewline.so\tmapped twice",
+        )
+
+        val finding = snapshot.findings.single()
+        assertEquals("TRANSLATION", finding.group)
+        assertEquals("WARNING", finding.severity)
+        assertEquals("Mapped translation library", finding.label)
+        assertEquals("/data/local/tmp/lib\ttab\nnewline.so", finding.value)
+        assertEquals("mapped twice", finding.detail)
+    }
+
+    @Test
     fun `parses trap summary`() {
         val result = bridge.parseTrap(
             """

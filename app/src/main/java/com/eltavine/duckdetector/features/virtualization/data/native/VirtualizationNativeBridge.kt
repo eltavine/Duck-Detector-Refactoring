@@ -84,10 +84,10 @@ open class VirtualizationNativeBridge(
                         val parts = line.removePrefix("FINDING=").split('\t')
                         if (parts.size >= 5) {
                             findings += VirtualizationNativeFinding(
-                                group = parts[0],
-                                severity = parts[1],
-                                label = parts[2],
-                                value = parts[3],
+                                group = parts[0].decodeValue(),
+                                severity = parts[1].decodeValue(),
+                                label = parts[2].decodeValue(),
+                                value = parts[3].decodeValue(),
                                 detail = parts[4].decodeValue(),
                             )
                         }
