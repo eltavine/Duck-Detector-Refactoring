@@ -147,10 +147,20 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
                 }
             }
 
-            if (lintBaseline.exists()) {
-                lint {
+            lint {
+                if (lintBaseline.exists()) {
                     baseline = lintBaseline
                 }
+
+                // Translations are contributed after the strings they cover, so a locale that has
+                // not caught up yet is a known state of this project rather than a defect. Keeping
+                // these reported but non-blocking is what lets every other lint error stay fatal and
+                // gate CI, instead of the whole check being switched off because of untranslated UI.
+                warning += setOf(
+                    "ImpliedQuantity",
+                    "MissingQuantity",
+                    "MissingTranslation",
+                )
             }
         }
 
