@@ -348,7 +348,7 @@ class VirtualizationCardModelMapper {
                         InstalledPackageVisibility.RESTRICTED -> "Scoped"
                         InstalledPackageVisibility.UNKNOWN -> "Unknown"
                     },
-                    status = if (report.packageVisibility == InstalledPackageVisibility.RESTRICTED) {
+                    status = if (report.packageVisibility != InstalledPackageVisibility.FULL) {
                         DetectorStatus.info(InfoKind.SUPPORT)
                     } else {
                         DetectorStatus.allClear()
@@ -510,7 +510,7 @@ class VirtualizationCardModelMapper {
                 !eglAvailable ||
                 !mountNamespaceAvailable ||
                 !syscallPackSupported ||
-                packageVisibility == InstalledPackageVisibility.RESTRICTED
+                packageVisibility != InstalledPackageVisibility.FULL
     }
 
     private fun placeholderRows(

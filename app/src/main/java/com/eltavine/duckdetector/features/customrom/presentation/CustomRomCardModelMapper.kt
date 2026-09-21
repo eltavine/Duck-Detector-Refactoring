@@ -141,11 +141,12 @@ class CustomRomCardModelMapper {
                     value = when {
                         report.runtimeSignalCount > 0 -> report.runtimeSignalCount.toString()
                         report.packageVisibility == CustomRomPackageVisibility.RESTRICTED -> "Scoped"
+                        report.packageVisibility == CustomRomPackageVisibility.UNKNOWN -> "Unavailable"
                         else -> "None"
                     },
                     status = when {
                         report.runtimeSignalCount > 0 -> DetectorStatus.warning()
-                        report.packageVisibility == CustomRomPackageVisibility.RESTRICTED -> DetectorStatus.info(
+                        report.packageVisibility != CustomRomPackageVisibility.FULL -> DetectorStatus.info(
                             InfoKind.SUPPORT
                         )
 
@@ -252,16 +253,22 @@ class CustomRomCardModelMapper {
                     add(
                         CustomRomDetailRowModel(
                             label = "Packages",
-                            value = if (report.packageVisibility == CustomRomPackageVisibility.RESTRICTED) "Scoped" else "Clean",
-                            status = if (report.packageVisibility == CustomRomPackageVisibility.RESTRICTED) {
+                            value = when (report.packageVisibility) {
+                                CustomRomPackageVisibility.FULL -> "Clean"
+                                CustomRomPackageVisibility.RESTRICTED -> "Scoped"
+                                CustomRomPackageVisibility.UNKNOWN -> "Unavailable"
+                            },
+                            status = if (report.packageVisibility != CustomRomPackageVisibility.FULL) {
                                 DetectorStatus.info(InfoKind.SUPPORT)
                             } else {
                                 DetectorStatus.allClear()
                             },
-                            detail = if (report.packageVisibility == CustomRomPackageVisibility.RESTRICTED) {
-                                "Package visibility looked restricted, so clean package results may under-report ROM apps."
-                            } else {
-                                null
+                            detail = when (report.packageVisibility) {
+                                CustomRomPackageVisibility.RESTRICTED ->
+                                    "Package visibility was restricted, so clean package results may under-report ROM apps."
+                                CustomRomPackageVisibility.UNKNOWN ->
+                                    "Package inventory was unavailable or anomalous, so package absence is inconclusive."
+                                CustomRomPackageVisibility.FULL -> null
                             },
                         ),
                     )
@@ -491,10 +498,14 @@ class CustomRomCardModelMapper {
                             ),
                         )
                     }
-                    if (report.packageVisibility == CustomRomPackageVisibility.RESTRICTED) {
+                    if (report.packageVisibility != CustomRomPackageVisibility.FULL) {
                         add(
                             CustomRomImpactItemModel(
-                                text = "Package visibility was scoped, so clean app-level evidence may be incomplete.",
+                                text = if (report.packageVisibility == CustomRomPackageVisibility.RESTRICTED) {
+                                    "Package visibility was scoped, so clean app-level evidence may be incomplete."
+                                } else {
+                                    "Package inventory was unavailable or anomalous, so app-level absence is inconclusive."
+                                },
                                 status = DetectorStatus.info(InfoKind.SUPPORT),
                             ),
                         )
@@ -696,7 +707,11 @@ class CustomRomCardModelMapper {
                 ),
                 CustomRomDetailRowModel(
                     label = "Package visibility",
-                    value = if (report.packageVisibility == CustomRomPackageVisibility.FULL) "Full" else "Scoped",
+                    value = when (report.packageVisibility) {
+                        CustomRomPackageVisibility.FULL -> "Full"
+                        CustomRomPackageVisibility.RESTRICTED -> "Scoped"
+                        CustomRomPackageVisibility.UNKNOWN -> "Unknown"
+                    },
                     status = if (report.packageVisibility == CustomRomPackageVisibility.FULL) {
                         DetectorStatus.allClear()
                     } else {
@@ -869,6 +884,6 @@ class CustomRomCardModelMapper {
         return !nativeAvailable ||
                 !propertyAreaAvailable ||
                 !symbolScanAvailable ||
-                packageVisibility == CustomRomPackageVisibility.RESTRICTED
+                packageVisibility != CustomRomPackageVisibility.FULL
     }
 }

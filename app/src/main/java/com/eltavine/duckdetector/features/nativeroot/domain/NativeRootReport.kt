@@ -121,6 +121,7 @@ data class NativeRootReport(
     val ksuManagerPackagePresent: Boolean = false,
     val ksuManagerTraitHitCount: Int = 0,
     val ksuManagerVisibilityRestricted: Boolean = false,
+    val ksuManagerVisibilityUnknown: Boolean = false,
     val tempRootDetected: Boolean = false,
     val tempRootCveExploitDetected: Boolean = false,
     val tempRootArtifactHitCount: Int = 0,

@@ -17,32 +17,83 @@
 package com.eltavine.duckdetector.core.packagevisibility
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 
+/** The visibility guarantee provided by PackageManager, not a guess based on list size. */
 enum class InstalledPackageVisibility {
     UNKNOWN,
     FULL,
     RESTRICTED,
 }
 
-object InstalledPackageVisibilityChecker {
+data class PackageVisibilityEnvironment(
+    val deviceSdk: Int,
+    val targetSdk: Int,
+    val queryAllPackagesRequested: Boolean,
+)
 
-    const val FULL_VISIBILITY_MINIMUM_COUNT = 10
-    const val SUSPICIOUSLY_LOW_VISIBLE_PACKAGE_COUNT = 60
+/**
+ * Pure policy for Android's package-visibility compatibility contract.
+ *
+ * Android 11 enables FILTER_APPLICATION_QUERY for callers targeting API 30 or newer. A caller
+ * that requests the normal QUERY_ALL_PACKAGES permission is exempt. Counts deliberately do not
+ * participate: automatically visible packages can make a filtered result arbitrarily large.
+ */
+object InstalledPackageVisibilityPolicy {
 
-    fun detect(
-        context: Context,
-        installedPackageCount: Int,
+    fun evaluate(
+        environment: PackageVisibilityEnvironment,
+        callerPackageObserved: Boolean,
     ): InstalledPackageVisibility {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+        // A successful PackageManager inventory must include the caller. Missing it means the
+        // observed response no longer satisfies the platform baseline, so absence claims are not
+        // defensible even if the manifest requests broad visibility.
+        if (!callerPackageObserved) {
+            return InstalledPackageVisibility.UNKNOWN
+        }
+        if (environment.deviceSdk < Build.VERSION_CODES.R ||
+            environment.targetSdk < Build.VERSION_CODES.R
+        ) {
             return InstalledPackageVisibility.FULL
         }
-        return if (installedPackageCount > FULL_VISIBILITY_MINIMUM_COUNT) {
+        return if (environment.queryAllPackagesRequested) {
             InstalledPackageVisibility.FULL
         } else {
             InstalledPackageVisibility.RESTRICTED
         }
+    }
+}
+
+object InstalledPackageInventoryAnomalyPolicy {
+
+    const val SUSPICIOUSLY_LOW_VISIBLE_PACKAGE_COUNT = 60
+
+    fun isSuspiciouslyLow(
+        visibility: InstalledPackageVisibility,
+        installedPackageCount: Int,
+        sdkInt: Int,
+    ): Boolean {
+        return sdkInt >= Build.VERSION_CODES.R &&
+                visibility == InstalledPackageVisibility.FULL &&
+                installedPackageCount < SUSPICIOUSLY_LOW_VISIBLE_PACKAGE_COUNT
+    }
+}
+
+/**
+ * Compatibility facade for callers that have not moved to [InstalledPackageInventoryReader].
+ *
+ * New code should consume the inventory result as one value. Keeping the old entry points avoids
+ * a source-level breaking change while internal callers migrate away from the former two-step
+ * `getInstalledPackages()` + `detect(count)` protocol, which could not distinguish query failure
+ * from a successful empty response.
+ */
+object InstalledPackageVisibilityChecker {
+
+    const val SUSPICIOUSLY_LOW_VISIBLE_PACKAGE_COUNT =
+        InstalledPackageInventoryAnomalyPolicy.SUSPICIOUSLY_LOW_VISIBLE_PACKAGE_COUNT
+
+    fun inspect(context: Context): InstalledPackageInventoryResult {
+        return AndroidInstalledPackageInventoryReader(context.applicationContext).read()
     }
 
     fun hasSuspiciouslyLowInventory(
@@ -50,24 +101,45 @@ object InstalledPackageVisibilityChecker {
         installedPackageCount: Int,
         sdkInt: Int = Build.VERSION.SDK_INT,
     ): Boolean {
-        if (sdkInt < Build.VERSION_CODES.R) {
-            return false
-        }
-        return visibility == InstalledPackageVisibility.FULL &&
-                installedPackageCount < SUSPICIOUSLY_LOW_VISIBLE_PACKAGE_COUNT
+        return InstalledPackageInventoryAnomalyPolicy.isSuspiciouslyLow(
+            visibility = visibility,
+            installedPackageCount = installedPackageCount,
+            sdkInt = sdkInt,
+        )
     }
 
-    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Read InstalledPackageInventoryResult so query failure remains explicit.",
+        replaceWith = ReplaceWith("InstalledPackageVisibilityChecker.inspect(context)"),
+    )
     fun getInstalledPackages(context: Context): Set<String> {
-        return runCatching {
-            val applications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getInstalledApplications(
-                    PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()),
-                )
-            } else {
-                context.packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            }
-            applications.mapTo(linkedSetOf()) { it.packageName }
-        }.getOrDefault(emptySet())
+        return when (val result = inspect(context)) {
+            is InstalledPackageInventoryResult.Available -> result.inventory.packageNames
+            is InstalledPackageInventoryResult.Unavailable -> emptySet()
+        }
+    }
+
+    @Deprecated(
+        message = "Visibility cannot be derived safely from a count; inspect the inventory.",
+        replaceWith = ReplaceWith("InstalledPackageVisibilityChecker.inspect(context)"),
+    )
+    fun detect(
+        context: Context,
+        installedPackageCount: Int,
+    ): InstalledPackageVisibility {
+        return resolveVisibility(
+            inventoryHasCaller = installedPackageCount > 0,
+            environment = AndroidPackageVisibilityEnvironmentProvider(context).read(),
+        )
+    }
+
+    internal fun resolveVisibility(
+        inventoryHasCaller: Boolean,
+        environment: PackageVisibilityEnvironment,
+    ): InstalledPackageVisibility {
+        return InstalledPackageVisibilityPolicy.evaluate(
+            environment = environment,
+            callerPackageObserved = inventoryHasCaller,
+        )
     }
 }

@@ -177,6 +177,8 @@ limitations under the License.
     <string name="startup_package_continue_anyway">ดำเนินการต่ออยู่ดี</string>
     <string name="startup_package_ack_headline">รับทราบการมองเห็น PackageManager ที่ถูกจำกัดแล้ว</string>
     <string name="startup_package_ack_detail">จำนวนแพ็กเกจที่มองเห็นได้ในขณะนี้: %1$d รายการ ผลลัพธ์ของ Dangerous Apps อาจมีความระมัดระวังมากขึ้นภายใต้ขอบเขตรายการนี้</string>
+    <string name="startup_package_unavailable_headline">ไม่สามารถตรวจสอบรายการ PackageManager ได้</string>
+    <string name="startup_package_unavailable_detail">การค้นหารายการล้มเหลวหรือไม่พบแอปนี้ในรายการ ผลลัพธ์ที่ระบุว่าไม่พบแพ็กเกจจะถือว่ายังสรุปไม่ได้</string>
     <string name="startup_package_low_inventory_headline">PackageManager ดูเหมือนครบ แต่จำนวนรายการที่มองเห็นได้กลับน้อยผิดปกติ</string>
     <string name="startup_package_low_inventory_detail">จำนวนแพ็กเกจที่มองเห็นได้ในขณะนี้: %1$d รายการ การเริ่มต้นจะดำเนินต่อไป แต่ Dangerous Apps จะตรวจทบทวนสภาวะรายการต่ำนี้เป็นหลักฐานของการกรองที่อาจเกิดขึ้น</string>
     <string name="startup_package_ready_headline">รายการ PackageManager ดูครบถ้วน</string>

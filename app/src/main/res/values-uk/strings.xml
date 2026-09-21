@@ -193,6 +193,8 @@ limitations under the License.
     <string name="startup_package_continue_anyway">Продовжити у будь-якому випадку</string>
     <string name="startup_package_ack_headline">Обмежена видимість PackageManager підтверджена.</string>
     <string name="startup_package_ack_detail">Поточна кількість видимих пакетів: %1$d. Висновки щодо небезпечних програм можуть бути неповними в межах цього обсягу інвентарю.</string>
+    <string name="startup_package_unavailable_headline">Не вдалося перевірити інвентар PackageManager.</string>
+    <string name="startup_package_unavailable_detail">Запит інвентарю завершився помилкою або не містив цієї програми. Відсутність пакета в результатах вважатиметься непереконливою.</string>
     <string name="startup_package_low_inventory_headline">PackageManager виглядає повним, але видимий інвентар незвично малий.</string>
     <string name="startup_package_low_inventory_detail">Поточна кількість видимих пакетів: %1$d. Запуск продовжиться, але детектор небезпечних програм розгляне цю умову як потенційний доказ фільтрації.</string>
     <string name="startup_package_ready_headline">Інвентар PackageManager виглядає повним.</string>

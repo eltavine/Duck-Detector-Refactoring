@@ -177,6 +177,8 @@ limitations under the License.
     <string name="startup_package_continue_anyway">Vẫn tiếp tục</string>
     <string name="startup_package_ack_headline">Đã xác nhận khả năng hiển thị PackageManager bị hạn chế.</string>
     <string name="startup_package_ack_detail">Số gói hiện đang hiển thị: %1$d. Kết quả Dangerous Apps có thể sẽ thận trọng hơn trong phạm vi danh mục này.</string>
+    <string name="startup_package_unavailable_headline">Không thể xác minh danh mục PackageManager.</string>
+    <string name="startup_package_unavailable_detail">Truy vấn danh mục thất bại hoặc không bao gồm ứng dụng này. Kết quả không tìm thấy gói sẽ được xem là chưa thể kết luận.</string>
     <string name="startup_package_low_inventory_headline">PackageManager có vẻ đầy đủ nhưng danh mục hiển thị lại nhỏ bất thường.</string>
     <string name="startup_package_low_inventory_detail">Số gói hiện đang hiển thị: %1$d. Quá trình khởi động vẫn tiếp tục, nhưng Dangerous Apps sẽ xem tình trạng danh mục thấp này như bằng chứng lọc tiềm năng.</string>
     <string name="startup_package_ready_headline">Danh mục PackageManager có vẻ đầy đủ.</string>

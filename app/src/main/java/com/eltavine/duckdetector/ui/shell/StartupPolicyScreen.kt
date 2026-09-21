@@ -592,6 +592,16 @@ private fun packageManagerPolicyCard(
             requiresAction = false,
         )
 
+        packageVisibilityState.visibility == InstalledPackageVisibility.UNKNOWN -> StartupPolicyCardUi(
+            icon = Icons.Rounded.Inventory2,
+            title = stringResource(R.string.startup_package_manager_title),
+            statusLabel = stringResource(R.string.startup_status_unsupported),
+            headline = stringResource(R.string.startup_package_unavailable_headline),
+            detail = stringResource(R.string.startup_package_unavailable_detail),
+            tone = StartupPolicyTone.SUPPORT,
+            requiresAction = false,
+        )
+
         packageVisibilityState.suspiciouslyLowInventory -> StartupPolicyCardUi(
             icon = Icons.Rounded.Inventory2,
             title = stringResource(R.string.startup_package_manager_title),

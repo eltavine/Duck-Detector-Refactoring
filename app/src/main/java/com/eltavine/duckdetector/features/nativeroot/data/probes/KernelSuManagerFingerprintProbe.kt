@@ -22,8 +22,10 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
+import com.eltavine.duckdetector.core.packagevisibility.AndroidInstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryResult
 import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageVisibility
-import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageVisibilityChecker
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFinding
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFindingSeverity
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootGroup
@@ -50,6 +52,9 @@ data class KernelSuManagerFingerprintProbeResult(
 ) {
     val visibilityRestricted: Boolean
         get() = packageVisibility == InstalledPackageVisibility.RESTRICTED
+
+    val visibilityUnknown: Boolean
+        get() = packageVisibility == InstalledPackageVisibility.UNKNOWN
 }
 
 internal data class KernelSuManagerManifestSnapshot(
@@ -62,6 +67,7 @@ internal data class KernelSuManagerManifestSnapshot(
 
 class KernelSuManagerFingerprintProbe(
     private val context: Context? = null,
+    private val packageInventoryReader: InstalledPackageInventoryReader? = null,
 ) {
 
     fun run(): KernelSuManagerFingerprintProbeResult {
@@ -75,11 +81,12 @@ class KernelSuManagerFingerprintProbe(
                 detail = "Context unavailable.",
             )
 
-        val visiblePackages = InstalledPackageVisibilityChecker.getInstalledPackages(appContext)
-        val visibility = InstalledPackageVisibilityChecker.detect(
-            context = appContext,
-            installedPackageCount = visiblePackages.size,
-        )
+        val inventoryResult = (packageInventoryReader
+            ?: AndroidInstalledPackageInventoryReader(appContext)).read()
+        val visibility = (inventoryResult as? InstalledPackageInventoryResult.Available)
+            ?.inventory
+            ?.visibility
+            ?: InstalledPackageVisibility.UNKNOWN
         val snapshot = loadPackageSnapshot(appContext.packageManager)
             ?: return KernelSuManagerFingerprintProbeResult(
                 available = true,
@@ -87,10 +94,13 @@ class KernelSuManagerFingerprintProbe(
                 packagePresent = false,
                 traitHitCount = 0,
                 findings = emptyList(),
-                detail = if (visibility == InstalledPackageVisibility.RESTRICTED) {
-                    "PackageManager visibility is restricted, so known KernelSU manager packages may be hidden."
-                } else {
-                    "Known KernelSU manager packages were not visible."
+                detail = when (visibility) {
+                    InstalledPackageVisibility.RESTRICTED ->
+                        "PackageManager visibility is restricted, so known KernelSU manager packages may be hidden."
+                    InstalledPackageVisibility.UNKNOWN ->
+                        "PackageManager inventory was unavailable or anomalous, so package absence is inconclusive."
+                    InstalledPackageVisibility.FULL ->
+                        "Known KernelSU manager packages were not visible."
                 },
             )
 

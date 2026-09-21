@@ -17,9 +17,12 @@
 package com.eltavine.duckdetector.features.customrom.data.repository
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
+import com.eltavine.duckdetector.core.packagevisibility.AndroidInstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryResult
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageVisibility
 import com.eltavine.duckdetector.features.customrom.data.native.CustomRomNativeBridge
 import com.eltavine.duckdetector.features.customrom.data.rules.CustomRomCatalog
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomFinding
@@ -35,6 +38,8 @@ import kotlinx.coroutines.withContext
 
 class CustomRomRepository(
     private val context: Context,
+    private val packageInventoryReader: InstalledPackageInventoryReader =
+        AndroidInstalledPackageInventoryReader(context.applicationContext),
     private val nativeBridge: CustomRomNativeBridge = CustomRomNativeBridge(),
     private val fileExists: (String) -> Boolean = { path -> File(path).exists() },
     private val propertyReader: CustomRomPropertyReader = DefaultCustomRomPropertyReader(),
@@ -53,8 +58,12 @@ class CustomRomRepository(
         val isPixel = isPixelDevice()
         val propertyFindings = detectPropertyFindings(isPixel)
         val buildFindings = detectBuildFindings(isPixel)
-        val installedPackages = getInstalledPackages()
-        val packageVisibility = detectPackageVisibility(installedPackages.size)
+        val packageInventory = packageInventoryReader.read()
+        val installedPackages = (packageInventory as? InstalledPackageInventoryResult.Available)
+            ?.inventory
+            ?.packageNames
+            .orEmpty()
+        val packageVisibility = packageInventory.toCustomRomVisibility()
         val packageFindings = detectPackageFindings(installedPackages, isPixel)
         val (serviceFindings, listedServiceCount) = detectServiceFindings(isPixel)
         val reflectionFindings = detectReflectionFindings(isPixel)
@@ -365,11 +374,12 @@ class CustomRomRepository(
                 summary = when {
                     packageFindings.isNotEmpty() -> "${packageFindings.size} package(s)"
                     packageVisibility == CustomRomPackageVisibility.RESTRICTED -> "Scoped"
+                    packageVisibility == CustomRomPackageVisibility.UNKNOWN -> "Unavailable"
                     else -> "Clean"
                 },
                 outcome = when {
                     packageFindings.isNotEmpty() -> CustomRomMethodOutcome.DETECTED
-                    packageVisibility == CustomRomPackageVisibility.RESTRICTED -> CustomRomMethodOutcome.SUPPORT
+                    packageVisibility != CustomRomPackageVisibility.FULL -> CustomRomMethodOutcome.SUPPORT
                     else -> CustomRomMethodOutcome.CLEAN
                 },
                 detail = when {
@@ -379,6 +389,9 @@ class CustomRomRepository(
 
                     packageVisibility == CustomRomPackageVisibility.RESTRICTED ->
                         "PackageManager visibility looked restricted on this device profile."
+
+                    packageVisibility == CustomRomPackageVisibility.UNKNOWN ->
+                        "PackageManager inventory was unavailable or failed its caller-package baseline."
 
                     else -> null
                 },
@@ -573,30 +586,15 @@ class CustomRomRepository(
                 Build.MODEL.startsWith("Pixel", ignoreCase = true)
     }
 
-    @Suppress("DEPRECATION")
-    private fun getInstalledPackages(): Set<String> {
-        return runCatching {
-            val applications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getInstalledApplications(
-                    PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()),
-                )
-            } else {
-                context.packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            }
-            applications.mapTo(linkedSetOf()) { it.packageName }
-        }.getOrDefault(emptySet())
-    }
-
-    private fun detectPackageVisibility(
-        installedPackageCount: Int,
-    ): CustomRomPackageVisibility {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return CustomRomPackageVisibility.FULL
-        }
-        return if (installedPackageCount > 10) {
-            CustomRomPackageVisibility.FULL
-        } else {
-            CustomRomPackageVisibility.RESTRICTED
+    private fun InstalledPackageInventoryResult.toCustomRomVisibility(): CustomRomPackageVisibility {
+        val visibility = (this as? InstalledPackageInventoryResult.Available)
+            ?.inventory
+            ?.visibility
+            ?: InstalledPackageVisibility.UNKNOWN
+        return when (visibility) {
+            InstalledPackageVisibility.UNKNOWN -> CustomRomPackageVisibility.UNKNOWN
+            InstalledPackageVisibility.FULL -> CustomRomPackageVisibility.FULL
+            InstalledPackageVisibility.RESTRICTED -> CustomRomPackageVisibility.RESTRICTED
         }
     }
 }

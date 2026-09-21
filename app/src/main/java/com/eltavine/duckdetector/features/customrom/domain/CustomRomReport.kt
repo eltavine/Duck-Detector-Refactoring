@@ -23,6 +23,7 @@ enum class CustomRomStage {
 }
 
 enum class CustomRomPackageVisibility {
+    UNKNOWN,
     FULL,
     RESTRICTED,
 }
@@ -106,7 +107,7 @@ data class CustomRomReport(
         fun loading(): CustomRomReport {
             return CustomRomReport(
                 stage = CustomRomStage.LOADING,
-                packageVisibility = CustomRomPackageVisibility.RESTRICTED,
+                packageVisibility = CustomRomPackageVisibility.UNKNOWN,
                 detectedRoms = emptyList(),
                 propertyFindings = emptyList(),
                 buildFindings = emptyList(),
@@ -136,7 +137,7 @@ data class CustomRomReport(
         fun failed(message: String): CustomRomReport {
             return CustomRomReport(
                 stage = CustomRomStage.FAILED,
-                packageVisibility = CustomRomPackageVisibility.RESTRICTED,
+                packageVisibility = CustomRomPackageVisibility.UNKNOWN,
                 detectedRoms = emptyList(),
                 propertyFindings = emptyList(),
                 buildFindings = emptyList(),

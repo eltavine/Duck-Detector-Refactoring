@@ -184,6 +184,8 @@ limitations under the License.
     <string name="startup_package_continue_anyway">المتابعة على أي حال</string>
     <string name="startup_package_ack_headline">تم الإقرار بتقييد رؤية PackageManager.</string>
     <string name="startup_package_ack_detail">عدد الحزم المرئية الحالي: %1$d. قد تكون نتائج التطبيقات الخطرة أكثر تحفظًا ضمن هذا النطاق.</string>
+    <string name="startup_package_unavailable_headline">تعذّر التحقق من قائمة PackageManager.</string>
+    <string name="startup_package_unavailable_detail">فشل استعلام القائمة أو لم يتضمن هذا التطبيق. ستُعامل نتائج عدم العثور المعتمدة على الحزم على أنها غير حاسمة.</string>
     <string name="startup_package_low_inventory_headline">يبدو PackageManager كاملًا لكن الفهرس المرئي صغير بشكل غير معتاد.</string>
     <string name="startup_package_low_inventory_detail">عدد الحزم المرئية الحالي: %1$d. ستستمر عملية البدء، لكن التطبيقات الخطرة ستراجع هذا الانخفاض في الفهرس كدليل محتمل على التصفية.</string>
     <string name="startup_package_ready_headline">يبدو فهرس PackageManager كاملًا.</string>

@@ -84,6 +84,7 @@ class DangerousAppsCardModelMapper {
                 report.suspiciousSharedStorageDenied -> "Shared storage baseline denied"
                 report.suspiciousLowPmInventory -> "Package inventory unusually small"
                 report.packageVisibility == DangerousPackageVisibility.RESTRICTED -> "Inventory visibility limited"
+                report.packageVisibility == DangerousPackageVisibility.UNKNOWN -> "Package inventory unavailable"
                 else -> "No known risky packages"
             }
         }
@@ -125,6 +126,10 @@ class DangerousAppsCardModelMapper {
 
                 report.packageVisibility == DangerousPackageVisibility.RESTRICTED ->
                     "createPackageContext + ZipFile, open APK descriptor, and storage-side probes still ran, but a clean result may under-report installed tools when PackageManager visibility is scoped."
+
+                report.packageVisibility == DangerousPackageVisibility.UNKNOWN ->
+                    report.issues.firstOrNull()
+                        ?: "PackageManager inventory was unavailable or anomalous, so package absence is inconclusive."
 
                 else ->
                     "PackageManager, createPackageContext + ZipFile, open APK descriptors, storage, loopback, IPC, accessibility, and native package-path probes did not surface known high-risk tools."
@@ -274,6 +279,10 @@ class DangerousAppsCardModelMapper {
                 suspiciousLowPmInventory -> DetectorStatus.warning()
                 packageVisibility == DangerousPackageVisibility.RESTRICTED -> DetectorStatus.info(
                     InfoKind.ERROR
+                )
+
+                packageVisibility == DangerousPackageVisibility.UNKNOWN -> DetectorStatus.info(
+                    InfoKind.SUPPORT
                 )
 
                 else -> DetectorStatus.allClear()

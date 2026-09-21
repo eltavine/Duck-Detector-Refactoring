@@ -182,6 +182,8 @@ limitations under the License.
     <string name="startup_package_continue_anyway">仍然继续</string>
     <string name="startup_package_ack_headline">已确认受限的 PackageManager 可见性。</string>
     <string name="startup_package_ack_detail">当前可见软件包数量：%1$d。在这种清单范围下，Dangerous Apps 的结果可能会更保守。</string>
+    <string name="startup_package_unavailable_headline">无法验证 PackageManager 清单。</string>
+    <string name="startup_package_unavailable_detail">清单查询失败或结果中未包含本应用。基于软件包缺失得出的结果将视为无法确定。</string>
     <string name="startup_package_low_inventory_headline">PackageManager 看起来完整，但可见清单异常偏少。</string>
     <string name="startup_package_low_inventory_detail">当前可见软件包数量：%1$d。启动将继续，但 Dangerous Apps 会将这种低清单状态作为潜在过滤证据进行审查。</string>
     <string name="startup_package_ready_headline">PackageManager 清单看起来完整。</string>

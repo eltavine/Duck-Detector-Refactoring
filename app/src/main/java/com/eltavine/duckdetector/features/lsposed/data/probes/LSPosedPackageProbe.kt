@@ -17,9 +17,11 @@
 package com.eltavine.duckdetector.features.lsposed.data.probes
 
 import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
-import android.os.Build
+import com.eltavine.duckdetector.core.packagevisibility.AndroidInstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledApplicationQueryOptions
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryResult
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageVisibility
 import com.eltavine.duckdetector.features.lsposed.domain.LSPosedPackageVisibility
 import com.eltavine.duckdetector.features.lsposed.domain.LSPosedSignal
 import com.eltavine.duckdetector.features.lsposed.domain.LSPosedSignalGroup
@@ -32,26 +34,31 @@ data class LSPosedPackageProbeResult(
     val packageVisibility: LSPosedPackageVisibility,
 )
 
-class LSPosedPackageProbe {
+class LSPosedPackageProbe(
+    private val inventoryReaderFactory: (Context) -> InstalledPackageInventoryReader = { context ->
+        AndroidInstalledPackageInventoryReader(
+            context = context,
+            queryOptions = InstalledApplicationQueryOptions(
+                includeMetadata = true,
+                resolveLabelsForMetadataKeys = XPOSED_METADATA_KEYS.toSet(),
+            ),
+        )
+    },
+) {
 
-    @Suppress("DEPRECATION")
     fun run(context: Context): LSPosedPackageProbeResult {
-        val packageManager = context.packageManager
-        val installedApps = runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.getInstalledApplications(
-                    PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()),
-                )
-            } else {
-                packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            }
-        }.getOrDefault(emptyList())
+        return evaluate(inventoryReaderFactory(context.applicationContext).read())
+    }
 
-        val packageVisibility = when {
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.R -> LSPosedPackageVisibility.FULL
-            installedApps.isEmpty() -> LSPosedPackageVisibility.UNKNOWN
-            installedApps.size > 10 -> LSPosedPackageVisibility.FULL
-            else -> LSPosedPackageVisibility.RESTRICTED
+    internal fun evaluate(
+        inventoryResult: InstalledPackageInventoryResult,
+    ): LSPosedPackageProbeResult {
+        val inventory = (inventoryResult as? InstalledPackageInventoryResult.Available)?.inventory
+        val installedApps = inventory?.applications.orEmpty()
+        val packageVisibility = when (inventory?.visibility ?: InstalledPackageVisibility.UNKNOWN) {
+            InstalledPackageVisibility.FULL -> LSPosedPackageVisibility.FULL
+            InstalledPackageVisibility.RESTRICTED -> LSPosedPackageVisibility.RESTRICTED
+            InstalledPackageVisibility.UNKNOWN -> LSPosedPackageVisibility.UNKNOWN
         }
 
         val signals = mutableListOf<LSPosedSignal>()
@@ -72,14 +79,13 @@ class LSPosedPackageProbe {
         }
 
         val moduleSignals = installedApps.mapNotNull { appInfo ->
-            val metaData = appInfo.metaData ?: return@mapNotNull null
-            val keys = XPOSED_METADATA_KEYS.filter { metaData.containsKey(it) }
+            val keys = XPOSED_METADATA_KEYS.filter { it in appInfo.metadataKeys }
             if (keys.isEmpty()) {
                 return@mapNotNull null
             }
             LSPosedSignal(
                 id = "module_${appInfo.packageName.replace('.', '_')}",
-                label = appLabel(packageManager, appInfo),
+                label = appInfo.label,
                 value = "Module",
                 group = LSPosedSignalGroup.PACKAGES,
                 severity = LSPosedSignalSeverity.WARNING,
@@ -99,15 +105,6 @@ class LSPosedPackageProbe {
             moduleAppCount = moduleSignals.size,
             packageVisibility = packageVisibility,
         )
-    }
-
-    private fun appLabel(
-        packageManager: PackageManager,
-        appInfo: ApplicationInfo,
-    ): String {
-        return runCatching {
-            packageManager.getApplicationLabel(appInfo).toString()
-        }.getOrDefault(appInfo.packageName)
     }
 
     private companion object {

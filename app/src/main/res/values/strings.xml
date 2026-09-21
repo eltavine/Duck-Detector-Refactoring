@@ -194,6 +194,8 @@ limitations under the License.
     <string name="startup_package_continue_anyway">Continue anyway</string>
     <string name="startup_package_ack_headline">Restricted PackageManager visibility was acknowledged.</string>
     <string name="startup_package_ack_detail">Current visible package count: %1$d. Dangerous Apps findings may be conservative under this inventory scope.</string>
+    <string name="startup_package_unavailable_headline">PackageManager inventory could not be verified.</string>
+    <string name="startup_package_unavailable_detail">The inventory query failed or did not include this app. Package-based absence results will be treated as inconclusive.</string>
     <string name="startup_package_low_inventory_headline">PackageManager looks full but the visible inventory is unusually small.</string>
     <string name="startup_package_low_inventory_detail">Current visible package count: %1$d. Startup will continue, but Dangerous Apps will review this low-inventory condition as potential filtering evidence.</string>
     <string name="startup_package_ready_headline">PackageManager inventory looks full.</string>

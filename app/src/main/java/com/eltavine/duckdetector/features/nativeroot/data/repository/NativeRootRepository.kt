@@ -145,6 +145,7 @@ class NativeRootRepository(
             ksuManagerPackagePresent = managerFingerprintResult.packagePresent,
             ksuManagerTraitHitCount = managerFingerprintResult.traitHitCount,
             ksuManagerVisibilityRestricted = managerFingerprintResult.visibilityRestricted,
+            ksuManagerVisibilityUnknown = managerFingerprintResult.visibilityUnknown,
             tempRootDetected = tempRootArtifactResult.tempRootDetected,
             tempRootCveExploitDetected = tempRootArtifactResult.cveExploitDetected,
             tempRootArtifactHitCount = tempRootArtifactResult.hitCount,
@@ -392,12 +393,14 @@ class NativeRootRepository(
 
                     managerFingerprintResult.packagePresent -> "Present"
                     managerFingerprintResult.visibilityRestricted -> "Scoped"
+                    managerFingerprintResult.visibilityUnknown -> "Unavailable"
                     managerFingerprintResult.available -> "Clean"
                     else -> "Unavailable"
                 },
                 outcome = when {
                     managerFingerprintResult.packagePresent -> NativeRootMethodOutcome.WARNING
-                    managerFingerprintResult.visibilityRestricted -> NativeRootMethodOutcome.SUPPORT
+                    managerFingerprintResult.visibilityRestricted || managerFingerprintResult.visibilityUnknown ->
+                        NativeRootMethodOutcome.SUPPORT
                     managerFingerprintResult.available -> NativeRootMethodOutcome.CLEAN
                     else -> NativeRootMethodOutcome.SUPPORT
                 },

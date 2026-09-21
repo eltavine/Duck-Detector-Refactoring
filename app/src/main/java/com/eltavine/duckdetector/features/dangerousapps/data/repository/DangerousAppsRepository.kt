@@ -26,6 +26,8 @@ import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
 import android.text.TextUtils
+import com.eltavine.duckdetector.core.packagevisibility.AndroidInstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryReader
 import com.eltavine.duckdetector.features.dangerousapps.data.native.DangerousAppsNativeBridge
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.CreatePackageContextZipProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.OpenApkFdPackageProbe
@@ -47,6 +49,8 @@ import kotlinx.coroutines.withContext
 
 class DangerousAppsRepository(
     private val context: Context,
+    private val packageInventoryReader: InstalledPackageInventoryReader =
+        AndroidInstalledPackageInventoryReader(context.applicationContext),
     private val nativeBridge: DangerousAppsNativeBridge = DangerousAppsNativeBridge(),
     private val createPackageContextZipProbe: CreatePackageContextZipProbe =
         CreatePackageContextZipProbe(context),
@@ -70,18 +74,17 @@ class DangerousAppsRepository(
         val detectedApps = linkedMapOf<String, MutableFinding>()
         val issues = mutableListOf<String>()
 
-        val installedPackages = PackageVisibilityChecker.getInstalledPackages(context)
+        val packageInventory = PackageVisibilityChecker.inspect(packageInventoryReader)
+        val installedPackages = packageInventory.packageNames
         val packageManagerVisibleCount = installedPackages.size
-        val packageVisibility = PackageVisibilityChecker.detect(context, packageManagerVisibleCount)
-        val suspiciousLowPmInventory = PackageVisibilityChecker.hasSuspiciouslyLowInventory(
-            packageVisibility = packageVisibility,
-            installedPackageCount = packageManagerVisibleCount,
-        )
+        val packageVisibility = packageInventory.visibility
+        val suspiciousLowPmInventory = packageInventory.suspiciouslyLow
         val suspiciousSharedStorageDenied = detectSharedStorageBaselineDenied()
 
         if (packageVisibility == DangerousPackageVisibility.RESTRICTED) {
             issues += "PackageManager visibility is restricted on this device profile."
         }
+        packageInventory.issue?.let(issues::add)
         if (suspiciousLowPmInventory) {
             issues += "PackageManager returned only $packageManagerVisibleCount visible packages despite a full inventory result. This can happen under HMA-style whitelist filtering."
         }

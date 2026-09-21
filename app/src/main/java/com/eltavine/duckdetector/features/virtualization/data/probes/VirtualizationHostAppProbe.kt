@@ -17,8 +17,10 @@
 package com.eltavine.duckdetector.features.virtualization.data.probes
 
 import android.content.Context
+import com.eltavine.duckdetector.core.packagevisibility.AndroidInstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryReader
+import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageInventoryResult
 import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageVisibility
-import com.eltavine.duckdetector.core.packagevisibility.InstalledPackageVisibilityChecker
 import com.eltavine.duckdetector.features.dangerousapps.data.native.DangerousAppsNativeBridge
 import com.eltavine.duckdetector.features.virtualization.data.rules.VirtualizationHostAppTarget
 import com.eltavine.duckdetector.features.virtualization.data.rules.VirtualizationHostAppsCatalog
@@ -52,6 +54,7 @@ data class VirtualizationHostAppProbeResult(
 open class VirtualizationHostAppProbe(
     private val context: Context? = null,
     private val nativeBridge: DangerousAppsNativeBridge = DangerousAppsNativeBridge(),
+    private val packageInventoryReader: InstalledPackageInventoryReader? = null,
 ) {
 
     open fun probe(): VirtualizationHostAppProbeResult {
@@ -62,11 +65,11 @@ open class VirtualizationHostAppProbe(
         )
 
         val detected = linkedMapOf<String, MutableSet<VirtualizationHostDetectionMethod>>()
-        val installedPackages = InstalledPackageVisibilityChecker.getInstalledPackages(appContext)
-        val packageVisibility = InstalledPackageVisibilityChecker.detect(
-            appContext,
-            installedPackages.size,
-        )
+        val inventoryResult = (packageInventoryReader
+            ?: AndroidInstalledPackageInventoryReader(appContext)).read()
+        val inventory = (inventoryResult as? InstalledPackageInventoryResult.Available)?.inventory
+        val installedPackages = inventory?.packageNames.orEmpty()
+        val packageVisibility = inventory?.visibility ?: InstalledPackageVisibility.UNKNOWN
 
         if (packageVisibility == InstalledPackageVisibility.FULL) {
             VirtualizationHostAppsCatalog.targets.forEach { target ->
@@ -118,6 +121,11 @@ open class VirtualizationHostAppProbe(
         val issues = buildList {
             if (packageVisibility == InstalledPackageVisibility.RESTRICTED) {
                 add("PackageManager visibility is restricted on this device profile.")
+            }
+            if (inventoryResult is InstalledPackageInventoryResult.Unavailable) {
+                add("PackageManager inventory unavailable: ${inventoryResult.failure.detail}")
+            } else if (packageVisibility == InstalledPackageVisibility.UNKNOWN) {
+                add("PackageManager inventory did not include this app, so the result is not trustworthy.")
             }
         }
 
