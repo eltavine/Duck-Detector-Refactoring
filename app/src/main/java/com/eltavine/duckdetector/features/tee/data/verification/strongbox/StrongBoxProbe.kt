@@ -71,13 +71,20 @@ class StrongBoxBehaviorProbeSuite(
             warnings += "StrongBox accepted RSA-4096, which is atypical for current hardware-backed implementations."
         }
         val p521Acceptance = testP521Support()
+        // These two thresholds are tripwires, not spec violations. CDD 9.11 states no latency or
+        // throughput target for StrongBox: C-1-3 through C-1-11 require a discrete CPU, a clock
+        // accurate to +-10%, a TRNG and tamper resistance, and C-1-8 requires resistance to timing
+        // side channels, so timing is a hardened property rather than a specified one. The Keystore
+        // documentation only says StrongBox "is slower, more resource-constrained, and supports
+        // fewer concurrent operations", which is qualitative. Both notes therefore stay
+        // informational and carry the measurement so a reader can judge it.
         val signingMicros = measureSigningMicros(keyStore)
-        if (signingMicros != null && signingMicros < 2_000) {
-            warnings += "StrongBox signing returned in under 2 ms."
+        if (signingMicros != null && signingMicros < SIGNING_TRIPWIRE_MICROS) {
+            warnings += "StrongBox signing returned in ${signingMicros}us, under the ${SIGNING_TRIPWIRE_MICROS}us this probe expects of a discrete secure element."
         }
         val keygenMillis = keyInfoResult.keyGenerationMillis
-        if (keygenMillis != null && keygenMillis < 20) {
-            warnings += "StrongBox key generation completed in under 20 ms."
+        if (keygenMillis != null && keygenMillis < KEYGEN_TRIPWIRE_MILLIS) {
+            warnings += "StrongBox key generation completed in ${keygenMillis}ms, under the ${KEYGEN_TRIPWIRE_MILLIS}ms this probe expects of a discrete secure element."
         }
         // Recorded, not scored: see ConcurrentSigningHandleObservation for why the number of
         // handles this app can hold is not a property of StrongBox.
@@ -376,6 +383,16 @@ internal fun classifyStrongBoxAcceptance(failure: Throwable?): StrongBoxAcceptan
  */
 private const val CONCURRENT_HANDLE_PROBE_CEILING = 24
 
+/**
+ * Signing faster than this is treated as worth noting rather than as a deviation, because no
+ * authoritative source specifies StrongBox latency. The measurement spans initSign through sign, so
+ * it includes the Binder round trips to keystore2 and the HAL, not secure-element compute alone.
+ */
+private const val SIGNING_TRIPWIRE_MICROS = 2_000
+
+/** Key generation counterpart to [SIGNING_TRIPWIRE_MICROS], and heuristic for the same reason. */
+private const val KEYGEN_TRIPWIRE_MILLIS = 20
+
 /** Why [observeConcurrentSigningHandles] stopped where it did. */
 enum class ConcurrentHandleStop {
     /**
@@ -549,6 +566,11 @@ data class StrongBoxBehaviorResult(
      */
     val concurrentHandles: ConcurrentSigningHandleObservation = ConcurrentSigningHandleObservation(),
 ) {
+    /**
+     * Only [hardFailures] count. [warnings] are informational notes such as an unusually fast
+     * signature, which no authoritative source makes a deviation, and the report reducer already
+     * surfaces them at INFO; letting them raise suspicion here would contradict that reading.
+     */
     val suspicious: Boolean
-        get() = hardFailures.isNotEmpty() || warnings.isNotEmpty()
+        get() = hardFailures.isNotEmpty()
 }

@@ -2335,13 +2335,15 @@ class TeeReportReducer(
     }
 
     private fun strongBoxValue(artifacts: TeeScanArtifacts): String {
-        return when {
-            artifacts.strongBox.hardFailures.isNotEmpty() -> artifacts.strongBox.hardFailures.first()
-            artifacts.strongBox.warnings.isNotEmpty() -> artifacts.strongBox.warnings.first()
-            !artifacts.strongBox.requested && !artifacts.strongBox.advertised -> "Not advertised"
-            artifacts.strongBox.available -> buildString {
+        val strongBox = artifacts.strongBox
+        if (strongBox.hardFailures.isNotEmpty()) {
+            return strongBox.hardFailures.first()
+        }
+        val state = when {
+            !strongBox.requested && !strongBox.advertised -> "Not advertised"
+            strongBox.available -> buildString {
                 append("Available")
-                artifacts.strongBox.keyInfoLevel?.let {
+                strongBox.keyInfoLevel?.let {
                     append(" • ")
                     append(it)
                 }
@@ -2350,15 +2352,24 @@ class TeeReportReducer(
             // "Not confirmed" covers both a key that came back without StrongBox backing and a probe
             // that never got an answer. Only the first is evidence about the device, so name the
             // reason whenever the probe recorded one.
-            artifacts.strongBox.requested -> buildString {
+            strongBox.requested -> buildString {
                 append("Not confirmed")
-                artifacts.strongBox.keyInfoUnavailableDetail.takeIf(String::isNotBlank)?.let {
+                strongBox.keyInfoUnavailableDetail.takeIf(String::isNotBlank)?.let {
                     append(" • ")
                     append(it)
                 }
             }
 
             else -> "Skipped"
+        }
+        // Warnings follow the state instead of replacing it. They are INFO-level notes here, and a
+        // working StrongBox that signed quickly is still a working StrongBox, so leading with the
+        // note used to hide both availability and the reported key level. All of them are kept
+        // because showing only the first dropped the rest.
+        return if (strongBox.warnings.isEmpty()) {
+            state
+        } else {
+            (listOf(state) + strongBox.warnings).joinToString(" • ")
         }
     }
 
