@@ -180,6 +180,33 @@ class VirtualizationNativeBridgeTest {
     }
 
     @Test
+    fun `a pack item whose attempts never completed is neither suspicious nor clean`() {
+        // What an item reports when every attempt found the wrapper pair disagreeing, leaving
+        // no stable baseline for the inline svc to be compared against. The attempts stay
+        // visible so the reason survives, but nothing was measured, so the item must not count
+        // as clean any more than it counts as a hit.
+        val result = bridge.parseSacrificialSyscallPack(
+            """
+            AVAILABLE=1
+            SUPPORTED=1
+            DISABLED=0
+            DETAIL=pack detail
+            ITEM=memfd_create	1	0	0	no stable baseline
+            ATTEMPT=memfd_create	0	wrapper pair disagreed
+            ATTEMPT=memfd_create	0	wrapper pair disagreed
+            ATTEMPT=memfd_create	0	wrapper pair disagreed
+            """.trimIndent(),
+        )
+
+        val item = result.items.single()
+        assertEquals(3, item.attempts.size)
+        assertEquals(0, item.completedAttempts)
+        assertFalse(item.suspicious)
+        assertFalse(item.clean)
+        assertEquals(0, result.hitCount)
+    }
+
+    @Test
     fun `blank snapshot falls back to empty`() {
         val snapshot = bridge.parseSnapshot("")
         val trap = bridge.parseTrap("")

@@ -167,17 +167,53 @@ namespace duckdetector::virtualization {
             return x0;
         }
 
+        /**
+         * One syscall issued three times: twice through bionic's syscall() wrapper and once
+         * through an inline svc.
+         *
+         * Only two mechanisms are present here, not three. The wrapper pair is deliberately
+         * the same path twice, because that is what gives this attempt a noise floor to judge
+         * the inline result against. Naming the second call "raw", as this struct once did,
+         * implied a second independent layer and invited a comparison between a path and
+         * itself.
+         *
+         * The comparison that carries meaning is wrapper against inline: userspace
+         * interposition can reach the wrapper's PLT entry or its prologue, while an svc
+         * compiled into this translation unit has no symbol to hook.
+         */
         struct SyscallAttemptTriplet {
-            long libcRet = -1;
-            int libcErrno = 0;
-            long rawRet = -1;
-            int rawErrno = 0;
+            long wrapperRet = -1;
+            int wrapperErrno = 0;
+            long wrapperRepeatRet = -1;
+            int wrapperRepeatErrno = 0;
             long asmRet = -1;
             int asmErrno = 0;
-            long long libcElapsedNs = 0;
-            long long rawElapsedNs = 0;
+            long long wrapperElapsedNs = 0;
+            long long wrapperRepeatElapsedNs = 0;
             long long asmElapsedNs = 0;
         };
+
+        // Applied to the gap between the inline call and the wrapper baseline, not to a raw
+        // duration, so both keep their original role of admitting only a gross outlier.
+        constexpr long long kTimingGapFactor = 4LL;
+        constexpr long long kTimingGapFloorNs = 50000LL;
+
+        /**
+         * Whether two attempts at the same syscall agree on what happened.
+         *
+         * Return values are compared only for the failure case, where errno carries the
+         * outcome. On success the number itself is not comparable: memfd_create and pidfd_open
+         * hand back a freshly allocated descriptor, and which number the kernel picks depends
+         * on what is free in the table at that moment. Requiring equality there would read an
+         * ordinary descriptor-numbering difference as one layer disagreeing with another.
+         */
+        bool outcomes_agree(long firstRet, int firstErrno, long secondRet, int secondErrno) {
+            const bool firstFailed = firstRet < 0;
+            if (firstFailed != (secondRet < 0)) {
+                return false;
+            }
+            return !firstFailed || firstErrno == secondErrno;
+        }
 
         struct SyscallItemAccumulator {
             std::string label;
@@ -195,25 +231,49 @@ namespace duckdetector::virtualization {
             accumulator->label = label;
             for (int attempt = 0; attempt < 3; ++attempt) {
                 SyscallAttemptTriplet triplet = callable(attempt);
-                if (unsupported_syscall_errno(triplet.libcErrno) ||
-                    unsupported_syscall_errno(triplet.rawErrno) ||
+                if (unsupported_syscall_errno(triplet.wrapperErrno) ||
+                    unsupported_syscall_errno(triplet.wrapperRepeatErrno) ||
                     unsupported_syscall_errno(triplet.asmErrno)) {
                     return false;
                 }
 
-                const bool returnMismatch = triplet.libcRet != triplet.rawRet ||
-                                            triplet.libcRet != triplet.asmRet ||
-                                            triplet.libcErrno != triplet.rawErrno ||
-                                            triplet.libcErrno != triplet.asmErrno;
-                const long long fastest = std::max(1LL, std::min(
-                        triplet.libcElapsedNs,
-                        std::min(triplet.rawElapsedNs, triplet.asmElapsedNs)
-                ));
-                const long long slowest = std::max(
-                        triplet.libcElapsedNs,
-                        std::max(triplet.rawElapsedNs, triplet.asmElapsedNs)
+                // The wrapper pair is one path called twice, so a disagreement between them is
+                // the call behaving non-reproducibly rather than a layer diverging. Without a
+                // stable baseline there is nothing for the inline result to be compared
+                // against, so the attempt records why and stays out of the completed tally.
+                if (!outcomes_agree(triplet.wrapperRet, triplet.wrapperErrno,
+                                    triplet.wrapperRepeatRet, triplet.wrapperRepeatErrno)) {
+                    std::ostringstream unstable;
+                    unstable << "wrapper pair disagreed (ret " << triplet.wrapperRet << "/"
+                             << triplet.wrapperRepeatRet << ", errno " << triplet.wrapperErrno
+                             << "/" << triplet.wrapperRepeatErrno
+                             << "), no stable baseline to compare the inline svc against";
+                    accumulator->attempts.push_back(TrapAttempt{false, unstable.str()});
+                    continue;
+                }
+
+                const bool returnMismatch = !outcomes_agree(
+                        triplet.wrapperRet, triplet.wrapperErrno,
+                        triplet.asmRet, triplet.asmErrno
                 );
-                const bool timingMismatch = slowest > fastest * 4LL && slowest - fastest > 50000LL;
+
+                // Scaled against the wrapper pair's own gap rather than against the fastest of
+                // the three. Those two calls take the same path, so whatever separates them is
+                // this attempt's noise, mostly preemption; measuring the inline call against
+                // the smallest raw sample instead let that noise alone clear the bar. The
+                // factor and floor are the ones this trap already used, kept because they are
+                // coarse on purpose: a syscall runs in single-digit microseconds, so the floor
+                // means only a stall far outside that range counts.
+                const long long controlGapNs = std::max(1LL, llabs(
+                        triplet.wrapperElapsedNs - triplet.wrapperRepeatElapsedNs
+                ));
+                const long long wrapperFloorNs = std::min(
+                        triplet.wrapperElapsedNs, triplet.wrapperRepeatElapsedNs
+                );
+                const long long asmGapNs = llabs(triplet.asmElapsedNs - wrapperFloorNs);
+                const bool timingMismatch = asmGapNs > controlGapNs * kTimingGapFactor &&
+                                            asmGapNs > kTimingGapFloorNs;
+
                 const bool suspicious = returnMismatch || timingMismatch;
                 accumulator->completedAttempts += 1;
                 if (suspicious) {
@@ -221,12 +281,16 @@ namespace duckdetector::virtualization {
                 }
 
                 std::ostringstream detail;
-                detail << "libc_ret=" << triplet.libcRet << " libc_errno=" << triplet.libcErrno
-                       << " raw_ret=" << triplet.rawRet << " raw_errno=" << triplet.rawErrno
+                detail << "wrapper_ret=" << triplet.wrapperRet
+                       << " wrapper_errno=" << triplet.wrapperErrno
+                       << " wrapper_repeat_ret=" << triplet.wrapperRepeatRet
+                       << " wrapper_repeat_errno=" << triplet.wrapperRepeatErrno
                        << " asm_ret=" << triplet.asmRet << " asm_errno=" << triplet.asmErrno
-                       << " libc_ns=" << triplet.libcElapsedNs
-                       << " raw_ns=" << triplet.rawElapsedNs
-                       << " asm_ns=" << triplet.asmElapsedNs;
+                       << " wrapper_ns=" << triplet.wrapperElapsedNs
+                       << " wrapper_repeat_ns=" << triplet.wrapperRepeatElapsedNs
+                       << " asm_ns=" << triplet.asmElapsedNs
+                       << " control_gap_ns=" << controlGapNs
+                       << " asm_gap_ns=" << asmGapNs;
                 accumulator->attempts.push_back(TrapAttempt{suspicious, detail.str()});
             }
             return true;
@@ -338,6 +402,9 @@ namespace duckdetector::virtualization {
             std::ostringstream path;
             path << "/proc/self/definitely_missing_virtualization_" << pid << "_" << attempt;
 
+            // Unlike the sacrificial pack, these two names are accurate: open() is a real
+            // bionic entry point, and the second call goes straight to openat through
+            // syscall(), so a hook on the former is observable against the latter.
             errno = 0;
             const long long libcStart = monotonic_ns();
             const int libcRet = open(path.str().c_str(), O_RDONLY | O_CLOEXEC);
@@ -549,8 +616,8 @@ namespace duckdetector::virtualization {
                 struct open_how how{};
                 how.flags = static_cast<std::uint64_t>(O_RDONLY | O_CLOEXEC);
                 SyscallAttemptTriplet triplet;
-                const long long libcStart = monotonic_ns();
-                triplet.libcRet = call_via_syscall(
+                const long long wrapperStart = monotonic_ns();
+                triplet.wrapperRet = call_via_syscall(
                         __NR_openat2,
                         AT_FDCWD,
                         reinterpret_cast<long>(path.c_str()),
@@ -558,11 +625,11 @@ namespace duckdetector::virtualization {
                         sizeof(how),
                         0,
                         0,
-                        &triplet.libcErrno
+                        &triplet.wrapperErrno
                 );
-                triplet.libcElapsedNs = monotonic_ns() - libcStart;
-                const long long rawStart = monotonic_ns();
-                triplet.rawRet = call_via_syscall(
+                triplet.wrapperElapsedNs = monotonic_ns() - wrapperStart;
+                const long long wrapperRepeatStart = monotonic_ns();
+                triplet.wrapperRepeatRet = call_via_syscall(
                         __NR_openat2,
                         AT_FDCWD,
                         reinterpret_cast<long>(path.c_str()),
@@ -570,9 +637,9 @@ namespace duckdetector::virtualization {
                         sizeof(how),
                         0,
                         0,
-                        &triplet.rawErrno
+                        &triplet.wrapperRepeatErrno
                 );
-                triplet.rawElapsedNs = monotonic_ns() - rawStart;
+                triplet.wrapperRepeatElapsedNs = monotonic_ns() - wrapperRepeatStart;
                 const long long asmStart = monotonic_ns();
                 triplet.asmRet = asm_syscall6(
                         __NR_openat2,
@@ -593,8 +660,8 @@ namespace duckdetector::virtualization {
                 const std::string path = "/proc/self/virtualization_statx_missing_" + std::to_string(attempt);
                 struct statx statxBuffer{};
                 SyscallAttemptTriplet triplet;
-                const long long libcStart = monotonic_ns();
-                triplet.libcRet = call_via_syscall(
+                const long long wrapperStart = monotonic_ns();
+                triplet.wrapperRet = call_via_syscall(
                         __NR_statx,
                         AT_FDCWD,
                         reinterpret_cast<long>(path.c_str()),
@@ -602,11 +669,11 @@ namespace duckdetector::virtualization {
                         STATX_BASIC_STATS,
                         reinterpret_cast<long>(&statxBuffer),
                         0,
-                        &triplet.libcErrno
+                        &triplet.wrapperErrno
                 );
-                triplet.libcElapsedNs = monotonic_ns() - libcStart;
-                const long long rawStart = monotonic_ns();
-                triplet.rawRet = call_via_syscall(
+                triplet.wrapperElapsedNs = monotonic_ns() - wrapperStart;
+                const long long wrapperRepeatStart = monotonic_ns();
+                triplet.wrapperRepeatRet = call_via_syscall(
                         __NR_statx,
                         AT_FDCWD,
                         reinterpret_cast<long>(path.c_str()),
@@ -614,9 +681,9 @@ namespace duckdetector::virtualization {
                         STATX_BASIC_STATS,
                         reinterpret_cast<long>(&statxBuffer),
                         0,
-                        &triplet.rawErrno
+                        &triplet.wrapperRepeatErrno
                 );
-                triplet.rawElapsedNs = monotonic_ns() - rawStart;
+                triplet.wrapperRepeatElapsedNs = monotonic_ns() - wrapperRepeatStart;
                 const long long asmStart = monotonic_ns();
                 triplet.asmRet = asm_syscall6(
                         __NR_statx,
@@ -636,8 +703,8 @@ namespace duckdetector::virtualization {
             const bool memfdSupported = run_syscall_item("memfd_create", [&](int attempt) {
                 const std::string name = "virt_memfd_" + std::to_string(attempt);
                 SyscallAttemptTriplet triplet;
-                const long long libcStart = monotonic_ns();
-                triplet.libcRet = call_via_syscall(
+                const long long wrapperStart = monotonic_ns();
+                triplet.wrapperRet = call_via_syscall(
                         __NR_memfd_create,
                         reinterpret_cast<long>(name.c_str()),
                         MFD_CLOEXEC,
@@ -645,12 +712,12 @@ namespace duckdetector::virtualization {
                         0,
                         0,
                         0,
-                        &triplet.libcErrno
+                        &triplet.wrapperErrno
                 );
-                triplet.libcElapsedNs = monotonic_ns() - libcStart;
-                if (triplet.libcRet >= 0) close(static_cast<int>(triplet.libcRet));
-                const long long rawStart = monotonic_ns();
-                triplet.rawRet = call_via_syscall(
+                triplet.wrapperElapsedNs = monotonic_ns() - wrapperStart;
+                if (triplet.wrapperRet >= 0) close(static_cast<int>(triplet.wrapperRet));
+                const long long wrapperRepeatStart = monotonic_ns();
+                triplet.wrapperRepeatRet = call_via_syscall(
                         __NR_memfd_create,
                         reinterpret_cast<long>(name.c_str()),
                         MFD_CLOEXEC,
@@ -658,10 +725,10 @@ namespace duckdetector::virtualization {
                         0,
                         0,
                         0,
-                        &triplet.rawErrno
+                        &triplet.wrapperRepeatErrno
                 );
-                triplet.rawElapsedNs = monotonic_ns() - rawStart;
-                if (triplet.rawRet >= 0) close(static_cast<int>(triplet.rawRet));
+                triplet.wrapperRepeatElapsedNs = monotonic_ns() - wrapperRepeatStart;
+                if (triplet.wrapperRepeatRet >= 0) close(static_cast<int>(triplet.wrapperRepeatRet));
                 const long long asmStart = monotonic_ns();
                 triplet.asmRet = asm_syscall6(
                         __NR_memfd_create,
@@ -682,8 +749,8 @@ namespace duckdetector::virtualization {
             const bool pidfdSupported = run_syscall_item("pidfd_open", [&](int) {
                 SyscallAttemptTriplet triplet;
                 const pid_t pid = getpid();
-                const long long libcStart = monotonic_ns();
-                triplet.libcRet = call_via_syscall(
+                const long long wrapperStart = monotonic_ns();
+                triplet.wrapperRet = call_via_syscall(
                         __NR_pidfd_open,
                         pid,
                         0,
@@ -691,12 +758,12 @@ namespace duckdetector::virtualization {
                         0,
                         0,
                         0,
-                        &triplet.libcErrno
+                        &triplet.wrapperErrno
                 );
-                triplet.libcElapsedNs = monotonic_ns() - libcStart;
-                if (triplet.libcRet >= 0) close(static_cast<int>(triplet.libcRet));
-                const long long rawStart = monotonic_ns();
-                triplet.rawRet = call_via_syscall(
+                triplet.wrapperElapsedNs = monotonic_ns() - wrapperStart;
+                if (triplet.wrapperRet >= 0) close(static_cast<int>(triplet.wrapperRet));
+                const long long wrapperRepeatStart = monotonic_ns();
+                triplet.wrapperRepeatRet = call_via_syscall(
                         __NR_pidfd_open,
                         pid,
                         0,
@@ -704,10 +771,10 @@ namespace duckdetector::virtualization {
                         0,
                         0,
                         0,
-                        &triplet.rawErrno
+                        &triplet.wrapperRepeatErrno
                 );
-                triplet.rawElapsedNs = monotonic_ns() - rawStart;
-                if (triplet.rawRet >= 0) close(static_cast<int>(triplet.rawRet));
+                triplet.wrapperRepeatElapsedNs = monotonic_ns() - wrapperRepeatStart;
+                if (triplet.wrapperRepeatRet >= 0) close(static_cast<int>(triplet.wrapperRepeatRet));
                 const long long asmStart = monotonic_ns();
                 triplet.asmRet = asm_syscall6(
                         __NR_pidfd_open,
@@ -729,8 +796,8 @@ namespace duckdetector::virtualization {
                 const std::string oldPath = "/proc/self/virtualization_renameat2_old_" + std::to_string(attempt);
                 const std::string newPath = "/proc/self/virtualization_renameat2_new_" + std::to_string(attempt);
                 SyscallAttemptTriplet triplet;
-                const long long libcStart = monotonic_ns();
-                triplet.libcRet = call_via_syscall(
+                const long long wrapperStart = monotonic_ns();
+                triplet.wrapperRet = call_via_syscall(
                         __NR_renameat2,
                         AT_FDCWD,
                         reinterpret_cast<long>(oldPath.c_str()),
@@ -738,11 +805,11 @@ namespace duckdetector::virtualization {
                         reinterpret_cast<long>(newPath.c_str()),
                         0,
                         0,
-                        &triplet.libcErrno
+                        &triplet.wrapperErrno
                 );
-                triplet.libcElapsedNs = monotonic_ns() - libcStart;
-                const long long rawStart = monotonic_ns();
-                triplet.rawRet = call_via_syscall(
+                triplet.wrapperElapsedNs = monotonic_ns() - wrapperStart;
+                const long long wrapperRepeatStart = monotonic_ns();
+                triplet.wrapperRepeatRet = call_via_syscall(
                         __NR_renameat2,
                         AT_FDCWD,
                         reinterpret_cast<long>(oldPath.c_str()),
@@ -750,9 +817,9 @@ namespace duckdetector::virtualization {
                         reinterpret_cast<long>(newPath.c_str()),
                         0,
                         0,
-                        &triplet.rawErrno
+                        &triplet.wrapperRepeatErrno
                 );
-                triplet.rawElapsedNs = monotonic_ns() - rawStart;
+                triplet.wrapperRepeatElapsedNs = monotonic_ns() - wrapperRepeatStart;
                 const long long asmStart = monotonic_ns();
                 triplet.asmRet = asm_syscall6(
                         __NR_renameat2,
