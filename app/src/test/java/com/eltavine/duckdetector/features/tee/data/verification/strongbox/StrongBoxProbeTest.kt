@@ -16,7 +16,10 @@
 
 package com.eltavine.duckdetector.features.tee.data.verification.strongbox
 
+import android.security.keystore.StrongBoxUnavailableException
 import com.eltavine.duckdetector.features.tee.domain.TeeTier
+import java.security.InvalidAlgorithmParameterException
+import java.security.ProviderException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -24,6 +27,52 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StrongBoxProbeTest {
+
+    @Test
+    fun `a created key is an acceptance`() {
+        assertEquals(StrongBoxAcceptance.ACCEPTED, classifyStrongBoxAcceptance(null))
+        assertTrue(StrongBoxAcceptance.ACCEPTED.isDeviceObservation)
+    }
+
+    @Test
+    fun `the framework parameter check is not an answer from this device`() {
+        // checkValidKeySize rejects a StrongBox EC size other than 256 before Keystore is called, so
+        // a secp521r1 request never becomes a question for KeyMint.
+        val acceptance = classifyStrongBoxAcceptance(
+            InvalidAlgorithmParameterException("Unsupported StrongBox EC key size: 521 bits."),
+        )
+
+        assertEquals(StrongBoxAcceptance.REFUSED_BY_FRAMEWORK, acceptance)
+        assertFalse(acceptance.isDeviceObservation)
+    }
+
+    @Test
+    fun `a keystore refusal is an answer from this device`() {
+        // generateKeyPair reports every KeyMint error other than HARDWARE_TYPE_UNAVAILABLE as a plain
+        // ProviderException, UNSUPPORTED_KEY_SIZE among them.
+        val acceptance = classifyStrongBoxAcceptance(ProviderException("Failed to generate key pair."))
+
+        assertEquals(StrongBoxAcceptance.REFUSED_BY_KEYSTORE, acceptance)
+        assertTrue(acceptance.isDeviceObservation)
+    }
+
+    @Test
+    fun `strongbox reporting itself unavailable is a keystore answer`() {
+        // StrongBoxUnavailableException extends ProviderException and carries
+        // KM_ERROR_HARDWARE_TYPE_UNAVAILABLE, so it belongs with the Keystore refusals.
+        assertEquals(
+            StrongBoxAcceptance.REFUSED_BY_KEYSTORE,
+            classifyStrongBoxAcceptance(StrongBoxUnavailableException("no strongbox")),
+        )
+    }
+
+    @Test
+    fun `an unrelated failure leaves the question unanswered`() {
+        val acceptance = classifyStrongBoxAcceptance(IllegalStateException("keystore not loaded"))
+
+        assertEquals(StrongBoxAcceptance.INCONCLUSIVE, acceptance)
+        assertFalse(acceptance.isDeviceObservation)
+    }
 
     @Test
     fun `pixel profile uses 128 concurrent signing handle threshold`() {
