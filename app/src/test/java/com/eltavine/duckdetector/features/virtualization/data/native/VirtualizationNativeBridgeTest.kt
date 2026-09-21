@@ -107,6 +107,30 @@ class VirtualizationNativeBridgeTest {
     }
 
     @Test
+    fun `a trap whose attempts all failed to measure is neither suspicious nor clean`() {
+        // What the arm64 counter trap reports when cntfrq_el0 reads zero: the attempts are
+        // recorded so the reason stays visible, but none of them completed a comparison. That
+        // has to stay apart from a run that compared and agreed, which is what clean means.
+        val result = bridge.parseTrap(
+            """
+            AVAILABLE=1
+            SUPPORTED=1
+            COMPLETED_ATTEMPTS=0
+            SUSPICIOUS_ATTEMPTS=0
+            DETAIL=comparison unavailable
+            ATTEMPT=0	freq=0 (cntfrq_el0 unprogrammed, comparison unavailable)
+            ATTEMPT=0	freq=0 (cntfrq_el0 unprogrammed, comparison unavailable)
+            ATTEMPT=0	freq=0 (cntfrq_el0 unprogrammed, comparison unavailable)
+            """.trimIndent(),
+        )
+
+        assertTrue(result.supported)
+        assertEquals(3, result.attempts.size)
+        assertFalse(result.suspicious)
+        assertFalse(result.clean)
+    }
+
+    @Test
     fun `parses sacrificial syscall pack summary`() {
         val result = bridge.parseSacrificialSyscallPack(
             """

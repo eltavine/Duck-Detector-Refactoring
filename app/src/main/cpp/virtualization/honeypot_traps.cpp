@@ -312,11 +312,43 @@ namespace duckdetector::virtualization {
                                "Compares libc and raw openat error paths for a transient missing-path trap.");
     }
 
+    /**
+     * Checks the firmware-provided counter frequency against the rate the kernel's own
+     * timekeeping runs at.
+     *
+     * This is not a comparison of two independent clocks, and must not be read as one. On
+     * arm64 CLOCK_MONOTONIC comes from the same register this probe reads: the vDSO's
+     * __arch_get_hw_counter (arch/arm64/include/asm/vdso/gettimeofday.h) issues
+     * "isb; mrs cntvct_el0", or CNTVCTSS_EL0 where FEAT_ECV is present. Both sides of the
+     * comparison therefore observe one counter, and what differs is the scaling: this probe
+     * divides by CNTFRQ_EL0, while CLOCK_MONOTONIC applies the mult/shift the kernel derived
+     * from the arch timer rate it established at boot.
+     *
+     * That makes the check worth running even so, because CNTFRQ_EL0 is not authoritative
+     * about the hardware. Arm ARM D12.1.2 has it UNKNOWN at reset and written by firmware at
+     * the highest exception level; nothing in hardware validates it. An environment that
+     * advertises a frequency the counter does not actually tick at will disagree with the
+     * kernel's calibrated rate, which is the divergence being looked for.
+     */
     TrapResult run_asm_counter_trap() {
 #if defined(__aarch64__)
+        // CNTFRQ_EL0 carries the frequency in its ClockFreq field, bits [31:0]. Masking
+        // bounds a firmware-written value before it is used as a divisor, so that upper bits
+        // cannot pass the zero check below and then divide the counter delta down to nothing.
+        constexpr unsigned long long kClockFreqMask = 0xffff'ffffULL;
+
+        // Deliberately coarse: both sides read one counter, so they agree to within
+        // clocksource rounding plus the two extra register reads inside the wall-clock
+        // window. Only a gross mismatch, such as an advertised frequency several times off
+        // the real tick rate, clears this. The cost of that margin is a false negative for
+        // subtle timer scaling, which this trap cannot see.
+        constexpr long long kGrossMismatchNumerator = 3LL;
+        constexpr long long kGrossMismatchDenominator = 4LL;
+
         TrapResult result = make_base_result(true);
         for (int attempt = 0; attempt < 3; ++attempt) {
-            const unsigned long long freq = virtualization_arm64_read_cntfrq();
+            const unsigned long long freq =
+                    virtualization_arm64_read_cntfrq() & kClockFreqMask;
             const long long wallStart = monotonic_ns();
             const unsigned long long counterStart = virtualization_arm64_read_cntvct();
             for (int i = 0; i < 256; ++i) {
@@ -325,16 +357,43 @@ namespace duckdetector::virtualization {
             const unsigned long long counterEnd = virtualization_arm64_read_cntvct();
             const long long wallEnd = monotonic_ns();
 
+            // A frequency of zero means firmware never programmed the register, so there is
+            // no divisor and no measurement. Leaving the attempt uncounted keeps that apart
+            // from a completed comparison that disagreed: the consumer needs two completed
+            // attempts before it will call this either suspicious or clean, so an
+            // unprogrammed register lands on neither instead of being reported as evidence.
+            if (freq == 0ULL) {
+                result.attempts.push_back(
+                        TrapAttempt{false,
+                                    "freq=0 (cntfrq_el0 unprogrammed, comparison unavailable)"}
+                );
+                continue;
+            }
+
+            // Zero covers both a counter that did not advance and one that went backwards.
+            // Either is anomalous on its own: at the frequencies the architecture allows,
+            // 256 syscalls always span several ticks.
             const unsigned long long counterDelta = counterEnd > counterStart
                                                     ? (counterEnd - counterStart)
                                                     : 0ULL;
             const long long wallDelta = wallEnd - wallStart;
-            const long long counterNs = (freq > 0ULL)
-                                        ? static_cast<long long>((counterDelta * 1000000000ULL) / freq)
-                                        : 0LL;
+
+            // Whole seconds are converted apart from the remainder so that counterDelta
+            // never multiplies into an overflow. A straight counterDelta * 1e9 wraps once the
+            // delta passes ~1.8e10 ticks, which is only ~18 seconds of counter at the 1GHz
+            // fixed frequency Armv8.6 mandates, and this window can stretch that far if the
+            // process is descheduled mid-loop. The remainder stays below freq, itself bounded
+            // to 32 bits above, so its multiplication is in range.
+            const unsigned long long deltaSeconds = counterDelta / freq;
+            const unsigned long long deltaRemainder = counterDelta % freq;
+            const long long counterNs = static_cast<long long>(
+                    deltaSeconds * 1000000000ULL + (deltaRemainder * 1000000000ULL) / freq
+            );
             const long long diff = llabs(counterNs - wallDelta);
-            const bool suspicious = freq == 0ULL || counterDelta == 0ULL ||
-                                    (wallDelta > 0LL && diff > (wallDelta * 3LL / 4LL));
+            const bool suspicious = counterDelta == 0ULL ||
+                                    (wallDelta > 0LL &&
+                                     diff > (wallDelta * kGrossMismatchNumerator /
+                                             kGrossMismatchDenominator));
 
             result.completedAttempts += 1;
             if (suspicious) {
@@ -346,7 +405,12 @@ namespace duckdetector::virtualization {
                    << " counter_ns=" << counterNs << " wall_ns=" << wallDelta;
             result.attempts.push_back(TrapAttempt{suspicious, detail.str()});
         }
-        return finalize_result(result, "Correlates arm64 cntvct or cntfrq readings with wall-clock work windows.");
+        return finalize_result(
+                result,
+                "Checks the firmware cntfrq_el0 value against the rate the kernel's own "
+                "timekeeping uses. Both sides read cntvct_el0, so this is one counter scaled "
+                "two ways, not two independent clocks."
+        );
 #else
         return build_unsupported_result("ASM counter trap is only supported on arm64-v8a.");
 #endif
