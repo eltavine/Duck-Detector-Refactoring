@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.features.virtualization.data.native
 import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
 import com.eltavine.duckdetector.core.native.NativeCollectionStatus
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 open class VirtualizationNativeBridge(
@@ -68,6 +69,8 @@ open class VirtualizationNativeBridge(
         if (raw.isBlank()) {
             return VirtualizationNativeSnapshot()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var snapshot = VirtualizationNativeSnapshot()
         val findings = mutableListOf<VirtualizationNativeFinding>()
@@ -147,6 +150,8 @@ open class VirtualizationNativeBridge(
         if (raw.isBlank()) {
             return SacrificialSyscallPackResult()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var available = false
         var supported = false
@@ -229,6 +234,8 @@ open class VirtualizationNativeBridge(
         if (raw.isBlank()) {
             return VirtualizationTrapResult()
         }
+
+        NativePayloadContract.requireKeys(raw, "AVAILABLE")
 
         var available = false
         var supported = false
