@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.features.tee.data.verification.keystore
 import android.content.Context
 import android.os.Build
 import android.security.keystore.KeyStoreManager
+import androidx.annotation.RequiresApi
 import java.security.cert.X509Certificate
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
@@ -140,6 +141,12 @@ internal data class KeyStoreGrantJavaApiResult(
     }
 }
 
+/**
+ * `KeyStoreManager`'s grant methods are public API only from Android 16. [KeyStoreGrantJavaApis.publicApi]
+ * is the sole construction site and refuses to build this on anything older, which lint cannot see
+ * from here; the annotation states that contract so lint checks the call site instead of the calls.
+ */
+@RequiresApi(Build.VERSION_CODES.BAKLAVA)
 private class PublicKeyStoreGrantJavaApi(
     private val manager: KeyStoreManager,
 ) : KeyStoreGrantJavaApi {
