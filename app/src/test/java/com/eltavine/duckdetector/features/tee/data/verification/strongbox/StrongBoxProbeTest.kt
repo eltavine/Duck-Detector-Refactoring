@@ -75,35 +75,48 @@ class StrongBoxProbeTest {
     }
 
     @Test
-    fun `pixel profile uses 128 concurrent signing handle threshold`() {
+    fun `granting every attempted handle reports no ceiling was reached`() {
+        val observation = describeConcurrentSigningHandles(
+            granted = 24,
+            ceiling = 24,
+            failureDescription = null,
+        )
+
+        assertEquals(24, observation.granted)
+        assertEquals(ConcurrentHandleStop.PROBE_CEILING, observation.stop)
         assertEquals(
-            128,
-            expectedConcurrentSigningHandleLimit(
-                brand = "google",
-                manufacturer = "Google",
-                model = "Pixel 9 Pro",
-            ),
+            "All 24 attempted handles were granted; no ceiling was reached.",
+            observation.detail,
         )
     }
 
     @Test
-    fun `non pixel profile keeps 16 concurrent signing handle threshold`() {
+    fun `a refusal keeps the handles already granted instead of collapsing to zero`() {
+        val observation = describeConcurrentSigningHandles(
+            granted = 15,
+            ceiling = 24,
+            failureDescription = "KeyStoreException(code -68): Too many operations",
+        )
+
+        assertEquals(15, observation.granted)
+        assertEquals(ConcurrentHandleStop.REFUSED, observation.stop)
         assertEquals(
-            16,
-            expectedConcurrentSigningHandleLimit(
-                brand = "samsung",
-                manufacturer = "samsung",
-                model = "SM-S9280",
-            ),
+            "Refused after 15 handles: KeyStoreException(code -68): Too many operations",
+            observation.detail,
         )
     }
 
     @Test
-    fun `pixel device profile requires pixel model plus google brand or manufacturer`() {
-        assertTrue(isPixelDeviceProfile("google", "Google", "Pixel 8"))
-        assertTrue(isPixelDeviceProfile("android", "Google", "Pixel Fold"))
-        assertFalse(isPixelDeviceProfile("google", "Google", "PixelExperience"))
-        assertFalse(isPixelDeviceProfile("google", "xiaomi", "MIX 4"))
+    fun `a refusal on the first handle stays distinct from a probe that never ran`() {
+        val refused = describeConcurrentSigningHandles(
+            granted = 0,
+            ceiling = 24,
+            failureDescription = "ProviderException: Keystore operation failed",
+        )
+
+        assertEquals(ConcurrentHandleStop.REFUSED, refused.stop)
+        assertEquals(ConcurrentHandleStop.SETUP_FAILED, ConcurrentSigningHandleObservation().stop)
+        assertEquals(0, refused.granted)
     }
 
     @Test
