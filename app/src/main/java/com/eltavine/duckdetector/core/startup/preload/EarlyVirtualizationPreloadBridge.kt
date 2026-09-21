@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.core.startup.preload
 
+import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
+
 open class EarlyVirtualizationPreloadBridge {
 
     open fun isNativeAvailable(): Boolean = isLoaded
@@ -79,9 +81,7 @@ open class EarlyVirtualizationPreloadBridge {
     private external fun nativeReset()
 
     companion object {
-        private val isLoaded: Boolean = runCatching {
-            System.loadLibrary("duckdetector")
-            true
-        }.getOrDefault(false)
+        private val isLoaded: Boolean
+            get() = DuckDetectorNativeLibrary.isLoaded
     }
 }

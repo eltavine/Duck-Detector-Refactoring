@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.zygisk.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+
 data class ZygiskNativeTrace(
     val group: String,
     val severity: String,
@@ -42,4 +44,9 @@ data class ZygiskNativeSnapshot(
     val threadHitCount: Int = 0,
     val fdHitCount: Int = 0,
     val traces: List<ZygiskNativeTrace> = emptyList(),
+    /**
+     * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
+     * found nothing" from "the probe never ran", so the reason is carried here.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 )

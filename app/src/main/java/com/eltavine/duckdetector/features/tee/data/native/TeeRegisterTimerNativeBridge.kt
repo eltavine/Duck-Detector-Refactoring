@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.tee.data.native
 
+import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
 
 class TeeRegisterTimerNativeBridge {
@@ -114,6 +115,7 @@ class TeeRegisterTimerNativeBridge {
     private external fun nativeSelectPreferredTimer(requestCpu0Affinity: Boolean): String
 
     companion object {
-        private val nativeLoaded = runCatching { System.loadLibrary("duckdetector") }.isSuccess
+        private val nativeLoaded: Boolean
+            get() = DuckDetectorNativeLibrary.isLoaded
     }
 }

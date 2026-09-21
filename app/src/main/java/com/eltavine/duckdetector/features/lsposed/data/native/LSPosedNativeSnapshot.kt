@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.lsposed.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+
 data class LSPosedNativeTrace(
     val group: String,
     val severity: String,
@@ -31,4 +33,9 @@ data class LSPosedNativeSnapshot(
     val heapHitCount: Int = 0,
     val heapScannedRegions: Int = 0,
     val traces: List<LSPosedNativeTrace> = emptyList(),
+    /**
+     * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
+     * found nothing" from "the probe never ran", so the reason is carried here.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 )

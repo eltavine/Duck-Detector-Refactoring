@@ -17,18 +17,37 @@
 package com.eltavine.duckdetector.features.tee.data.native
 
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
-class TeeNativeBridge {
+class TeeNativeBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
 
-    fun collectSnapshot(leafDer: ByteArray?): NativeTeeSnapshot {
-        return runCatching {
-            decodeSnapshot(
+    fun collectSnapshot(leafDer: ByteArray?): NativeTeeSnapshot = collector.collect(
+        // All three entry points are read together: a snapshot built from only some of them would
+        // report the unread probes as "nothing detected".
+        readPayload = {
+            RawPayloads(
                 environmentRaw = nativeCollectEnvironment(),
                 trickyRaw = nativeInspectTrickyStore(),
                 derRaw = leafDer?.let(::nativeInspectLeafDer).orEmpty(),
             )
-        }.getOrDefault(NativeTeeSnapshot())
-    }
+        },
+        parse = { payloads ->
+            decodeSnapshot(
+                environmentRaw = payloads.environmentRaw,
+                trickyRaw = payloads.trickyRaw,
+                derRaw = payloads.derRaw,
+            )
+        },
+        unavailable = { status -> NativeTeeSnapshot(collection = status) },
+    )
+
+    private data class RawPayloads(
+        val environmentRaw: String,
+        val trickyRaw: String,
+        val derRaw: String,
+    )
 
     internal fun decodeSnapshot(
         environmentRaw: String,
@@ -90,10 +109,4 @@ class TeeNativeBridge {
     private external fun nativeInspectTrickyStore(): String
 
     private external fun nativeInspectLeafDer(leafDer: ByteArray): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

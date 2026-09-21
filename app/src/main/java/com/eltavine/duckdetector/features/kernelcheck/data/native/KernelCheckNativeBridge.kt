@@ -16,14 +16,18 @@
 
 package com.eltavine.duckdetector.features.kernelcheck.data.native
 
-class KernelCheckNativeBridge {
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
-    fun collectSnapshot(
-    ): KernelCheckNativeSnapshot {
-        return runCatching {
-            parse(nativeCollectSnapshot())
-        }.getOrDefault(KernelCheckNativeSnapshot())
-    }
+class KernelCheckNativeBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
+
+    fun collectSnapshot(): KernelCheckNativeSnapshot = collector.collect(
+        readPayload = ::nativeCollectSnapshot,
+        parse = ::parse,
+        unavailable = { status -> KernelCheckNativeSnapshot(collection = status) },
+    )
 
     internal fun parse(
         raw: String,
@@ -66,16 +70,7 @@ class KernelCheckNativeBridge {
         )
     }
 
-    private fun String.decodeValue(): String {
-        return replace("\\n", "\n")
-            .replace("\\r", "\r")
-    }
+    private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 
     private external fun nativeCollectSnapshot(): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

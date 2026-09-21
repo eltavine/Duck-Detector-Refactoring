@@ -15,6 +15,7 @@
  */
 
 #include "virtualization/snapshot_builder.h"
+#include "common/payload_codec.h"
 #include "virtualization/egl_probe.h"
 
 #include <dirent.h>
@@ -63,18 +64,7 @@ namespace duckdetector::virtualization {
         }
 
         std::string encode_value(const std::string &value) {
-            std::string encoded = value;
-            std::size_t pos = 0;
-            while ((pos = encoded.find('\n', pos)) != std::string::npos) {
-                encoded.replace(pos, 1, "\\n");
-                pos += 2;
-            }
-            pos = 0;
-            while ((pos = encoded.find('\r', pos)) != std::string::npos) {
-                encoded.replace(pos, 1, "\\r");
-                pos += 2;
-            }
-            return encoded;
+            return common::escape_payload_value(value);
         }
 
         bool contains_token(const std::string &text, const std::vector<std::string> &tokens) {

@@ -16,13 +16,18 @@
 
 package com.eltavine.duckdetector.features.nativeroot.data.native
 
-class NativeRootNativeBridge {
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
-    fun collectSnapshot(): NativeRootNativeSnapshot {
-        return runCatching {
-            parse(nativeCollectSnapshot())
-        }.getOrDefault(NativeRootNativeSnapshot())
-    }
+class NativeRootNativeBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
+
+    fun collectSnapshot(): NativeRootNativeSnapshot = collector.collect(
+        readPayload = ::nativeCollectSnapshot,
+        parse = ::parse,
+        unavailable = { status -> NativeRootNativeSnapshot(collection = status) },
+    )
 
     internal fun parse(raw: String): NativeRootNativeSnapshot {
         if (raw.isBlank()) {
@@ -145,49 +150,7 @@ class NativeRootNativeBridge {
         return this == "1" || equals("true", ignoreCase = true)
     }
 
-    private fun String.decodeValue(): String {
-        return buildString(length) {
-            var index = 0
-            while (index < this@decodeValue.length) {
-                val current = this@decodeValue[index]
-                if (current == '\\' && index + 1 < this@decodeValue.length) {
-                    when (this@decodeValue[index + 1]) {
-                        'n' -> {
-                            append('\n')
-                            index += 2
-                            continue
-                        }
-
-                        'r' -> {
-                            append('\r')
-                            index += 2
-                            continue
-                        }
-
-                        't' -> {
-                            append('\t')
-                            index += 2
-                            continue
-                        }
-
-                        '\\' -> {
-                            append('\\')
-                            index += 2
-                            continue
-                        }
-                    }
-                }
-                append(current)
-                index += 1
-            }
-        }
-    }
+    private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 
     private external fun nativeCollectSnapshot(): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

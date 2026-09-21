@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.tee.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+
 data class NativeTeeSnapshot(
     val tracingDetected: Boolean = false,
     val suspiciousMappings: List<String> = emptyList(),
@@ -40,4 +42,9 @@ data class NativeTeeSnapshot(
     val trickyStoreTimingGapMadNs: Long? = null,
     val trickyStoreTimingMedianNoiseFloorNs: Long? = null,
     val trickyStoreTimingMedianRatioPercent: Int? = null,
+    /**
+     * Why this snapshot is or is not usable. Every other field here defaults to "nothing detected",
+     * which on its own cannot distinguish a clean device from a probe that never ran.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 )

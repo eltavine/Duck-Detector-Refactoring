@@ -16,10 +16,17 @@
 
 package com.eltavine.duckdetector.features.dangerousapps.data.native
 
+import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
+
 class DangerousAppsNativeBridge {
 
     fun statPackages(packageNames: List<String>): Set<String> {
         if (packageNames.isEmpty()) {
+            return emptySet()
+        }
+        // Asking the shared handle first is also what triggers the one-time load. Without this the
+        // JNI call below would raise UnsatisfiedLinkError and be swallowed as "no packages found".
+        if (!DuckDetectorNativeLibrary.isLoaded) {
             return emptySet()
         }
         return runCatching {
@@ -32,10 +39,4 @@ class DangerousAppsNativeBridge {
     }
 
     private external fun nativeStatPackages(packageNames: Array<String>): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

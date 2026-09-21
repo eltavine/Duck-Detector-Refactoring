@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.zygisk.data.fdtrap
 
+import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
+
 class ZygiskFdTrapNativeBridge {
 
     fun isNativeAvailable(): Boolean = nativeLoaded
@@ -74,6 +76,7 @@ class ZygiskFdTrapNativeBridge {
         const val RESULT_NATIVE_UNAVAILABLE = -4
         const val RESULT_SKIPPED = -5
 
-        private val nativeLoaded = runCatching { System.loadLibrary("duckdetector") }.isSuccess
+        private val nativeLoaded: Boolean
+            get() = DuckDetectorNativeLibrary.isLoaded
     }
 }

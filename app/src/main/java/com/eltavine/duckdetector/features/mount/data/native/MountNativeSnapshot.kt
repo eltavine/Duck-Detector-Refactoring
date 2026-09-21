@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.mount.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+
 data class MountNativeFinding(
     val group: String,
     val severity: String,
@@ -66,4 +68,9 @@ data class MountNativeSnapshot(
     val systemFsTypeAnomaly: Boolean = false,
     val tmpfsSizeAnomaly: Boolean = false,
     val findings: List<MountNativeFinding> = emptyList(),
+    /**
+     * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
+     * found nothing" from "the probe never ran", so the reason is carried here.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 )

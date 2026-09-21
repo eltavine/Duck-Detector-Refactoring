@@ -16,21 +16,28 @@
 
 package com.eltavine.duckdetector.features.selinux.data.native
 
+import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentPayloadCodec
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 
-open class SelinuxContextValidityBridge {
+open class SelinuxContextValidityBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
 
-    open fun collectLocalSnapshot(): SelinuxContextValiditySnapshot {
-        if (!nativeLoaded) {
-            return SelinuxContextValiditySnapshot(
-                failureReason = "duckdetector native library unavailable.",
+    open fun collectLocalSnapshot(): SelinuxContextValiditySnapshot = collector.collect(
+        readPayload = ::nativeCollectContextValiditySnapshotInternal,
+        parse = ::parse,
+        unavailable = { status ->
+            // Previously an unloadable library produced a fixed reason while a probe that threw
+            // produced no reason at all, which read as a successful scan that found nothing.
+            SelinuxContextValiditySnapshot(
+                failureReason = status.explain("Native SELinux context validity snapshot was unavailable"),
+                collection = status,
             )
-        }
-        return runCatching {
-            parse(nativeCollectContextValiditySnapshotInternal())
-        }.getOrDefault(SelinuxContextValiditySnapshot())
-    }
+        },
+    )
 
     internal fun parse(raw: String): SelinuxContextValiditySnapshot {
         if (raw.isBlank()) {
@@ -188,43 +195,7 @@ open class SelinuxContextValidityBridge {
         return asBool()
     }
 
-    private fun String.decodeValue(): String {
-        return buildString(length) {
-            var index = 0
-            while (index < this@decodeValue.length) {
-                val current = this@decodeValue[index]
-                if (current == '\\' && index + 1 < this@decodeValue.length) {
-                    when (this@decodeValue[index + 1]) {
-                        'n' -> {
-                            append('\n')
-                            index += 2
-                            continue
-                        }
-
-                        'r' -> {
-                            append('\r')
-                            index += 2
-                            continue
-                        }
-
-                        't' -> {
-                            append('\t')
-                            index += 2
-                            continue
-                        }
-
-                        '\\' -> {
-                            append('\\')
-                            index += 2
-                            continue
-                        }
-                    }
-                }
-                append(current)
-                index += 1
-            }
-        }
-    }
+    private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 
     private external fun nativeCollectContextValiditySnapshotInternal(): String
 
@@ -234,7 +205,8 @@ open class SelinuxContextValidityBridge {
         @Volatile
         private var preloadedRawData: String? = null
 
-        private val nativeLoaded = runCatching { System.loadLibrary("duckdetector") }.isSuccess
+        private val nativeLoaded: Boolean
+            get() = DuckDetectorNativeLibrary.isLoaded
 
         @JvmStatic
         val isNativeLibraryLoaded: Boolean

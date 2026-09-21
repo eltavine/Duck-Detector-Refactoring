@@ -16,6 +16,8 @@
 
 #include "virtualization/honeypot_traps.h"
 
+#include "common/payload_codec.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/memfd.h>
@@ -43,18 +45,7 @@ namespace duckdetector::virtualization {
     namespace {
 
         std::string encode_value(const std::string &value) {
-            std::string encoded = value;
-            std::size_t pos = 0;
-            while ((pos = encoded.find('\n', pos)) != std::string::npos) {
-                encoded.replace(pos, 1, "\\n");
-                pos += 2;
-            }
-            pos = 0;
-            while ((pos = encoded.find('\r', pos)) != std::string::npos) {
-                encoded.replace(pos, 1, "\\r");
-                pos += 2;
-            }
-            return encoded;
+            return common::escape_payload_value(value);
         }
 
         long long monotonic_ns() {

@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.customrom.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomFinding
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomModificationFinding
 
@@ -33,6 +34,11 @@ data class CustomRomNativeSnapshot(
     val policyFindings: List<CustomRomFinding> = emptyList(),
     val overlayFindings: List<CustomRomFinding> = emptyList(),
     val symbolFindings: List<CustomRomFinding> = emptyList(),
+    /**
+     * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
+     * found nothing" from "the probe never ran", so the reason is carried here.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 ) {
     val propertyAreaItemAnomalyCount: Int
         get() = propertyAreaItemCount

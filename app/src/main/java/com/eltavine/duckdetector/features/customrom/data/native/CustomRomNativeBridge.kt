@@ -16,16 +16,19 @@
 
 package com.eltavine.duckdetector.features.customrom.data.native
 
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomFinding
 import com.eltavine.duckdetector.features.customrom.domain.CustomRomModificationFinding
 
-class CustomRomNativeBridge {
+class CustomRomNativeBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
 
-    fun collectSnapshot(): CustomRomNativeSnapshot {
-        return runCatching {
-            parse(nativeCollectSnapshot())
-        }.getOrDefault(CustomRomNativeSnapshot())
-    }
+    fun collectSnapshot(): CustomRomNativeSnapshot = collector.collect(
+        readPayload = ::nativeCollectSnapshot,
+        parse = ::parse,
+        unavailable = { status -> CustomRomNativeSnapshot(collection = status) },
+    )
 
     internal fun parse(raw: String): CustomRomNativeSnapshot {
         if (raw.isBlank()) {
@@ -164,10 +167,4 @@ class CustomRomNativeBridge {
     }
 
     private external fun nativeCollectSnapshot(): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

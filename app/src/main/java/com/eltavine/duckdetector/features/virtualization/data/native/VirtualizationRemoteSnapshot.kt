@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.virtualization.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
+
 enum class VirtualizationRemoteProfile {
     REGULAR,
     ISOLATED,
@@ -190,10 +192,7 @@ data class VirtualizationRemoteSnapshot(
             )
         }
 
-        private fun String.decodeValue(): String {
-            return replace("\\n", "\n")
-                .replace("\\r", "\r")
-        }
+        private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 
         private fun String.decodeList(): List<String> {
             if (isBlank()) {

@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.systemproperties.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertySource
 
 data class PropAreaFinding(
@@ -37,6 +38,11 @@ data class SystemPropertiesNativeSnapshot(
     val propAreaFindings: List<PropAreaFinding> = emptyList(),
     val readOnlyPropertyHandleAvailable: Boolean = false,
     val readOnlyPropertyHandleCheckedCount: Int = 0,
+    /**
+     * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
+     * found nothing" from "the probe never ran", so the reason is carried here.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 ) {
     val nativePropertyHitCount: Int
         get() = libcProperties.values.count { sanitizeLibcValue(it).isNotBlank() }

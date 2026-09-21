@@ -66,7 +66,9 @@ class KernelCheckRepository(
 
         if (identitySources.isEmpty() && procCmdline.isBlank() && !nativeSnapshot.available) {
             return KernelCheckReport.failed(
-                "Unable to read kernel identity through uname -a or /proc/version.",
+                nativeSnapshot.collection.explain(
+                    "Unable to read kernel identity through uname -a or /proc/version",
+                ),
             )
         }
 

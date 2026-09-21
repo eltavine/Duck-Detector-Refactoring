@@ -16,6 +16,9 @@
 
 package com.eltavine.duckdetector.features.nativeroot.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
+
 data class CgroupProcessLeakNativePath(
     val path: String,
     val uid: Int,
@@ -50,15 +53,22 @@ data class CgroupProcessLeakNativeSnapshot(
     val procDeniedCount: Int = 0,
     val paths: List<CgroupProcessLeakNativePath> = emptyList(),
     val entries: List<CgroupProcessLeakNativeEntry> = emptyList(),
+    /**
+     * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
+     * found nothing" from "the probe never ran", so the reason is carried here.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 )
 
-class CgroupProcessLeakNativeBridge {
+class CgroupProcessLeakNativeBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
 
-    fun collectSnapshot(): CgroupProcessLeakNativeSnapshot {
-        return runCatching {
-            parse(nativeCollectSnapshot())
-        }.getOrDefault(CgroupProcessLeakNativeSnapshot())
-    }
+    fun collectSnapshot(): CgroupProcessLeakNativeSnapshot = collector.collect(
+        readPayload = ::nativeCollectSnapshot,
+        parse = ::parse,
+        unavailable = { status -> CgroupProcessLeakNativeSnapshot(collection = status) },
+    )
 
     internal fun parse(raw: String): CgroupProcessLeakNativeSnapshot {
         if (raw.isBlank()) {
@@ -232,10 +242,4 @@ class CgroupProcessLeakNativeBridge {
     }
 
     private external fun nativeCollectSnapshot(): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

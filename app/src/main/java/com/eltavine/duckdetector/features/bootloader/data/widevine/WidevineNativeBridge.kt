@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.bootloader.data.widevine
 
+import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
+
 internal fun interface WidevineNativePropertyReader {
     fun readProperties(): WidevineNativeSnapshot
 }
@@ -23,6 +25,11 @@ internal fun interface WidevineNativePropertyReader {
 internal class WidevineNativeBridge : WidevineNativePropertyReader {
 
     override fun readProperties(): WidevineNativeSnapshot {
+        // The Java MediaDrm path stays available when this optional native path cannot load, so an
+        // unavailable library is not an error here. Asking also triggers the one-time load attempt.
+        if (!DuckDetectorNativeLibrary.isLoaded) {
+            return WidevineNativeSnapshot()
+        }
         return try {
             parse(nativeReadProperties())
         } catch (_: LinkageError) {
@@ -88,15 +95,5 @@ internal class WidevineNativeBridge : WidevineNativePropertyReader {
         const val INDEX_SECURITY_VALUE = 2
         const val INDEX_SYSTEM_ID_STATUS = 3
         const val INDEX_SYSTEM_ID_VALUE = 4
-
-        init {
-            try {
-                System.loadLibrary("duckdetector")
-            } catch (_: LinkageError) {
-                // The Java MediaDrm path remains available when the optional native path cannot load.
-            } catch (_: SecurityException) {
-                // A runtime loading policy can disable parity collection without disabling the probe.
-            }
-        }
     }
 }

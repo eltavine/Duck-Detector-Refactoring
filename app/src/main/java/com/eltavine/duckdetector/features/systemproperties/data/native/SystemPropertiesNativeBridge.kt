@@ -16,7 +16,12 @@
 
 package com.eltavine.duckdetector.features.systemproperties.data.native
 
-class SystemPropertiesNativeBridge {
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
+
+class SystemPropertiesNativeBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
 
     fun collectSnapshot(
         propertyNames: Collection<String>,
@@ -24,9 +29,13 @@ class SystemPropertiesNativeBridge {
         if (propertyNames.isEmpty()) {
             return SystemPropertiesNativeSnapshot()
         }
-        return runCatching {
-            parse(nativeCollectSnapshot(propertyNames.distinct().sorted().toTypedArray()))
-        }.getOrDefault(SystemPropertiesNativeSnapshot())
+        return collector.collect(
+            readPayload = {
+                nativeCollectSnapshot(propertyNames.distinct().sorted().toTypedArray())
+            },
+            parse = ::parse,
+            unavailable = { status -> SystemPropertiesNativeSnapshot(collection = status) },
+        )
     }
 
     internal fun parse(
@@ -117,16 +126,7 @@ class SystemPropertiesNativeBridge {
         )
     }
 
-    private fun String.decodeValue(): String {
-        return replace("\\n", "\n")
-            .replace("\\r", "\r")
-    }
+    private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 
     private external fun nativeCollectSnapshot(propertyNames: Array<String>): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

@@ -19,33 +19,13 @@
 #include <sstream>
 #include <string>
 
+#include "common/payload_codec.h"
 #include "selinux/audit_probe.h"
 
 namespace {
 
     std::string escape_value(const std::string &value) {
-        std::string escaped;
-        escaped.reserve(value.size());
-        for (const char ch: value) {
-            switch (ch) {
-                case '\\':
-                    escaped += "\\\\";
-                    break;
-                case '\n':
-                    escaped += "\\n";
-                    break;
-                case '\r':
-                    escaped += "\\r";
-                    break;
-                case '\t':
-                    escaped += "\\t";
-                    break;
-                default:
-                    escaped += ch;
-                    break;
-            }
-        }
-        return escaped;
+        return duckdetector::common::escape_payload_value(value);
     }
 
     std::string encode_snapshot(const duckdetector::selinux::AuditProbeSnapshot &snapshot) {

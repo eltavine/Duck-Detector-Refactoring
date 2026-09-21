@@ -18,6 +18,8 @@
 
 #include <sstream>
 
+#include "common/payload_codec.h"
+
 namespace duckdetector::zygisk {
 
     namespace {
@@ -55,28 +57,7 @@ namespace duckdetector::zygisk {
     }  // namespace
 
     std::string escape_value(const std::string &value) {
-        std::string escaped;
-        escaped.reserve(value.size());
-        for (const char ch: value) {
-            switch (ch) {
-                case '\\':
-                    escaped += "\\\\";
-                    break;
-                case '\n':
-                    escaped += "\\n";
-                    break;
-                case '\r':
-                    escaped += "\\r";
-                    break;
-                case '\t':
-                    escaped += "\\t";
-                    break;
-                default:
-                    escaped += ch;
-                    break;
-            }
-        }
-        return escaped;
+        return common::escape_payload_value(value);
     }
 
     std::string encode_snapshot(const Snapshot &snapshot) {

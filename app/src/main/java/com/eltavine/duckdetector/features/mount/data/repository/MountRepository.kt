@@ -84,7 +84,7 @@ class MountRepository(
         val shellTmpResult = shellTmpConcealmentProbe.run()
         if (!snapshot.available) {
             return buildFailedReport(
-                message = "Native mount snapshot was unavailable.",
+                message = snapshot.collection.explain("Native mount snapshot was unavailable"),
                 procMountView = procMountView,
                 zygoteNext = zygoteNext,
             )

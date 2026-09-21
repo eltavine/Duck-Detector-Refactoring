@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.selinux.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentPayloadCodec
 
 internal object SelinuxContextValidityPayloadCodec {
@@ -373,17 +374,5 @@ internal object SelinuxContextValidityPayloadCodec {
         }
     }
 
-    private fun escapeValue(value: String): String {
-        return buildString(value.length) {
-            value.forEach { ch ->
-                when (ch) {
-                    '\\' -> append("\\\\")
-                    '\n' -> append("\\n")
-                    '\r' -> append("\\r")
-                    '\t' -> append("\\t")
-                    else -> append(ch)
-                }
-            }
-        }
-    }
+    private fun escapeValue(value: String): String = NativePayloadCodec.encodeValue(value)
 }

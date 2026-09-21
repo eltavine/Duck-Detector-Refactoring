@@ -16,6 +16,7 @@
 
 package com.eltavine.duckdetector.features.selinux.data.native
 
+import com.eltavine.duckdetector.core.native.NativeCollectionStatus
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxProcAttrCurrentResult
 
 data class SelinuxContextValiditySnapshot(
@@ -109,4 +110,10 @@ data class SelinuxContextValiditySnapshot(
     val procAttrCurrentFailureReason: String? = null,
     val failureReason: String? = null,
     val notes: List<String> = emptyList(),
+    /**
+     * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
+     * found nothing" from "the probe never ran", so the reason is carried here. [failureReason] holds
+     * the same information in the wording the report shows.
+     */
+    val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
 )

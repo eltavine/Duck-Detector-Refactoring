@@ -16,13 +16,17 @@
 
 package com.eltavine.duckdetector.features.mount.data.native
 
-open class MountNativeBridge {
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
-    open fun collectSnapshot(): MountNativeSnapshot {
-        return runCatching {
-            parse(nativeCollectSnapshot())
-        }.getOrDefault(MountNativeSnapshot())
-    }
+open class MountNativeBridge(
+    private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+) {
+
+    open fun collectSnapshot(): MountNativeSnapshot = collector.collect(
+        readPayload = ::nativeCollectSnapshot,
+        parse = ::parse,
+        unavailable = { status -> MountNativeSnapshot(collection = status) },
+    )
 
     internal fun parse(raw: String): MountNativeSnapshot {
         if (raw.isBlank()) {
@@ -121,10 +125,4 @@ open class MountNativeBridge {
     }
 
     private external fun nativeCollectSnapshot(): String
-
-    companion object {
-        init {
-            runCatching { System.loadLibrary("duckdetector") }
-        }
-    }
 }

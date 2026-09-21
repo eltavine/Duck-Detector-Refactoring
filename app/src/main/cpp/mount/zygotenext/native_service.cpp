@@ -33,6 +33,8 @@
 #include <utility>
 #include <vector>
 
+#include "common/payload_codec.h"
+
 namespace {
 
 constexpr int32_t kStatusOk = 0;
@@ -68,28 +70,7 @@ struct MarkerRecord {
 };
 
 std::string escape_field(const std::string &value) {
-    std::string escaped;
-    escaped.reserve(value.size());
-    for (const char ch: value) {
-        switch (ch) {
-            case '\\':
-                escaped += "\\\\";
-                break;
-            case '\n':
-                escaped += "\\n";
-                break;
-            case '\r':
-                escaped += "\\r";
-                break;
-            case '\t':
-                escaped += "\\t";
-                break;
-            default:
-                escaped += ch;
-                break;
-        }
-    }
-    return escaped;
+    return duckdetector::common::escape_payload_value(value);
 }
 
 std::vector<std::string> split_spaces(const std::string &value) {
