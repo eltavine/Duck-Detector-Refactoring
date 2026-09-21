@@ -1,0 +1,124 @@
+# Copyright (C) 2026 Duck Apps Contributor
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Set up Android build toolchain
+description: >
+  Installs the JDK, Gradle cache, and the exact Android SDK packages this project pins in
+  gradle.properties. Every workflow that runs Gradle needs the same setup, so it lives here instead
+  of being copied per workflow where the pinned versions could drift apart.
+
+inputs:
+  cache-read-only:
+    description: Whether the Gradle cache should be restored without being written back.
+    required: false
+    default: "true"
+
+outputs:
+  build-tools:
+    description: Android build-tools version read from gradle.properties.
+    value: ${{ steps.toolchain.outputs.build_tools }}
+  cmake:
+    description: CMake version read from gradle.properties.
+    value: ${{ steps.toolchain.outputs.cmake }}
+  compile-sdk:
+    description: compileSdk version read from gradle.properties.
+    value: ${{ steps.toolchain.outputs.compile_sdk }}
+  ndk:
+    description: NDK version read from gradle.properties.
+    value: ${{ steps.toolchain.outputs.ndk }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read Android toolchain settings
+      id: toolchain
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        python3 - <<'PY' >> "$GITHUB_OUTPUT"
+        from pathlib import Path
+
+        properties = {}
+        for raw_line in Path("gradle.properties").read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            properties[key.strip()] = value.strip()
+
+        mapping = {
+            "build_tools": "duckdetector.android.buildTools",
+            "cmake": "duckdetector.android.cmake",
+            "compile_sdk": "duckdetector.android.compileSdk",
+            "compile_sdk_minor": "duckdetector.android.compileSdkMinor",
+            "ndk": "duckdetector.android.ndk",
+        }
+
+        for output_name, property_name in mapping.items():
+            value = properties.get(property_name)
+            if not value:
+                raise SystemExit(f"Missing required Gradle property: {property_name}")
+            print(f"{output_name}={value}")
+        PY
+
+    - name: Make Gradle wrapper executable
+      shell: bash
+      run: chmod +x gradlew
+
+    - name: Set up Java 17
+      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      with:
+        distribution: temurin
+        java-version: "17"
+
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      with:
+        cache-read-only: ${{ inputs.cache-read-only }}
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+      with:
+        packages: platform-tools
+
+    - name: Install Android SDK packages
+      shell: bash
+      env:
+        BUILD_TOOLS: ${{ steps.toolchain.outputs.build_tools }}
+        CMAKE: ${{ steps.toolchain.outputs.cmake }}
+        COMPILE_SDK: ${{ steps.toolchain.outputs.compile_sdk }}
+        COMPILE_SDK_MINOR: ${{ steps.toolchain.outputs.compile_sdk_minor }}
+        NDK: ${{ steps.toolchain.outputs.ndk }}
+      run: |
+        set -euo pipefail
+
+        packages=(
+          "platform-tools"
+          "platforms;android-${COMPILE_SDK}.${COMPILE_SDK_MINOR}"
+          "build-tools;${BUILD_TOOLS}"
+          "cmake;${CMAKE}"
+          "ndk;${NDK}"
+        )
+
+        for attempt in 1 2 3; do
+          if sdkmanager --install "${packages[@]}"; then
+            break
+          fi
+          if [ "${attempt}" -eq 3 ]; then
+            echo "Android SDK package installation failed after ${attempt} attempts." >&2
+            exit 1
+          fi
+          sleep $((attempt * 5))
+        done

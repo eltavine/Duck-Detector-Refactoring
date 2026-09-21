@@ -62,72 +62,14 @@ jobs:
 
           echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
 
-      - name: Read Android toolchain settings
+      - name: Set up Android build toolchain
         id: toolchain
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          from pathlib import Path
-
-          properties = {}
-          for raw_line in Path("gradle.properties").read_text(encoding="utf-8").splitlines():
-              line = raw_line.strip()
-              if not line or line.startswith("#") or "=" not in line:
-                  continue
-              key, value = line.split("=", 1)
-              properties[key.strip()] = value.strip()
-
-          mapping = {
-              "build_tools": "duckdetector.android.buildTools",
-              "cmake": "duckdetector.android.cmake",
-              "compile_sdk": "duckdetector.android.compileSdk",
-              "compile_sdk_minor": "duckdetector.android.compileSdkMinor",
-              "ndk": "duckdetector.android.ndk",
-          }
-
-          for output_name, property_name in mapping.items():
-              value = properties.get(property_name)
-              if not value:
-                  raise SystemExit(f"Missing required Gradle property: {property_name}")
-              print(f"{output_name}={value}")
-          PY
-
-      - name: Make Gradle wrapper executable
-        shell: bash
-        run: chmod +x gradlew
-
-      - name: Set up Java 17
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        uses: ./.github/actions/setup-android-build
         with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
-        with:
-          packages: platform-tools
-
-      - name: Install Android SDK packages
-        shell: bash
-        env:
-          BUILD_TOOLS: ${{ steps.toolchain.outputs.build_tools }}
-          CMAKE: ${{ steps.toolchain.outputs.cmake }}
-          COMPILE_SDK: ${{ steps.toolchain.outputs.compile_sdk }}
-          COMPILE_SDK_MINOR: ${{ steps.toolchain.outputs.compile_sdk_minor }}
-          NDK: ${{ steps.toolchain.outputs.ndk }}
-        run: |
-          set -euo pipefail
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-${COMPILE_SDK}.${COMPILE_SDK_MINOR}" \
-            "build-tools;${BUILD_TOOLS}" \
-            "cmake;${CMAKE}" \
-            "ndk;${NDK}"
+          # Tag builds restore the cache but do not write it back: GitHub scopes a cache entry to
+          # the ref that created it, so an entry written from refs/tags/v* can never be read by
+          # another branch or tag and would only consume the repository cache quota.
+          cache-read-only: "true"
 
       - name: Prepare release keystore
         id: keystore
@@ -215,6 +157,7 @@ jobs:
           ./gradlew \
             -Pduckdetector.buildTimeUtc="${build_time_utc}" \
             -Pduckdetector.teeCrl.refresh=true \
+            -Pduckdetector.githubContributors.refresh=true \
             :app:assembleRelease
           end_time=$(date +%s)
 
@@ -317,7 +260,7 @@ jobs:
         shell: bash
         env:
           APK_PATH: ${{ steps.metadata.outputs.apk_path }}
-          BUILD_TOOLS: ${{ steps.toolchain.outputs.build_tools }}
+          BUILD_TOOLS: ${{ steps.toolchain.outputs.build-tools }}
           EXPECTED_SIGNER_SHA256: ${{ steps.signing_fingerprint.outputs.sha256 }}
         run: |
           set -euo pipefail

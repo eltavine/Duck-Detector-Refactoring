@@ -1,0 +1,83 @@
+# Copyright (C) 2026 Duck Apps Contributor
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: CI
+
+# build.yml and release-latest.yml only run on pushes to main and on tags, which left the unit
+# tests, Android lint, and the native build unverified on every pull request. This workflow runs
+# exactly the checks CODING_STANDARDS.md asks contributors to run locally, and needs no secrets.
+#
+# Only pull_request is used, not push. A branch in this repository that has an open pull request
+# would otherwise match both triggers and run the whole matrix twice for one commit.
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Unit tests, lint, and native build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Android build toolchain
+        uses: ./.github/actions/setup-android-build
+        with:
+          cache-read-only: "true"
+
+      # assembleDebug covers externalNativeBuildDebug, so the CMake configuration and all four ABIs
+      # are compiled here. The contributors asset is deliberately left unrefreshed: pull requests
+      # have no reason to reach github.com during the build.
+      - name: Run unit tests and assemble debug
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./gradlew --stacktrace \
+            :app:testDebugUnitTest \
+            :app:assembleDebug
+
+      # Gating. lintDebug reports zero errors, so any new one fails the pull request. Translation
+      # completeness is reported as a warning instead (see the lint block in the convention plugin),
+      # because a locale that has not caught up with a new string must not block unrelated work.
+      - name: Run Android lint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./gradlew --stacktrace :app:lintDebug
+
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verify-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.txt
+          if-no-files-found: ignore
+          retention-days: 7
