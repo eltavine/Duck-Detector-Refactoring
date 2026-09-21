@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.tee.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
+
 class TeeRegisterTimerNativeBridge {
 
     fun isNativeAvailable(): Boolean = nativeLoaded
@@ -89,7 +91,10 @@ class TeeRegisterTimerNativeBridge {
                 .map { it.trim() }
                 .filter { it.isNotEmpty() && it.contains('=') }
                 .forEach { line ->
-                    put(line.substringBefore('='), line.substringAfter('='))
+                    put(
+                        line.substringBefore('='),
+                        NativePayloadCodec.decodeValue(line.substringAfter('=')),
+                    )
                 }
         }
     }

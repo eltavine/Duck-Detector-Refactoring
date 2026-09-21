@@ -23,6 +23,8 @@
 #include <sys/system_properties.h>
 #include <unistd.h>
 
+#include "common/payload_codec.h"
+
 namespace systemproperties {
 
     namespace {
@@ -60,28 +62,14 @@ namespace systemproperties {
     }
 
     std::string escape_value(std::string value) {
+        // /proc/cmdline and /proc/bootconfig separate entries with NUL, so a raw read arrives with
+        // embedded NULs that would truncate the jstring. Flatten them before escaping.
         for (char &ch: value) {
             if (ch == '\0') {
                 ch = ' ';
             }
         }
-
-        std::string escaped;
-        escaped.reserve(value.size());
-        for (char ch: value) {
-            switch (ch) {
-                case '\n':
-                    escaped += "\\n";
-                    break;
-                case '\r':
-                    escaped += "\\r";
-                    break;
-                default:
-                    escaped += ch;
-                    break;
-            }
-        }
-        return escaped;
+        return duckdetector::common::escape_payload_value(value);
     }
 
     std::string read_text_file(const char *path, size_t max_bytes) {

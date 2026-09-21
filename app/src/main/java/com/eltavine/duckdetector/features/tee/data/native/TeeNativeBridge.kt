@@ -16,6 +16,8 @@
 
 package com.eltavine.duckdetector.features.tee.data.native
 
+import com.eltavine.duckdetector.core.native.NativePayloadCodec
+
 class TeeNativeBridge {
 
     fun collectSnapshot(leafDer: ByteArray?): NativeTeeSnapshot {
@@ -71,7 +73,7 @@ class TeeNativeBridge {
                 .filter { it.isNotEmpty() && it.contains('=') }
                 .forEach { line ->
                     val key = line.substringBefore('=')
-                    val value = line.substringAfter('=')
+                    val value = NativePayloadCodec.decodeValue(line.substringAfter('='))
                     val index = indexedKeys.getOrDefault(key, 0)
                     indexedKeys[key] = index + 1
                     if (index == 0) {

@@ -16,6 +16,7 @@
 
 #include <jni.h>
 
+#include "common/payload_codec.h"
 #include "kernelcheck/arm64_cpu_identity_probe.h"
 
 #include <algorithm>
@@ -80,28 +81,14 @@ namespace {
     }
 
     std::string escape_value(std::string value) {
+        // /proc/cmdline separates entries with NUL, so a raw read arrives with embedded NULs that
+        // would truncate the jstring. Flatten them before escaping.
         for (char &ch: value) {
             if (ch == '\0') {
                 ch = ' ';
             }
         }
-
-        std::string escaped;
-        escaped.reserve(value.size());
-        for (char ch: value) {
-            switch (ch) {
-                case '\n':
-                    escaped += "\\n";
-                    break;
-                case '\r':
-                    escaped += "\\r";
-                    break;
-                default:
-                    escaped += ch;
-                    break;
-            }
-        }
-        return escaped;
+        return duckdetector::common::escape_payload_value(value);
     }
 
     std::string read_file_via_syscall(const char *path, size_t max_bytes = 16384) {

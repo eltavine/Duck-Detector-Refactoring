@@ -16,12 +16,17 @@
 
 #include "tee/common/result_codec.h"
 
+#include "common/payload_codec.h"
+
 namespace ducktee::common {
 
     void ResultCodec::put(std::string_view key, std::string_view value) {
         buffer_.append(key);
         buffer_.push_back('=');
-        buffer_.append(value);
+        // TEE values carry attacker-influenced text such as mapped library paths and trickystore
+        // details. Appending them raw let a single newline end the record early and turn the
+        // remainder into bogus keys, so the whole payload has to go through the shared escaping.
+        buffer_.append(duckdetector::common::escape_payload_value(value));
         buffer_.push_back('\n');
     }
 
