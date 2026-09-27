@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.compose.icons.simple)
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.aboutlibraries.compose.m3) {
         exclude(group = "com.github.skydoves", module = "compose-stability-runtime")
     }

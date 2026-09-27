@@ -15,6 +15,11 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="author_wall_title">기여자</string>
+    <string name="author_wall_hint">드래그하여 이동 · 두 손가락으로 확대 및 축소 · 눌러서 상세 정보 보기</string>
+    <string name="author_view_details">상세 정보 보기</string>
+    <string name="author_view_github">GitHub에서 보기</string>
+    <string name="author_details_close">닫기</string>
     <string name="about_clipboard_build_hash_line">빌드 해시: %1$s</string>
     <string name="about_clipboard_build_time_line">빌드 시간 (UTC): %1$s UTC</string>
     <string name="about_clipboard_label">Duck Detector 빌드 정보</string>
@@ -33,13 +38,10 @@ limitations under the License.
     <string name="about_title">정보</string>
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_value_version">%1$s (%2$d)</string>
-    <string name="author_boundary_toast">끝점</string>
     <string name="author_summary_baka">TEE &amp; Zygisk</string>
     <string name="author_summary_eltavine">UI, C++, ASM 및 Kotlin 기여</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="author_swipe_hint_paged">좌우로 밀어서 작성자를 살펴보세요. %1$d/%2$d</string>
-    <string name="author_swipe_hint_single">좌우로 밀어서 작성자를 살펴보세요.</string>
     <string name="licenses_dialog_close">닫기</string>
     <string name="licenses_dialog_home_page">홈페이지</string>
     <string name="licenses_dialog_licenses">라이선스: %1$s</string>

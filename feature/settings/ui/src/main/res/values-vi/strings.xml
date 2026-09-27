@@ -15,6 +15,11 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="author_wall_title">Người đóng góp</string>
+    <string name="author_wall_hint">Kéo để di chuyển · Chụm hai ngón tay để thu phóng · Chạm để xem chi tiết</string>
+    <string name="author_view_details">Xem chi tiết</string>
+    <string name="author_view_github">Xem trên GitHub</string>
+    <string name="author_details_close">Đóng</string>
     <string name="about_clipboard_build_hash_line">Mã băm build: %1$s</string>
     <string name="about_clipboard_build_time_line">Thời gian build (UTC): %1$s UTC</string>
     <string name="about_clipboard_label">Thông tin build Duck Detector</string>
@@ -33,13 +38,10 @@ limitations under the License.
     <string name="about_title">Giới thiệu</string>
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_value_version">%1$s (%2$d)</string>
-    <string name="author_boundary_toast">Điểm cuối</string>
     <string name="author_summary_baka">TEE &amp; Zygisk</string>
     <string name="author_summary_eltavine">Đóng góp UI, C++, ASM và Kotlin.</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="author_swipe_hint_paged">Vuốt sang trái hoặc phải để xem các tác giả. %1$d/%2$d</string>
-    <string name="author_swipe_hint_single">Vuốt sang trái hoặc phải để xem các tác giả.</string>
     <string name="licenses_dialog_close">Đóng</string>
     <string name="licenses_dialog_home_page">Trang chủ</string>
     <string name="licenses_dialog_licenses">Giấy phép: %1$s</string>

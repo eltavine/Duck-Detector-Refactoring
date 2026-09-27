@@ -15,6 +15,11 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="author_wall_title">المساهمون</string>
+    <string name="author_wall_hint">اسحب للتنقل · استخدم إصبعين للتكبير والتصغير · انقر لعرض التفاصيل</string>
+    <string name="author_view_details">عرض التفاصيل</string>
+    <string name="author_view_github">عرض على GitHub</string>
+    <string name="author_details_close">إغلاق</string>
     <string name="about_clipboard_build_hash_line">مُعرف البناء: %1$s</string>
     <string name="about_clipboard_build_time_line">وقت البناء (UTC): %1$s UTC</string>
     <string name="about_clipboard_label">معلومات بناء Duck Detector</string>
@@ -33,7 +38,6 @@ limitations under the License.
     <string name="about_title">حول</string>
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_value_version">%1$s (%2$d)</string>
-    <string name="author_boundary_toast">نهاية القائمة</string>
     <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
     <string name="author_summary_baka">TEE و Zygisk</string>
     <string name="author_summary_eltavine">ساهم في واجهة المستخدم و C++ و ASM و Kotlin.</string>
@@ -43,8 +47,6 @@ limitations under the License.
     <string name="author_summary_victor">CI</string>
     <string name="author_summary_wxx">CI ‏(Kotlin)</string>
     <string name="author_summary_xiaotong">TEE ‏(C++، Kotlin)</string>
-    <string name="author_swipe_hint_paged">اسحب لليمين أو اليسار للتنقل بين المطورين. %1$d/%2$d</string>
-    <string name="author_swipe_hint_single">اسحب لليمين أو اليسار للتنقل بين المطورين.</string>
     <string name="licenses_dialog_close">إغلاق</string>
     <string name="licenses_dialog_home_page">الصفحة الرئيسية</string>
     <string name="licenses_dialog_licenses">التراخيص: %1$s</string>

@@ -15,6 +15,11 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="author_wall_title">Contributors</string>
+    <string name="author_wall_hint">Drag to explore · Pinch to zoom · Tap for details</string>
+    <string name="author_view_details">View details</string>
+    <string name="author_view_github">View on GitHub</string>
+    <string name="author_details_close">Close</string>
     <string name="about_clipboard_build_hash_line">Build Hash: %1$s</string>
     <string name="about_clipboard_build_time_line">Build Time (UTC): %1$s UTC</string>
     <string name="about_clipboard_label">Duck Detector build info</string>
@@ -33,7 +38,6 @@ limitations under the License.
     <string name="about_title">About</string>
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_value_version">%1$s (%2$d)</string>
-    <string name="author_boundary_toast">Finality</string>
     <string name="author_summary_5ec1cff">SELinux and LSPosed false-positive finding</string>
     <string name="author_summary_947409161">Ukrainian translation</string>
     <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
@@ -53,8 +57,6 @@ limitations under the License.
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
     <string name="author_summary_zg089">Arabic translation</string>
-    <string name="author_swipe_hint_paged">Swipe left or right to browse authors. %1$d/%2$d</string>
-    <string name="author_swipe_hint_single">Swipe left or right to browse authors.</string>
     <string name="licenses_dialog_close">Close</string>
     <string name="licenses_dialog_home_page">Home page</string>
     <string name="licenses_dialog_licenses">Licenses: %1$s</string>

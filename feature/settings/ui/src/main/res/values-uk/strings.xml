@@ -15,6 +15,11 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="author_wall_title">Учасники</string>
+    <string name="author_wall_hint">Перетягуйте для переміщення · Змінюйте масштаб двома пальцями · Торкніться для подробиць</string>
+    <string name="author_view_details">Переглянути подробиці</string>
+    <string name="author_view_github">Переглянути на GitHub</string>
+    <string name="author_details_close">Закрити</string>
     <string name="about_clipboard_build_hash_line">Хеш збірки: %1$s</string>
     <string name="about_clipboard_build_time_line">Час збірки (UTC): %1$s UTC</string>
     <string name="about_clipboard_label">Інформація про збірку Duck Detector</string>
@@ -33,7 +38,6 @@ limitations under the License.
     <string name="about_title">Про програму</string>
     <string name="about_value_build_time">%1$s UTC</string>
     <string name="about_value_version">%1$s (%2$d)</string>
-    <string name="author_boundary_toast">Кінець списку</string>
     <string name="author_summary_alex">SELinux (C++, Kotlin)</string>
     <string name="author_summary_baka">TEE та Zygisk</string>
     <string name="author_summary_eltavine">Зробив внесок в UI, C++, ASM та Kotlin.</string>
@@ -43,8 +47,6 @@ limitations under the License.
     <string name="author_summary_victor">CI</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="author_swipe_hint_paged">Проведіть пальцем вліво або вправо, щоб переглянути авторів. %1$d/%2$d</string>
-    <string name="author_swipe_hint_single">Проведіть пальцем вліво або вправо, щоб переглянути авторів.</string>
     <string name="licenses_dialog_close">Закрити</string>
     <string name="licenses_dialog_home_page">Домашня сторінка</string>
     <string name="licenses_dialog_licenses">Ліцензії: %1$s</string>
