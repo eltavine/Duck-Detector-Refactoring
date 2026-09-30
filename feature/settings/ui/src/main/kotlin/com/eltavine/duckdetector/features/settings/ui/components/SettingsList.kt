@@ -17,40 +17,24 @@
 
 package com.eltavine.duckdetector.features.settings.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemColors
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedListItem
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
-import com.eltavine.duckdetector.core.ui.components.WrapSafeText
-
-/** Horizontal inset of row content, which section titles and footnotes align with. */
-private val SettingsItemInset = 18.dp
-
-private val SettingsItemPadding = PaddingValues(horizontal = SettingsItemInset, vertical = 14.dp)
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsFootnote
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsGroup
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsIconTile
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsItem
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsItemColors
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsSection
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveMonochromeIconColor
 
 @Composable
 internal fun SettingsSection(
@@ -59,44 +43,21 @@ internal fun SettingsSection(
     badge: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = SettingsItemInset),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            WrapSafeText(
-                text = title,
-                modifier = Modifier.semantics { heading() },
-                style = DuckTypography.FootnoteEmphasized,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (badge != null) {
-                WrapSafeText(
-                    text = badge,
-                    modifier = Modifier
-                        .background(color = DuckTheme.palette.groupedSurface, shape = ShapeTokens.CornerFull)
-                        .padding(horizontal = 8.dp, vertical = 1.dp),
-                    style = DuckTypography.Caption.copy(fontFeatureSettings = "tnum"),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-        content()
-    }
-}
-
-/** Rows that read as one block: separated by the segmented gap and shaped by [settingsItemShapes]. */
-@Composable
-internal fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+    NativeSettingsSection(
+        title = title,
+        modifier = modifier,
+        badge = badge,
+        materialBadgeColor = DuckTheme.palette.groupedSurface,
+        materialBadgeContentColor = MaterialTheme.colorScheme.onSurface,
+        materialBadgeTextStyle = DuckTypography.Caption,
         content = content,
     )
+}
+
+/** Rows that read as one block while uihelper owns each skin's native container semantics. */
+@Composable
+internal fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
+    NativeSettingsGroup(content = content)
 }
 
 @Composable
@@ -111,35 +72,17 @@ internal fun SettingsItem(
     supportingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
-    val headlineContent: @Composable () -> Unit = {
-        WrapSafeText(text = headline, style = DuckTypography.Body)
-    }
-    if (onClick == null) {
-        SegmentedListItem(
-            shapes = shapes,
-            modifier = modifier,
-            enabled = enabled,
-            leadingContent = leadingContent,
-            trailingContent = trailingContent,
-            supportingContent = supportingContent,
-            colors = colors,
-            contentPadding = SettingsItemPadding,
-            content = headlineContent,
-        )
-    } else {
-        SegmentedListItem(
-            onClick = onClick,
-            shapes = shapes,
-            modifier = modifier,
-            enabled = enabled,
-            leadingContent = leadingContent,
-            trailingContent = trailingContent,
-            supportingContent = supportingContent,
-            colors = colors,
-            contentPadding = SettingsItemPadding,
-            content = headlineContent,
-        )
-    }
+    NativeSettingsItem(
+        headline = headline,
+        modifier = modifier,
+        materialShapes = shapes,
+        onClick = onClick,
+        enabled = enabled,
+        materialColors = colors,
+        leadingContent = leadingContent,
+        supportingContent = supportingContent,
+        trailingContent = trailingContent,
+    )
 }
 
 /** Disabled rows keep their colors: a row is disabled only while it is busy, not unavailable. */
@@ -148,41 +91,39 @@ internal fun settingsItemColors(
     containerColor: Color = DuckTheme.palette.groupedSurface,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     supportingColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-): ListItemColors = ListItemDefaults.segmentedColors(
+): ListItemColors = NativeSettingsItemColors(
     containerColor = containerColor,
     contentColor = contentColor,
-    leadingContentColor = contentColor,
-    trailingContentColor = supportingColor,
-    supportingContentColor = supportingColor,
-    disabledContainerColor = containerColor,
-    disabledContentColor = contentColor,
-    disabledLeadingContentColor = contentColor,
-    disabledTrailingContentColor = supportingColor,
-    disabledSupportingContentColor = supportingColor,
+    supportingColor = supportingColor,
 )
 
 @Composable
 internal fun SettingsIconTile(
     icon: ImageVector,
-    tint: Color = MaterialTheme.colorScheme.primary,
+    tint: Color? = null,
 ) {
-    SettingsIconTile {
-        Icon(imageVector = icon, contentDescription = null, tint = tint)
-    }
+    NativeSettingsIconTile(
+        icon = icon,
+        materialTint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant,
+        miuixTint = tint ?: MaterialTheme.colorScheme.primary,
+    )
+}
+
+/** About-section glyphs stay monochrome on MIUIX and retain the old Material neutral tint. */
+@Composable
+internal fun AboutLeadingIcon(icon: ImageVector) {
+    SettingsIconTile(icon = icon, tint = aboutMiuixIconColor())
 }
 
 @Composable
+internal fun aboutMiuixIconColor(): Color =
+    adaptiveMonochromeIconColor(materialColor = MaterialTheme.colorScheme.onSurfaceVariant)
+
+@Composable
 internal fun SettingsIconTile(
-    containerColor: Color = DuckTheme.palette.groupedInset,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .background(color = containerColor, shape = ShapeTokens.CornerMedium),
-        contentAlignment = Alignment.Center,
-        content = content,
-    )
+    NativeSettingsIconTile(content = content)
 }
 
 @Composable
@@ -192,35 +133,12 @@ internal fun SettingsFootnote(
     title: String? = null,
     icon: ImageVector? = null,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = SettingsItemInset),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(top = 1.dp)
-                    .size(18.dp),
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (title != null) {
-                WrapSafeText(
-                    text = title,
-                    style = DuckTypography.FootnoteEmphasized,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            WrapSafeText(
-                text = text,
-                style = DuckTypography.Footnote,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    NativeSettingsFootnote(
+        text = text,
+        modifier = modifier,
+        title = title,
+        icon = icon,
+        materialTitleStyle = DuckTypography.FootnoteEmphasized,
+        materialBodyStyle = DuckTypography.Footnote,
+    )
 }

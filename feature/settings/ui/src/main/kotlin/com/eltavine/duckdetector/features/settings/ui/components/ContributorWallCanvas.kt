@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.features.settings.ui.R
+import io.github.xiaotong6666.uihelper.chrome.pagerSwipeExclusion
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -106,6 +107,7 @@ internal fun ContributorWallCanvas(
                 .fillMaxWidth()
                 .height(canvasHeight)
                 .clip(ShapeTokens.CornerLarge)
+                .then(pagerSwipeExclusion())
                 .wallEdgeFade()
                 .pointerInput(geometry, viewport) {
                     val maximumVelocity = 6000.dp.toPx().let { Velocity(it, it) }

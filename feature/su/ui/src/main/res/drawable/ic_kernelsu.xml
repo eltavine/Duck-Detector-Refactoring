@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adapted from KernelSU manager ic_launcher_foreground.xml; viewport cropped for a list icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="360"
+    android:viewportHeight="360">
+
+    <group
+        android:translateX="-220"
+        android:translateY="-220">
+        <path
+            android:pathData="M 259 259 H 541 V 541 H 259 V 259 Z"
+            android:strokeWidth="18"
+            android:strokeColor="#FF000000" />
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M 257 257 H 407 V 407 H 257 V 257 Z" />
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M 393 393 H 543 V 543 H 393 V 393 Z" />
+    </group>
+</vector>

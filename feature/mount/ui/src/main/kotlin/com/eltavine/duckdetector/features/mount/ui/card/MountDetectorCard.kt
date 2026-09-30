@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountTree
@@ -32,7 +33,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Storage
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -48,6 +50,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.copyPlainTextToClipboard
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
@@ -76,68 +80,84 @@ internal fun MountDetectorCard(
             MountCollapsedOverview(model = model)
         },
     ) {
-        if (model.procMountViewRows.isNotEmpty()) {
-            MountDetailSection(
-                title = "Isolated process mounts",
+        DetectorSectionGroup {
+            item(visible = model.procMountViewRows.isNotEmpty()) {
+                MountDetailSection(
+                title = stringResource(R.string.mount_section_isolated_process),
                 icon = Icons.Rounded.AccountTree,
                 rows = model.procMountViewRows,
-            )
-        }
+                showDivider = model.artifactRows.isNotEmpty() || model.runtimeRows.isNotEmpty() ||
+                    model.filesystemRows.isNotEmpty() || model.consistencyRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.artifactRows.isNotEmpty()) {
-            MountDetailSection(
-                title = "Root artifacts",
+            item(visible = model.artifactRows.isNotEmpty()) {
+                MountDetailSection(
+                title = stringResource(R.string.mount_section_root_artifacts),
                 icon = Icons.Rounded.FolderOpen,
                 rows = model.artifactRows,
-            )
-        }
+                showDivider = model.runtimeRows.isNotEmpty() || model.filesystemRows.isNotEmpty() ||
+                    model.consistencyRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.runtimeRows.isNotEmpty()) {
-            MountDetailSection(
-                title = "Runtime mounts",
+            item(visible = model.runtimeRows.isNotEmpty()) {
+                MountDetailSection(
+                title = stringResource(R.string.mount_section_runtime_mounts),
                 icon = Icons.Rounded.Storage,
                 rows = model.runtimeRows,
-            )
-        }
+                showDivider = model.filesystemRows.isNotEmpty() || model.consistencyRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.filesystemRows.isNotEmpty()) {
-            MountDetailSection(
-                title = "Filesystem",
+            item(visible = model.filesystemRows.isNotEmpty()) {
+                MountDetailSection(
+                title = stringResource(R.string.mount_section_filesystem),
                 icon = Icons.Rounded.Memory,
                 rows = model.filesystemRows,
-            )
-        }
+                showDivider = model.consistencyRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.consistencyRows.isNotEmpty()) {
-            MountDetailSection(
-                title = "Namespace and consistency",
+            item(visible = model.consistencyRows.isNotEmpty()) {
+                MountDetailSection(
+                title = stringResource(R.string.mount_section_namespace_consistency),
                 icon = Icons.Rounded.AccountTree,
                 rows = model.consistencyRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            MountImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                MountImpactSection(
+                title = stringResource(R.string.mount_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            MountDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                MountDetailSection(
+                title = stringResource(R.string.mount_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            MountDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                MountDetailSection(
+                title = stringResource(R.string.mount_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -152,7 +172,7 @@ private fun MountCollapsedOverview(
     val native = model.headerFacts.firstOrNull { it.fact == MountHeaderFact.NATIVE } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -190,10 +210,13 @@ private fun MountDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<MountDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -241,10 +264,13 @@ private fun MountImpactSection(
     title: String,
     icon: ImageVector,
     items: List<MountImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -264,7 +290,7 @@ private fun MountImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

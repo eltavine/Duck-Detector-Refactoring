@@ -17,25 +17,29 @@
 
 package com.eltavine.duckdetector.features.kernelcheck.ui.card
 
+import com.eltavine.duckdetector.features.kernelcheck.ui.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DeveloperBoard
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.CrisisAlert
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -43,6 +47,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.kernelcheck.presentation.model.KernelCheckCardModel
@@ -62,58 +68,68 @@ internal fun KernelCheckDetectorCard(
         status = model.status,
         verdict = model.verdict,
         summary = model.summary,
-        leadingIcon = Icons.Rounded.Memory,
+        leadingIcon = Icons.Rounded.DeveloperBoard,
         modifier = modifier,
         headerFacts = {
             KernelCheckCollapsedOverview(model = model)
         },
     ) {
-        if (model.identityRows.isNotEmpty()) {
-            KernelCheckDetailSection(
-                title = "Kernel identity",
+        DetectorSectionGroup {
+            item(visible = model.identityRows.isNotEmpty()) {
+                KernelCheckDetailSection(
+                title = stringResource(R.string.kernelcheck_section_identity),
                 icon = Icons.Rounded.Description,
                 rows = model.identityRows,
-            )
-        }
+                showDivider = model.anomalyRows.isNotEmpty() || model.behaviorRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.anomalyRows.isNotEmpty()) {
-            KernelCheckDetailSection(
-                title = "Anomalies",
+            item(visible = model.anomalyRows.isNotEmpty()) {
+                KernelCheckDetailSection(
+                title = stringResource(R.string.kernelcheck_section_anomalies),
                 icon = Icons.Rounded.Warning,
                 rows = model.anomalyRows,
-            )
-        }
+                showDivider = model.behaviorRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.behaviorRows.isNotEmpty()) {
-            KernelCheckDetailSection(
-                title = "Kernel behavior",
+            item(visible = model.behaviorRows.isNotEmpty()) {
+                KernelCheckDetailSection(
+                title = stringResource(R.string.kernelcheck_section_behavior),
                 icon = Icons.Rounded.BugReport,
                 rows = model.behaviorRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            KernelCheckImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                KernelCheckImpactSection(
+                title = stringResource(R.string.kernelcheck_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            KernelCheckDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                KernelCheckDetailSection(
+                title = stringResource(R.string.kernelcheck_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            KernelCheckDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                KernelCheckDetailSection(
+                title = stringResource(R.string.kernelcheck_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -128,7 +144,7 @@ private fun KernelCheckCollapsedOverview(
     val native = model.headerFacts.firstOrNull { it.fact == KernelCheckHeaderFact.NATIVE } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -166,10 +182,13 @@ private fun KernelCheckDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<KernelCheckDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -200,10 +219,13 @@ private fun KernelCheckImpactSection(
     title: String,
     icon: ImageVector,
     items: List<KernelCheckImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -223,7 +245,7 @@ private fun KernelCheckImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

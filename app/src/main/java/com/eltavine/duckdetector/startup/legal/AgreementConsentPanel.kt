@@ -44,7 +44,7 @@ import androidx.compose.material.icons.outlined.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -196,7 +196,7 @@ private fun AgreeButton(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (ready) {
-                    Icon(
+                    DuckIcon(
                         imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),

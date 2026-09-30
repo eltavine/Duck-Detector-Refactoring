@@ -96,6 +96,7 @@ Duck-Detector-Refactoring/
 ├─ feature/               # 每个目录一个检测器或辅助功能，按层拆分
 ├─ samples/sdk-consumer/  # 只依赖已发布 AAR 构建的独立示例应用
 ├─ build-logic/           # 约定插件、模块边界与依赖校验、生成资源任务
+├─ uihelper/              # 锁定提交的 Git 子模块：MIUIX / Material UI，独立 Gradle 构建
 ├─ docs/                  # 架构概览、指南与后续事项
 ├─ .github/policies/      # 模块、原生、检测器接触点、反射与文本协议策略
 ├─ .github/scripts/       # 仓库守卫脚本及其自测
@@ -135,6 +136,12 @@ python3 scripts/new_detector.py <name> --description "检测什么，以及为�
 - CMake 4.1.2
 
 依赖与工具版本以 [`gradle.properties`](./gradle.properties) 和 [`gradle/libs.versions.toml`](./gradle/libs.versions.toml) 为准。
+
+克隆后需要初始化 UI 子模块（也可在克隆时使用 `--recurse-submodules`）。它作为独立 Gradle 构建接入，不进入无 UI 的检测 SDK：
+
+```bash
+git submodule update --init --recursive
+```
 
 ## 常用命令
 

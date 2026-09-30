@@ -279,7 +279,7 @@ class ZygiskCardModelMapper {
         return when (report.toDetectorStatus()) {
             DetectorStatus.danger() -> "Danger"
             DetectorStatus.warning() -> "Warning"
-            DetectorStatus.allClear() -> "All clear"
+            DetectorStatus.allClear() -> "Clear"
             else -> "Support"
         }
     }

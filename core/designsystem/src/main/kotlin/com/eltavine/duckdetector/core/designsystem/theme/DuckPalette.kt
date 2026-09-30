@@ -26,9 +26,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * Colors for grouped screens, where content sits in containers on a darker page: the arrangement
- * of Apple's grouped lists. Status colors are Apple's system colors, which change between light
- * and dark appearance so each stays legible on its background.
+ * Colors for grouped utility screens. MIUIX mode derives surfaces from MiuixTheme and uses the
+ * same status accents as the native MIUIX treatment instead of mixing in a second platform's
+ * system palette.
  */
 @Immutable
 public class DuckPalette internal constructor(
@@ -63,20 +63,46 @@ internal fun duckPalette(scheme: ColorScheme, dark: Boolean): DuckPalette = if (
         groupedSurface = scheme.surfaceContainerLow,
         groupedInset = scheme.surfaceContainerHigh,
         separator = scheme.outlineVariant.copy(alpha = 0.55f),
-        positive = Color(0xFF30D158),
-        caution = Color(0xFFFF9F0A),
-        critical = Color(0xFFFF453A),
-        neutral = Color(0xFF98989D),
+        positive = Color(0xFF36D167),
+        caution = Color(0xFFF5A623),
+        critical = scheme.error,
+        neutral = scheme.onSurfaceVariant,
     )
 } else {
     DuckPalette(
-        groupedBackground = scheme.surfaceContainer,
-        groupedSurface = scheme.surfaceContainerLowest,
+        groupedBackground = scheme.surfaceContainerLowest,
+        groupedSurface = scheme.surfaceContainer,
         groupedInset = scheme.surfaceContainer,
         separator = scheme.outlineVariant.copy(alpha = 0.7f),
-        positive = Color(0xFF34C759),
-        caution = Color(0xFFFF9500),
-        critical = Color(0xFFFF3B30),
-        neutral = Color(0xFF8E8E93),
+        positive = Color(0xFF36D167),
+        caution = Color(0xFFF5A623),
+        critical = scheme.error,
+        neutral = scheme.onSurfaceVariant,
     )
 }
+
+/** Material Expressive layers: tonal page, bright grouped items, and higher inset facts. */
+internal fun expressiveDuckPalette(scheme: ColorScheme, dark: Boolean): DuckPalette =
+    if (dark) {
+        DuckPalette(
+            groupedBackground = scheme.surfaceContainer,
+            groupedSurface = scheme.surfaceBright,
+            groupedInset = scheme.surfaceContainerHigh,
+            separator = scheme.outlineVariant.copy(alpha = 0.55f),
+            positive = Color(0xFF30D158),
+            caution = Color(0xFFFF9F0A),
+            critical = Color(0xFFFF453A),
+            neutral = Color(0xFF98989D),
+        )
+    } else {
+        DuckPalette(
+            groupedBackground = scheme.surfaceContainer,
+            groupedSurface = scheme.surfaceBright,
+            groupedInset = scheme.surfaceContainerHigh,
+            separator = scheme.outlineVariant.copy(alpha = 0.7f),
+            positive = Color(0xFF34C759),
+            caution = Color(0xFFFF9500),
+            critical = Color(0xFFFF3B30),
+            neutral = Color(0xFF8E8E93),
+        )
+    }

@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -75,7 +75,7 @@ internal fun StartupPolicyCard(
                     .background(color = DuckTheme.palette.groupedInset, shape = IconTileShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
+                DuckIcon(
                     imageVector = card.icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurface,

@@ -17,4 +17,12 @@ limitations under the License.
 
 <resources>
     <string name="native_root_diagnostic_clipboard_label">Native Root diagnostic detail</string>
+
+    <string name="nativeroot_section_native_probes">Native probes</string>
+    <string name="nativeroot_section_runtime_artifacts">Runtime artifacts</string>
+    <string name="nativeroot_section_kernel_traces">Kernel traces</string>
+    <string name="nativeroot_section_property_residue">Property residue</string>
+    <string name="nativeroot_section_impact">Impact</string>
+    <string name="nativeroot_section_detection_methods">Detection methods</string>
+    <string name="nativeroot_section_scan_summary">Scan summary</string>
 </resources>

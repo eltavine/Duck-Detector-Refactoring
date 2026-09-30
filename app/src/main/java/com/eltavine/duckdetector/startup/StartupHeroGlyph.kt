@@ -20,7 +20,7 @@ package com.eltavine.duckdetector.startup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,7 +47,7 @@ internal fun StartupHeroGlyph(
             .background(color = DuckTheme.palette.groupedSurface, shape = HeroGlyphShape),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        DuckIcon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurface,

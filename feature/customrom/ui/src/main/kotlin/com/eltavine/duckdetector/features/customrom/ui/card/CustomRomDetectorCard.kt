@@ -17,10 +17,12 @@
 
 package com.eltavine.duckdetector.features.customrom.ui.card
 
+import com.eltavine.duckdetector.features.customrom.ui.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
@@ -29,12 +31,14 @@ import androidx.compose.material.icons.rounded.CrisisAlert
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -42,6 +46,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.customrom.presentation.model.CustomRomCardModel
@@ -67,52 +73,62 @@ internal fun CustomRomDetectorCard(
             CustomRomCollapsedOverview(model = model)
         },
     ) {
-        if (model.buildRows.isNotEmpty()) {
-            CustomRomDetailSection(
-                title = "Build signals",
+        DetectorSectionGroup {
+            item(visible = model.buildRows.isNotEmpty()) {
+                CustomRomDetailSection(
+                title = stringResource(R.string.customrom_section_build_signals),
                 icon = Icons.Rounded.Build,
                 rows = model.buildRows,
-            )
-        }
+                showDivider = model.runtimeRows.isNotEmpty() || model.frameworkRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.runtimeRows.isNotEmpty()) {
-            CustomRomDetailSection(
-                title = "Runtime signals",
+            item(visible = model.runtimeRows.isNotEmpty()) {
+                CustomRomDetailSection(
+                title = stringResource(R.string.customrom_section_runtime_signals),
                 icon = Icons.Rounded.Apps,
                 rows = model.runtimeRows,
-            )
-        }
+                showDivider = model.frameworkRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.frameworkRows.isNotEmpty()) {
-            CustomRomDetailSection(
-                title = "Framework traces",
+            item(visible = model.frameworkRows.isNotEmpty()) {
+                CustomRomDetailSection(
+                title = stringResource(R.string.customrom_section_framework_traces),
                 icon = Icons.Rounded.Folder,
                 rows = model.frameworkRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            CustomRomImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                CustomRomImpactSection(
+                title = stringResource(R.string.customrom_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            CustomRomDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                CustomRomDetailSection(
+                title = stringResource(R.string.customrom_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            CustomRomDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                CustomRomDetailSection(
+                title = stringResource(R.string.customrom_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -127,7 +143,7 @@ private fun CustomRomCollapsedOverview(
     val native = model.headerFacts.firstOrNull { it.fact == CustomRomHeaderFact.NATIVE } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -165,10 +181,13 @@ private fun CustomRomDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<CustomRomDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -199,10 +218,13 @@ private fun CustomRomImpactSection(
     title: String,
     icon: ImageVector,
     items: List<CustomRomImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -222,7 +244,7 @@ private fun CustomRomImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

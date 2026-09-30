@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +72,7 @@ internal fun AgreementSection(
                     .background(color = DuckTheme.palette.groupedInset, shape = SectionIconShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
+                DuckIcon(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),

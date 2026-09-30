@@ -17,12 +17,15 @@
 
 package com.eltavine.duckdetector.features.lsposed.ui.card
 
+import com.eltavine.duckdetector.features.lsposed.ui.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.AccountTree
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.BugReport
@@ -31,12 +34,15 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -44,6 +50,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.lsposed.presentation.model.LSPosedCardModel
@@ -63,67 +71,84 @@ internal fun LSPosedDetectorCard(
         status = model.status,
         verdict = model.verdict,
         summary = model.summary,
-        leadingIcon = Icons.Rounded.BugReport,
+        leadingIcon = Icons.Rounded.Extension,
+        miuixLeadingPainter = painterResource(R.drawable.ic_lsposed_miuix),
         modifier = modifier,
         headerFacts = {
             LSPosedCollapsedOverview(model = model)
         },
     ) {
-        if (model.runtimeRows.isNotEmpty()) {
-            LSPosedDetailSection(
-                title = "Runtime checks",
+        DetectorSectionGroup {
+            item(visible = model.runtimeRows.isNotEmpty()) {
+                LSPosedDetailSection(
+                title = stringResource(R.string.lsposed_section_runtime_checks),
                 icon = Icons.Rounded.BugReport,
                 rows = model.runtimeRows,
-            )
-        }
-        if (model.binderRows.isNotEmpty()) {
-            LSPosedDetailSection(
-                title = "Binder and services",
+                showDivider = model.binderRows.isNotEmpty() || model.packageRows.isNotEmpty() ||
+                    model.policyRows.isNotEmpty() || model.nativeRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.binderRows.isNotEmpty()) {
+                LSPosedDetailSection(
+                title = stringResource(R.string.lsposed_section_binder_services),
                 icon = Icons.Rounded.AccountTree,
                 rows = model.binderRows,
-            )
-        }
-        if (model.packageRows.isNotEmpty()) {
-            LSPosedDetailSection(
-                title = "Packages and modules",
+                showDivider = model.packageRows.isNotEmpty() || model.policyRows.isNotEmpty() ||
+                    model.nativeRows.isNotEmpty() || model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() ||
+                    model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.packageRows.isNotEmpty()) {
+                LSPosedDetailSection(
+                title = stringResource(R.string.lsposed_section_packages_modules),
                 icon = Icons.Rounded.Apps,
                 rows = model.packageRows,
-            )
-        }
-        if (model.policyRows.isNotEmpty()) {
-            LSPosedDetailSection(
-                title = "SELinux policy",
+                showDivider = model.policyRows.isNotEmpty() || model.nativeRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.policyRows.isNotEmpty()) {
+                LSPosedDetailSection(
+                title = stringResource(R.string.lsposed_section_selinux_policy),
                 icon = Icons.Rounded.Security,
                 rows = model.policyRows,
-            )
-        }
-        if (model.nativeRows.isNotEmpty()) {
-            LSPosedDetailSection(
-                title = "Native traces",
+                showDivider = model.nativeRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.nativeRows.isNotEmpty()) {
+                LSPosedDetailSection(
+                title = stringResource(R.string.lsposed_section_native_traces),
                 icon = Icons.Rounded.Memory,
                 rows = model.nativeRows,
-            )
-        }
-        if (model.impactItems.isNotEmpty()) {
-            LSPosedImpactSection(
-                title = "Impact",
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.impactItems.isNotEmpty()) {
+                LSPosedImpactSection(
+                title = stringResource(R.string.lsposed_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
-        if (model.methodRows.isNotEmpty()) {
-            LSPosedDetailSection(
-                title = "Detection methods",
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.methodRows.isNotEmpty()) {
+                LSPosedDetailSection(
+                title = stringResource(R.string.lsposed_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
-        if (model.scanRows.isNotEmpty()) {
-            LSPosedDetailSection(
-                title = "Scan summary",
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.scanRows.isNotEmpty()) {
+                LSPosedDetailSection(
+                title = stringResource(R.string.lsposed_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -138,7 +163,7 @@ private fun LSPosedCollapsedOverview(
     val packages = model.headerFacts.firstOrNull { it.fact == LSPosedHeaderFact.PACKAGES } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -176,10 +201,13 @@ private fun LSPosedDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<LSPosedDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -212,10 +240,13 @@ private fun LSPosedImpactSection(
     title: String,
     icon: ImageVector,
     items: List<LSPosedImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -235,7 +266,7 @@ private fun LSPosedImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

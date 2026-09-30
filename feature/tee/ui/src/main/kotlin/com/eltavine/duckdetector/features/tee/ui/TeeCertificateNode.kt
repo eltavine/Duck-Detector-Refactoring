@@ -38,7 +38,7 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.VpnKey
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -81,7 +81,7 @@ internal fun TeeCertificateNode(
                 color = accent.copy(alpha = 0.14f),
                 shape = CircleShape,
             ) {
-                Icon(
+                DuckIcon(
                     imageVector = roleIcon,
                     contentDescription = null,
                     tint = accent,
@@ -103,11 +103,7 @@ internal fun TeeCertificateNode(
             }
         }
 
-        Surface(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shape = ShapeTokens.CornerExtraLarge,
-        ) {
+        TeeDialogSurface(tone = TeeDialogTone.Low, modifier = Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -197,10 +193,7 @@ private fun TeeCertificateGroup(
     icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = ShapeTokens.CornerLargeIncreased,
-    ) {
+    TeeDialogSurface(tone = TeeDialogTone.High, cornerRadius = 12.dp) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -211,11 +204,8 @@ private fun TeeCertificateGroup(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shape = ShapeTokens.CornerLarge,
-                ) {
-                    Icon(
+                TeeDialogSurface(tone = TeeDialogTone.Highest, cornerRadius = 12.dp) {
+                    DuckIcon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
@@ -249,11 +239,8 @@ private fun TeeCertificateField(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            shape = ShapeTokens.CornerLarge,
-        ) {
-            Icon(
+        TeeDialogSurface(tone = TeeDialogTone.Highest, cornerRadius = 12.dp) {
+            DuckIcon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,

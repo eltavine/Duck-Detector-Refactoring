@@ -25,7 +25,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:ui"))
+    implementation(libs.uihelper)
     implementation(project(":core:designsystem"))
     api(project(":feature:update:domain"))
     api(project(":feature:update:presentation"))

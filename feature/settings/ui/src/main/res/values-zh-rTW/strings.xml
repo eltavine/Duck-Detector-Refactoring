@@ -48,7 +48,7 @@ limitations under the License.
     <string name="author_summary_wxx">CI（Kotlin）</string>
     <string name="author_summary_xiaotong">TEE（C++、Kotlin）</string>
     <string name="github_acceleration_footer">gh-proxy.com 為第三方服務。開啟後，更新檢查與 Nightly 下載會經由它轉送，不再直接連線 GitHub。它無法轉送提交比較，因此更新對話框可能只列出最新一次提交。</string>
-    <string name="github_acceleration_summary">透過 gh-proxy.com 檢查並下載 Nightly 更新</string>
+    <string name="github_acceleration_summary">透過第三方 gh-proxy.com 檢查與下載 Nightly，提交比較可能無法使用，更新彈窗可能只顯示最新提交</string>
     <string name="github_acceleration_title">GitHub 加速</string>
     <string name="licenses_dialog_close">關閉</string>
     <string name="licenses_dialog_home_page">首頁</string>
@@ -56,20 +56,20 @@ limitations under the License.
     <string name="licenses_dialog_open">開啟</string>
     <string name="licenses_dialog_source_repo">原始碼倉庫</string>
     <string name="licenses_dialog_version">版本 %1$s</string>
-    <string name="licenses_entry_subtitle">瀏覽此建置內含的第三方專案，並查看其授權聲明。</string>
+    <string name="licenses_entry_subtitle">瀏覽此建置內含的第三方專案，並查看其授權聲明</string>
     <string name="licenses_entry_title">開源函式庫</string>
-    <string name="licenses_inventory_subtitle">點選任一依賴項即可檢視授權文本與上游專案連結。</string>
+    <string name="licenses_inventory_subtitle">點選任一依賴項即可檢視授權文本與上游專案連結</string>
     <string name="licenses_inventory_title">內含函式庫清單</string>
     <string name="licenses_screen_back">返回</string>
-    <string name="licenses_screen_subtitle">此建置內含的第三方元件。</string>
+    <string name="licenses_screen_subtitle">此建置內含的第三方元件</string>
     <string name="licenses_screen_title">開源授權</string>
     <string name="settings_section_detection">檢測選項</string>
     <string name="settings_section_network">網路</string>
     <string name="settings_title">設定</string>
     <string name="update_settings_label">檢查更新</string>
-    <string name="update_status_available">有新的 Nightly 建置；輕觸查看詳情</string>
+    <string name="update_status_available">有新的 Nightly 建置，輕觸查看詳情</string>
     <string name="update_status_checking">正在檢查 GitHub…</string>
     <string name="update_status_current">目前已是最新 Nightly 建置</string>
-    <string name="update_status_failed">無法檢查 GitHub；輕觸重試</string>
-    <string name="update_status_idle">冷啟動後會檢查 GitHub Main Nightly；輕觸可立即檢查</string>
+    <string name="update_status_failed">無法檢查 GitHub，輕觸重試</string>
+    <string name="update_status_idle">冷啟動後會檢查 GitHub Main Nightly，輕觸可立即檢查</string>
 </resources>

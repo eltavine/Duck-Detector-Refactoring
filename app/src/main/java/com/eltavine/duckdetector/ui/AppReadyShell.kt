@@ -21,9 +21,17 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.outlined.Home as HomeOutline
+import androidx.compose.material.icons.outlined.Settings as SettingsOutline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -47,18 +56,26 @@ import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.detector.ConsentDecision
 import com.eltavine.duckdetector.core.detector.ConsentId
+import com.eltavine.duckdetector.core.navigation.DuckNavHost
+import com.eltavine.duckdetector.core.navigation.DuckRoute
+import com.eltavine.duckdetector.core.navigation.rememberDuckRoutes
+import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardUiState
 import com.eltavine.duckdetector.features.dashboard.presentation.model.buildDashboardFindings
 import com.eltavine.duckdetector.features.dashboard.presentation.model.buildDashboardOverview
 import com.eltavine.duckdetector.features.dashboard.presentation.model.dashboardCardOrder
 import com.eltavine.duckdetector.features.dashboard.ui.DashboardScreen
+import com.eltavine.duckdetector.features.dashboard.ui.DashboardTelegramAction
+import com.eltavine.duckdetector.features.dashboard.ui.DashboardTopBarBrandIcon
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUiState
 import com.eltavine.duckdetector.features.settings.ui.ConsentToggle
 import com.eltavine.duckdetector.features.settings.ui.SettingsScreen
+import com.eltavine.duckdetector.features.settings.ui.licenses.OpenSourceLicensesScreen
 import com.eltavine.duckdetector.features.update.data.GitHubAccelerationStore
 import com.eltavine.duckdetector.features.update.domain.GitHubAcceleration
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadResolution
+import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
 import com.eltavine.duckdetector.features.update.presentation.shouldOfferGitHubAcceleration
 import com.eltavine.duckdetector.features.update.ui.GitHubAccelerationDialog
 import com.eltavine.duckdetector.features.update.ui.NightlyUpdateDialog
@@ -67,13 +84,25 @@ import com.eltavine.duckdetector.notifications.ScanProgressNotificationSnapshot
 import com.eltavine.duckdetector.notifications.ScanProgressNotifier
 import com.eltavine.duckdetector.ui.scan.DetectorScanViewModel
 import com.eltavine.duckdetector.ui.shell.AppDestination
-import com.eltavine.duckdetector.ui.shell.FloatingAppTabSwitcher
+import io.github.xiaotong6666.uihelper.chrome.AdaptiveNavigationShell
+import io.github.xiaotong6666.uihelper.chrome.NavigationShellItem
+import io.github.xiaotong6666.uihelper.chrome.NavigationShellPagerGesturePolicy
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveCircularProgressIndicator
+import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveBodyStyle
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveOnSurfaceColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSecondaryTextColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveTitleStyle
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 import kotlinx.coroutines.launch
+import io.github.xiaotong6666.uihelper.dialog.rememberRetainedDialogPayload
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
 internal fun AppReadyShell(
     destination: AppDestination,
     onSelectDestination: (AppDestination) -> Unit,
+    onUiModeChange: (UiMode) -> Unit,
     consentDecisions: Map<ConsentId, ConsentDecision>,
     notificationPermissionState: com.eltavine.duckdetector.notifications.ScanNotificationPermissionState,
 ) {
@@ -87,7 +116,6 @@ internal fun AppReadyShell(
     val updateViewModel: UpdateViewModel = viewModel(factory = updateFactory)
     val accelerationStore = remember(appContext) { GitHubAccelerationStore.getInstance(appContext) }
     val gitHubAcceleration by accelerationStore.acceleration.collectAsState(initial = null)
-    // Closing the offer without answering leaves the choice open, so the next cold start asks again.
     var accelerationOfferDismissed by rememberSaveable { mutableStateOf(false) }
     val appLocale = LocalConfiguration.current.locales[0]
     val offerGitHubAcceleration = !accelerationOfferDismissed &&
@@ -99,9 +127,9 @@ internal fun AppReadyShell(
     // The scan coordinator, the dashboard and the export list detectors by id.
     val detectors = remember(detectorSessions) { detectorSessions.sortedBy { it.id.value } }
     val updateUiState by updateViewModel.uiState.collectAsState()
+    val visibleUpdate = updateUiState.availableUpdate.takeIf { updateUiState.isDialogVisible }
+    val updateDialogPayload = rememberRetainedDialogPayload(visibleUpdate)
 
-    // The automatic check waits for the answer to the acceleration offer, so turning acceleration on
-    // already sends that first check through gh-proxy.com.
     val automaticUpdateCheckReady = gitHubAcceleration != null && !offerGitHubAcceleration
     LaunchedEffect(updateViewModel, automaticUpdateCheckReady) {
         if (automaticUpdateCheckReady) {
@@ -177,44 +205,92 @@ internal fun AppReadyShell(
         )
     }
 
+    // Keep one MIUIX navigation stack for both skins. The tab pager remains within Main,
+    // and cannot intercept the predictive-back gesture of the Licenses route on top of it.
+    val navigator = rememberDuckRoutes()
+    val openLicenses: () -> Unit = {
+        navigator.pushUnique(DuckRoute.Licenses)
+    }
+    val backFromLicenses: () -> Unit = {
+        navigator.pop()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        when (destination) {
-            AppDestination.MAIN -> {
-                DashboardScreen(
-                    uiState = dashboardState,
-                    detectors = detectors,
-                    deviceProfile = deviceProfile,
-                )
-            }
-
-            AppDestination.SETTINGS -> {
-                SettingsScreen(
-                    uiState = settingsState,
-                    consentToggles = consentToggles,
-                    onCheckForUpdates = updateViewModel::onSettingsUpdateAction,
-                    onGitHubAccelerationChange = { enabled ->
-                        scope.launch { accelerationStore.setEnabled(enabled) }
+        DuckNavHost(
+            backStack = navigator.backStack,
+            onBack = backFromLicenses,
+            main = {
+                // One route owner and one tab pager for both skins. Page state, title and
+                // bottom-bar selection track the physically visible page during a gesture.
+                AdaptiveNavigationShell(
+                    items = listOf(
+                        NavigationShellItem(
+                            title = stringResource(R.string.navigation_home),
+                            topBarTitle = "Duck Detector",
+                            compactTopBarTitle = "Duck Detector",
+                            icon = Icons.Outlined.HomeOutline,
+                            selectedIcon = Icons.Rounded.Home,
+                            leadingContent = { DashboardTopBarBrandIcon() },
+                            largeTitleLeadingContent = { DashboardTopBarBrandIcon() },
+                            materialTitleContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    DashboardTopBarBrandIcon()
+                                    Spacer(modifier = Modifier.size(10.dp))
+                                    Text("Duck Detector", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            },
+                            trailingContent = { DashboardTelegramAction() },
+                        ),
+                        NavigationShellItem(
+                            title = stringResource(R.string.navigation_settings),
+                            topBarTitle = stringResource(com.eltavine.duckdetector.features.settings.ui.R.string.settings_title),
+                            icon = Icons.Outlined.SettingsOutline,
+                            selectedIcon = Icons.Rounded.Settings,
+                            pagerGesturePolicy = NavigationShellPagerGesturePolicy.RegionAware,
+                        ),
+                    ),
+                    selectedIndex = if (destination == AppDestination.MAIN) 0 else 1,
+                    onSelectedIndexChange = { index ->
+                        onSelectDestination(if (index == 0) AppDestination.MAIN else AppDestination.SETTINGS)
                     },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-
-        FloatingAppTabSwitcher(
-            selectedDestination = destination,
-            onSelectDestination = onSelectDestination,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 28.dp),
+                ) { page, padding, _, pageModifier ->
+                    when (page) {
+                        0 -> DashboardScreen(
+                            uiState = dashboardState,
+                            detectors = detectors,
+                            deviceProfile = deviceProfile,
+                            scaffoldPadding = padding,
+                            pageModifier = pageModifier,
+                        )
+                        else -> SettingsScreen(
+                            uiState = settingsState,
+                            consentToggles = consentToggles,
+                            onUiModeChange = onUiModeChange,
+                            onCheckForUpdates = updateViewModel::onSettingsUpdateAction,
+                            onGitHubAccelerationChange = { enabled ->
+                                scope.launch { accelerationStore.setEnabled(enabled) }
+                            },
+                            onOpenLicenses = openLicenses,
+                            scaffoldPadding = padding,
+                            pageModifier = pageModifier,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+            },
+            licenses = {
+                OpenSourceLicensesScreen(onBack = backFromLicenses, modifier = Modifier.fillMaxSize())
+            },
         )
 
-        if (updateUiState.isDialogVisible && updateUiState.availableUpdate != null) {
-            val availableUpdate = requireNotNull(updateUiState.availableUpdate)
+        updateDialogPayload.value?.let { availableUpdate ->
             NightlyUpdateDialog(
+                show = visibleUpdate != null,
                 currentVersionName = BuildConfig.VERSION_NAME,
                 update = availableUpdate,
                 downloadEnabled = !isResolvingUpdateDownload,
                 onDismiss = updateViewModel::dismissUpdate,
+                onDismissFinished = updateDialogPayload.onDismissFinished,
                 onViewChanges = {
                     if (!openExternalUri(context, availableUpdate.compareUrl)) {
                         Toast.makeText(
@@ -277,23 +353,34 @@ internal fun StartupBootstrapLoadingScreen(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier,
+        modifier = modifier
+            .fillMaxSize()
+            .then(
+                adaptiveValue(
+                    material = Modifier,
+                    miuix = Modifier.background(DuckTheme.palette.groupedBackground),
+                ),
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            CircularProgressIndicator()
-            Text(
-                text = "Preparing startup",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+            AdaptiveCircularProgressIndicator(
+                materialSize = 40.dp,
+                miuixSize = 48.dp,
+                materialStrokeWidth = 4.dp,
             )
-            Text(
-                text = "Loading agreement state before startup policy review.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            WrapSafeText(
+                text = stringResource(R.string.startup_preparing_title),
+                style = adaptiveTitleStyle(MaterialTheme.typography.titleMedium),
+                color = adaptiveOnSurfaceColor(),
+            )
+            WrapSafeText(
+                text = stringResource(R.string.startup_preparing_detail),
+                style = adaptiveBodyStyle(MaterialTheme.typography.bodyMedium),
+                color = adaptiveSecondaryTextColor(),
             )
         }
     }

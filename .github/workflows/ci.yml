@@ -42,6 +42,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          submodules: true
           persist-credentials: false
 
       # Every checker ships a fixture-based self-test so that a regression in the checker
@@ -90,6 +91,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          submodules: true
           persist-credentials: false
 
       - name: Set up Android build toolchain
@@ -192,7 +194,7 @@ jobs:
             exit 1
           fi
           grep -q "feature/$probe/EVIDENCE.md is still a draft" /tmp/evidence-errors
-          ./gradlew --stacktrace unitTest :app:assembleDebug buildHealth
+          ./gradlew --no-configuration-cache --stacktrace unitTest :app:assembleDebug buildHealth
 
       - name: Upload test and lint reports
         if: always()

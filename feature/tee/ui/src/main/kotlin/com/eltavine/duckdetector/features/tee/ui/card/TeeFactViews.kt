@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -41,7 +42,7 @@ import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.VpnKey
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -50,16 +51,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.core.ui.R as CoreUiR
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
 import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.copyPlainTextToClipboard
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
@@ -69,6 +71,7 @@ import com.eltavine.duckdetector.features.tee.presentation.model.TeeFactRowModel
 import com.eltavine.duckdetector.features.tee.presentation.model.TeeHeaderFactModel
 import com.eltavine.duckdetector.features.tee.presentation.model.TeeHighlightSignalModel
 import com.eltavine.duckdetector.features.tee.ui.R
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 
 @Composable
 internal fun TeeFactPairCard(
@@ -91,23 +94,47 @@ internal fun TeeHighlightPill(
     signal: TeeHighlightSignalModel,
 ) {
     val appearance = rememberStatusAppearance(signal.status)
+    val containerColor = adaptiveValue(
+        material = when (signal.status.severity) {
+            DetectionSeverity.DANGER -> MaterialTheme.colorScheme.errorContainer
+            DetectionSeverity.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
+            DetectionSeverity.ALL_CLEAR -> MaterialTheme.colorScheme.secondaryContainer
+            DetectionSeverity.INFO -> MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        miuix = appearance.tintWash,
+    )
+    val contentColor = adaptiveValue(
+        material = when (signal.status.severity) {
+            DetectionSeverity.DANGER -> MaterialTheme.colorScheme.onErrorContainer
+            DetectionSeverity.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
+            DetectionSeverity.ALL_CLEAR -> MaterialTheme.colorScheme.onSecondaryContainer
+            DetectionSeverity.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        miuix = MaterialTheme.colorScheme.onSurface,
+    )
+    val iconTint = adaptiveValue(material = contentColor, miuix = appearance.iconTint)
     Row(
         modifier = Modifier
-            .background(color = appearance.tintWash, shape = ShapeTokens.CornerFull)
-            .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+            .fillMaxWidth()
+            .heightIn(min = 44.dp)
+            .background(
+                color = containerColor,
+                shape = AdaptiveShapeTokens.CornerMedium,
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
-            tint = appearance.iconTint,
+            tint = iconTint,
             modifier = Modifier.size(15.dp),
         )
         WrapSafeText(
             text = "${signal.label}: ${signal.value}",
             style = DuckTypography.Caption,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = contentColor,
         )
     }
 }
@@ -115,24 +142,20 @@ internal fun TeeHighlightPill(
 @Composable
 internal fun TeeFactGroup(
     group: TeeFactGroupModel,
+    stateKey: String,
+    showDivider: Boolean,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    // Both skins use the same section state and default-to-collapsed behavior.
+    DetectorSectionFrame(
+        title = group.title,
+        icon = Icons.Rounded.Policy,
+        stateKey = stateKey,
+        showDivider = showDivider,
+        severity = highestSectionSeverity(group.rows.map { it.status }),
     ) {
-        WrapSafeText(
-            text = group.title,
-            modifier = Modifier.semantics { heading() },
-            style = DuckTypography.FootnoteEmphasized,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         group.rows.forEachIndexed { index, row ->
             TeeFactRow(row = row)
-            if (index < group.rows.lastIndex) {
-                DetectorHairline()
-            }
+            if (index < group.rows.lastIndex) DetectorHairline()
         }
     }
 }
@@ -164,7 +187,6 @@ private fun TeeFactRow(
         value = row.value,
         status = row.status,
         statusIcon = iconFor(row.icon),
-        verticalPadding = 0.dp,
         valueModifier = valueModifier,
     )
 }

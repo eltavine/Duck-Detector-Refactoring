@@ -20,30 +20,46 @@ package com.eltavine.duckdetector.features.settings.ui.licenses
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.settings.ui.R
-import com.eltavine.duckdetector.features.settings.ui.components.SettingsIconTile
+import com.eltavine.duckdetector.features.settings.ui.components.AboutLeadingIcon
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsItem
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.SettingsNavigationItem
 
 @Composable
 internal fun OpenSourceLicensesItem(
     shapes: ListItemShapes,
     onClick: () -> Unit,
 ) {
-    SettingsItem(
-        headline = stringResource(R.string.licenses_entry_title),
-        shapes = shapes,
-        onClick = onClick,
-        leadingContent = { SettingsIconTile(icon = Icons.Rounded.Description) },
-        supportingContent = { WrapSafeText(text = stringResource(R.string.licenses_entry_subtitle)) },
-        trailingContent = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
+    val title = stringResource(R.string.licenses_entry_title)
+    val description = stringResource(R.string.licenses_entry_subtitle)
+    AdaptiveContent(
+        miuix = {
+            SettingsNavigationItem(
+                title = title,
+                description = description,
+                icon = Icons.Rounded.Description,
+                onClick = onClick,
+            )
+        },
+        material = {
+            SettingsItem(
+                headline = title,
+                shapes = shapes,
+                onClick = onClick,
+                leadingContent = { AboutLeadingIcon(icon = Icons.Rounded.Description) },
+                supportingContent = { WrapSafeText(text = description) },
+                trailingContent = {
+                    DuckIcon(
+                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = null,
+                    )
+                },
             )
         },
     )

@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="navigation_home">Home</string>
+    <string name="navigation_settings">Settings</string>
     <string name="duck_logo_description">Duck Detector logo</string>
     <string name="user_agreement">User Agreement</string>
     <string name="disclaimer">&amp; Disclaimer</string>
@@ -39,6 +41,7 @@ limitations under the License.
     <string name="update_open_failed">No browser is available to open GitHub</string>
     <string name="startup_review_label">Startup policy review</string>
     <string name="startup_preparing_title">Preparing startup</string>
+    <string name="startup_preparing_detail">Loading agreement state before startup policy review.</string>
     <string name="startup_before_scan_title">Before the scan</string>
     <string name="startup_loading_detail">Preferences and PackageManager visibility are still being loaded. Detector ViewModels stay paused until this completes.</string>
     <string name="startup_intro_detail">Finish the required choices before detector scans begin. Notifications, Live Update routing, CRL online refresh, and PackageManager visibility are reviewed here in one place. The detector pipeline remains blocked until every required card below is settled.</string>

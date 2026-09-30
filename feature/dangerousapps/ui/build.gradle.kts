@@ -25,6 +25,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.uihelper)
     implementation(project(":core:detector"))
     implementation(project(":core:evidence"))
     api(project(":core:ui"))

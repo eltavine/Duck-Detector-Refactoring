@@ -22,6 +22,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,7 +37,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -52,9 +52,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.designsystem.components.StatusBarProtection
+import com.eltavine.duckdetector.core.designsystem.components.DuckPanel
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.core.detector.ConsentDecision
 import com.eltavine.duckdetector.core.detector.ConsentId
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
@@ -62,6 +62,12 @@ import com.eltavine.duckdetector.notifications.ScanNotificationPermissionState
 import com.eltavine.duckdetector.notifications.preferences.ScanNotificationPrefs
 import com.eltavine.duckdetector.sdk.PackageVisibility
 import com.eltavine.duckdetector.startup.StartupHeroGlyph
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveCircularProgressIndicator
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveBodyStyle
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveContainerContentColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSecondaryTextColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveTitleStyle
 
 @Composable
 internal fun StartupPolicyScreen(
@@ -246,35 +252,52 @@ private fun ResolutionProgress(
 
 @Composable
 private fun LoadingPolicyCard() {
+    AdaptiveContent(
+        miuix = {
+            // DuckPanel uses the native MIUIX Card: surfaceContainer and squircle corners.
+            DuckPanel(
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+            ) {
+                LoadingPolicyCardContent()
+            }
+        },
+        material = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = DuckTheme.palette.groupedSurface,
+                        shape = MaterialTheme.shapes.large,
+                    )
+                    .padding(horizontal = 18.dp, vertical = 18.dp),
+            ) {
+                LoadingPolicyCardContent()
+            }
+        },
+    )
+}
+
+@Composable
+private fun LoadingPolicyCardContent() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = DuckTheme.palette.groupedSurface,
-                shape = ShapeTokens.CornerExtraLargeIncreased,
-            )
-            .padding(horizontal = 18.dp, vertical = 18.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(24.dp),
-            strokeWidth = 2.5.dp,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        AdaptiveCircularProgressIndicator(size = 24.dp, materialStrokeWidth = 2.5.dp)
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             WrapSafeText(
                 text = stringResource(R.string.startup_loading_dependencies_title),
-                style = DuckTypography.Headline,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = adaptiveTitleStyle(DuckTypography.Headline),
+                color = adaptiveContainerContentColor(),
             )
             WrapSafeText(
                 text = stringResource(R.string.startup_loading_dependencies_detail),
-                style = DuckTypography.Footnote,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = adaptiveBodyStyle(DuckTypography.Footnote),
+                color = adaptiveSecondaryTextColor(),
             )
         }
     }

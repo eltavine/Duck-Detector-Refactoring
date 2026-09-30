@@ -17,11 +17,6 @@
 
 package com.eltavine.duckdetector.features.settings.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.runtime.Composable
@@ -31,10 +26,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUiState
 import com.eltavine.duckdetector.features.settings.ui.R
 import com.eltavine.duckdetector.features.settings.ui.licenses.OpenSourceLicensesItem
+import io.github.xiaotong6666.uihelper.adaptive.ExpandableSectionBody
 
 // Update, version and licenses rows, with the three build detail rows between version and
 // licenses while they are shown.
@@ -66,11 +61,7 @@ internal fun AboutSection(
                 onExpandedChange = { showBuildDetails = it },
                 shapes = settingsItemShapes(index = 1, count = itemCount),
             )
-            AnimatedVisibility(
-                visible = showBuildDetails,
-                enter = expandVertically() + fadeIn(MotionTokens.FadeInOut),
-                exit = shrinkVertically() + fadeOut(MotionTokens.FadeInOut),
-            ) {
+            ExpandableSectionBody(expanded = showBuildDetails) {
                 // Shaped against the expanded group, so the rows keep inner corners while they collapse.
                 BuildDetailItems(
                     versionName = uiState.versionName,

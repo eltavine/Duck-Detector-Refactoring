@@ -22,143 +22,91 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsTargetAppModel
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveHorizontalDivider
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveIconLabelChip
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveMetricChip
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveSurfaceTone
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveFootnoteStyle
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveHeadlineStyle
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveOnSurfaceColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSecondaryTextColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceBackground
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceClip
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceColor
+import io.github.xiaotong6666.uihelper.dialog.AdaptiveDetailsDialog
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DangerousAppsTargetsDialog(
+    show: Boolean,
     targets: List<DangerousAppsTargetAppModel>,
     onDismiss: () -> Unit,
 ) {
     val categoryCount = targets.map { it.category }.distinct().size
+    val listSurface = adaptiveSurfaceColor(AdaptiveSurfaceTone.Low)
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
+    AdaptiveDetailsDialog(
+        show = show,
+        title = stringResource(R.string.target_app_list_title),
+        summary = stringResource(R.string.target_app_list_summary),
+        icon = Icons.Rounded.Apps,
+        closeLabel = stringResource(R.string.target_app_list_close),
+        onDismiss = onDismiss,
+        materialTitleStyle = MaterialTheme.typography.titleLarge,
+    ) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AdaptiveMetricChip(
+                icon = Icons.Rounded.Apps,
+                label = stringResource(R.string.target_app_list_targets),
+                value = targets.size.toString(),
+                materialShape = ShapeTokens.CornerLarge,
+            )
+            AdaptiveMetricChip(
+                icon = Icons.Rounded.Category,
+                label = stringResource(R.string.target_app_list_categories),
+                value = categoryCount.toString(),
+                materialShape = ShapeTokens.CornerLarge,
+            )
+        }
+        LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 720.dp),
-            shape = ShapeTokens.CornerExtraLarge,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
+                .weight(1f, fill = false)
+                .heightIn(max = 600.dp)
+                .adaptiveSurfaceBackground(listSurface, ShapeTokens.CornerExtraLarge, listSurface, 16.dp)
+                .adaptiveSurfaceClip(ShapeTokens.CornerExtraLarge, 16.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = ShapeTokens.CornerLargeIncreased,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Apps,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .size(22.dp),
-                        )
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        WrapSafeText(
-                            text = "Target app list",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        WrapSafeText(
-                            text = "Legacy dangerous-app inventory currently used by this detector.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    DangerousAppsDialogMetricChip(
-                        icon = Icons.Rounded.Apps,
-                        label = "Targets",
-                        value = targets.size.toString(),
+            itemsIndexed(targets) { index, target ->
+                DangerousAppsTargetRow(target)
+                if (index < targets.lastIndex) {
+                    AdaptiveHorizontalDivider(
+                        materialThickness = 1.dp,
+                        materialColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
                     )
-                    DangerousAppsDialogMetricChip(
-                        icon = Icons.Rounded.Category,
-                        label = "Categories",
-                        value = categoryCount.toString(),
-                    )
-                }
-
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    shape = ShapeTokens.CornerExtraLarge,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(0.dp),
-                    ) {
-                        targets.forEachIndexed { index, target ->
-                            DangerousAppsTargetRow(target = target)
-                            if (index < targets.lastIndex) {
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
-                                    thickness = 1.dp,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        WrapSafeText(
-                            text = "Close",
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
                 }
             }
         }
@@ -170,9 +118,7 @@ private fun DangerousAppsTargetRow(
     target: DangerousAppsTargetAppModel,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(
@@ -183,73 +129,21 @@ private fun DangerousAppsTargetRow(
             WrapSafeText(
                 text = target.appName,
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = adaptiveHeadlineStyle(MaterialTheme.typography.titleSmall),
+                color = adaptiveOnSurfaceColor(),
             )
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = ShapeTokens.CornerFull,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Shield,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    WrapSafeText(
-                        text = target.category,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
+            AdaptiveIconLabelChip(
+                icon = Icons.Rounded.Shield,
+                label = target.category,
+                materialShape = ShapeTokens.CornerFull,
+                miuixCornerRadius = 6.dp,
+            )
         }
         WrapSafeText(
             text = target.packageName,
-            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = adaptiveFootnoteStyle(MaterialTheme.typography.bodySmall).copy(fontFamily = FontFamily.Monospace),
+            color = adaptiveSecondaryTextColor(),
         )
     }
 }
 
-@Composable
-private fun DangerousAppsDialogMetricChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    value: String,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = ShapeTokens.CornerLarge,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp),
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                WrapSafeText(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                WrapSafeText(
-                    text = value,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-    }
-}

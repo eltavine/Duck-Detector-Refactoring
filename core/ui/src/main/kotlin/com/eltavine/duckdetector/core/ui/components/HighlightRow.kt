@@ -17,14 +17,13 @@
 
 package com.eltavine.duckdetector.core.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,9 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveInsetSurfaceColor
 import com.eltavine.duckdetector.core.ui.model.HighlightItemModel
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceBackground
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 
 @Composable
 public fun HighlightRow(
@@ -46,12 +47,17 @@ public fun HighlightRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(color = DuckTheme.palette.groupedInset, shape = ShapeTokens.CornerLarge)
+            .adaptiveSurfaceBackground(
+                materialColor = DuckTheme.palette.groupedInset,
+                materialShape = MaterialTheme.shapes.large,
+                miuixColor = adaptiveInsetSurfaceColor(),
+                miuixCornerRadius = 16.dp,
+            )
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(
+        AdaptiveIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,
@@ -66,13 +72,16 @@ public fun HighlightRow(
             WrapSafeText(
                 text = item.title,
                 modifier = Modifier.fillMaxWidth(),
-                style = DuckTypography.CalloutEmphasized,
+                style = adaptiveValue(
+                    material = DuckTypography.CalloutEmphasized,
+                    miuix = DuckTypography.PanelTitle,
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             WrapSafeText(
                 text = item.detail,
                 modifier = Modifier.fillMaxWidth(),
-                style = DuckTypography.Footnote,
+                style = DuckTypography.PanelSupporting,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             CompactStatusBadge(status = item.status, modifier = Modifier.padding(top = 4.dp))

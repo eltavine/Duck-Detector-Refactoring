@@ -49,7 +49,7 @@ limitations under the License.
     <string name="author_summary_wxx">CI（Kotlin）</string>
     <string name="author_summary_xiaotong">TEE（C++、Kotlin）</string>
     <string name="github_acceleration_footer">gh-proxy.com 为第三方服务。开启后，更新检查和 Nightly 下载将经由它中转，不再直接连接 GitHub。它无法中转提交对比，因此更新弹窗可能只列出最新一次提交。</string>
-    <string name="github_acceleration_summary">通过 gh-proxy.com 检查和下载 Nightly 更新</string>
+    <string name="github_acceleration_summary">通过第三方 gh-proxy.com 检查和下载 Nightly，提交对比可能不可用，更新弹窗可能只显示最新提交</string>
     <string name="github_acceleration_title">GitHub 加速</string>
     <string name="licenses_dialog_close">关闭</string>
     <string name="licenses_dialog_home_page">主页</string>
@@ -57,20 +57,20 @@ limitations under the License.
     <string name="licenses_dialog_open">打开</string>
     <string name="licenses_dialog_source_repo">源代码仓库</string>
     <string name="licenses_dialog_version">版本 %1$s</string>
-    <string name="licenses_entry_subtitle">浏览此构建内置的第三方项目，并查看其许可证声明。</string>
+    <string name="licenses_entry_subtitle">浏览此构建内置的第三方项目，并查看其许可证声明</string>
     <string name="licenses_entry_title">开源库</string>
-    <string name="licenses_inventory_subtitle">点击任意依赖项以查看许可证文本和上游项目链接。</string>
+    <string name="licenses_inventory_subtitle">点击任意依赖项以查看许可证文本和上游项目链接</string>
     <string name="licenses_inventory_title">内置库清单</string>
     <string name="licenses_screen_back">返回</string>
-    <string name="licenses_screen_subtitle">此构建内置的第三方组件。</string>
+    <string name="licenses_screen_subtitle">此构建内置的第三方组件</string>
     <string name="licenses_screen_title">开源许可证</string>
     <string name="settings_section_detection">检测选项</string>
     <string name="settings_section_network">网络</string>
     <string name="settings_title">设置</string>
     <string name="update_settings_label">检查更新</string>
-    <string name="update_status_available">有新的 Nightly 构建；点按查看详情</string>
+    <string name="update_status_available">有新的 Nightly 构建，点按查看详情</string>
     <string name="update_status_checking">正在检查 GitHub…</string>
     <string name="update_status_current">当前已是最新 Nightly 构建</string>
-    <string name="update_status_failed">无法检查 GitHub；点按重试</string>
-    <string name="update_status_idle">冷启动后会检查 GitHub Main Nightly；点按可立即检查</string>
+    <string name="update_status_failed">无法检查 GitHub，点按重试</string>
+    <string name="update_status_idle">冷启动后会检查 GitHub Main Nightly，点按可立即检查</string>
 </resources>

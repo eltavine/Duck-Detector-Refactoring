@@ -17,6 +17,8 @@
 
 package com.eltavine.duckdetector.features.settings.ui.components
 
+import android.os.SystemClock
+import android.util.Log
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
@@ -36,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,9 +57,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.settings.ui.R
+import io.github.xiaotong6666.uihelper.chrome.pagerSwipeExclusion
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 
 private const val WordmarkWidth = 1000f
@@ -78,7 +84,15 @@ fun ContributorNameWordmark(modifier: Modifier = Modifier) {
     val names = remember(context) { loadContributorSnapshots(context).map { it.name } }
     if (names.isEmpty()) return
 
-    val layout = remember(names) { buildWordmarkLayout(names) }
+    // Building thousands of Android glyph paths is CPU-heavy. Doing it in composition caused the
+    // settings LazyColumn to miss frames exactly when the wordmark entered the prefetch viewport.
+    // Keep the same rendered path, but prepare it off the main thread.
+    val layout by produceState<WordmarkLayout?>(initialValue = null, names) {
+        val started = SystemClock.elapsedRealtime()
+        Log.d("DuckSettingsScroll", "wordmark build start names=${names.size}")
+        value = withContext(Dispatchers.Default) { buildWordmarkLayout(names) }
+        Log.d("DuckSettingsScroll", "wordmark build done ms=${SystemClock.elapsedRealtime() - started}")
+    }
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     var zoom by rememberSaveable { mutableFloatStateOf(1f) }
     var offset by rememberSaveable(stateSaver = WordmarkOffsetSaver) { mutableStateOf(Offset.Zero) }
@@ -113,12 +127,17 @@ fun ContributorNameWordmark(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2.6f)
-                .clip(ShapeTokens.CornerLarge)
-                .onSizeChanged { viewport = it }
+                .clip(AdaptiveShapeTokens.CornerLarge)
+                .then(pagerSwipeExclusion())
+                .onSizeChanged {
+                    viewport = it
+                    Log.d("DuckSettingsScroll", "wordmark viewport=${it.width}x${it.height}")
+                }
                 .transformable(state = transformState, canPan = { zoom > 1f })
                 .semantics { contentDescription = "Duck Detector" },
         ) {
             if (size.width <= 0f || size.height <= 0f) return@Canvas
+            val resolvedLayout = layout ?: return@Canvas
             val scale = wordmarkFitScale(Size(size.width, size.height)) * zoom
             val canvas = drawContext.canvas.nativeCanvas
             canvas.save()
@@ -126,7 +145,7 @@ fun ContributorNameWordmark(modifier: Modifier = Modifier) {
             canvas.translate(size.width / 2f + offset.x, size.height / 2f + offset.y)
             canvas.scale(scale, scale)
             canvas.translate(-WordmarkWidth / 2f, -WordmarkHeight / 2f)
-            canvas.drawPath(layout.characters, characterPaint)
+            canvas.drawPath(resolvedLayout.characters, characterPaint)
             canvas.restore()
         }
         WrapSafeText(

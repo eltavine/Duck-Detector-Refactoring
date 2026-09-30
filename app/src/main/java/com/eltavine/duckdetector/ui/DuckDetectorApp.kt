@@ -55,9 +55,10 @@ import com.eltavine.duckdetector.ui.shell.combineConsentDecisions
 import com.eltavine.duckdetector.ui.shell.resolveStartupGateState
 import com.eltavine.duckdetector.ui.shell.shouldCreateDetectorViewModels
 import kotlinx.coroutines.launch
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
-fun DuckDetectorApp() {
+fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
     val blacklistMatch = remember { DeviceBlacklist.matchCurrentDevice() }
     if (blacklistMatch != null) {
         Surface {
@@ -215,6 +216,7 @@ fun DuckDetectorApp() {
                     AppReadyShell(
                         destination = destination,
                         onSelectDestination = { selected -> destination = selected },
+                        onUiModeChange = onUiModeChange,
                         consentDecisions = requireNotNull(consentDecisions),
                         notificationPermissionState = notificationPermissionState,
                     )

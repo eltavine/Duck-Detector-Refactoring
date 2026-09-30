@@ -17,10 +17,12 @@
 
 package com.eltavine.duckdetector.features.memory.ui.card
 
+import com.eltavine.duckdetector.features.memory.ui.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CrisisAlert
@@ -29,12 +31,14 @@ import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -42,6 +46,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.memory.presentation.model.MemoryCardModel
@@ -68,47 +74,57 @@ internal fun MemoryDetectorCard(
             MemoryCollapsedOverview(model = model)
         },
     ) {
-        if (model.hookRows.isNotEmpty()) {
-            MemoryDetailSection(
-                title = "Function hooks",
+        DetectorSectionGroup {
+            item(visible = model.hookRows.isNotEmpty()) {
+                MemoryDetailSection(
+                title = stringResource(R.string.memory_section_function_hooks),
                 icon = Icons.Rounded.Memory,
                 rows = model.hookRows,
-            )
-        }
-        if (model.mappingRows.isNotEmpty()) {
-            MemoryDetailSection(
-                title = "Mappings and FD-backed code",
+                showDivider = model.mappingRows.isNotEmpty() || model.loaderRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.mappingRows.isNotEmpty()) {
+                MemoryDetailSection(
+                title = stringResource(R.string.memory_section_mappings_fd_code),
                 icon = Icons.Rounded.Map,
                 rows = model.mappingRows,
-            )
-        }
-        if (model.loaderRows.isNotEmpty()) {
-            MemoryDetailSection(
-                title = "Loader visibility",
+                showDivider = model.loaderRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.loaderRows.isNotEmpty()) {
+                MemoryDetailSection(
+                title = stringResource(R.string.memory_section_loader_visibility),
                 icon = Icons.Rounded.Visibility,
                 rows = model.loaderRows,
-            )
-        }
-        if (model.impactItems.isNotEmpty()) {
-            MemoryImpactSection(
-                title = "Impact",
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.impactItems.isNotEmpty()) {
+                MemoryImpactSection(
+                title = stringResource(R.string.memory_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
-        if (model.methodRows.isNotEmpty()) {
-            MemoryDetailSection(
-                title = "Detection methods",
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.methodRows.isNotEmpty()) {
+                MemoryDetailSection(
+                title = stringResource(R.string.memory_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
-        if (model.scanRows.isNotEmpty()) {
-            MemoryDetailSection(
-                title = "Scan summary",
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
+            item(visible = model.scanRows.isNotEmpty()) {
+                MemoryDetailSection(
+                title = stringResource(R.string.memory_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -123,7 +139,7 @@ private fun MemoryCollapsedOverview(
     val runtime = model.headerFacts.firstOrNull { it.fact == MemoryHeaderFact.RUNTIME } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -161,10 +177,13 @@ private fun MemoryDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<MemoryDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -201,10 +220,13 @@ private fun MemoryImpactSection(
     title: String,
     icon: ImageVector,
     items: List<MemoryImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -224,7 +246,7 @@ private fun MemoryImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

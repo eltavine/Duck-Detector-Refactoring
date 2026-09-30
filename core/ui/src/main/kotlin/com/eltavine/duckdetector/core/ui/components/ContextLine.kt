@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.ui.model.ContextItemModel
 
 @Composable
@@ -39,7 +39,7 @@ public fun ContextLine(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(color = DuckTheme.palette.groupedInset, shape = ShapeTokens.CornerMedium)
+            .background(color = DuckTheme.palette.groupedInset, shape = AdaptiveShapeTokens.CornerMedium)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {

@@ -28,6 +28,7 @@ limitations under the License.
     <string name="tee_revocation_network_declined_headline">TEE revocation checks use the built-in snapshot.</string>
     <string name="tee_revocation_network_declined_detail">Duck Detector will not perform online CRL refresh until you re-enable it in Settings. Built-in revocation checks remain active.</string>
     <string name="tee_revocation_network_setting_title">Allow online CRL refresh</string>
-    <string name="tee_revocation_network_setting_summary">TEE revocation checks always use the built-in snapshot; this only permits fetching Google\'s latest attestation revocation feed.</string>
+    <string name="tee_revocation_network_setting_summary">Built-in TEE revocation checks stay enabled, this only allows fetching Google\'s latest revocation data</string>
     <string name="tee_revocation_network_setting_footer">Changes apply immediately to online refresh behavior. Built-in TEE revocation checks remain enabled.</string>
+    <string name="tee_dialog_close">Close</string>
 </resources>

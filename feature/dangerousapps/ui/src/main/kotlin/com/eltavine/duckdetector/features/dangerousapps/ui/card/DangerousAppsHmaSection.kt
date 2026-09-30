@@ -29,7 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,7 +38,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsHiddenPackageItemModel
@@ -52,7 +52,7 @@ internal fun DangerousAppsHmaSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color = critical.copy(alpha = 0.08f), shape = ShapeTokens.CornerLarge)
+            .background(color = critical.copy(alpha = 0.08f), shape = AdaptiveShapeTokens.CornerLarge)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -63,10 +63,10 @@ internal fun DangerousAppsHmaSection(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(color = critical.copy(alpha = 0.14f), shape = ShapeTokens.CornerMedium),
+                    .background(color = critical.copy(alpha = 0.14f), shape = AdaptiveShapeTokens.CornerMedium),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
+                DuckIcon(
                     imageVector = Icons.Rounded.VisibilityOff,
                     contentDescription = null,
                     tint = critical,

@@ -27,6 +27,6 @@ limitations under the License.
     <string name="tee_revocation_network_declined_headline">TEE 吊銷檢查使用內建快照。</string>
     <string name="tee_revocation_network_declined_detail">在您重新於設定中啟用之前，Duck Detector 不會執行線上 CRL 重新整理。內建吊銷檢查始終保持啟用。</string>
     <string name="tee_revocation_network_setting_title">允許線上重新整理 CRL</string>
-    <string name="tee_revocation_network_setting_summary">TEE 吊銷檢查始終使用內建快照；此開關只允許取得 Google 最新 attestation revocation feed。</string>
+    <string name="tee_revocation_network_setting_summary">內建 TEE 吊銷檢查始終啟用，此開關僅允許取得 Google 最新吊銷資料</string>
     <string name="tee_revocation_network_setting_footer">變更會立即套用到線上重新整理行為。內建 TEE 吊銷檢查始終保持啟用。</string>
 </resources>

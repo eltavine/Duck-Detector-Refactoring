@@ -17,17 +17,116 @@
 
 package com.eltavine.duckdetector.core.designsystem.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * Text styles for grouped screens, stepped like Apple's text styles: a large title for the page,
  * a headline for each container, then callout, footnote and caption for the text inside it.
  */
 public object DuckTypography {
+    /** Native MIUIX page title, with the existing Google Sans title retained for Material. */
+    public val PageTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.title1 else MaterialTheme.typography.headlineLarge
+
+    public val StatusHeadline: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.title3 else MaterialTheme.typography.headlineSmall
+
+    public val PanelTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) {
+            MiuixTheme.textStyles.headline1.copy(fontWeight = FontWeight.Medium)
+        } else {
+            MaterialTheme.typography.titleMedium
+        }
+
+    public val PanelBody: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) {
+            MiuixTheme.textStyles.body1
+        } else {
+            MaterialTheme.typography.bodyMedium
+        }
+
+    public val PanelSupporting: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.body2 else MaterialTheme.typography.bodyMedium
+
+    public val PanelCaption: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.footnote1 else MaterialTheme.typography.labelMedium
+
+    public val SectionTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.headline1 else MaterialTheme.typography.titleMedium
+
+    public val DetailLabel: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) {
+            MiuixTheme.textStyles.footnote1
+        } else {
+            MaterialTheme.typography.bodySmall
+        }
+
+    public val DetailValue: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) {
+            MiuixTheme.textStyles.body1.copy(lineHeight = 22.sp)
+        } else {
+            MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+        }
+
+    public val ActionLabel: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) {
+            MiuixTheme.textStyles.button
+        } else {
+            MaterialTheme.typography.labelLargeEmphasized
+        }
+
+    public val FindingEyebrow: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.footnote1 else FootnoteEmphasized
+
+    public val LoadingTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.title3 else PanelTitle
+
+    public val LoadingSupporting: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.body2 else PanelSupporting
+
+    public val ReportAction: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) {
+            MiuixTheme.textStyles.body2.copy(fontWeight = FontWeight.Medium)
+        } else {
+            MaterialTheme.typography.labelLargeEmphasized
+        }
+
+    public val ReportMeta: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) MiuixTheme.textStyles.footnote1 else MaterialTheme.typography.bodySmall
+
+    public val MetricNumeral: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = if (LocalUiMode.current == UiMode.Miuix) {
+            MiuixTheme.textStyles.title2.copy(fontFeatureSettings = "tnum", fontWeight = FontWeight.Medium)
+        } else {
+            Numeral
+        }
+
     public val LargeTitle: TextStyle = heading(34.sp, 41.sp, FontWeight.Bold, (-0.4).sp)
     public val Title1: TextStyle = heading(28.sp, 34.sp, FontWeight.Bold, (-0.3).sp)
     public val Title2: TextStyle = heading(22.sp, 28.sp, FontWeight.Bold, (-0.2).sp)

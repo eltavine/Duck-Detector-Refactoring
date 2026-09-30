@@ -30,7 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -45,22 +45,21 @@ import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TeeCertificatesDialog(
+    show: Boolean,
     label: String,
     count: String,
     certificates: List<TeeCertificateItem>,
     onDismiss: () -> Unit,
 ) {
     TeeDialogFrame(
+        show = show,
         title = "Certificate chain",
         subtitle = "Attestation certificates exposed by the current scan.",
         icon = Icons.Rounded.VerifiedUser,
         onDismiss = onDismiss,
     ) {
         if (certificates.isEmpty()) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = ShapeTokens.CornerExtraLarge,
-            ) {
+            TeeDialogSurface(tone = TeeDialogTone.Low) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -137,16 +136,13 @@ private fun TeeCertificateOverviewChip(
     label: String,
     value: String,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = ShapeTokens.CornerLarge,
-    ) {
+    TeeDialogSurface(tone = TeeDialogTone.Highest, cornerRadius = 12.dp) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(
+            DuckIcon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,

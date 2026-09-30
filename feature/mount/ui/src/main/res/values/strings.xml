@@ -17,4 +17,13 @@ limitations under the License.
 
 <resources>
     <string name="mount_diagnostic_clipboard_label">Cross-process mount view detail</string>
+
+    <string name="mount_section_isolated_process">Isolated process mounts</string>
+    <string name="mount_section_root_artifacts">Root artifacts</string>
+    <string name="mount_section_runtime_mounts">Runtime mounts</string>
+    <string name="mount_section_filesystem">Filesystem</string>
+    <string name="mount_section_namespace_consistency">Namespace and consistency</string>
+    <string name="mount_section_impact">Impact</string>
+    <string name="mount_section_detection_methods">Detection methods</string>
+    <string name="mount_section_scan_summary">Scan summary</string>
 </resources>

@@ -18,12 +18,11 @@
 package com.eltavine.duckdetector.features.settings.ui.licenses
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -31,21 +30,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.Gavel
-import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -58,14 +51,23 @@ import androidx.compose.ui.window.DialogProperties
 import com.eltavine.duckdetector.core.designsystem.components.DuckButtonDefaults
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.features.settings.ui.R
 import com.mikepenz.aboutlibraries.entity.Library
-import com.mikepenz.aboutlibraries.entity.License
 import com.mikepenz.aboutlibraries.ui.compose.util.author
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
+import top.yukonga.miuix.kmp.basic.Button as MiuixButton
+import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.HorizontalDivider as MiuixDivider
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 private val DialogInset = 20.dp
 private val GroupInset = 16.dp
@@ -77,9 +79,21 @@ private val GroupInset = 16.dp
  */
 @Composable
 internal fun LicenseDetailsDialog(
+    show: Boolean,
     library: Library,
     onDismiss: () -> Unit,
+    onDismissFinished: () -> Unit = {},
 ) {
+    if (LocalUiMode.current == UiMode.Miuix) {
+        LicenseDetailsMiuix(
+            show = show,
+            library = library,
+            onDismiss = onDismiss,
+            onDismissFinished = onDismissFinished,
+        )
+        return
+    }
+    if (!show) return
     val scrollState = rememberScrollState()
 
     Dialog(
@@ -92,8 +106,8 @@ internal fun LicenseDetailsDialog(
                 .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .background(
-                    color = DuckTheme.palette.groupedSurface,
-                    shape = ShapeTokens.CornerExtraLargeIncreased,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.extraLarge,
                 )
                 .padding(top = 24.dp, bottom = DialogInset),
         ) {
@@ -147,6 +161,102 @@ internal fun LicenseDetailsDialog(
 }
 
 @Composable
+private fun LicenseDetailsMiuix(
+    show: Boolean,
+    library: Library,
+    onDismiss: () -> Unit,
+    onDismissFinished: () -> Unit,
+) {
+    val context = LocalContext.current
+    val website = library.website?.takeIf { it.isNotBlank() }
+    val projectUrl = website ?: library.scm?.url?.takeIf { it.isNotBlank() }
+    // Licenses is a secondary NavDisplay destination above the main MIUIX Scaffold.
+    // OverlayDialog registers in the root Scaffold's popup host, behind that destination;
+    // WindowDialog owns a platform window and remains visible above the licenses route.
+    WindowDialog(
+        show = show,
+        title = library.name,
+        summary = library.author.takeIf { it.isNotBlank() },
+        onDismissRequest = onDismiss,
+        onDismissFinished = onDismissFinished,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            library.artifactVersion?.takeIf { it.isNotBlank() }?.let { version ->
+                LicensePill(text = stringResource(R.string.licenses_dialog_version, version), version = true)
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                library.description?.takeIf { it.isNotBlank() }?.let { description ->
+                    MiuixText(
+                        text = description,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+                if (projectUrl != null) {
+                    MiuixCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        insideMargin = androidx.compose.foundation.layout.PaddingValues(14.dp),
+                        pressFeedbackType = PressFeedbackType.None,
+                        showIndication = true,
+                        onClick = { openExternalUri(context, projectUrl) },
+                    ) {
+                        MiuixText(
+                            text = stringResource(
+                                if (website != null) R.string.licenses_dialog_home_page
+                                else R.string.licenses_dialog_source_repo,
+                            ),
+                            style = MiuixTheme.textStyles.headline1,
+                        )
+                        MiuixText(
+                            text = projectUrl,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                library.licenses.forEach { license ->
+                    MiuixCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        insideMargin = androidx.compose.foundation.layout.PaddingValues(14.dp),
+                        pressFeedbackType = PressFeedbackType.None,
+                        showIndication = !license.url.isNullOrBlank(),
+                        onClick = license.url?.takeIf { it.isNotBlank() }?.let { url ->
+                            { openExternalUri(context, url) }
+                        },
+                    ) {
+                        MiuixText(text = license.name, style = MiuixTheme.textStyles.headline1)
+                        MiuixDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        SelectionContainer {
+                            MiuixText(
+                                text = license.licenseContent?.trim()?.takeIf { it.isNotEmpty() }
+                                    ?: stringResource(R.string.licenses_dialog_no_license_text),
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
+                    }
+                }
+            }
+            MiuixButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                colors = MiuixButtonDefaults.buttonColorsPrimary(),
+            ) {
+                MiuixText(text = stringResource(R.string.licenses_dialog_close))
+            }
+        }
+    }
+}
+
+@Composable
 private fun LicenseDialogHeader(
     library: Library,
     modifier: Modifier = Modifier,
@@ -160,10 +270,10 @@ private fun LicenseDialogHeader(
             modifier = Modifier
                 .padding(bottom = 6.dp)
                 .size(56.dp)
-                .background(color = DuckTheme.palette.groupedInset, shape = ShapeTokens.CornerLarge),
+                .background(color = DuckTheme.palette.groupedInset, shape = AdaptiveShapeTokens.CornerLarge),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
+            DuckIcon(
                 imageVector = Icons.Rounded.Description,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
@@ -199,129 +309,5 @@ private fun LicenseDialogHeader(
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun LibraryProjectLink(library: Library) {
-    val context = LocalContext.current
-    val website = library.website?.takeIf { it.isNotBlank() }
-    val url = website ?: library.scm?.url?.takeIf { it.isNotBlank() } ?: return
-    LinkRow(
-        icon = if (website != null) Icons.Rounded.Language else Icons.Rounded.Code,
-        label = stringResource(
-            if (website != null) R.string.licenses_dialog_home_page else R.string.licenses_dialog_source_repo,
-        ),
-        url = url,
-        onClick = { openExternalUri(context, url) },
-        modifier = Modifier
-            .clip(ShapeTokens.CornerLarge)
-            .background(color = DuckTheme.palette.groupedInset),
-    )
-}
-
-@Composable
-private fun LicenseTextGroup(license: License) {
-    val context = LocalContext.current
-    val url = license.url?.takeIf { it.isNotBlank() }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(ShapeTokens.CornerLarge)
-            .background(color = DuckTheme.palette.groupedInset),
-    ) {
-        if (url != null) {
-            LinkRow(
-                icon = Icons.Rounded.Gavel,
-                label = license.name,
-                url = url,
-                onClick = { openExternalUri(context, url) },
-            )
-        } else {
-            LicenseNameRow(name = license.name)
-        }
-        DetectorHairline(startInset = GroupInset)
-        SelectionContainer {
-            WrapSafeText(
-                text = license.licenseContent?.trim()?.takeIf { it.isNotEmpty() }
-                    ?: stringResource(R.string.licenses_dialog_no_license_text),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = GroupInset, vertical = 14.dp),
-                style = DuckTypography.Footnote,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun LinkRow(
-    icon: ImageVector,
-    label: String,
-    url: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = GroupInset, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            WrapSafeText(
-                text = label,
-                style = DuckTypography.CalloutEmphasized,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            WrapSafeText(
-                text = url,
-                style = DuckTypography.Footnote,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
-            contentDescription = stringResource(R.string.licenses_dialog_open),
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
-    }
-}
-
-@Composable
-private fun LicenseNameRow(name: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = GroupInset, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Gavel,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
-        )
-        WrapSafeText(
-            text = name,
-            style = DuckTypography.CalloutEmphasized,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
     }
 }

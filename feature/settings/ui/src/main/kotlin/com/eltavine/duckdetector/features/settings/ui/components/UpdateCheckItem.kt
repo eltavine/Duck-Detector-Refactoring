@@ -19,7 +19,6 @@ package com.eltavine.duckdetector.features.settings.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -31,22 +30,23 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateStatus
 import com.eltavine.duckdetector.features.settings.ui.R
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveInfiniteProgressIndicator
+import io.github.xiaotong6666.uihelper.adaptive.SettingsNavigationItem
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 
 private enum class UpdateTrailing { Recheck, Checking, Details }
 
@@ -61,15 +61,14 @@ internal fun UpdateCheckItem(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val available = status == SettingsUpdateStatus.AVAILABLE
-    val tileColor by animateColorAsState(
-        targetValue = if (available) colorScheme.primary else DuckTheme.palette.groupedInset,
-        label = "updateTile",
-    )
     val glyph = when (status) {
         SettingsUpdateStatus.IDLE,
         SettingsUpdateStatus.CHECKING -> UpdateGlyph(Icons.Rounded.SystemUpdate, colorScheme.primary)
         SettingsUpdateStatus.CURRENT -> UpdateGlyph(Icons.Rounded.CheckCircle, colorScheme.primary)
-        SettingsUpdateStatus.AVAILABLE -> UpdateGlyph(Icons.Rounded.NewReleases, colorScheme.onPrimary)
+        SettingsUpdateStatus.AVAILABLE -> UpdateGlyph(
+            Icons.Rounded.NewReleases,
+            adaptiveValue(material = colorScheme.onPrimaryContainer, miuix = colorScheme.primary),
+        )
         SettingsUpdateStatus.FAILED -> UpdateGlyph(Icons.Rounded.ErrorOutline, colorScheme.error)
     }
     val trailing = when (status) {
@@ -80,8 +79,59 @@ internal fun UpdateCheckItem(
         SettingsUpdateStatus.FAILED -> UpdateTrailing.Recheck
     }
 
+    val title = stringResource(R.string.update_settings_label)
+    val statusText = updateStatusText(status)
+    AdaptiveContent(
+        miuix = {
+            if (available) {
+                SettingsNavigationItem(
+                    title = title,
+                    description = statusText,
+                    icon = Icons.Rounded.NewReleases,
+                    onClick = onCheckForUpdates,
+                )
+            } else {
+                UpdateCheckRow(
+                    title = title,
+                    statusText = statusText,
+                    status = status,
+                    shapes = shapes,
+                    glyph = glyph,
+                    trailing = trailing,
+                    available = available,
+                    onCheckForUpdates = onCheckForUpdates,
+                )
+            }
+        },
+        material = {
+            UpdateCheckRow(
+                title = title,
+                statusText = statusText,
+                status = status,
+                shapes = shapes,
+                glyph = glyph,
+                trailing = trailing,
+                available = available,
+                onCheckForUpdates = onCheckForUpdates,
+            )
+        },
+    )
+}
+
+@Composable
+private fun UpdateCheckRow(
+    title: String,
+    statusText: String,
+    status: SettingsUpdateStatus,
+    shapes: ListItemShapes,
+    glyph: UpdateGlyph,
+    trailing: UpdateTrailing,
+    available: Boolean,
+    onCheckForUpdates: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
     SettingsItem(
-        headline = stringResource(R.string.update_settings_label),
+        headline = title,
         shapes = shapes,
         onClick = onCheckForUpdates,
         enabled = status != SettingsUpdateStatus.CHECKING,
@@ -95,13 +145,17 @@ internal fun UpdateCheckItem(
             settingsItemColors()
         },
         leadingContent = {
-            SettingsIconTile(containerColor = tileColor) {
+            SettingsIconTile {
                 AnimatedContent(
                     targetState = glyph,
                     transitionSpec = { crossfade() },
                     label = "updateGlyph",
                 ) { target ->
-                    Icon(imageVector = target.icon, contentDescription = null, tint = target.tint)
+                    DuckIcon(
+                        imageVector = target.icon,
+                        contentDescription = null,
+                        tint = adaptiveValue(material = target.tint, miuix = aboutMiuixIconColor()),
+                    )
                 }
             }
         },
@@ -112,7 +166,7 @@ internal fun UpdateCheckItem(
                 label = "updateStatus",
             ) { target ->
                 WrapSafeText(
-                    text = updateStatusText(target),
+                    text = if (target == status) statusText else updateStatusText(target),
                     color = if (target == SettingsUpdateStatus.FAILED) colorScheme.error else Color.Unspecified,
                 )
             }
@@ -124,15 +178,14 @@ internal fun UpdateCheckItem(
                 label = "updateTrailing",
             ) { target ->
                 when (target) {
-                    UpdateTrailing.Checking -> CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        strokeWidth = 2.5.dp,
-                    )
-                    UpdateTrailing.Details -> Icon(
+                    UpdateTrailing.Checking -> {
+                        AdaptiveInfiniteProgressIndicator(size = 22.dp, materialStrokeWidth = 2.5.dp)
+                    }
+                    UpdateTrailing.Details -> DuckIcon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                         contentDescription = null,
                     )
-                    UpdateTrailing.Recheck -> Icon(
+                    UpdateTrailing.Recheck -> DuckIcon(
                         imageVector = Icons.Rounded.Refresh,
                         contentDescription = null,
                     )

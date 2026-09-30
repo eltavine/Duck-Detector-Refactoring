@@ -17,10 +17,12 @@
 
 package com.eltavine.duckdetector.features.systemproperties.ui.card
 
+import com.eltavine.duckdetector.features.systemproperties.ui.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.CompareArrows
@@ -33,11 +35,13 @@ import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.ViewInAr
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -45,6 +49,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.systemproperties.presentation.model.SystemPropertiesCardModel
@@ -70,76 +76,95 @@ internal fun SystemPropertiesDetectorCard(
             SystemPropertiesCollapsedOverview(model = model)
         },
     ) {
-        if (model.coreRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Security and runtime",
+        DetectorSectionGroup {
+            item(visible = model.coreRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_security_runtime),
                 icon = Icons.Rounded.Shield,
                 rows = model.coreRows,
-            )
-        }
+                showDivider = model.bootRows.isNotEmpty() || model.buildRows.isNotEmpty() ||
+                    model.sourceRows.isNotEmpty() || model.consistencyRows.isNotEmpty() || model.infoRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.bootRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Verified boot",
+            item(visible = model.bootRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_verified_boot),
                 icon = Icons.Rounded.VerifiedUser,
                 rows = model.bootRows,
-            )
-        }
+                showDivider = model.buildRows.isNotEmpty() || model.sourceRows.isNotEmpty() ||
+                    model.consistencyRows.isNotEmpty() || model.infoRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.buildRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Build profile",
+            item(visible = model.buildRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_build_profile),
                 icon = Icons.Rounded.ViewInAr,
                 rows = model.buildRows,
-            )
-        }
+                showDivider = model.sourceRows.isNotEmpty() || model.consistencyRows.isNotEmpty() ||
+                    model.infoRows.isNotEmpty() || model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() ||
+                    model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.sourceRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Source consistency",
+            item(visible = model.sourceRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_source_consistency),
                 icon = Icons.AutoMirrored.Rounded.CompareArrows,
                 rows = model.sourceRows,
-            )
-        }
+                showDivider = model.consistencyRows.isNotEmpty() || model.infoRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.consistencyRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Cross-check rules",
+            item(visible = model.consistencyRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_cross_check_rules),
                 icon = Icons.AutoMirrored.Rounded.FactCheck,
                 rows = model.consistencyRows,
-            )
-        }
+                showDivider = model.infoRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.infoRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Device info",
+            item(visible = model.infoRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_device_info),
                 icon = Icons.Rounded.Fingerprint,
                 rows = model.infoRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            SystemPropertiesImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                SystemPropertiesImpactSection(
+                title = stringResource(R.string.systemproperties_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            SystemPropertiesDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                SystemPropertiesDetailSection(
+                title = stringResource(R.string.systemproperties_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -154,7 +179,7 @@ private fun SystemPropertiesCollapsedOverview(
     val build = model.headerFacts.firstOrNull { it.fact == SystemPropertiesHeaderFact.BUILD } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -192,10 +217,13 @@ private fun SystemPropertiesDetailSection(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     rows: List<SystemPropertiesDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -226,10 +254,13 @@ private fun SystemPropertiesImpactSection(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     items: List<SystemPropertiesImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -249,7 +280,7 @@ private fun SystemPropertiesImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

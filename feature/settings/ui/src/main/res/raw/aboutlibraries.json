@@ -403,6 +403,29 @@
       "funding": []
     },
     {
+      "uniqueId": "androidx.compose.material3:material3-window-size-class",
+      "artifactVersion": "1.5.0-alpha29",
+      "name": "Compose Material 3 Window Size Class",
+      "description": "Provides window size classes for building responsive UIs",
+      "website": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.5.0-alpha29",
+      "developers": [
+        {
+          "name": "The Android Open Source Project"
+        }
+      ],
+      "organization": {
+        "name": "The Android Open Source Project"
+      },
+      "scm": {
+        "connection": "scm:git:https://android.googlesource.com/platform/frameworks/support",
+        "url": "https://cs.android.com/androidx/platform/frameworks/support"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
       "uniqueId": "androidx.compose.material:material-icons-core",
       "artifactVersion": "1.7.8",
       "name": "Compose Material Icons Core",
@@ -2352,6 +2375,27 @@
       "funding": []
     },
     {
+      "uniqueId": "com.materialkolor:material-color-utilities",
+      "artifactVersion": "5.0.1",
+      "name": "MaterialKolor",
+      "description": "Material You dynamic color for Compose Multiplatform",
+      "website": "https://github.com/jordond/materialkolor",
+      "developers": [
+        {
+          "name": "Jordon de Hoog"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/jordond/materialkolor.git",
+        "developerConnection": "scm:git:git@github.com:jordond/materialkolor.git",
+        "url": "https://github.com/jordond/materialkolor"
+      },
+      "licenses": [
+        "MIT"
+      ],
+      "funding": []
+    },
+    {
       "uniqueId": "com.mikepenz:aboutlibraries-compose-core",
       "artifactVersion": "13.2.1",
       "name": "AboutLibraries Compose UI Library",
@@ -2436,6 +2480,47 @@
       "funding": []
     },
     {
+      "uniqueId": "dev.drewhamilton.poko:poko-annotations",
+      "artifactVersion": "0.23.1",
+      "name": "Poko Annotations",
+      "description": "A Kotlin compiler plugin for generating equals, hashCode, and toString for plain old Kotlin objects.",
+      "website": "https://github.com/drewhamilton/Poko",
+      "developers": [
+        {
+          "name": "Drew Hamilton"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:github.com/drewhamilton/Poko.git",
+        "developerConnection": "scm:git:ssh://github.com/drewhamilton/Poko.git",
+        "url": "https://github.com/drewhamilton/Poko"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "io.github.xiaotong6666:uihelper",
+      "artifactVersion": "43",
+      "name": "uihelper",
+      "description": "Adaptive Material and Miuix Compose components for utility-style Android apps.",
+      "website": "https://github.com/XiaoTong6666/uihelper",
+      "developers": [
+        {
+          "name": "XiaoTong6666"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/XiaoTong6666/uihelper.git",
+        "url": "https://github.com/XiaoTong6666/uihelper"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
       "uniqueId": "javax.inject:javax.inject",
       "artifactVersion": "1",
       "name": "javax.inject",
@@ -2485,6 +2570,48 @@
       "funding": []
     },
     {
+      "uniqueId": "me.zhanghai.android.appiconloader:appiconloader",
+      "artifactVersion": "1.5.0",
+      "name": "AppIconLoader",
+      "description": "Android app icon loader from AOSP iconloaderlib",
+      "website": "https://github.com/zhanghai/AppIconLoader",
+      "developers": [
+        {
+          "name": "Hai Zhang"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git@github.com:zhanghai/AppIconLoader.git",
+        "developerConnection": "scm:git@github.com:zhanghai/AppIconLoader.git",
+        "url": "https://github.com/zhanghai/AppIconLoader"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "me.zhanghai.android.appiconloader:appiconloader-iconloaderlib",
+      "artifactVersion": "1.5.0",
+      "name": "AppIconLoader iconloaderlib",
+      "description": "Android app icon loader from AOSP iconloaderlib",
+      "website": "https://github.com/zhanghai/AppIconLoader",
+      "developers": [
+        {
+          "name": "Hai Zhang"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git@github.com:zhanghai/AppIconLoader.git",
+        "developerConnection": "scm:git@github.com:zhanghai/AppIconLoader.git",
+        "url": "https://github.com/zhanghai/AppIconLoader"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
       "uniqueId": "org.bouncycastle:bcprov-jdk18on",
       "artifactVersion": "1.83",
       "name": "Bouncy Castle Provider",
@@ -2500,6 +2627,27 @@
       },
       "licenses": [
         "73252b46f36df25ef51a7994de439aea"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "org.commonmark:commonmark",
+      "artifactVersion": "0.30.0",
+      "name": "commonmark-java core",
+      "description": "Core of commonmark-java (a library for parsing Markdown to an AST, modifying the AST and rendering it to HTML or Markdown)",
+      "website": "https://github.com/commonmark/commonmark-java",
+      "developers": [
+        {
+          "name": "Robin Stocker"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/commonmark/commonmark-java",
+        "developerConnection": "scm:git:https://github.com/commonmark/commonmark-java",
+        "url": "https://github.com/commonmark/commonmark-java"
+      },
+      "licenses": [
+        "e6f8c945ba79ba6fb3ca31f49b3f3826"
       ],
       "funding": []
     },
@@ -2649,6 +2797,28 @@
         "connection": "scm:git:https://github.com/JetBrains/compose-jb.git",
         "developerConnection": "scm:git:https://github.com/JetBrains/compose-jb.git",
         "url": "https://github.com/JetBrains/compose-jb"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose",
+      "artifactVersion": "2.11.0",
+      "name": "Lifecycle ViewModel Compose",
+      "description": "Compose integration with Lifecycle ViewModel",
+      "website": "https://github.com/JetBrains/compose-multiplatform",
+      "developers": [
+        {
+          "name": "Compose Multiplatform Team",
+          "organisationUrl": "https://www.jetbrains.com"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/JetBrains/compose-multiplatform.git",
+        "developerConnection": "scm:git:https://github.com/JetBrains/compose-multiplatform.git",
+        "url": "https://github.com/JetBrains/compose-multiplatform"
       },
       "licenses": [
         "Apache-2.0"
@@ -2869,6 +3039,28 @@
         "connection": "scm:git:https://github.com/JetBrains/compose-jb.git",
         "developerConnection": "scm:git:https://github.com/JetBrains/compose-jb.git",
         "url": "https://github.com/JetBrains/compose-jb"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "org.jetbrains.compose.material3:material3-window-size-class",
+      "artifactVersion": "1.12.0-alpha03",
+      "name": "Compose Material 3 Window Size Class",
+      "description": "Provides window size classes for building responsive UIs",
+      "website": "https://github.com/JetBrains/compose-multiplatform",
+      "developers": [
+        {
+          "name": "Compose Multiplatform Team",
+          "organisationUrl": "https://www.jetbrains.com"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/JetBrains/compose-multiplatform.git",
+        "developerConnection": "scm:git:https://github.com/JetBrains/compose-multiplatform.git",
+        "url": "https://github.com/JetBrains/compose-multiplatform"
       },
       "licenses": [
         "Apache-2.0"
@@ -3450,6 +3642,166 @@
         "Apache-2.0"
       ],
       "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-blur-android",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-blur",
+      "description": "Blur effect library for Miuix",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-core",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-core",
+      "description": "Core utilities for Miuix",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-icons-android",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-icons",
+      "description": "Extended icon library for Miuix",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-nav-android",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-nav",
+      "description": "Self-contained navigation runtime for Miuix",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-preference-android",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-preference",
+      "description": "Preference components for Miuix",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-shader",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-shader",
+      "description": "Runtime shader abstraction for Miuix",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-squircle",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-squircle",
+      "description": "Squircle corner library for Miuix",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
+    },
+    {
+      "uniqueId": "top.yukonga.miuix.kmp:miuix-ui",
+      "artifactVersion": "0.9.4",
+      "name": "miuix-ui",
+      "description": "A UI library for Compose Multiplatform",
+      "website": "https://github.com/compose-miuix-ui/miuix",
+      "developers": [
+        {
+          "name": "compose-miuix-ui"
+        }
+      ],
+      "scm": {
+        "connection": "scm:git:https://github.com/compose-miuix-ui/miuix.git",
+        "url": "https://github.com/compose-miuix-ui/miuix"
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "funding": []
     }
   ],
   "licenses": {
@@ -3506,6 +3858,13 @@
       "name": "Other",
       "url": "",
       "hash": "c6dd25dfadc26f1371fd26933f5eb10f"
+    },
+    "e6f8c945ba79ba6fb3ca31f49b3f3826": {
+      "name": "BSD 2-Clause \"Simplified\" License",
+      "url": "https://github.com/commonmark/commonmark-java/blob/main/LICENSE.txt",
+      "content": "Copyright (c) 2015, Atlassian Pty Ltd\nAll rights reserved.\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions are met:\n\n* Redistributions of source code must retain the above copyright notice, this\n  list of conditions and the following disclaimer.\n\n* Redistributions in binary form must reproduce the above copyright notice,\n  this list of conditions and the following disclaimer in the documentation\n  and/or other materials provided with the distribution.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\nAND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\nIMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\nDISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\nFOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\nDAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\nSERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\nCAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\nOR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\nOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+      "spdxId": "BSD-2-Clause",
+      "hash": "e6f8c945ba79ba6fb3ca31f49b3f3826"
     }
   }
 }
