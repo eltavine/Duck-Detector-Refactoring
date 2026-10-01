@@ -32,7 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material.icons.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Badge
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
@@ -220,7 +220,7 @@ private fun ReportHeroAction(contentColor: Color) {
                 color = contentColor,
             )
             if (!isMiuix) {
-                Icon(Icons.Rounded.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp), tint = contentColor.copy(alpha = 0.78f))
+                Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp), tint = contentColor.copy(alpha = 0.78f))
             }
         }
     }

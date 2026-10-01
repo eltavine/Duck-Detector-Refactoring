@@ -117,7 +117,7 @@ public fun DashboardTopBarBrandIcon() {
 @Composable
 public fun DashboardTelegramAction() {
     val context = LocalContext.current
-    val onClick: () -> Unit = { openExternalUri(context, "https://t.me/duck_detector"); Unit }
+    val onClick: () -> Unit = { openExternalUri(context, "https://t.me/duck_detector") }
     if (LocalUiMode.current == UiMode.Miuix) {
         MiuixIconButton(onClick = onClick) {
             Icon(
