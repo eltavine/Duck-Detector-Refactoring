@@ -77,6 +77,10 @@ jobs:
             fi
 
             git checkout --detach "refs/tags/${tag_name}"
+            # The checkout step pinned submodules to the default branch, and a plain checkout does
+            # not move them, so the build would compile that branch's uihelper into this tag.
+            git submodule sync --recursive
+            git submodule update --init --recursive
           else
             tag_name="${GITHUB_REF_NAME}"
           fi
