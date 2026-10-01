@@ -17,13 +17,9 @@
 package com.eltavine.duckdetector.ui
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -31,8 +27,6 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.outlined.Home as HomeOutline
 import androidx.compose.material.icons.outlined.Settings as SettingsOutline
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +54,6 @@ import com.eltavine.duckdetector.core.detector.ConsentId
 import com.eltavine.duckdetector.core.navigation.DuckNavHost
 import com.eltavine.duckdetector.core.navigation.DuckRoute
 import com.eltavine.duckdetector.core.navigation.rememberDuckRoutes
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardUiState
 import com.eltavine.duckdetector.features.dashboard.presentation.model.buildDashboardFindings
@@ -90,10 +83,6 @@ import io.github.xiaotong6666.uihelper.chrome.NavigationShellItem
 import io.github.xiaotong6666.uihelper.chrome.NavigationShellPagerGesturePolicy
 import kotlinx.coroutines.launch
 import io.github.xiaotong6666.uihelper.mode.UiMode
-import io.github.xiaotong6666.uihelper.mode.LocalUiMode
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator as MiuixCircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 internal fun AppReadyShell(
@@ -113,6 +102,7 @@ internal fun AppReadyShell(
     val updateViewModel: UpdateViewModel = viewModel(factory = updateFactory)
     val accelerationStore = remember(appContext) { GitHubAccelerationStore.getInstance(appContext) }
     val gitHubAcceleration by accelerationStore.acceleration.collectAsState(initial = null)
+    // Closing the offer without answering leaves the choice open, so the next cold start asks again.
     var accelerationOfferDismissed by rememberSaveable { mutableStateOf(false) }
     val appLocale = LocalConfiguration.current.locales[0]
     val offerGitHubAcceleration = !accelerationOfferDismissed &&
@@ -132,6 +122,8 @@ internal fun AppReadyShell(
         if (visibleUpdate != null) presentedUpdate = visibleUpdate
     }
 
+    // The automatic check waits for the answer to the acceleration offer, so turning acceleration on
+    // already sends that first check through gh-proxy.com.
     val automaticUpdateCheckReady = gitHubAcceleration != null && !offerGitHubAcceleration
     LaunchedEffect(updateViewModel, automaticUpdateCheckReady) {
         if (automaticUpdateCheckReady) {
@@ -348,50 +340,6 @@ internal fun AppReadyShell(
                 onDecline = { scope.launch { accelerationStore.setEnabled(false) } },
                 onDismiss = { accelerationOfferDismissed = true },
             )
-        }
-    }
-}
-
-@Composable
-internal fun StartupBootstrapLoadingScreen(
-    modifier: Modifier = Modifier,
-) {
-    val miuix = LocalUiMode.current == UiMode.Miuix
-    Box(
-        modifier = modifier.fillMaxSize().then(
-            if (miuix) Modifier.background(DuckTheme.palette.groupedBackground) else Modifier,
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            if (miuix) {
-                MiuixCircularProgressIndicator(size = 48.dp)
-                MiuixText(
-                    text = stringResource(R.string.startup_preparing_title),
-                    style = MiuixTheme.textStyles.title3,
-                    color = MiuixTheme.colorScheme.onSurface,
-                )
-                MiuixText(
-                    text = stringResource(R.string.startup_preparing_detail),
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-            } else {
-                CircularProgressIndicator()
-                Text(
-                    text = stringResource(R.string.startup_preparing_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = stringResource(R.string.startup_preparing_detail),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }
