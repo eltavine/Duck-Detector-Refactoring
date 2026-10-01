@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.components.DuckPanel
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
+import com.eltavine.duckdetector.core.designsystem.theme.materialStatusTone
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.core.ui.LocalAppBuildInfo
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
@@ -126,18 +127,11 @@ internal fun DashboardOverviewCard(
         }
         return
     }
-    val tone = model.status.severity
-    val containerColor = when (tone) {
-        DetectionSeverity.DANGER -> MaterialTheme.colorScheme.errorContainer
-        DetectionSeverity.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
-        DetectionSeverity.ALL_CLEAR -> MaterialTheme.colorScheme.secondaryContainer
-        DetectionSeverity.INFO -> MaterialTheme.colorScheme.surfaceContainerHigh
-    }
-    val contentColor = when (tone) {
-        DetectionSeverity.DANGER -> MaterialTheme.colorScheme.onErrorContainer
-        DetectionSeverity.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
-        DetectionSeverity.ALL_CLEAR -> MaterialTheme.colorScheme.onSecondaryContainer
-        DetectionSeverity.INFO -> MaterialTheme.colorScheme.onSurface
+    val scheme = MaterialTheme.colorScheme
+    val (containerColor, contentColor) = when (model.status.severity) {
+        DetectionSeverity.DANGER -> scheme.errorContainer to scheme.onErrorContainer
+        DetectionSeverity.WARNING, DetectionSeverity.ALL_CLEAR -> materialStatusTone(appearance.iconTint, scheme)
+        DetectionSeverity.INFO -> scheme.surfaceContainerHigh to scheme.onSurface
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Surface(

@@ -23,6 +23,7 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
 /**
  * Colors for grouped screens, where content sits in containers on a darker page: the arrangement
@@ -81,15 +82,25 @@ internal fun duckPalette(scheme: ColorScheme, dark: Boolean): DuckPalette = if (
 }
 
 /** M3E layers from KSU / InstallerX: tonal page, bright grouped items, high inset facts. */
-internal fun expressiveDuckPalette(scheme: ColorScheme, dark: Boolean): DuckPalette = DuckPalette(
-    groupedBackground = scheme.surfaceContainer,
-    groupedSurface = scheme.surfaceBright,
-    groupedInset = scheme.surfaceContainerHigh,
-    separator = scheme.outlineVariant.copy(alpha = if (dark) 0.55f else 0.7f),
-    // Material keeps the same status hierarchy but derives accents from the active M3 scheme
-    // (including Monet), matching KSU / InstallerX. MIUIX still uses [duckPalette] unchanged.
-    positive = scheme.secondary,
-    caution = scheme.tertiary,
-    critical = scheme.error,
-    neutral = scheme.onSurfaceVariant,
-)
+internal fun expressiveDuckPalette(scheme: ColorScheme, dark: Boolean): DuckPalette {
+    // The secondary and tertiary roles cannot carry a verdict: Monet derives them from the
+    // wallpaper, and the Android 10-11 fallback scheme makes both the same gray.
+    val status = duckPalette(scheme, dark)
+    return DuckPalette(
+        groupedBackground = scheme.surfaceContainer,
+        groupedSurface = scheme.surfaceBright,
+        groupedInset = scheme.surfaceContainerHigh,
+        separator = scheme.outlineVariant.copy(alpha = if (dark) 0.55f else 0.7f),
+        positive = status.positive,
+        caution = status.caution,
+        critical = scheme.error,
+        neutral = scheme.onSurfaceVariant,
+    )
+}
+
+/**
+ * A Material tonal container and its content color for a [DuckPalette] status hue, used where
+ * Material would otherwise reach for the secondary or tertiary container.
+ */
+public fun materialStatusTone(accent: Color, scheme: ColorScheme): Pair<Color, Color> =
+    lerp(scheme.surfaceContainerHigh, accent, 0.2f) to lerp(accent, scheme.onSurface, 0.55f)

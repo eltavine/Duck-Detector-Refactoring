@@ -33,7 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.eltavine.duckdetector.core.designsystem.theme.DuckPalette
+import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
+import com.eltavine.duckdetector.core.designsystem.theme.materialStatusTone
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
@@ -94,7 +97,7 @@ public fun StatusBadge(
         return
     }
 
-    val (containerColor, contentColor) = materialStatusColors(status, MaterialTheme.colorScheme)
+    val (containerColor, contentColor) = materialStatusColors(status, MaterialTheme.colorScheme, DuckTheme.palette)
     Column(
         modifier = modifier
             .widthIn(max = 220.dp)
@@ -139,7 +142,7 @@ public fun CompactStatusBadge(
         return
     }
 
-    val (containerColor, contentColor) = materialStatusColors(status, MaterialTheme.colorScheme)
+    val (containerColor, contentColor) = materialStatusColors(status, MaterialTheme.colorScheme, DuckTheme.palette)
     Row(
         modifier = modifier
             .background(color = containerColor, shape = MaterialTheme.shapes.extraSmall)
@@ -168,7 +171,7 @@ public fun MaterialSeverityTag(
     label: String,
     modifier: Modifier = Modifier,
 ) {
-    val (containerColor, contentColor) = materialStatusColors(status, MaterialTheme.colorScheme)
+    val (containerColor, contentColor) = materialStatusColors(status, MaterialTheme.colorScheme, DuckTheme.palette)
     Box(
         modifier = modifier
             .background(containerColor, MaterialTheme.shapes.extraSmall)
@@ -178,15 +181,18 @@ public fun MaterialSeverityTag(
     }
 }
 
-private fun materialStatusColors(status: DetectorStatus, scheme: ColorScheme): Pair<Color, Color> =
+private fun materialStatusColors(
+    status: DetectorStatus,
+    scheme: ColorScheme,
+    palette: DuckPalette,
+): Pair<Color, Color> =
     if (status.infoKind == InfoKind.ERROR && status.severity == DetectionSeverity.INFO) {
         scheme.errorContainer to scheme.onErrorContainer
-    } else materialStatusColors(status.severity, scheme)
-
-private fun materialStatusColors(severity: DetectionSeverity, scheme: ColorScheme): Pair<Color, Color> =
-    when (severity) {
-        DetectionSeverity.DANGER -> scheme.errorContainer to scheme.onErrorContainer
-        DetectionSeverity.WARNING -> scheme.tertiaryContainer to scheme.onTertiaryContainer
-        DetectionSeverity.ALL_CLEAR -> scheme.secondaryContainer to scheme.onSecondaryContainer
-        DetectionSeverity.INFO -> scheme.surfaceContainerHigh to scheme.onSurfaceVariant
+    } else {
+        when (status.severity) {
+            DetectionSeverity.DANGER -> scheme.errorContainer to scheme.onErrorContainer
+            DetectionSeverity.WARNING -> materialStatusTone(palette.caution, scheme)
+            DetectionSeverity.ALL_CLEAR -> materialStatusTone(palette.positive, scheme)
+            DetectionSeverity.INFO -> scheme.surfaceContainerHigh to scheme.onSurfaceVariant
+        }
     }
