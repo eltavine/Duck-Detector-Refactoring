@@ -54,6 +54,23 @@ data class TeePatchState(
     val summary: String = "Patch data unavailable",
 )
 
+enum class TeeSoterAnomalyKind {
+    D_SOTER_FIXED_SPKI,
+    D_SOTER_ZERO_SIGNATURE,
+    D_SOTER_ZERO_CPU_ID,
+    KNOWN_RELAY_CPU_ID,
+    KNOWN_RELAY_SPKI,
+    UID_MISMATCH,
+    CPU_ID_MISMATCH,
+    INVALID_COUNTER,
+    SOFTWARE_HAL_TAKEOVER,
+}
+
+data class TeeSoterAnomaly(
+    val kind: TeeSoterAnomalyKind,
+    val detail: String,
+)
+
 data class TeeSoterState(
     val serviceReachable: Boolean = false,
     val keyPrepared: Boolean = false,
@@ -61,6 +78,7 @@ data class TeeSoterState(
     val available: Boolean = false,
     val damaged: Boolean = false,
     val abnormalEnvironment: Boolean = false,
+    val anomalies: List<TeeSoterAnomaly> = emptyList(),
     val summary: String = "Soter check skipped",
 )
 

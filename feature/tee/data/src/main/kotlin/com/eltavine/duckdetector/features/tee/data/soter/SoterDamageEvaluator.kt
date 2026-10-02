@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.features.tee.data.soter
 
 import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
+import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomaly
 
 class SoterDamageEvaluator {
 
@@ -27,6 +28,7 @@ class SoterDamageEvaluator {
         signSessionAvailable: Boolean,
         errorMessage: String?,
         abnormalEnvironment: Boolean = false,
+        anomalies: List<TeeSoterAnomaly> = emptyList(),
     ): TeeSoterState {
         val available = serviceReachable && keyPrepared && signSessionAvailable
         val damaged = serviceReachable && !available
@@ -46,7 +48,8 @@ class SoterDamageEvaluator {
             available = available,
             damaged = damaged,
             abnormalEnvironment = abnormalEnvironment,
-            summary = summary,
+            anomalies = anomalies,
+            summary = summary + anomalies.joinToString(separator = "; ", prefix = " ") { it.detail },
         )
     }
 

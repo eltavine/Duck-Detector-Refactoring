@@ -20,6 +20,8 @@ package com.eltavine.duckdetector.features.tee.data.soter
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomaly
+import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomalyKind
 
 class SoterDamageEvaluatorTest {
 
@@ -82,5 +84,25 @@ class SoterDamageEvaluatorTest {
         assertFalse(state.damaged)
         assertTrue(state.abnormalEnvironment)
         assertTrue(state.summary.contains("abnormal soter environment", ignoreCase = true))
+    }
+
+    @Test
+    fun `anomaly keeps available soter available but reports evidence`() {
+        val state = evaluator.evaluate(
+            serviceReachable = true,
+            keyPrepared = true,
+            signSessionAvailable = true,
+            errorMessage = null,
+            anomalies = listOf(
+                TeeSoterAnomaly(
+                    TeeSoterAnomalyKind.KNOWN_RELAY_CPU_ID,
+                    "Known relay cpu_id matched.",
+                )
+            )
+        )
+
+        assertTrue(state.available)
+        assertFalse(state.damaged)
+        assertTrue(state.summary.contains("Known relay cpu_id matched"))
     }
 }

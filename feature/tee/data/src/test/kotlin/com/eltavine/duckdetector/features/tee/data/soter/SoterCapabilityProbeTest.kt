@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.features.tee.data.soter
 
 import com.tencent.soter.core.SoterCore
 import com.tencent.soter.core.model.SoterCoreResult
+import com.tencent.soter.core.model.SoterPubKeyModel
 import com.tencent.soter.soterserver.SoterSessionResult
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -103,9 +104,11 @@ class SoterCapabilityProbeTest {
             trebleConnected = true,
             hasAsk = true,
             askModelPresent = true,
+            askModelJson = CLEAN_MODEL_JSON,
             authGenerateSuccess = true,
             hasAuth = true,
             authModelPresent = true,
+            authModelJson = CLEAN_MODEL_JSON,
             sessionResult = SoterSessionResult().apply {
                 resultCode = 0
                 session = 42L
@@ -121,6 +124,42 @@ class SoterCapabilityProbeTest {
     }
 
     @Test
+    fun `treble uid is set before initialization`() {
+        val client = FakeSoterClient(
+            nativeSupport = true,
+            coreType = SoterCore.IS_TREBLE,
+            trebleConnected = false,
+        )
+
+        SoterCapabilityProbe(client, currentUid = { 42 }).inspect()
+
+        assertTrue(client.trebleUidSetBeforeInit)
+    }
+
+    @Test
+    fun `soter models captured during preparation feed abuse evidence`() {
+        val modelJson = """{"pub_key":"","cpu_id":"090000005171734c42866bea148b21f5","counter":1,"uid":"42"}"""
+        val client = FakeSoterClient(
+            nativeSupport = true,
+            coreType = SoterCore.IS_TREBLE,
+            trebleConnected = true,
+            hasAsk = true,
+            askModelPresent = true,
+            askModelJson = modelJson,
+            authGenerateSuccess = true,
+            hasAuth = true,
+            authModelPresent = true,
+            authModelJson = modelJson,
+            sessionResult = SoterSessionResult().apply { resultCode = 0; session = 1L },
+        )
+
+        val state = SoterCapabilityProbe(client, currentUid = { 42 }).inspect()
+
+        assertTrue(state.available)
+        assertTrue(state.anomalies.isNotEmpty())
+    }
+
+    @Test
     fun `init sigh failure becomes damaged`() {
         val client = FakeSoterClient(
             nativeSupport = true,
@@ -129,9 +168,11 @@ class SoterCapabilityProbeTest {
             hasAsk = false,
             askGenerateSuccess = true,
             askModelPresent = true,
+            askModelJson = CLEAN_MODEL_JSON,
             authGenerateSuccess = true,
             hasAuth = true,
             authModelPresent = true,
+            authModelJson = CLEAN_MODEL_JSON,
             sessionResult = SoterSessionResult().apply {
                 resultCode = 7
                 session = 0L
@@ -185,6 +226,9 @@ private class FakeSoterClient(
     private val hasAuth: Boolean = false,
     private val authModelPresent: Boolean = false,
     private val sessionResult: SoterSessionResult? = null,
+    private val askModelJson: String? = null,
+    private val authModelJson: String? = null,
+    private val trebleUidResult: Int? = null,
 ) : SoterClient {
 
     var initTrebleCalled = false
@@ -192,8 +236,17 @@ private class FakeSoterClient(
     var initSighCalled = false
     var removeAuthCalled = false
     var removeAskCalled = false
+    var trebleUidSetBeforeInit = false
+    private var configuredTrebleUid = 0
 
     override fun tryToInitSoterBeforeTreble() = Unit
+
+    override fun setTrebleUid(uid: Int) {
+        configuredTrebleUid = uid
+        trebleUidSetBeforeInit = !initTrebleCalled
+    }
+
+    override fun getTrebleUid(): Int = trebleUidResult ?: configuredTrebleUid
 
     override fun tryToInitSoterTreble() {
         initTrebleCalled = true
@@ -223,14 +276,16 @@ private class FakeSoterClient(
         return if (askGenerateSuccess) SoterCoreResult(0) else SoterCoreResult(6, "ask failed")
     }
 
-    override fun getAppGlobalSecureKeyModel(): Any? = if (askModelPresent) Any() else null
+    override fun getAppGlobalSecureKeyModel(): SoterPubKeyModel? =
+        askModelJson?.takeIf { askModelPresent }?.let { SoterPubKeyModel(it, "") }
 
     override fun generateAuthKey(alias: String): SoterCoreResult? =
         if (authGenerateSuccess) SoterCoreResult(0) else SoterCoreResult(6, "auth failed")
 
     override fun hasAuthKey(alias: String): Boolean = hasAuth
 
-    override fun getAuthKeyModel(alias: String): Any? = if (authModelPresent) Any() else null
+    override fun getAuthKeyModel(alias: String): SoterPubKeyModel? =
+        authModelJson?.takeIf { authModelPresent }?.let { SoterPubKeyModel(it, "") }
 
     override fun initSigh(alias: String, challenge: String): SoterSessionResult? {
         initSighCalled = true
@@ -248,3 +303,6 @@ private class FakeSoterClient(
         return SoterCoreResult(0)
     }
 }
+
+private const val CLEAN_MODEL_JSON =
+    """{"pub_key":"","cpu_id":"1234000000000000","counter":1,"uid":"0"}"""

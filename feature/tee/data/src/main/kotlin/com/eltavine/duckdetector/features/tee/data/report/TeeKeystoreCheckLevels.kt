@@ -272,6 +272,7 @@ internal fun strongBoxLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when 
 
 internal fun soterLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
     artifacts.soter.damaged -> TeeSignalLevel.FAIL
+    artifacts.soter.anomalies.isNotEmpty() -> TeeSignalLevel.WARN
     artifacts.soter.available -> TeeSignalLevel.PASS
     artifacts.soter.abnormalEnvironment -> TeeSignalLevel.WARN
     !artifacts.soter.serviceReachable -> TeeSignalLevel.WARN

@@ -18,11 +18,15 @@
 package com.eltavine.duckdetector.features.tee.data.soter
 
 import android.content.Context
+import android.os.Process
+import com.eltavine.duckdetector.core.platform.HiddenSystemProperties
 import com.eltavine.duckdetector.core.platform.PlatformFailureName
 import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
+import com.tencent.soter.core.sotercore.SoterCoreTreble
 import com.tencent.soter.core.SoterCore
 import com.tencent.soter.core.model.ConstantsSoter
 import com.tencent.soter.core.model.SoterCoreResult
+import com.tencent.soter.core.model.SoterPubKeyModel
 import com.tencent.soter.soterserver.SoterSessionResult
 
 class SoterCapabilityProbe internal constructor(
@@ -31,6 +35,8 @@ class SoterCapabilityProbe internal constructor(
         SoterEnvironmentSnapshot()
     },
     private val damageEvaluator: SoterDamageEvaluator = SoterDamageEvaluator(),
+    private val abuseAnalyzer: SoterAbuseAnalyzer = SoterAbuseAnalyzer(),
+    private val currentUid: () -> Int = Process::myUid,
 ) {
 
     constructor(
@@ -50,6 +56,7 @@ class SoterCapabilityProbe internal constructor(
             signSessionAvailable = result.signSessionOk,
             errorMessage = result.uiSummary,
             abnormalEnvironment = result.abnormalEnvironment,
+            anomalies = abuseAnalyzer.analyze(result.keys, result.service),
         )
     }
 
@@ -63,9 +70,17 @@ class SoterCapabilityProbe internal constructor(
         var askPreExisted = true
         var keyPrepareOk = false
         var signSessionOk = false
+        var vendorSoterStopped = false
+        val keyEvidence = mutableListOf<SoterKeyEvidence>()
+        var uidSetupReliable = false
+        val expectedUid = runCatching(currentUid).getOrNull()
         var summary = "Soter probe did not complete."
 
         try {
+            if (expectedUid != null) {
+                client.setTrebleUid(expectedUid)
+                uidSetupReliable = client.getTrebleUid() == expectedUid
+            }
             client.tryToInitSoterBeforeTreble()
             client.tryToInitSoterTreble()
             client.setUp()
@@ -90,7 +105,9 @@ class SoterCapabilityProbe internal constructor(
 
         if (nativeSupport && trebleConnected) {
             try {
+                vendorSoterStopped = readVendorSoterState().equals("stopped", ignoreCase = false)
                 val prepareState = prepareKeyLikeWechat(testAlias)
+                keyEvidence += keyEvidence(prepareState)
                 askPreExisted = prepareState.askPreExisted
                 keyPrepareOk = prepareState.keyPrepareOk
                 summary += ", keyPrep ask=${prepareState.askOk}, askModel=${prepareState.askModelPresent}, auth=${prepareState.authOk}, hasAuth=${prepareState.authPresent}, authModel=${prepareState.authModelPresent}, retries=${prepareState.retryCount}, finalErr=${prepareState.finalErrCode}"
@@ -146,13 +163,55 @@ class SoterCapabilityProbe internal constructor(
             keyPrepareOk = keyPrepareOk,
             signSessionOk = signSessionOk,
             abnormalEnvironment = environment.abnormalEnvironment,
+            keys = keyEvidence,
+            service = SoterServiceEvidence(
+                expectedUid = expectedUid,
+                uidSetupReliable = uidSetupReliable,
+                vendorSoterStoppedBeforeSuccessfulTransaction =
+                    vendorSoterStopped && keyPrepareOk && signSessionOk,
+            ),
             uiSummary = summary,
         )
+    }
+
+    private fun readVendorSoterState(): String? =
+        HiddenSystemProperties.read(VENDOR_SOTER_STATE_PROPERTY).getOrNull()?.takeIf { it.isNotBlank() }
+
+    private fun keyEvidence(state: PrepareState): List<SoterKeyEvidence> {
+        val ask = state.askModel
+        val auth = state.authModel
+        return buildList {
+            if (ask != null) {
+                add(
+                    SoterKeyEvidence(
+                        role = SoterKeyRole.ASK,
+                        alias = null,
+                        preExisted = state.askPreExisted && !state.askGeneratedByProbe,
+                        rawJson = ask.rawJson,
+                        signatureBase64 = ask.signature,
+                        publicPem = ask.pub_key_in_x509,
+                    )
+                )
+            }
+            if (auth != null) {
+                add(
+                    SoterKeyEvidence(
+                        role = SoterKeyRole.AUTH_KEY,
+                        alias = state.authAlias,
+                        preExisted = false,
+                        rawJson = auth.rawJson,
+                        signatureBase64 = auth.signature,
+                        publicPem = auth.pub_key_in_x509,
+                    )
+                )
+            }
+        }
     }
 
     private fun prepareKeyLikeWechat(testAlias: String): PrepareState {
         val state = PrepareState(
             askPreExisted = runCatching { client.hasAppGlobalSecureKey() }.getOrDefault(false),
+            authAlias = testAlias,
         )
         var lastErrCode = 0
         var lastErrMsg = "ok"
@@ -177,12 +236,14 @@ class SoterCapabilityProbe internal constructor(
             }
 
             state.askOk = askExists
-            state.askModelPresent = runCatching { client.getAppGlobalSecureKeyModel() != null }.getOrDefault(false)
+            val askModel = runCatching { client.getAppGlobalSecureKeyModel() }.getOrNull()
+            state.askModelPresent = askModel != null
             if (!state.askModelPresent) {
                 lastErrCode = ASK_MODEL_MISSING
                 lastErrMsg = "ask model missing"
                 return@repeat
             }
+            state.askModel = askModel
 
             val authResult = runCatching { client.generateAuthKey(testAlias) }.getOrNull()
             state.authOk = authResult?.isSuccess() == true
@@ -193,12 +254,14 @@ class SoterCapabilityProbe internal constructor(
             }
 
             state.authPresent = runCatching { client.hasAuthKey(testAlias) }.getOrDefault(false)
-            state.authModelPresent = runCatching { client.getAuthKeyModel(testAlias) != null }.getOrDefault(false)
+            val authModel = runCatching { client.getAuthKeyModel(testAlias) }.getOrNull()
+            state.authModelPresent = authModel != null
             if (!state.authPresent || !state.authModelPresent) {
                 lastErrCode = AUTH_MODEL_MISSING
                 lastErrMsg = "auth key model is null or auth key absent after generation"
                 return@repeat
             }
+            state.authModel = authModel
 
             state.keyPrepareOk = true
             state.finalErrCode = 0
@@ -217,12 +280,15 @@ class SoterCapabilityProbe internal constructor(
 
     private class PrepareState(
         val askPreExisted: Boolean,
+        val authAlias: String,
         var askGeneratedByProbe: Boolean = false,
         var askOk: Boolean = false,
         var askModelPresent: Boolean = false,
         var authOk: Boolean = false,
         var authPresent: Boolean = false,
         var authModelPresent: Boolean = false,
+        var askModel: SoterPubKeyModel? = null,
+        var authModel: SoterPubKeyModel? = null,
         var keyPrepareOk: Boolean = false,
         var retryCount: Int = 0,
         var finalErrCode: Int = 0,
@@ -234,6 +300,8 @@ class SoterCapabilityProbe internal constructor(
         val keyPrepareOk: Boolean,
         val signSessionOk: Boolean,
         val abnormalEnvironment: Boolean,
+        val keys: List<SoterKeyEvidence>,
+        val service: SoterServiceEvidence,
         val uiSummary: String,
     )
 
@@ -244,10 +312,13 @@ class SoterCapabilityProbe internal constructor(
         private const val UNKNOWN_RESULT_CODE = -999
         private const val ASK_MODEL_MISSING = 1003
         private const val AUTH_MODEL_MISSING = 1006
+        private const val VENDOR_SOTER_STATE_PROPERTY = "init.svc.vendor.soter"
     }
 }
 
 internal interface SoterClient {
+    fun setTrebleUid(uid: Int)
+    fun getTrebleUid(): Int
     fun tryToInitSoterBeforeTreble()
     fun tryToInitSoterTreble()
     fun setUp()
@@ -260,10 +331,10 @@ internal interface SoterClient {
     fun isSystemHasBiometric(biometricType: Int): Boolean
     fun hasAppGlobalSecureKey(): Boolean
     fun generateAppGlobalSecureKey(): SoterCoreResult?
-    fun getAppGlobalSecureKeyModel(): Any?
+    fun getAppGlobalSecureKeyModel(): SoterPubKeyModel?
     fun generateAuthKey(alias: String): SoterCoreResult?
     fun hasAuthKey(alias: String): Boolean
-    fun getAuthKeyModel(alias: String): Any?
+    fun getAuthKeyModel(alias: String): SoterPubKeyModel?
     fun initSigh(alias: String, challenge: String): SoterSessionResult?
     fun removeAuthKey(alias: String, autoDeleteAsk: Boolean): SoterCoreResult?
     fun removeAppGlobalSecureKey(): SoterCoreResult?
@@ -272,6 +343,12 @@ internal interface SoterClient {
 private class AndroidSoterClient(
     private val appContext: Context,
 ) : SoterClient {
+    override fun setTrebleUid(uid: Int) {
+        SoterCoreTreble.uid = uid
+    }
+
+    override fun getTrebleUid(): Int = SoterCoreTreble.uid
+
     override fun tryToInitSoterBeforeTreble() = SoterCore.tryToInitSoterBeforeTreble()
 
     override fun tryToInitSoterTreble() = SoterCore.tryToInitSoterTreble(appContext)
@@ -300,13 +377,13 @@ private class AndroidSoterClient(
 
     override fun generateAppGlobalSecureKey(): SoterCoreResult? = SoterCore.generateAppGlobalSecureKey()
 
-    override fun getAppGlobalSecureKeyModel(): Any? = SoterCore.getAppGlobalSecureKeyModel()
+    override fun getAppGlobalSecureKeyModel(): SoterPubKeyModel? = SoterCore.getAppGlobalSecureKeyModel()
 
     override fun generateAuthKey(alias: String): SoterCoreResult? = SoterCore.generateAuthKey(alias)
 
     override fun hasAuthKey(alias: String): Boolean = SoterCore.hasAuthKey(alias)
 
-    override fun getAuthKeyModel(alias: String): Any? = SoterCore.getAuthKeyModel(alias)
+    override fun getAuthKeyModel(alias: String): SoterPubKeyModel? = SoterCore.getAuthKeyModel(alias)
 
     override fun initSigh(alias: String, challenge: String): SoterSessionResult? =
         SoterCore.initSigh(alias, challenge)
