@@ -17,11 +17,13 @@
 
 package com.eltavine.duckdetector.features.tee.data.soter
 
+import com.eltavine.duckdetector.features.tee.domain.TeeSignalLevel
+import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomaly
+import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomalyKind
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomaly
-import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomalyKind
 
 class SoterDamageEvaluatorTest {
 
@@ -67,7 +69,10 @@ class SoterDamageEvaluatorTest {
 
         assertTrue(state.available)
         assertFalse(state.damaged)
-        assertTrue(state.summary.contains("soter", ignoreCase = true))
+        assertEquals(
+            "Soter checks succeeded: Treble service was reachable and ASK/AuthKey/initSigh all succeeded.",
+            state.summary,
+        )
     }
 
     @Test
@@ -93,16 +98,35 @@ class SoterDamageEvaluatorTest {
             keyPrepared = true,
             signSessionAvailable = true,
             errorMessage = null,
-            anomalies = listOf(
-                TeeSoterAnomaly(
-                    TeeSoterAnomalyKind.KNOWN_RELAY_CPU_ID,
-                    "Known relay cpu_id matched.",
-                )
-            )
+            anomalies = listOf(relayAnomaly),
         )
 
         assertTrue(state.available)
         assertFalse(state.damaged)
-        assertTrue(state.summary.contains("Known relay cpu_id matched"))
+        assertEquals(listOf(relayAnomaly), state.anomalies)
+        assertEquals(
+            "Soter ASK/AuthKey/initSigh calls succeeded, but the replies need review: relay cpu_id in ASK.",
+            state.summary,
+        )
     }
+
+    @Test
+    fun `anomaly is appended to a damaged summary`() {
+        val state = evaluator.evaluate(
+            serviceReachable = true,
+            keyPrepared = true,
+            signSessionAvailable = false,
+            errorMessage = "Soter signing resultCode=7",
+            anomalies = listOf(relayAnomaly),
+        )
+
+        assertTrue(state.damaged)
+        assertEquals("Soter signing resultCode=7. Replies need review: relay cpu_id in ASK.", state.summary)
+    }
+
+    private val relayAnomaly = TeeSoterAnomaly(
+        TeeSoterAnomalyKind.KNOWN_RELAY_CPU_ID,
+        TeeSignalLevel.WARN,
+        "relay cpu_id in ASK",
+    )
 }

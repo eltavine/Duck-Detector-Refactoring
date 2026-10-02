@@ -35,6 +35,5 @@ dependencies {
     api(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.annotation)
     implementation(libs.soter.core)
-    implementation(libs.json)
     testImplementation(project(":core:evidence"))
 }

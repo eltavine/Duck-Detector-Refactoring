@@ -51,9 +51,13 @@ private fun MutableList<TeeEvidenceItem>.addEnvironmentAndGrantIndicators(artifa
     if (artifacts.soter.anomalies.isNotEmpty()) {
         add(
             fact(
-                "Soter abuse evidence",
-                artifacts.soter.anomalies.joinToString(separator = "; ") { it.detail },
-                TeeSignalLevel.WARN,
+                "Soter reply integrity",
+                artifacts.soter.anomalies.joinToString(
+                    separator = "; ",
+                    prefix = "Soter replies need review: ",
+                    postfix = ".",
+                ) { it.detail },
+                artifacts.soter.anomalies.maxOf { it.level },
                 topic = TeeEvidenceTopic.SOTER,
             )
         )

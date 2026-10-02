@@ -58,6 +58,12 @@ enum class TeeSoterAnomalyKind {
     D_SOTER_FIXED_SPKI,
     D_SOTER_ZERO_SIGNATURE,
     D_SOTER_ZERO_CPU_ID,
+
+    /** An all-zero signature whose length differs from D-Soter's 256 bytes. */
+    ZERO_SIGNATURE,
+
+    /** An all-zero cpu_id whose length differs from D-Soter's 16 characters. */
+    ZERO_CPU_ID,
     KNOWN_RELAY_CPU_ID,
     KNOWN_RELAY_SPKI,
     UID_MISMATCH,
@@ -68,6 +74,7 @@ enum class TeeSoterAnomalyKind {
 
 data class TeeSoterAnomaly(
     val kind: TeeSoterAnomalyKind,
+    val level: TeeSignalLevel,
     val detail: String,
 )
 
