@@ -147,6 +147,30 @@ class SoterCapabilityProbeTest {
     }
 
     @Test
+    fun `alternate soter init service property names are reported`() {
+        val properties = mapOf(
+            "init.svc.vendor.qcom-soter" to "stopped",
+            "init.svc.qti_soter_hal" to "stopped",
+        )
+
+        val state = probe(workingClient(), halStates = listOf("stopped", "stopped"), halProperties = properties).inspect()
+
+        assertEquals(listOf(TeeSoterAnomalyKind.SOFTWARE_HAL_TAKEOVER), state.anomalies.map { it.kind })
+    }
+
+    @Test
+    fun `running alternate soter service suppresses stopped unrelated service`() {
+        val properties = mapOf(
+            "init.svc.vendor.qcom-soter" to "running",
+            "init.svc.unrelated-soter-helper" to "stopped",
+        )
+
+        val state = probe(workingClient(), halProperties = properties).inspect()
+
+        assertTrue(state.anomalies.isEmpty())
+    }
+
+    @Test
     fun `init sigh failure becomes damaged`() {
         val client = FakeSoterClient(
             nativeSupport = true,
@@ -201,14 +225,19 @@ class SoterCapabilityProbeTest {
     private fun probe(
         client: FakeSoterClient,
         environment: SoterEnvironmentSnapshot = SoterEnvironmentSnapshot(),
-        halStates: List<String?> = emptyList(),
+        halStates: List<String> = emptyList(),
+        halProperties: Map<String, String> = emptyMap(),
     ): SoterCapabilityProbe {
-        val remainingHalStates = ArrayDeque(halStates)
+        val remainingHalStates = ArrayDeque(halStates.ifEmpty { List(2) { null } })
         return SoterCapabilityProbe(
             client = client,
             environmentInspector = SoterEnvironmentInspector { environment },
             currentUid = { TEST_UID },
-            vendorHalState = { remainingHalStates.removeFirstOrNull() },
+            soterHalStates = {
+                remainingHalStates.removeFirstOrNull()
+                    ?.let { state -> mapOf("init.svc.vendor.soter" to state) }
+                    ?: halProperties
+            },
         )
     }
 

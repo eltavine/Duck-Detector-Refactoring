@@ -35,6 +35,16 @@ public class SystemPropertyReadUtils(
         return nativeBridge.collectSnapshot(propertyNames)
     }
 
+    /**
+     * Reads every property whose name starts with [prefix], using the same getprop snapshot as the
+     * multi-source property checks. A full snapshot is required because Android does not expose a
+     * public property-enumeration API; an unavailable getprop result is represented by an empty map.
+     */
+    public fun collectByPrefix(prefix: String): Map<String, String> {
+        return getpropSnapshot()
+            .filterKeys { it.startsWith(prefix) }
+    }
+
     public fun readProperty(
         property: String,
         category: SystemPropertyCategory,
@@ -79,8 +89,12 @@ public class SystemPropertyReadUtils(
     private fun readViaGetprop(
         property: String,
     ): String {
-        val snapshot = getpropSnapshot ?: readGetpropSnapshot().also { getpropSnapshot = it }
+        val snapshot = getpropSnapshot()
         return snapshot[property].orEmpty()
+    }
+
+    private fun getpropSnapshot(): Map<String, String> {
+        return getpropSnapshot ?: readGetpropSnapshot().also { getpropSnapshot = it }
     }
 
     private fun readViaJvm(

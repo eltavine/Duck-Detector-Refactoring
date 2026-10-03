@@ -19,7 +19,7 @@ package com.eltavine.duckdetector.features.tee.data.soter
 
 import android.content.Context
 import android.os.Process
-import com.eltavine.duckdetector.core.platform.HiddenSystemProperties
+import com.eltavine.duckdetector.capability.systemproperties.data.SystemPropertyReadUtils
 import com.eltavine.duckdetector.core.platform.PlatformFailureName
 import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
 import com.tencent.soter.core.model.ConstantsSoter
@@ -34,10 +34,9 @@ class SoterCapabilityProbe internal constructor(
     private val damageEvaluator: SoterDamageEvaluator = SoterDamageEvaluator(),
     private val abuseAnalyzer: SoterAbuseAnalyzer = SoterAbuseAnalyzer(),
     private val currentUid: () -> Int = Process::myUid,
-    // init.svc.vendor.* is vendor_default_prop, which appdomain cannot read on devices that enforce
-    // compatible properties, so this is usually null.
-    private val vendorHalState: () -> String? = {
-        HiddenSystemProperties.read(VENDOR_HAL_STATE_PROPERTY).getOrNull()?.takeIf { it.isNotBlank() }
+    private val soterHalStates: () -> Map<String, String> = {
+        SystemPropertyReadUtils().collectByPrefix(INIT_SERVICE_PROPERTY_PREFIX)
+            .filterKeys { propertyName -> propertyName.contains(SOTER_SERVICE_NAME, ignoreCase = true) }
     },
 ) {
 
@@ -73,8 +72,8 @@ class SoterCapabilityProbe internal constructor(
         var askPreExisted = true
         var keyPrepareOk = false
         var signSessionOk = false
-        var halStateBeforePrepare: String? = null
-        var halStateAfterSigning: String? = null
+        var halStatesBeforePrepare: Map<String, String> = emptyMap()
+        var halStatesAfterSigning: Map<String, String> = emptyMap()
         val keyEvidence = mutableListOf<SoterKeyEvidence>()
         var summary = "Soter probe did not complete."
 
@@ -106,7 +105,7 @@ class SoterCapabilityProbe internal constructor(
 
         if (nativeSupport && trebleConnected) {
             try {
-                halStateBeforePrepare = vendorHalState()
+                halStatesBeforePrepare = soterHalStates()
                 val prepareState = prepareKeyLikeWechat(testAlias)
                 keyEvidence += keyEvidence(prepareState)
                 askPreExisted = prepareState.askPreExisted
@@ -134,7 +133,7 @@ class SoterCapabilityProbe internal constructor(
             summary += ", signing=skipped"
         }
         if (signSessionOk) {
-            halStateAfterSigning = vendorHalState()
+            halStatesAfterSigning = soterHalStates()
         }
 
         var removeAuthOk = false
@@ -173,8 +172,10 @@ class SoterCapabilityProbe internal constructor(
             service = SoterServiceEvidence(
                 requestedUid = requestedUid,
                 vendorHalStoppedWhileServing = signSessionOk &&
-                    halStateBeforePrepare == VENDOR_HAL_STOPPED &&
-                    halStateAfterSigning == VENDOR_HAL_STOPPED,
+                    halStatesBeforePrepare.values.all { it.equals(VENDOR_HAL_STOPPED, ignoreCase = true) } &&
+                    halStatesAfterSigning.values.all { it.equals(VENDOR_HAL_STOPPED, ignoreCase = true) } &&
+                    halStatesBeforePrepare.isNotEmpty() &&
+                    halStatesAfterSigning.isNotEmpty(),
             ),
             uiSummary = summary,
         )
@@ -287,7 +288,8 @@ class SoterCapabilityProbe internal constructor(
         private const val UNKNOWN_RESULT_CODE = -999
         private const val ASK_MODEL_MISSING = 1003
         private const val AUTH_MODEL_MISSING = 1006
-        private const val VENDOR_HAL_STATE_PROPERTY = "init.svc.vendor.soter"
+        private const val INIT_SERVICE_PROPERTY_PREFIX = "init.svc."
+        private const val SOTER_SERVICE_NAME = "soter"
         private const val VENDOR_HAL_STOPPED = "stopped"
     }
 }
