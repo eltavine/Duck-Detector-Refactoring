@@ -30,9 +30,18 @@ limitations under the License.
     <string name="update_later">Later</string>
     <string name="update_view_changes">View all changes on GitHub</string>
     <string name="update_download">Open download</string>
+    <string name="update_dialog_title_stable">Stable update available</string>
+    <string name="update_release_label">Release and commit</string>
+    <string name="update_apk_label">APK size and SHA-256</string>
+    <string name="update_release_notes_title">Release notes</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="one">1 more entry is on the release page</item>
+        <item quantity="other">%1$d more entries are on the release page</item>
+    </plurals>
+    <string name="update_view_release">View the release on GitHub</string>
     <!-- Offered only to users who read the app in Chinese, so only the Chinese locales translate it. -->
     <string name="github_acceleration_dialog_title" tools:ignore="MissingTranslation">Turn on GitHub acceleration?</string>
-    <string name="github_acceleration_dialog_message" tools:ignore="MissingTranslation">GitHub may be hard to reach from where you are. Duck Detector can check for and download Nightly updates through gh-proxy.com, a third-party acceleration service. You can change this later in Settings.</string>
+    <string name="github_acceleration_dialog_message" tools:ignore="MissingTranslation">GitHub may be hard to reach from where you are. Duck Detector can check for and download updates through gh-proxy.com, a third-party acceleration service. You can change this later in Settings.</string>
     <string name="github_acceleration_dialog_enable" tools:ignore="MissingTranslation">Turn on</string>
     <string name="github_acceleration_dialog_decline" tools:ignore="MissingTranslation">Not now</string>
 </resources>

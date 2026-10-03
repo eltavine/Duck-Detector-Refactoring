@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">隱私 / 資料使用</string>
     <string name="about_label_version">版本</string>
     <string name="about_label_website">網站</string>
-    <string name="about_privacy_summary">檢查在裝置本地執行，不會上傳檢測結果。應用會在每次冷啟動時存取一次 GitHub 取得 Nightly 更新中繼資料（開啟 GitHub 加速後經由 gh-proxy.com）；線上 CRL 重新整理仍為可選功能。</string>
+    <string name="about_privacy_summary">檢查在裝置本地執行，不會上傳檢測結果。應用會在每次冷啟動時存取一次 GitHub，取得所選更新管道的中繼資料（開啟 GitHub 加速後經由 gh-proxy.com）；線上 CRL 重新整理仍為可選功能。</string>
     <string name="about_subtitle">專案連結與建置中繼資料。</string>
     <string name="about_title">關於</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -47,8 +47,8 @@ limitations under the License.
     <string name="author_summary_sinanb9">SELinux app zygote 崩潰回報與核心追蹤</string>
     <string name="author_summary_wxx">CI（Kotlin）</string>
     <string name="author_summary_xiaotong">TEE（C++、Kotlin）</string>
-    <string name="github_acceleration_footer">gh-proxy.com 為第三方服務。開啟後，更新檢查與 Nightly 下載會經由它轉送，不再直接連線 GitHub。它無法轉送提交比較，因此更新對話框可能只列出最新一次提交。</string>
-    <string name="github_acceleration_summary">透過 gh-proxy.com 檢查並下載 Nightly 更新</string>
+    <string name="github_acceleration_footer">gh-proxy.com 為第三方服務。開啟後，更新檢查與下載會經由它轉送，不再直接連線 GitHub。它無法轉送提交比較，因此當早於最新 Stable 版本的建置更新到 Nightly 時，更新對話框可能只列出最近的變更。</string>
+    <string name="github_acceleration_summary">透過 gh-proxy.com 檢查並下載更新</string>
     <string name="github_acceleration_title">GitHub 加速</string>
     <string name="licenses_dialog_close">關閉</string>
     <string name="licenses_dialog_home_page">首頁</string>
@@ -66,10 +66,14 @@ limitations under the License.
     <string name="settings_section_detection">檢測選項</string>
     <string name="settings_section_network">網路</string>
     <string name="settings_title">設定</string>
+    <string name="update_channel_label">更新管道</string>
+    <string name="update_channel_nightly_summary">main 分支的每一次變更，合併後即建置</string>
+    <string name="update_channel_stable_summary">經過測試、以版本標籤發布的版本</string>
     <string name="update_settings_label">檢查更新</string>
-    <string name="update_status_available">有新的 Nightly 建置；輕觸查看詳情</string>
+    <string name="update_status_ahead">目前建置比最新的 %1$s（%2$s）更新；有更新的版本時會提示</string>
+    <string name="update_status_available">有新的 %1$s 建置；輕觸查看詳情</string>
     <string name="update_status_checking">正在檢查 GitHub…</string>
-    <string name="update_status_current">目前已是最新 Nightly 建置</string>
+    <string name="update_status_current">目前已是最新 %1$s 建置</string>
     <string name="update_status_failed">無法檢查 GitHub；輕觸重試</string>
-    <string name="update_status_idle">冷啟動後會檢查 GitHub Main Nightly；輕觸可立即檢查</string>
+    <string name="update_status_idle">冷啟動後會檢查 GitHub 上的 %1$s；輕觸可立即檢查</string>
 </resources>

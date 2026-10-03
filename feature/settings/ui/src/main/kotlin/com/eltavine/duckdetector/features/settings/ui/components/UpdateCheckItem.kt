@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
+import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateStatus
 import com.eltavine.duckdetector.features.settings.ui.R
 
@@ -56,9 +57,12 @@ private data class UpdateGlyph(val icon: ImageVector, val tint: Color)
 @Composable
 internal fun UpdateCheckItem(
     status: SettingsUpdateStatus,
+    channel: SettingsUpdateChannel,
+    latestChannelVersion: String?,
     shapes: ListItemShapes,
     onCheckForUpdates: () -> Unit,
 ) {
+    val channelName = stringResource(channel.label())
     val colorScheme = MaterialTheme.colorScheme
     val available = status == SettingsUpdateStatus.AVAILABLE
     val tileColor by animateColorAsState(
@@ -68,7 +72,8 @@ internal fun UpdateCheckItem(
     val glyph = when (status) {
         SettingsUpdateStatus.IDLE,
         SettingsUpdateStatus.CHECKING -> UpdateGlyph(Icons.Rounded.SystemUpdate, colorScheme.primary)
-        SettingsUpdateStatus.CURRENT -> UpdateGlyph(Icons.Rounded.CheckCircle, colorScheme.primary)
+        SettingsUpdateStatus.CURRENT,
+        SettingsUpdateStatus.AHEAD -> UpdateGlyph(Icons.Rounded.CheckCircle, colorScheme.primary)
         SettingsUpdateStatus.AVAILABLE -> UpdateGlyph(Icons.Rounded.NewReleases, colorScheme.onPrimary)
         SettingsUpdateStatus.FAILED -> UpdateGlyph(Icons.Rounded.ErrorOutline, colorScheme.error)
     }
@@ -77,6 +82,7 @@ internal fun UpdateCheckItem(
         SettingsUpdateStatus.AVAILABLE -> UpdateTrailing.Details
         SettingsUpdateStatus.IDLE,
         SettingsUpdateStatus.CURRENT,
+        SettingsUpdateStatus.AHEAD,
         SettingsUpdateStatus.FAILED -> UpdateTrailing.Recheck
     }
 
@@ -112,7 +118,7 @@ internal fun UpdateCheckItem(
                 label = "updateStatus",
             ) { target ->
                 WrapSafeText(
-                    text = updateStatusText(target),
+                    text = updateStatusText(target, channelName, latestChannelVersion),
                     color = if (target == SettingsUpdateStatus.FAILED) colorScheme.error else Color.Unspecified,
                 )
             }
@@ -143,15 +149,22 @@ internal fun UpdateCheckItem(
 }
 
 @Composable
-private fun updateStatusText(status: SettingsUpdateStatus): String = stringResource(
-    when (status) {
-        SettingsUpdateStatus.IDLE -> R.string.update_status_idle
-        SettingsUpdateStatus.CHECKING -> R.string.update_status_checking
-        SettingsUpdateStatus.CURRENT -> R.string.update_status_current
-        SettingsUpdateStatus.AVAILABLE -> R.string.update_status_available
-        SettingsUpdateStatus.FAILED -> R.string.update_status_failed
-    },
-)
+private fun updateStatusText(
+    status: SettingsUpdateStatus,
+    channelName: String,
+    latestChannelVersion: String?,
+): String = when (status) {
+    SettingsUpdateStatus.IDLE -> stringResource(R.string.update_status_idle, channelName)
+    SettingsUpdateStatus.CHECKING -> stringResource(R.string.update_status_checking)
+    SettingsUpdateStatus.CURRENT -> stringResource(R.string.update_status_current, channelName)
+    SettingsUpdateStatus.AHEAD -> stringResource(
+        R.string.update_status_ahead,
+        channelName,
+        latestChannelVersion.orEmpty(),
+    )
+    SettingsUpdateStatus.AVAILABLE -> stringResource(R.string.update_status_available, channelName)
+    SettingsUpdateStatus.FAILED -> stringResource(R.string.update_status_failed)
+}
 
 private fun crossfade(): ContentTransform =
     fadeIn(MotionTokens.FadeInOut) togetherWith fadeOut(MotionTokens.FadeInOut)

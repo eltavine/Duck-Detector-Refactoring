@@ -33,18 +33,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUiState
+import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.ui.R
 import com.eltavine.duckdetector.features.settings.ui.licenses.OpenSourceLicensesItem
 
-// Update, version and licenses rows, with the three build detail rows between version and
+// Channel, update, version and licenses rows, with the three build detail rows between version and
 // licenses while they are shown.
-private const val CollapsedItemCount = 3
-private const val ExpandedItemCount = 6
-private const val FirstBuildDetailIndex = 2
+private const val CollapsedItemCount = 4
+private const val ExpandedItemCount = 7
+private const val FirstBuildDetailIndex = 3
 
 @Composable
 internal fun AboutSection(
     uiState: SettingsUiState,
+    onUpdateChannelChange: (SettingsUpdateChannel) -> Unit,
     onCheckForUpdates: () -> Unit,
     onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
@@ -54,9 +56,16 @@ internal fun AboutSection(
 
     SettingsSection(title = stringResource(R.string.about_title), modifier = modifier) {
         SettingsGroup {
+            UpdateChannelItem(
+                channel = uiState.updateChannel,
+                shapes = settingsItemShapes(index = 0, count = itemCount),
+                onChannelChange = onUpdateChannelChange,
+            )
             UpdateCheckItem(
                 status = uiState.updateStatus,
-                shapes = settingsItemShapes(index = 0, count = itemCount),
+                channel = uiState.updateChannel,
+                latestChannelVersion = uiState.latestChannelVersion,
+                shapes = settingsItemShapes(index = 1, count = itemCount),
                 onCheckForUpdates = onCheckForUpdates,
             )
             VersionItem(
@@ -64,7 +73,7 @@ internal fun AboutSection(
                 versionCode = uiState.versionCode,
                 expanded = showBuildDetails,
                 onExpandedChange = { showBuildDetails = it },
-                shapes = settingsItemShapes(index = 1, count = itemCount),
+                shapes = settingsItemShapes(index = 2, count = itemCount),
             )
             AnimatedVisibility(
                 visible = showBuildDetails,

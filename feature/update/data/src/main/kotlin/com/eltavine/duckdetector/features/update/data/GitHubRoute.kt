@@ -20,7 +20,7 @@ package com.eltavine.duckdetector.features.update.data
 import com.eltavine.duckdetector.features.update.domain.GitHubAcceleration
 
 /**
- * How update requests and the Nightly download reach GitHub. gh-proxy.com fetches the GitHub URL
+ * How update requests and the update download reach GitHub. gh-proxy.com fetches the GitHub URL
  * written after its own address and returns that response, release assets included:
  * https://gh-proxy.com/docs/github-accelerator
  */

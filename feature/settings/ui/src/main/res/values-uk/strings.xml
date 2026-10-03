@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">Конфіденційність / Використання даних</string>
     <string name="about_label_version">Версія</string>
     <string name="about_label_website">Веб-сайт</string>
-    <string name="about_privacy_summary">Перевірки виконуються локально, результати не надсилаються. Застосунок один раз за холодного запуску звертається до GitHub по метадані Nightly (через gh-proxy.com, коли ввімкнено прискорення GitHub). Онлайн-оновлення CRL залишається необов’язковим.</string>
+    <string name="about_privacy_summary">Перевірки виконуються локально, результати не надсилаються. Застосунок один раз за холодного запуску звертається до GitHub по метадані оновлень вибраного каналу (через gh-proxy.com, коли ввімкнено прискорення GitHub). Онлайн-оновлення CRL залишається необов’язковим.</string>
     <string name="about_subtitle">Посилання на проект та метадані збірки.</string>
     <string name="about_title">Про програму</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -49,8 +49,8 @@ limitations under the License.
     <string name="author_summary_victor">CI</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="github_acceleration_footer">gh-proxy.com — сторонній сервіс. Поки параметр увімкнено, перевірка оновлень і завантаження Nightly йдуть через нього, а не напряму до GitHub. Він не може передавати порівняння комітів, тому діалог оновлення може показувати лише найновіший коміт.</string>
-    <string name="github_acceleration_summary">Перевіряти й завантажувати оновлення Nightly через gh-proxy.com</string>
+    <string name="github_acceleration_footer">gh-proxy.com — сторонній сервіс. Поки параметр увімкнено, перевірка оновлень і завантаження йдуть через нього, а не напряму до GitHub. Він не може передавати порівняння комітів, тому для збірки, старішої за останній випуск Stable, діалог оновлення Nightly може показувати лише останні зміни.</string>
+    <string name="github_acceleration_summary">Перевіряти й завантажувати оновлення через gh-proxy.com</string>
     <string name="github_acceleration_title">Прискорення GitHub</string>
     <string name="licenses_dialog_close">Закрити</string>
     <string name="licenses_dialog_home_page">Домашня сторінка</string>
@@ -68,10 +68,14 @@ limitations under the License.
     <string name="settings_section_detection">Параметри виявлення</string>
     <string name="settings_section_network">Мережа</string>
     <string name="settings_title">Налаштування</string>
+    <string name="update_channel_label">Канал оновлень</string>
+    <string name="update_channel_nightly_summary">Кожна зміна в main, зібрана одразу після злиття</string>
+    <string name="update_channel_stable_summary">Перевірені випуски з тегом версії</string>
     <string name="update_settings_label">Перевірити оновлення</string>
-    <string name="update_status_available">Доступна новіша збірка Nightly; торкніться для подробиць</string>
+    <string name="update_status_ahead">Ця збірка новіша за останню %1$s (%2$s); вам запропонують наступну новішу</string>
+    <string name="update_status_available">Доступна новіша збірка %1$s; торкніться для подробиць</string>
     <string name="update_status_checking">Перевірка GitHub…</string>
-    <string name="update_status_current">У вас найновіша збірка Nightly</string>
+    <string name="update_status_current">У вас найновіша збірка %1$s</string>
     <string name="update_status_failed">Не вдалося перевірити GitHub; торкніться, щоб повторити</string>
-    <string name="update_status_idle">GitHub Main Nightly перевіряється після холодного запуску; торкніться, щоб перевірити зараз</string>
+    <string name="update_status_idle">%1$s на GitHub перевіряється після холодного запуску; торкніться, щоб перевірити зараз</string>
 </resources>

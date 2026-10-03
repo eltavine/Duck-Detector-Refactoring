@@ -456,18 +456,19 @@ jobs:
           compression-level: 0
           retention-days: 14
 
-      - name: Prepare nightly release note
+      # The note lists what main gained since the last stable release; update.json carries the same
+      # list, so the app shows what a newer Nightly adds without GitHub's compare API.
+      - name: Prepare Nightly release note and changes
         if: github.ref_name == github.event.repository.default_branch
         shell: bash
         run: |
           set -euo pipefail
 
-          cat <<EOF > nightly-release-note.md
-          Nightly APK and SDK AAR build
-
-          Commit: ${GITHUB_SHA}
-          Branch: ${GITHUB_REF_NAME}
-          EOF
+          python3 .github/scripts/release_changes.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --head "${GITHUB_SHA}" \
+            --changes-output nightly-changes.json \
+            --note-output nightly-release-note.md
 
       - name: Snapshot previous Nightly release assets
         id: previous_nightly_assets
@@ -564,10 +565,12 @@ jobs:
           import hashlib
           import json
           import os
-          import subprocess
-          from datetime import datetime, timezone
+          import sys
           from pathlib import Path
           from urllib.parse import unquote, urlsplit
+
+          sys.path.insert(0, ".github/scripts")
+          import release_manifest
 
           apk_path = Path(os.environ["APK_PATH"])
           if not apk_path.is_file() or apk_path.stat().st_size <= 0:
@@ -642,13 +645,6 @@ jobs:
                   f"Uploaded APK size mismatch: local={apk_size}, release={remote_size!r}"
               )
 
-          def git(*args: str) -> str:
-              return subprocess.check_output(["git", *args], text=True).strip()
-
-          def iso8601_from_epoch(epoch: str) -> str:
-              return datetime.fromtimestamp(int(epoch), tz=timezone.utc) \
-                  .strftime("%Y-%m-%dT%H:%M:%SZ")
-
           sha256 = hashlib.sha256()
           with apk_path.open("rb") as apk_file:
               for chunk in iter(lambda: apk_file.read(1024 * 1024), b""):
@@ -667,33 +663,22 @@ jobs:
                   f"Uploaded SDK AAR digest mismatch: local=sha256:{aar_sha256}, release={aar_remote_digest}"
               )
 
-          commit_sha = git("rev-parse", "HEAD")
-          manifest = {
-              "schemaVersion": 1,
-              "channel": "nightly",
-              "branch": os.environ["NIGHTLY_MANIFEST_BRANCH"],
-              "versionName": os.environ["VERSION_NAME"],
-              "versionCode": int(os.environ["VERSION_CODE"]),
-              "commit": {
-                  "sha": commit_sha,
-                  "subject": git("log", "-1", "--format=%s", "HEAD"),
-                  "body": git("log", "-1", "--format=%b", "HEAD"),
-                  "authorName": git("log", "-1", "--format=%an", "HEAD"),
-                  "authoredAt": iso8601_from_epoch(git("log", "-1", "--format=%at", "HEAD")),
-              },
-              "builtAtUtc": os.environ["BUILD_TIME_ISO"],
-              "apk": {
+          manifest = release_manifest.build_manifest(
+              channel="nightly",
+              branch=os.environ["NIGHTLY_MANIFEST_BRANCH"],
+              version_name=os.environ["VERSION_NAME"],
+              version_code=int(os.environ["VERSION_CODE"]),
+              commit=release_manifest.commit_entry(".", "HEAD"),
+              built_at=os.environ["BUILD_TIME_ISO"],
+              apk={
                   "name": apk_name,
                   "downloadUrl": apk_url,
                   "sizeBytes": apk_size,
                   "sha256": apk_sha256,
               },
-          }
-
-          Path("update.json").write_text(
-              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-              encoding="utf-8",
+              changes=json.loads(Path("nightly-changes.json").read_text(encoding="utf-8")),
           )
+          release_manifest.write_manifest(manifest, os.environ["GITHUB_REPOSITORY"], Path("update.json"))
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
               output.write(f"apk_asset_id={apk_asset_id}\n")
               output.write(f"aar_asset_id={aar_asset_id}\n")

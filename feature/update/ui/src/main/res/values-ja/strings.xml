@@ -30,4 +30,12 @@ limitations under the License.
     <string name="update_later">後で</string>
     <string name="update_view_changes">GitHub ですべての変更を表示</string>
     <string name="update_download">ダウンロードを開く</string>
+    <string name="update_dialog_title_stable">Stable 更新があります</string>
+    <string name="update_release_label">リリースとコミット</string>
+    <string name="update_apk_label">APK のサイズと SHA-256</string>
+    <string name="update_release_notes_title">リリースノート</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="other">ほか %1$d 件はリリースページに記載されています</item>
+    </plurals>
+    <string name="update_view_release">GitHub でリリースを表示</string>
 </resources>

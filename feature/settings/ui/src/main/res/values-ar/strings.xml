@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">الخصوصية / استخدام البيانات</string>
     <string name="about_label_version">الإصدار</string>
     <string name="about_label_website">الموقع الإلكتروني</string>
-    <string name="about_privacy_summary">تعمل الفحوصات محليًا ولا تُرفع نتائج الكشف. يتصل التطبيق بـ GitHub مرة واحدة عند كل تشغيل بارد لجلب بيانات تحديث Nightly (عبر gh-proxy.com عند تفعيل تسريع GitHub). يظل تحديث CRL عبر الإنترنت اختياريًا.</string>
+    <string name="about_privacy_summary">تعمل الفحوصات محليًا ولا تُرفع نتائج الكشف. يتصل التطبيق بـ GitHub مرة واحدة عند كل تشغيل بارد لجلب بيانات التحديث للقناة التي تتابعها (عبر gh-proxy.com عند تفعيل تسريع GitHub). يظل تحديث CRL عبر الإنترنت اختياريًا.</string>
     <string name="about_subtitle">روابط المشروع وبيانات البناء.</string>
     <string name="about_title">حول</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -49,8 +49,8 @@ limitations under the License.
     <string name="author_summary_victor">CI</string>
     <string name="author_summary_wxx">CI ‏(Kotlin)</string>
     <string name="author_summary_xiaotong">TEE ‏(C++، Kotlin)</string>
-    <string name="github_acceleration_footer">gh-proxy.com خدمة تابعة لجهة خارجية. أثناء التفعيل، تمر عمليات التحقق من التحديثات وتنزيلات Nightly عبرها بدلًا من الاتصال بـ GitHub مباشرة. ولا يمكنها تمرير مقارنة الالتزامات، لذا قد لا يعرض مربع حوار التحديث إلا أحدث التزام.</string>
-    <string name="github_acceleration_summary">التحقق من تحديثات Nightly وتنزيلها عبر gh-proxy.com</string>
+    <string name="github_acceleration_footer">gh-proxy.com خدمة تابعة لجهة خارجية. أثناء التفعيل، تمر عمليات التحقق من التحديثات والتنزيلات عبرها بدلًا من الاتصال بـ GitHub مباشرة. ولا يمكنها تمرير مقارنة الالتزامات، لذا عند تحديث إصدار أقدم من أحدث إصدار Stable إلى Nightly قد لا يعرض مربع حوار التحديث إلا أحدث التغييرات.</string>
+    <string name="github_acceleration_summary">التحقق من التحديثات وتنزيلها عبر gh-proxy.com</string>
     <string name="github_acceleration_title">تسريع GitHub</string>
     <string name="licenses_dialog_close">إغلاق</string>
     <string name="licenses_dialog_home_page">الصفحة الرئيسية</string>
@@ -68,10 +68,14 @@ limitations under the License.
     <string name="settings_section_detection">خيارات الكشف</string>
     <string name="settings_section_network">الشبكة</string>
     <string name="settings_title">الإعدادات</string>
+    <string name="update_channel_label">قناة التحديث</string>
+    <string name="update_channel_nightly_summary">كل تغيير في main، يُبنى فور دمجه</string>
+    <string name="update_channel_stable_summary">إصدارات مختبرة تُنشر بوسم إصدار</string>
     <string name="update_settings_label">التحقق من التحديثات</string>
-    <string name="update_status_available">يتوفر إصدار Nightly أحدث؛ اضغط للتفاصيل</string>
+    <string name="update_status_ahead">هذا الإصدار أحدث من آخر إصدار %1$s (%2$s)؛ سيُعرض عليك الإصدار الأحدث التالي</string>
+    <string name="update_status_available">يتوفر إصدار %1$s أحدث؛ اضغط للتفاصيل</string>
     <string name="update_status_checking">جارٍ التحقق من GitHub…</string>
-    <string name="update_status_current">لديك أحدث إصدار Nightly</string>
+    <string name="update_status_current">لديك أحدث إصدار %1$s</string>
     <string name="update_status_failed">تعذر التحقق من GitHub؛ اضغط لإعادة المحاولة</string>
-    <string name="update_status_idle">يتم فحص GitHub Main Nightly بعد التشغيل البارد؛ اضغط للفحص الآن</string>
+    <string name="update_status_idle">يتم فحص %1$s على GitHub بعد التشغيل البارد؛ اضغط للفحص الآن</string>
 </resources>

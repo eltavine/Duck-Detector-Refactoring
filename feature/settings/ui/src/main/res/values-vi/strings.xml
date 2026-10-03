@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">Quyền riêng tư / Dữ liệu</string>
     <string name="about_label_version">Phiên bản</string>
     <string name="about_label_website">Trang web</string>
-    <string name="about_privacy_summary">Các kiểm tra chạy cục bộ và kết quả không được tải lên. Ứng dụng kết nối GitHub một lần mỗi lần khởi động lạnh để lấy siêu dữ liệu Nightly (qua gh-proxy.com khi bật Tăng tốc GitHub). Làm mới CRL trực tuyến vẫn là tùy chọn.</string>
+    <string name="about_privacy_summary">Các kiểm tra chạy cục bộ và kết quả không được tải lên. Ứng dụng kết nối GitHub một lần mỗi lần khởi động lạnh để lấy siêu dữ liệu cập nhật của kênh bạn chọn (qua gh-proxy.com khi bật Tăng tốc GitHub). Làm mới CRL trực tuyến vẫn là tùy chọn.</string>
     <string name="about_subtitle">Liên kết dự án và siêu dữ liệu bản build.</string>
     <string name="about_title">Giới thiệu</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -44,8 +44,8 @@ limitations under the License.
     <string name="author_summary_eltavine">Đóng góp UI, C++, ASM và Kotlin.</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="github_acceleration_footer">gh-proxy.com là dịch vụ của bên thứ ba. Khi bật, việc kiểm tra cập nhật và tải Nightly sẽ đi qua dịch vụ này thay vì kết nối trực tiếp tới GitHub. Dịch vụ không chuyển tiếp được phần so sánh commit, nên hộp thoại cập nhật có thể chỉ hiển thị commit mới nhất.</string>
-    <string name="github_acceleration_summary">Kiểm tra và tải bản cập nhật Nightly qua gh-proxy.com</string>
+    <string name="github_acceleration_footer">gh-proxy.com là dịch vụ của bên thứ ba. Khi bật, việc kiểm tra cập nhật và tải xuống sẽ đi qua dịch vụ này thay vì kết nối trực tiếp tới GitHub. Dịch vụ không chuyển tiếp được phần so sánh commit, nên khi cập nhật lên Nightly từ bản cũ hơn bản Stable mới nhất, hộp thoại cập nhật có thể chỉ hiển thị các thay đổi gần đây.</string>
+    <string name="github_acceleration_summary">Kiểm tra và tải bản cập nhật qua gh-proxy.com</string>
     <string name="github_acceleration_title">Tăng tốc GitHub</string>
     <string name="licenses_dialog_close">Đóng</string>
     <string name="licenses_dialog_home_page">Trang chủ</string>
@@ -63,10 +63,14 @@ limitations under the License.
     <string name="settings_section_detection">Tùy chọn phát hiện</string>
     <string name="settings_section_network">Mạng</string>
     <string name="settings_title">Cài đặt</string>
+    <string name="update_channel_label">Kênh cập nhật</string>
+    <string name="update_channel_nightly_summary">Mọi thay đổi trên main, được build ngay khi hợp nhất</string>
+    <string name="update_channel_stable_summary">Các bản phát hành đã kiểm thử, gắn thẻ phiên bản</string>
     <string name="update_settings_label">Kiểm tra cập nhật</string>
-    <string name="update_status_available">Có bản Nightly mới; chạm để xem chi tiết</string>
+    <string name="update_status_ahead">Bản này mới hơn bản %1$s mới nhất (%2$s); bạn sẽ được đề xuất bản mới hơn tiếp theo</string>
+    <string name="update_status_available">Có bản %1$s mới; chạm để xem chi tiết</string>
     <string name="update_status_checking">Đang kiểm tra GitHub…</string>
-    <string name="update_status_current">Bạn đang dùng bản Nightly mới nhất</string>
+    <string name="update_status_current">Bạn đang dùng bản %1$s mới nhất</string>
     <string name="update_status_failed">Không thể kiểm tra GitHub; chạm để thử lại</string>
-    <string name="update_status_idle">Kiểm tra GitHub Main Nightly sau khi khởi động lạnh; chạm để kiểm tra ngay</string>
+    <string name="update_status_idle">Kiểm tra %1$s trên GitHub sau khi khởi động lạnh; chạm để kiểm tra ngay</string>
 </resources>

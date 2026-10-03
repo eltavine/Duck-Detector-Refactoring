@@ -8,7 +8,8 @@
 
 <p align="center">
   <strong>
-    <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly">下载 Nightly</a> ·
+    <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest">下载</a> ·
+    <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly">Nightly</a> ·
     <a href="#快速上手">文档</a> ·
     <a href="docs/guides/sdk-integration.md">SDK 集成</a>
   </strong>
@@ -38,7 +39,7 @@ DuckDetector 在 Android 设备上采集并关联与安全相关的证据，用�
 
 # 快速上手
 
-1. **下载：** 从 [Nightly 版本](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly)下载 APK。Nightly 构建从 `main` 分支发布，并同步推送到 [Telegram 频道](https://t.me/duck_detector)；目前尚无正式版本。
+1. **下载：** 从[最新 Stable 版本](https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest)下载 APK。Stable 版本使用 `v26.10.0` 这样的日历版本号；[Nightly 版本](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly)跟随 `main` 分支的每一次更改。两者都会同步推送到 [Telegram 频道](https://t.me/duck_detector)，应用检查哪个渠道的更新可在 **设置 → 关于 → 更新渠道** 中选择。
 2. **安装：** 安装到 Android 10 及以上版本的设备，无需 Root 权限。
 3. **扫描：** 首次启动时需要同意用户协议，并完成几项启动选项：通知、Live Update、TEE 检查所用的在线吊销数据刷新，以及包可见性。之后扫描会自动开始，每个检测器完成后，对应卡片随即显示结果。
 4. **解读结果：** 参照下文说明。报告结果或寻求帮助时，请[提交 Issue](https://github.com/eltavine/Duck-Detector-Refactoring/issues)，并附上用仪表盘顶部 **Export Report** 保存的报告文件；只有摘要截图是不够的。
@@ -82,7 +83,7 @@ DuckDetector 在 Android 设备上采集并关联与安全相关的证据，用�
 | **ABI** | 为 `arm64-v8a`、`armeabi-v7a`、`x86` 和 `x86_64` 提供原生系统调用路径；部分计时与虚拟化陷阱探针仅适用于 `arm64-v8a`。 |
 | **权限** | 应用无需 Root 权限，但 Android 权限、包可见性和平台沙盒仍会限制可观测范围。 |
 | **设备差异** | OEM 修改、内核配置、Android 版本和沙盒策略可能导致探针显示不支持、不可用或低置信度。 |
-| **网络使用** | 核心设备扫描在本地运行。TEE 吊销检查始终包含内置快照；下载 Google 最新吊销数据需要用户授权。应用还会在冷启动后以及用户从设置页操作时访问 GitHub 检查 Nightly 更新。开启 GitHub 加速后（中文用户会收到开启询问，也可在设置中切换），这些检查和 Nightly 下载改由第三方服务 [gh-proxy.com](https://gh-proxy.com/docs) 中转。 |
+| **网络使用** | 核心设备扫描在本地运行。TEE 吊销检查始终包含内置快照；下载 Google 最新吊销数据需要用户授权。应用还会在冷启动后以及用户从设置页操作时访问 GitHub，检查所选渠道（Stable 或 Nightly）的更新。开启 GitHub 加速后（中文用户会收到开启询问，也可在设置中切换），这些检查和更新下载改由第三方服务 [gh-proxy.com](https://gh-proxy.com/docs) 中转。 |
 
 # 项目结构
 
@@ -159,7 +160,7 @@ for s in .github/scripts/check-*.py; do python3 "$s"; done
 ./gradlew :sdk:aar:publish
 ```
 
-[Nightly Release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly) 会同时提供 APK 和 SDK AAR。
+每个 [Stable 版本](https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest)和 [Nightly 版本](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly)都会同时提供 APK 和 SDK AAR。
 
 参与开发前请阅读 [`CODING_STANDARDS.md`](./CODING_STANDARDS.md)。
 
@@ -172,7 +173,17 @@ for s in .github/scripts/check-*.py; do python3 "$s"; done
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-未完整配置时，本地 `release` 构建会使用 debug 密钥签名，不能将该产物视为官方发布版本。
+未完整配置时，本地 `release` 构建会使用 debug 密钥签名，不能将该产物视为官方发布版本。Stable 版本的发布流程见 [`.github/RELEASING.md`](./.github/RELEASING.md)。
+
+## 校验下载的文件
+
+每个 Stable 版本都会在发布说明和 `SHA256SUMS` 中列出 APK 与 SDK AAR 的 SHA-256，并由 GitHub 证明它们是发布 workflow 从对应 tag 的提交构建出来的：
+
+```bash
+gh attestation verify Duck.Detector-26.10.0.apk --repo eltavine/Duck-Detector-Refactoring
+```
+
+应用内的更新弹窗也会显示所提供 APK 的大小和 SHA-256，可用于核对下载的文件。
 
 # 隐私与限制
 

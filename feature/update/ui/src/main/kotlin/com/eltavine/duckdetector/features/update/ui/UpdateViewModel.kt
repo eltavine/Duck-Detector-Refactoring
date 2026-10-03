@@ -20,8 +20,10 @@ package com.eltavine.duckdetector.features.update.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
+import com.eltavine.duckdetector.features.update.domain.UpdateChannelPreference
 import com.eltavine.duckdetector.features.update.domain.UpdateCheckResult
+import com.eltavine.duckdetector.features.update.domain.UpdateChecker
 import com.eltavine.duckdetector.features.update.presentation.UpdateCheckStatus
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadResolution
 import com.eltavine.duckdetector.features.update.presentation.UpdateUiState
@@ -31,6 +33,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal fun interface UpdateCheckGate {
@@ -46,15 +49,28 @@ internal class SingleRunUpdateCheckGate : UpdateCheckGate {
 private object ProcessUpdateCheckGate : UpdateCheckGate by SingleRunUpdateCheckGate()
 
 class UpdateViewModel internal constructor(
-    private val repository: NightlyUpdateChecker,
+    private val repository: UpdateChecker,
+    private val channelPreference: UpdateChannelPreference,
+    buildChannel: UpdateChannel,
     private val currentVersionCode: Int,
     private val currentCommitSha: String,
     private val automaticCheckGate: UpdateCheckGate = ProcessUpdateCheckGate,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(UpdateUiState())
+    private val _uiState = MutableStateFlow(UpdateUiState(channel = buildChannel))
     val uiState: StateFlow<UpdateUiState> = _uiState.asStateFlow()
     private var checkJob: Job? = null
+    private var channelChosenHere = false
+
+    init {
+        viewModelScope.launch {
+            val stored = channelPreference.read()
+            // A choice made while the stored channel loaded is newer than what was stored.
+            if (!channelChosenHere) {
+                _uiState.update { state -> state.copy(channel = stored) }
+            }
+        }
+    }
 
     fun checkAutomatically() {
         if (!automaticCheckGate.tryAcquire()) {
@@ -72,35 +88,38 @@ class UpdateViewModel internal constructor(
         }
     }
 
+    /** Follows [channel] from now on and checks it at once, dropping what the other channel found. */
+    fun selectChannel(channel: UpdateChannel) {
+        if (channel == _uiState.value.channel) {
+            return
+        }
+        channelChosenHere = true
+        checkJob?.cancel()
+        _uiState.value = UpdateUiState(channel = channel, status = UpdateCheckStatus.CHECKING)
+        checkJob = viewModelScope.launch {
+            channelPreference.write(channel)
+            runCheck(channel, manual = true)
+        }
+    }
+
     fun dismissUpdate() {
         _uiState.value = _uiState.value.copy(isDialogVisible = false)
     }
 
     suspend fun resolveDownload(): UpdateDownloadResolution {
-        val displayedManifest = _uiState.value.availableUpdate?.manifest
+        val state = _uiState.value
+        val displayedManifest = state.availableUpdate?.manifest
         return try {
-            when (
-                val result = repository.check(
-                    currentVersionCode = currentVersionCode,
-                    currentCommitSha = currentCommitSha,
-                )
-            ) {
-                is UpdateCheckResult.Current -> {
-                    _uiState.value = UpdateUiState(status = UpdateCheckStatus.CURRENT)
-                    UpdateDownloadResolution.Current
-                }
+            val result = repository.check(state.channel, currentVersionCode, currentCommitSha)
+            _uiState.value = stateFor(state.channel, result)
+            when (result) {
+                is UpdateCheckResult.Current,
+                is UpdateCheckResult.Ahead -> UpdateDownloadResolution.Current
 
-                is UpdateCheckResult.Available -> {
-                    _uiState.value = UpdateUiState(
-                        status = UpdateCheckStatus.AVAILABLE,
-                        availableUpdate = result.update,
-                        isDialogVisible = true,
-                    )
-                    if (result.update.manifest == displayedManifest) {
-                        UpdateDownloadResolution.Ready(result.update.downloadUrl)
-                    } else {
-                        UpdateDownloadResolution.Refreshed
-                    }
+                is UpdateCheckResult.Available -> if (result.update.manifest == displayedManifest) {
+                    UpdateDownloadResolution.Ready(result.update.downloadUrl)
+                } else {
+                    UpdateDownloadResolution.Refreshed
                 }
             }
         } catch (cancellation: CancellationException) {
@@ -117,41 +136,51 @@ class UpdateViewModel internal constructor(
             isDialogVisible = false,
         )
         checkJob = viewModelScope.launch {
-            try {
-                when (
-                    val result = repository.check(
-                        currentVersionCode = currentVersionCode,
-                        currentCommitSha = currentCommitSha,
-                    )
-                ) {
-                    is UpdateCheckResult.Current -> {
-                        _uiState.value = UpdateUiState(status = UpdateCheckStatus.CURRENT)
-                    }
-
-                    is UpdateCheckResult.Available -> {
-                        _uiState.value = UpdateUiState(
-                            status = UpdateCheckStatus.AVAILABLE,
-                            availableUpdate = result.update,
-                            isDialogVisible = true,
-                        )
-                    }
-                }
-            } catch (throwable: Throwable) {
-                if (throwable is CancellationException) {
-                    throw throwable
-                }
-                _uiState.value = if (manual) {
-                    UpdateUiState(status = UpdateCheckStatus.FAILED)
-                } else {
-                    UpdateUiState(status = UpdateCheckStatus.IDLE)
-                }
-            }
+            runCheck(channelPreference.read(), manual)
         }
+    }
+
+    private suspend fun runCheck(channel: UpdateChannel, manual: Boolean) {
+        try {
+            val result = repository.check(channel, currentVersionCode, currentCommitSha)
+            _uiState.value = stateFor(channel, result)
+        } catch (throwable: Throwable) {
+            if (throwable is CancellationException) {
+                throw throwable
+            }
+            _uiState.value = UpdateUiState(
+                channel = channel,
+                status = if (manual) UpdateCheckStatus.FAILED else UpdateCheckStatus.IDLE,
+            )
+        }
+    }
+
+    private fun stateFor(channel: UpdateChannel, result: UpdateCheckResult): UpdateUiState = when (result) {
+        is UpdateCheckResult.Current -> UpdateUiState(
+            channel = channel,
+            status = UpdateCheckStatus.CURRENT,
+            latestVersionName = result.manifest.versionName,
+        )
+
+        is UpdateCheckResult.Ahead -> UpdateUiState(
+            channel = channel,
+            status = UpdateCheckStatus.AHEAD,
+            latestVersionName = result.manifest.versionName,
+        )
+
+        is UpdateCheckResult.Available -> UpdateUiState(
+            channel = channel,
+            status = UpdateCheckStatus.AVAILABLE,
+            availableUpdate = result.update,
+            isDialogVisible = true,
+        )
     }
 
     companion object {
         fun factory(
-            createChecker: () -> NightlyUpdateChecker,
+            createChecker: () -> UpdateChecker,
+            createChannelPreference: () -> UpdateChannelPreference,
+            buildChannel: UpdateChannel,
             currentVersionCode: Int,
             currentCommitSha: String,
         ): ViewModelProvider.Factory {
@@ -160,6 +189,8 @@ class UpdateViewModel internal constructor(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return UpdateViewModel(
                         repository = createChecker(),
+                        channelPreference = createChannelPreference(),
+                        buildChannel = buildChannel,
                         currentVersionCode = currentVersionCode,
                         currentCommitSha = currentCommitSha,
                     ) as T
