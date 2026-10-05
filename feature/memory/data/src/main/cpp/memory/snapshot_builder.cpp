@@ -23,6 +23,7 @@
 #include "memory/detectors/linker_detector.h"
 #include "memory/detectors/maps_anomaly_detector.h"
 #include "memory/detectors/signal_detector.h"
+#include "memory/detectors/system_copy_detector.h"
 #include "memory/detectors/vdso_detector.h"
 
 namespace duckdetector::memory {
@@ -39,6 +40,7 @@ namespace duckdetector::memory {
         const auto smaps = read_self_smaps();
         snapshot.hooks = detect_function_hooks(maps);
         snapshot.maps = detect_maps_anomalies(maps, smaps);
+        snapshot.copies = detect_system_copies(smaps);
         snapshot.fd = detect_fd_anomalies(maps);
         snapshot.signal = detect_signal_anomalies(maps);
         snapshot.vdso = detect_vdso_anomalies(maps);

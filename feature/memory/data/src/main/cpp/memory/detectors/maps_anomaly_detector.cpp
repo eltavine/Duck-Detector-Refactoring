@@ -107,17 +107,6 @@ namespace duckdetector::memory {
                                          FindingSeverity::kHigh, detail.str())
                 );
             }
-
-            if (entry.anonymous_kb > 0 && is_system_path(entry.map.path)) {
-                signals.system_anonymous_exec = true;
-                std::ostringstream detail;
-                detail << entry.map.path << " reports " << entry.anonymous_kb
-                       << " kB anonymous executable pages";
-                signals.findings.push_back(
-                        make_map_finding("SMAPS", "Anonymous executable pages on system mapping",
-                                         FindingSeverity::kMedium, detail.str())
-                );
-            }
         }
 
         return signals;

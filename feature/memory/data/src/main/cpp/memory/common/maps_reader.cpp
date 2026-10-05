@@ -41,17 +41,23 @@ namespace duckdetector::memory {
             unsigned long start = 0;
             unsigned long end = 0;
             char perms[5] = {};
-            unsigned long inode = 0;
+            unsigned long long offset = 0;
+            unsigned int dev_major = 0;
+            unsigned int dev_minor = 0;
+            unsigned long long inode = 0;
             int path_offset = 0;
             if (std::sscanf(
                     line,
-                    "%lx-%lx %4s %*s %*s %lu %n",
+                    "%lx-%lx %4s %llx %x:%x %llu %n",
                     &start,
                     &end,
                     perms,
+                    &offset,
+                    &dev_major,
+                    &dev_minor,
                     &inode,
                     &path_offset
-            ) < 4) {
+            ) < 7) {
                 return entry;
             }
 
@@ -61,6 +67,9 @@ namespace duckdetector::memory {
             entry.writable = perms[1] == 'w';
             entry.executable = perms[2] == 'x';
             entry.private_mapping = perms[3] == 'p';
+            entry.offset = offset;
+            entry.dev_major = dev_major;
+            entry.dev_minor = dev_minor;
             entry.inode = inode;
             if (path_offset > 0 && static_cast<size_t>(path_offset) < std::strlen(line)) {
                 entry.path = trim_ascii(std::string(line + path_offset));

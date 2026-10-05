@@ -168,13 +168,38 @@ class MemoryRepositoryTest {
     }
 
     @Test
-    fun `anonymous pages on a system mapping are review rather than an anomaly`() {
+    fun `copied system code that matches its file leaves the row clean`() {
         val mapsMethod = repository.buildMethods(
             MemoryNativeSnapshot(available = true, systemAnonymousExec = true),
         ).first { it.label == "maps + smaps" }
 
+        assertEquals("Clean", mapsMethod.summary)
+        assertEquals(MemoryMethodOutcome.CLEAN, mapsMethod.outcome)
+    }
+
+    @Test
+    fun `copied system code that could not be compared is review`() {
+        val mapsMethod = repository.buildMethods(
+            MemoryNativeSnapshot(available = true, systemAnonymousExec = true, systemCopyUnverified = true),
+        ).first { it.label == "maps + smaps" }
+
         assertEquals("Review", mapsMethod.summary)
         assertEquals(MemoryMethodOutcome.REVIEW, mapsMethod.outcome)
+    }
+
+    @Test
+    fun `copied system code that differs from its file is an anomaly`() {
+        val mapsMethod = repository.buildMethods(
+            MemoryNativeSnapshot(
+                available = true,
+                systemAnonymousExec = true,
+                systemCopyModified = true,
+                systemCopyUnverified = true,
+            ),
+        ).first { it.label == "maps + smaps" }
+
+        assertEquals("Anomaly", mapsMethod.summary)
+        assertEquals(MemoryMethodOutcome.DETECTED, mapsMethod.outcome)
     }
 
     @Test

@@ -40,6 +40,8 @@ data class MemoryNativeSnapshot(
     val writableExec: Boolean = false,
     val anonymousExec: Boolean = false,
     val systemAnonymousExec: Boolean = false,
+    val systemCopyModified: Boolean = false,
+    val systemCopyUnverified: Boolean = false,
     val swappedExec: Boolean = false,
     val sharedDirtyExec: Boolean = false,
     val deletedSo: Boolean = false,
