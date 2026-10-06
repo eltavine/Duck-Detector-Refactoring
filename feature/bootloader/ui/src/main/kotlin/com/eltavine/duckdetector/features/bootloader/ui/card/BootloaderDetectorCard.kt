@@ -21,8 +21,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.rounded.CrisisAlert
 import androidx.compose.material.icons.rounded.Info
@@ -31,13 +33,14 @@ import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -45,6 +48,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.bootloader.presentation.model.BootloaderCardAssessment
@@ -71,7 +76,7 @@ internal fun BootloaderDetectorCard(
         status = model.status,
         verdict = model.verdict,
         summary = model.summary,
-        leadingIcon = Icons.Rounded.VerifiedUser,
+        leadingIcon = Icons.Rounded.Lock,
         leadingBadgeIcon = if (model.showConsistencyQuestionIcon) {
             Icons.Rounded.QuestionMark
         } else {
@@ -84,60 +89,73 @@ internal fun BootloaderDetectorCard(
             BootloaderCollapsedOverview(model = model)
         },
     ) {
-        if (model.stateRows.isNotEmpty()) {
-            BootloaderDetailSection(
-                title = "Boot state",
+        DetectorSectionGroup {
+            item(visible = model.stateRows.isNotEmpty()) {
+                BootloaderDetailSection(
+                title = stringResource(R.string.bootloader_section_boot_state),
                 icon = Icons.Rounded.VerifiedUser,
                 rows = model.stateRows,
-            )
-        }
+                showDivider = model.attestationRows.isNotEmpty() || model.propertyRows.isNotEmpty() ||
+                    model.consistencyRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.attestationRows.isNotEmpty()) {
-            BootloaderDetailSection(
-                title = "Attestation",
+            item(visible = model.attestationRows.isNotEmpty()) {
+                BootloaderDetailSection(
+                title = stringResource(R.string.bootloader_section_attestation),
                 icon = Icons.Rounded.Key,
                 rows = model.attestationRows,
-            )
-        }
+                showDivider = model.propertyRows.isNotEmpty() || model.consistencyRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.propertyRows.isNotEmpty()) {
-            BootloaderDetailSection(
-                title = "Boot properties",
+            item(visible = model.propertyRows.isNotEmpty()) {
+                BootloaderDetailSection(
+                title = stringResource(R.string.bootloader_section_boot_properties),
                 icon = Icons.Rounded.Settings,
                 rows = model.propertyRows,
-            )
-        }
+                showDivider = model.consistencyRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.consistencyRows.isNotEmpty()) {
-            BootloaderDetailSection(
-                title = "Consistency",
+            item(visible = model.consistencyRows.isNotEmpty()) {
+                BootloaderDetailSection(
+                title = stringResource(R.string.bootloader_section_consistency),
                 icon = Icons.AutoMirrored.Rounded.FactCheck,
                 rows = model.consistencyRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            BootloaderImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                BootloaderImpactSection(
+                title = stringResource(R.string.bootloader_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            BootloaderDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                BootloaderDetailSection(
+                title = stringResource(R.string.bootloader_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            BootloaderDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                BootloaderDetailSection(
+                title = stringResource(R.string.bootloader_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -152,7 +170,7 @@ private fun BootloaderCollapsedOverview(
     val trust = model.headerFacts.firstOrNull { it.fact == BootloaderHeaderFact.TRUST } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -190,10 +208,13 @@ private fun BootloaderDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<BootloaderDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -224,10 +245,13 @@ private fun BootloaderImpactSection(
     title: String,
     icon: ImageVector,
     items: List<BootloaderImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -247,7 +271,7 @@ private fun BootloaderImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

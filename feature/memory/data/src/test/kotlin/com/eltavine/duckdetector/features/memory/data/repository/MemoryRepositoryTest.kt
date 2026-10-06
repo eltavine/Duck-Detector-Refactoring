@@ -166,4 +166,68 @@ class MemoryRepositoryTest {
 
         assertTrue(repository.isBenignArtCodeCacheSwapFinding(finding))
     }
+
+    @Test
+    fun `copied system code that matches its file leaves the row clean`() {
+        val mapsMethod = repository.buildMethods(
+            MemoryNativeSnapshot(available = true, systemAnonymousExec = true),
+        ).first { it.label == "maps + smaps" }
+
+        assertEquals("Clean", mapsMethod.summary)
+        assertEquals(MemoryMethodOutcome.CLEAN, mapsMethod.outcome)
+    }
+
+    @Test
+    fun `copied system code that could not be compared is review`() {
+        val mapsMethod = repository.buildMethods(
+            MemoryNativeSnapshot(available = true, systemAnonymousExec = true, systemCopyUnverified = true),
+        ).first { it.label == "maps + smaps" }
+
+        assertEquals("Review", mapsMethod.summary)
+        assertEquals(MemoryMethodOutcome.REVIEW, mapsMethod.outcome)
+    }
+
+    @Test
+    fun `copied system code that differs from its file is an anomaly`() {
+        val mapsMethod = repository.buildMethods(
+            MemoryNativeSnapshot(
+                available = true,
+                systemAnonymousExec = true,
+                systemCopyModified = true,
+                systemCopyUnverified = true,
+            ),
+        ).first { it.label == "maps + smaps" }
+
+        assertEquals("Anomaly", mapsMethod.summary)
+        assertEquals(MemoryMethodOutcome.DETECTED, mapsMethod.outcome)
+    }
+
+    @Test
+    fun `anonymous executable mappings stay an anomaly`() {
+        val mapsMethod = repository.buildMethods(
+            MemoryNativeSnapshot(available = true, anonymousExec = true, systemAnonymousExec = true),
+        ).first { it.label == "maps + smaps" }
+
+        assertEquals("Anomaly", mapsMethod.summary)
+        assertEquals(MemoryMethodOutcome.DETECTED, mapsMethod.outcome)
+    }
+
+    @Test
+    fun `sanitizing keeps anonymous pages on the WebView provider's mapping`() {
+        val snapshot = MemoryNativeSnapshot(
+            available = true,
+            systemAnonymousExec = true,
+            findings = listOf(
+                MemoryNativeFinding(
+                    section = "MAPS",
+                    category = "SMAPS",
+                    label = "Anonymous executable pages on system mapping",
+                    severity = "MEDIUM",
+                    detail = "/product/app/webview/webview.apk reports 4 kB anonymous executable pages",
+                ),
+            ),
+        )
+
+        assertEquals(snapshot, repository.sanitizeSnapshot(snapshot))
+    }
 }

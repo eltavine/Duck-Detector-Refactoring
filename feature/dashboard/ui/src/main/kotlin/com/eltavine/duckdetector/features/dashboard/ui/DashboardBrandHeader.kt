@@ -18,7 +18,7 @@
 package com.eltavine.duckdetector.features.dashboard.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,124 +26,110 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Badge
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.ContinuousCornerShape
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.ui.LocalAppBuildInfo
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.openExternalUri
-import com.eltavine.duckdetector.core.ui.presentation.formatBuildTimeUtc
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveFilledIconButton
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveOnSurfaceColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
+import androidx.compose.ui.graphics.Color
 import com.eltavine.duckdetector.core.ui.R as CoreUiR
 
-// An app icon's corner is close to a quarter of its side.
-private val AppIconShape = ContinuousCornerShape(14.dp)
-
-/** The page's large title, under the app icon, with the build it describes. */
+/** Standalone dashboard fallback; hosted pages place branding in their native top bars. */
 @Composable
-internal fun BrandHeader() {
-    val context = LocalContext.current
-    val buildInfo = LocalAppBuildInfo.current
+internal fun BrandHeader(showTitle: Boolean = true) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppIcon()
+            MaterialAppIcon()
             Spacer(modifier = Modifier.weight(1f))
-            FilledIconButton(
-                onClick = { openExternalUri(context, "https://t.me/duck_detector") },
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = DuckTheme.palette.groupedSurface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ),
-            ) {
-                Icon(
-                    painter = painterResource(CoreUiR.drawable.ic_telegram),
-                    contentDescription = stringResource(CoreUiR.string.social_telegram),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            DashboardTelegramAction()
         }
-        WrapSafeText(
-            text = stringResource(CoreUiR.string.app_name),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-                .semantics { heading() },
-            style = DuckTypography.LargeTitle,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        BrandMetaLine(
-            icon = Icons.Rounded.Badge,
-            text = "${buildInfo.versionName}(${buildInfo.versionCode})",
-        )
-        BrandMetaLine(
-            icon = Icons.Rounded.Schedule,
-            text = "Build Time (UTC)  ${formatBuildTimeUtc(buildInfo.buildTimeUtc)}",
-        )
+        if (showTitle) {
+            WrapSafeText(
+                text = stringResource(CoreUiR.string.app_name),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .semantics { heading() },
+                style = DuckTypography.PageTitle,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
 // The logo is a one-color glyph tinted with the text color, so it inverts with the theme: black on
 // the light tile, white on the dark one.
 @Composable
-private fun AppIcon() {
+private fun MaterialAppIcon(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 56.dp) {
     Box(
-        modifier = Modifier
-            .size(56.dp)
-            .background(color = DuckTheme.palette.groupedSurface, shape = AppIconShape),
+        modifier = modifier
+            .size(size)
+            // Preserve the original 56dp/14dp tile proportions in the compact bar.
+            .background(color = DuckTheme.palette.groupedSurface, shape = RoundedCornerShape(size / 4)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        DuckIcon(
             painter = painterResource(R.drawable.ic_duck_logo),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(34.dp),
+            modifier = Modifier.size(size * (34f / 56f)),
         )
     }
 }
 
+/** App-owned top bar mark: preserve Material's tile and use only the duck line art on MIUIX. */
 @Composable
-private fun BrandMetaLine(
-    icon: ImageVector,
-    text: String,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+public fun DashboardTopBarBrandIcon() {
+    AdaptiveContent(
+        miuix = {
+            DuckIcon(
+                painter = painterResource(R.drawable.ic_duck_logo),
+                contentDescription = null,
+                tint = adaptiveOnSurfaceColor(),
+                modifier = Modifier.size(30.dp),
+            )
+        },
+        material = { MaterialAppIcon(size = 40.dp) },
+    )
+}
+
+/** Telegram's existing circle/plane glyph without a second background in MIUIX mode. */
+@Composable
+public fun DashboardTelegramAction() {
+    val context = LocalContext.current
+    val onClick: () -> Unit = { openExternalUri(context, "https://t.me/duck_detector"); Unit }
+    AdaptiveFilledIconButton(
+        onClick = onClick,
+        materialContainerColor = DuckTheme.palette.groupedSurface,
+        materialContentColor = MaterialTheme.colorScheme.primary,
+        miuixContainerColor = Color.Transparent,
+        miuixContentColor = adaptiveOnSurfaceColor(),
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp),
-        )
-        WrapSafeText(
-            text = text,
-            style = DuckTypography.Footnote,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        DuckIcon(
+            painter = painterResource(CoreUiR.drawable.ic_telegram),
+            contentDescription = stringResource(CoreUiR.string.social_telegram),
+            modifier = Modifier.size(adaptiveValue(material = 20.dp, miuix = 26.dp)),
         )
     }
 }

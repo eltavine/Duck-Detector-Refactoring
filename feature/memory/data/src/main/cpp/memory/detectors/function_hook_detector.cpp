@@ -24,6 +24,8 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -145,6 +147,87 @@ namespace duckdetector::memory {
 #endif
         }
 
+        std::optional<std::uintptr_t> direct_branch_destination(const std::uint8_t *bytes) {
+            const auto origin = reinterpret_cast<std::uintptr_t>(bytes);
+#if defined(__aarch64__)
+            const std::uint32_t inst = *reinterpret_cast<const std::uint32_t*>(bytes);
+            if ((inst >> 26) != 0x05 && (inst >> 26) != 0x25) {
+                return std::nullopt;
+            }
+            const std::intptr_t imm26 = static_cast<std::int32_t>(inst << 6) >> 6;
+            return origin + static_cast<std::uintptr_t>(imm26 * 4);
+#elif defined(__x86_64__)
+            if (bytes[0] == 0xE9) {
+                std::int32_t rel32 = 0;
+                std::memcpy(&rel32, bytes + 1, sizeof(rel32));
+                return origin + 5 + static_cast<std::uintptr_t>(static_cast<std::intptr_t>(rel32));
+            }
+            if (bytes[0] == 0xEB) {
+                const std::intptr_t rel8 = static_cast<std::int8_t>(bytes[1]);
+                return origin + 2 + static_cast<std::uintptr_t>(rel8);
+            }
+            return std::nullopt;
+#else
+            (void) origin;
+            return std::nullopt;
+#endif
+        }
+
+        bool same_file(const MapEntry &left, const MapEntry &right) {
+            return left.inode == right.inode && left.path == right.path;
+        }
+
+        // On x86_64 clang tail-calls the loader's weak __loader_* symbols, so libdl forwarders such
+        // as dlclose start with a jmp into libdl's own PLT (bionic libdl/libdl.cpp). The image is
+        // the run of adjacent mappings of one system file, so another mapping of that file does not
+        // count; an inline hook hands execution to code outside the image.
+        bool branch_stays_in_image(
+                const std::vector<MapEntry> &maps,
+                const std::uintptr_t entry_address,
+                const std::uintptr_t destination
+        ) {
+            for (size_t index = 0; index < maps.size(); ++index) {
+                const MapEntry &origin = maps[index];
+                if (entry_address < origin.start || entry_address >= origin.end) {
+                    continue;
+                }
+                if (origin.inode == 0 || !is_system_path(origin.path)) {
+                    return false;
+                }
+                size_t first = index;
+                while (first > 0 && maps[first - 1].end == maps[first].start &&
+                       same_file(maps[first - 1], origin)) {
+                    --first;
+                }
+                size_t last = index;
+                while (last + 1 < maps.size() && maps[last].end == maps[last + 1].start &&
+                       same_file(maps[last + 1], origin)) {
+                    ++last;
+                }
+                for (size_t candidate = first; candidate <= last; ++candidate) {
+                    if (destination >= maps[candidate].start && destination < maps[candidate].end) {
+                        return maps[candidate].executable;
+                    }
+                }
+                return false;
+            }
+            return false;
+        }
+
+        std::string describe_destination(
+                const std::vector<MapEntry> &maps,
+                const std::uintptr_t destination
+        ) {
+            const auto landing = find_entry_for_address(maps, destination);
+            std::string path = "[unmapped]";
+            if (landing.has_value()) {
+                path = landing->path.empty() ? "[anonymous]" : landing->path;
+            }
+            std::ostringstream output;
+            output << path << " @ 0x" << std::hex << destination;
+            return output.str();
+        }
+
         Finding make_finding(
                 const char *category,
                 const char *label,
@@ -219,6 +302,10 @@ namespace duckdetector::memory {
             }
 
             const auto *bytes = static_cast<const std::uint8_t *>(address_ptr);
+            const auto destination = direct_branch_destination(bytes);
+            if (destination.has_value() && branch_stays_in_image(maps, address, *destination)) {
+                continue;
+            }
             if (looks_like_branch_instruction(bytes) && !looks_like_expected_prologue(bytes)) {
                 signals.inline_hook = true;
                 signals.prologue_modified = true;
@@ -226,6 +313,9 @@ namespace duckdetector::memory {
                 std::ostringstream detail;
                 detail << target.name << " starts with branch-like bytes [" << hex_prefix(bytes, 12)
                        << "]";
+                if (destination.has_value()) {
+                    detail << " into " << describe_destination(maps, *destination);
+                }
                 signals.findings.push_back(
                         make_finding("INLINE_HOOK", "Branch-like prologue", FindingSeverity::kHigh,
                                      detail.str())

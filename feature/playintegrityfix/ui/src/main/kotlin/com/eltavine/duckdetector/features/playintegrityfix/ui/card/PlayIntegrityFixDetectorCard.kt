@@ -17,10 +17,12 @@
 
 package com.eltavine.duckdetector.features.playintegrityfix.ui.card
 
+import com.eltavine.duckdetector.features.playintegrityfix.ui.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.CompareArrows
@@ -30,11 +32,13 @@ import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -42,6 +46,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.playintegrityfix.presentation.model.PlayIntegrityFixCardModel
@@ -67,52 +73,62 @@ internal fun PlayIntegrityFixDetectorCard(
             PlayIntegrityFixCollapsedOverview(model = model)
         },
     ) {
-        if (model.propertyRows.isNotEmpty()) {
-            PlayIntegrityFixDetailSection(
-                title = "Spoof properties",
+        DetectorSectionGroup {
+            item(visible = model.propertyRows.isNotEmpty()) {
+                PlayIntegrityFixDetailSection(
+                title = stringResource(R.string.playintegrityfix_section_spoof_properties),
                 icon = Icons.Rounded.Shield,
                 rows = model.propertyRows,
-            )
-        }
+                showDivider = model.consistencyRows.isNotEmpty() || model.nativeRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.consistencyRows.isNotEmpty()) {
-            PlayIntegrityFixDetailSection(
-                title = "Cross-source consistency",
+            item(visible = model.consistencyRows.isNotEmpty()) {
+                PlayIntegrityFixDetailSection(
+                title = stringResource(R.string.playintegrityfix_section_cross_source_consistency),
                 icon = Icons.AutoMirrored.Rounded.CompareArrows,
                 rows = model.consistencyRows,
-            )
-        }
+                showDivider = model.nativeRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.nativeRows.isNotEmpty()) {
-            PlayIntegrityFixDetailSection(
-                title = "Runtime traces",
+            item(visible = model.nativeRows.isNotEmpty()) {
+                PlayIntegrityFixDetailSection(
+                title = stringResource(R.string.playintegrityfix_section_runtime_traces),
                 icon = Icons.Rounded.Memory,
                 rows = model.nativeRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            PlayIntegrityFixImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                PlayIntegrityFixImpactSection(
+                title = stringResource(R.string.playintegrityfix_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            PlayIntegrityFixDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                PlayIntegrityFixDetailSection(
+                title = stringResource(R.string.playintegrityfix_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            PlayIntegrityFixDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                PlayIntegrityFixDetailSection(
+                title = stringResource(R.string.playintegrityfix_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -127,7 +143,7 @@ private fun PlayIntegrityFixCollapsedOverview(
     val native = model.headerFacts.firstOrNull { it.fact == PlayIntegrityFixHeaderFact.NATIVE } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -165,10 +181,13 @@ private fun PlayIntegrityFixDetailSection(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     rows: List<PlayIntegrityFixDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -199,10 +218,13 @@ private fun PlayIntegrityFixImpactSection(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     items: List<PlayIntegrityFixImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -222,7 +244,7 @@ private fun PlayIntegrityFixImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

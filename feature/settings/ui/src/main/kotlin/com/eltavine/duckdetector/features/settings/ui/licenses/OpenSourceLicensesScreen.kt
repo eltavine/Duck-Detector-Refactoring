@@ -17,28 +17,17 @@
 
 package com.eltavine.duckdetector.features.settings.ui.licenses
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Verified
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,10 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.features.settings.ui.R
-import com.eltavine.duckdetector.core.ui.components.WrapSafeText
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveCircularProgressIndicator
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveSummaryCard
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveVerticalScrollFeedback
+import io.github.xiaotong6666.uihelper.chrome.DetailPageHost
+import io.github.xiaotong6666.uihelper.dialog.rememberRetainedDialogPayload
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 import com.mikepenz.aboutlibraries.entity.Library
 import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 import com.mikepenz.aboutlibraries.ui.compose.m3.chipColors
@@ -65,7 +58,6 @@ fun OpenSourceLicensesScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    BackHandler(onBack = onBack)
     val resources = LocalResources.current
     val libraries by produceLibraries {
         AboutLibrariesJsonOverrides.apply(
@@ -76,163 +68,133 @@ fun OpenSourceLicensesScreen(
         )
     }
     val libraryCount = libraries?.libraries?.size
+    val miuixLibraries = remember(libraries) { libraries?.libraries?.sortedBy { it.name.lowercase() }.orEmpty() }
     var selectedLibrary by remember { mutableStateOf<Library?>(null) }
+    val retainedLibrary = rememberRetainedDialogPayload(selectedLibrary)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DuckTheme.palette.groupedBackground),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = stringResource(R.string.licenses_screen_back),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-
+    if (LocalUiMode.current == UiMode.Miuix) {
+        DetailPageHost(
+            title = stringResource(R.string.licenses_screen_title),
+            subtitle = stringResource(R.string.licenses_screen_subtitle),
+            onBack = onBack,
+        ) { contentPadding, pageModifier ->
+            if (libraries == null) {
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = pageModifier
+                        .fillMaxSize()
+                        .padding(contentPadding)
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    WrapSafeText(
-                        text = stringResource(R.string.licenses_screen_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                    AdaptiveSummaryCard(
+                        icon = Icons.Rounded.Verified,
+                        title = stringResource(R.string.licenses_inventory_title),
+                        summary = stringResource(R.string.licenses_inventory_subtitle),
+                        trailingText = "…",
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    WrapSafeText(
-                        text = stringResource(R.string.licenses_screen_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                Surface(
-                    shape = ShapeTokens.CornerMedium,
-                    color = DuckTheme.palette.groupedSurface,
-                ) {
                     Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .padding(10.dp),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Description,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                        AdaptiveCircularProgressIndicator()
                     }
                 }
-            }
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                shape = ShapeTokens.CornerExtraLargeIncreased,
-                color = DuckTheme.palette.groupedSurface,
-            ) {
-                Row(
+            } else {
+                // Keep the whole detail page on one native MIUIX scroll chain so the top bar,
+                // elastic edge feedback and scroll-end haptics all observe the same deltas.
+                LazyColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 18.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .fillMaxSize()
+                        .adaptiveVerticalScrollFeedback()
+                        .then(pageModifier),
+                    overscrollEffect = null,
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = contentPadding.calculateTopPadding() + 12.dp,
+                        end = 12.dp,
+                        bottom = contentPadding.calculateBottomPadding() + 20.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = DuckTheme.palette.groupedInset,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .padding(10.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Verified,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        WrapSafeText(
-                            text = stringResource(R.string.licenses_inventory_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        WrapSafeText(
-                            text = stringResource(R.string.licenses_inventory_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    item(key = "inventory") {
+                        AdaptiveSummaryCard(
+                            icon = Icons.Rounded.Verified,
+                            title = stringResource(R.string.licenses_inventory_title),
+                            summary = stringResource(R.string.licenses_inventory_subtitle),
+                            trailingText = libraryCount.toString(),
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
-
-                    Surface(
-                        shape = ShapeTokens.CornerMedium,
-                        color = DuckTheme.palette.groupedInset,
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            WrapSafeText(
-                                text = libraryCount?.toString() ?: "...",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
+                    items(count = miuixLibraries.size, key = { miuixLibraries[it].uniqueId }) { index ->
+                        val library = miuixLibraries[index]
+                        LicenseLibraryRow(
+                            library = library,
+                            onClick = { selectedLibrary = library },
+                        )
                     }
                 }
             }
-
-            LibrariesContainer(
-                libraries = libraries,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(vertical = 2.dp),
-                colors = LibraryDefaults.libraryColors(
-                    libraryBackgroundColor = DuckTheme.palette.groupedBackground,
-                    libraryContentColor = MaterialTheme.colorScheme.onSurface,
-                    licenseChipColors = LibraryDefaults.chipColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
-                ),
-                onLibraryClick = { library ->
-                    selectedLibrary = library
-                    true
-                },
-                libraryRow = { _, library, _, toggle, _ ->
-                    LicenseLibraryRow(
-                        library = library,
-                        onClick = toggle,
-                    )
-                },
+        }
+        retainedLibrary.value?.let { library ->
+            LicenseDetailsDialog(
+                show = selectedLibrary != null,
+                library = library,
+                onDismiss = { selectedLibrary = null },
+                onDismissFinished = retainedLibrary.onDismissFinished,
             )
+        }
+        return
+    }
+
+    // Use the native M3E large collapsing bar while keeping DuckNavHost as the sole route owner;
+    // DetailPageHost only provides the visual chrome.
+    Box(modifier = modifier.fillMaxSize()) {
+        DetailPageHost(
+            title = stringResource(R.string.licenses_screen_title),
+            subtitle = stringResource(R.string.licenses_screen_subtitle),
+            onBack = onBack,
+        ) { contentPadding, pageModifier ->
+            Column(
+                modifier = pageModifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                AdaptiveSummaryCard(
+                    icon = Icons.Rounded.Verified,
+                    title = stringResource(R.string.licenses_inventory_title),
+                    summary = stringResource(R.string.licenses_inventory_subtitle),
+                    trailingText = libraryCount?.toString() ?: "…",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                LibrariesContainer(
+                    libraries = libraries,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentPadding = PaddingValues(vertical = 2.dp),
+                    colors = LibraryDefaults.libraryColors(
+                        libraryBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
+                        libraryContentColor = MaterialTheme.colorScheme.onSurface,
+                        licenseChipColors = LibraryDefaults.chipColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                    ),
+                    onLibraryClick = { library ->
+                        selectedLibrary = library
+                        true
+                    },
+                    libraryRow = { _, library, _, toggle, _ ->
+                        LicenseLibraryRow(library = library, onClick = toggle)
+                    },
+                )
+            }
         }
     }
 
     selectedLibrary?.let { library ->
-        LicenseDetailsDialog(library = library, onDismiss = { selectedLibrary = null })
+        LicenseDetailsDialog(show = true, library = library, onDismiss = { selectedLibrary = null })
     }
 }

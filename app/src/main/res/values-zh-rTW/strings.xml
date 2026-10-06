@@ -90,4 +90,6 @@ limitations under the License.
     <string name="startup_package_low_inventory_detail">目前可見套件數量：%1$d。啟動將繼續，但 Dangerous Apps 會將這種低清單狀態視為潛在過濾證據加以檢查。</string>
     <string name="startup_package_ready_headline">PackageManager 清單看起來完整。</string>
     <string name="startup_package_ready_detail">目前可見套件數量：%1$d。Dangerous Apps 可以使用標準的套件清單路徑。</string>
+    <string name="navigation_home">首頁</string>
+    <string name="navigation_settings">設定</string>
 </resources>

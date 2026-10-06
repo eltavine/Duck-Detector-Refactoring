@@ -20,20 +20,55 @@ package com.eltavine.duckdetector.core.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Icon
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveIcon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
+import io.github.xiaotong6666.uihelper.common.StatusTag
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.adaptivePrimaryColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveErrorColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSecondaryTextColor
+
+/** Compact MIUIX status label shared by detector cards and summary rows. */
+@Composable
+public fun MiuixStatusLabel(
+    status: DetectorStatus,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    val appearance = rememberStatusAppearance(status)
+    val background = when (status.severity) {
+        DetectionSeverity.DANGER -> adaptiveErrorColor()
+        DetectionSeverity.WARNING, DetectionSeverity.ALL_CLEAR -> appearance.iconTint
+        // A failed probe keeps its critical tint so it cannot pass for supporting information.
+        DetectionSeverity.INFO -> if (status.infoKind == InfoKind.ERROR) appearance.iconTint else adaptivePrimaryColor()
+    }
+    // Keep severity-specific fills; every MIUIX status label uses opaque white text.
+    val foreground = homeStatusLabelTextColor()
+    StatusTag(
+        label = label,
+        modifier = modifier,
+        backgroundColor = background,
+        contentColor = foreground,
+    )
+}
+
+internal fun homeStatusLabelTextColor(): Color = Color.White
 
 @Composable
 public fun StatusBadge(
@@ -41,38 +76,58 @@ public fun StatusBadge(
     modifier: Modifier = Modifier,
 ) {
     val appearance = rememberStatusAppearance(status)
-
-    Column(
-        modifier = modifier
-            .widthIn(max = 220.dp)
-            .background(color = appearance.tintWash, shape = ShapeTokens.CornerMedium)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                imageVector = appearance.icon,
-                contentDescription = null,
-                tint = appearance.iconTint,
-                modifier = Modifier.size(18.dp),
-            )
-            WrapSafeText(
-                text = appearance.label,
-                style = DuckTypography.CalloutEmphasized,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        appearance.metaLabel?.let { metaLabel ->
-            WrapSafeText(
-                text = metaLabel,
-                style = DuckTypography.Caption,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    AdaptiveContent(
+        miuix = {
+            Column(
+                modifier = modifier.widthIn(max = 220.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                MiuixStatusLabel(status = status, label = appearance.label)
+                appearance.metaLabel?.let { label ->
+                    WrapSafeText(
+                        text = label,
+                        style = DuckTypography.PanelCaption,
+                        color = adaptiveSecondaryTextColor(),
+                    )
+                }
+            }
+        },
+        material = {
+            val containerColor = appearance.tintWash
+            val contentColor = appearance.iconTint
+            Column(
+                modifier = modifier
+                    .widthIn(max = 220.dp)
+                    .background(color = containerColor, shape = MaterialTheme.shapes.medium)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    AdaptiveIcon(
+                        imageVector = appearance.icon,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    WrapSafeText(
+                        text = appearance.label,
+                        style = DuckTypography.CalloutEmphasized,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                appearance.metaLabel?.let { metaLabel ->
+                    WrapSafeText(
+                        text = metaLabel,
+                        style = DuckTypography.PanelCaption,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -81,24 +136,69 @@ public fun CompactStatusBadge(
     modifier: Modifier = Modifier,
 ) {
     val appearance = rememberStatusAppearance(status)
+    AdaptiveContent(
+        miuix = {
+            MiuixStatusLabel(status = status, label = appearance.label, modifier = modifier)
+        },
+        material = {
+            val containerColor = appearance.tintWash
+            val contentColor = appearance.iconTint
+            Row(
+                modifier = modifier
+                    .background(color = containerColor, shape = MaterialTheme.shapes.extraSmall)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                AdaptiveIcon(
+                    imageVector = appearance.icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(14.dp),
+                )
+                WrapSafeText(
+                    text = appearance.label,
+                    style = MaterialTheme.typography.labelSmallEmphasized,
+                    color = contentColor,
+                )
+            }
+        },
+    )
+}
 
-    Row(
+@Composable
+public fun AdaptiveSeverityTag(
+    status: DetectorStatus,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    AdaptiveContent(
+        miuix = { MiuixStatusLabel(status = status, label = label, modifier = modifier) },
+        material = {
+            MaterialSeverityTag(
+                status = status,
+                label = label,
+                modifier = modifier,
+            )
+        },
+    )
+}
+
+/** Compact Material tonal tag using the shared detector status palette. */
+@Composable
+public fun MaterialSeverityTag(
+    status: DetectorStatus,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    val appearance = rememberStatusAppearance(status)
+    val containerColor = appearance.tintWash
+    val contentColor = appearance.iconTint
+    Box(
         modifier = modifier
-            .background(color = appearance.tintWash, shape = ShapeTokens.CornerFull)
-            .padding(start = 7.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .background(containerColor, MaterialTheme.shapes.extraSmall)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Icon(
-            imageVector = appearance.icon,
-            contentDescription = null,
-            tint = appearance.iconTint,
-            modifier = Modifier.size(14.dp),
-        )
-        WrapSafeText(
-            text = appearance.label,
-            style = DuckTypography.Caption,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Text(label, color = contentColor, style = MaterialTheme.typography.labelSmallEmphasized)
     }
 }

@@ -73,4 +73,5 @@ limitations under the License.
     <string name="update_status_current">最新の %1$s ビルドです</string>
     <string name="update_status_failed">GitHub を確認できませんでした。タップして再試行</string>
     <string name="update_status_idle">コールドスタート後に GitHub の %1$s を確認します。タップして今すぐ確認</string>
+    <string name="settings_section_appearance">外観</string>
 </resources>

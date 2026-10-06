@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BugReport
@@ -32,7 +33,7 @@ import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -48,6 +50,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.copyPlainTextToClipboard
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
@@ -76,60 +80,73 @@ internal fun NativeRootDetectorCard(
             NativeRootCollapsedOverview(model = model)
         },
     ) {
-        if (model.nativeRows.isNotEmpty()) {
-            NativeRootDetailSection(
-                title = "Native probes",
+        DetectorSectionGroup {
+            item(visible = model.nativeRows.isNotEmpty()) {
+                NativeRootDetailSection(
+                title = stringResource(R.string.nativeroot_section_native_probes),
                 icon = Icons.Rounded.Security,
                 rows = model.nativeRows,
-            )
-        }
+                showDivider = model.runtimeRows.isNotEmpty() || model.kernelRows.isNotEmpty() ||
+                    model.propertyRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.runtimeRows.isNotEmpty()) {
-            NativeRootDetailSection(
-                title = "Runtime artifacts",
+            item(visible = model.runtimeRows.isNotEmpty()) {
+                NativeRootDetailSection(
+                title = stringResource(R.string.nativeroot_section_runtime_artifacts),
                 icon = Icons.Rounded.Shield,
                 rows = model.runtimeRows,
-            )
-        }
+                showDivider = model.kernelRows.isNotEmpty() || model.propertyRows.isNotEmpty() ||
+                    model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.kernelRows.isNotEmpty()) {
-            NativeRootDetailSection(
-                title = "Kernel traces",
+            item(visible = model.kernelRows.isNotEmpty()) {
+                NativeRootDetailSection(
+                title = stringResource(R.string.nativeroot_section_kernel_traces),
                 icon = Icons.Rounded.Memory,
                 rows = model.kernelRows,
-            )
-        }
+                showDivider = model.propertyRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.propertyRows.isNotEmpty()) {
-            NativeRootDetailSection(
-                title = "Property residue",
+            item(visible = model.propertyRows.isNotEmpty()) {
+                NativeRootDetailSection(
+                title = stringResource(R.string.nativeroot_section_property_residue),
                 icon = Icons.Rounded.Info,
                 rows = model.propertyRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            NativeRootImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                NativeRootImpactSection(
+                title = stringResource(R.string.nativeroot_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            NativeRootDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                NativeRootDetailSection(
+                title = stringResource(R.string.nativeroot_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            NativeRootDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                NativeRootDetailSection(
+                title = stringResource(R.string.nativeroot_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -144,7 +161,7 @@ private fun NativeRootCollapsedOverview(
     val runtime = model.headerFacts.firstOrNull { it.fact == NativeRootHeaderFact.RUNTIME } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -182,10 +199,13 @@ private fun NativeRootDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<NativeRootDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -236,10 +256,13 @@ private fun NativeRootImpactSection(
     title: String,
     icon: ImageVector,
     items: List<NativeRootImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -259,7 +282,7 @@ private fun NativeRootImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

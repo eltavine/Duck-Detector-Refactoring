@@ -34,9 +34,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.update.domain.ReleaseNotesItem
 import com.eltavine.duckdetector.features.update.domain.UpdateChangelog
+import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
 
 // The release page keeps the full notes; the dialog shows enough to decide on the update.
 private const val MAX_RELEASE_NOTE_ITEMS = 40

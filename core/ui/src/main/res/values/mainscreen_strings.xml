@@ -20,7 +20,7 @@ limitations under the License.
     tools:locale="en">
     <string name="card_collapse">Collapse card</string>
     <string name="card_expand">Expand card</string>
-    <string name="status_all_clear">All Clear</string>
+    <string name="status_all_clear">Clear</string>
     <string name="status_danger">Danger</string>
     <string name="status_info">Info</string>
     <string name="status_info_error">Error</string>

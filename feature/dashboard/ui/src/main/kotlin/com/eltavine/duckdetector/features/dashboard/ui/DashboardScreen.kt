@@ -21,15 +21,14 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,23 +38,32 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.components.StatusBarProtection
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
+import com.eltavine.duckdetector.core.designsystem.components.DuckPanel
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.evidence.DetectorId
+import com.eltavine.duckdetector.core.ui.components.LocalDetectorCardExpansionSignal
 import com.eltavine.duckdetector.core.ui.detector.DetectorSession
 import com.eltavine.duckdetector.core.ui.detector.DeviceProfileSession
 import com.eltavine.duckdetector.core.ui.LocalAppBuildInfo
@@ -71,6 +79,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveCircularProgressIndicator
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveContainerContentColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveScrollableOverscrollEffect
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSecondaryTextColor
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveVerticalScrollFeedback
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveViewportOverscroll
+import kotlinx.coroutines.launch
 
 @Composable
 fun DashboardScreen(
@@ -78,8 +95,22 @@ fun DashboardScreen(
     detectors: List<DetectorSession>,
     deviceProfile: DeviceProfileSession,
     modifier: Modifier = Modifier,
+    scaffoldPadding: PaddingValues? = null,
+    pageModifier: Modifier = Modifier,
 ) {
+    val materialOverscrollEffect = rememberOverscrollEffect()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    var expansionRequest by remember { mutableStateOf<DashboardExpansionRequest?>(null) }
+    val hostedHorizontalInset = adaptiveValue(material = 16.dp, miuix = 12.dp)
+    val pageSpacing = adaptiveValue(material = 16.dp, miuix = 12.dp)
+    val showStandaloneMaterialChrome = adaptiveValue(
+        material = scaffoldPadding == null,
+        miuix = false,
+    )
+    val layoutDirection = LocalLayoutDirection.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     val buildInfo = LocalAppBuildInfo.current
     val orderedDetectors = remember(uiState.cardOrder, detectors) {
         val detectorsById = detectors.associateBy { it.id }
@@ -110,13 +141,18 @@ fun DashboardScreen(
                 }
                 Toast.makeText(
                     context,
-                    "Report saved",
+                    resources.getString(R.string.dashboard_report_saved),
                     Toast.LENGTH_SHORT,
                 ).show()
             } catch (e: Exception) {
                 Toast.makeText(
                     context,
-                    "Save failed: ${e.message}",
+                    e.message
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { message ->
+                            resources.getString(R.string.dashboard_report_save_failed, message)
+                        }
+                        ?: resources.getString(R.string.dashboard_report_save_failed_unknown),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -126,61 +162,113 @@ fun DashboardScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DuckTheme.palette.groupedBackground),
+            .background(DuckTheme.palette.groupedBackground)
+            // Render at the entire page viewport, not at an inset card or scroll item.
+            // The LazyColumn below supplies the scroll deltas to the same native effect.
+            .adaptiveViewportOverscroll(materialOverscrollEffect),
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = WindowInsets.safeDrawing
-                // The bottom clears the floating tab switcher the shell draws over the last card.
-                .add(WindowInsets(left = 16.dp, top = 12.dp, right = 16.dp, bottom = 96.dp))
-                .asPaddingValues(),
-        ) {
-            item { BrandHeader() }
-            item {
-                ExportButton(
-                    onClick = {
-                        exportLauncher.launch(generateExportReportFileName())
-                    },
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                // uihelper preserves the native MIUIX ordering: elastic overscroll remains outside
+                // the top-bar nested-scroll observer so its rebound cannot collapse chrome.
+                .adaptiveVerticalScrollFeedback()
+                .then(pageModifier),
+            overscrollEffect = adaptiveScrollableOverscrollEffect(materialOverscrollEffect),
+            verticalArrangement = Arrangement.spacedBy(pageSpacing),
+            contentPadding = if (scaffoldPadding != null) {
+                // MIUIX owns the top bar and navigation bar. Their insets must not be re-applied.
+                PaddingValues(
+                    start = scaffoldPadding.calculateStartPadding(layoutDirection) + hostedHorizontalInset,
+                    top = scaffoldPadding.calculateTopPadding() + 12.dp,
+                    end = scaffoldPadding.calculateEndPadding(layoutDirection) + hostedHorizontalInset,
+                    bottom = scaffoldPadding.calculateBottomPadding() + 16.dp,
                 )
+            } else {
+                WindowInsets.safeDrawing
+                    .add(WindowInsets(left = 16.dp, top = 12.dp, right = 16.dp, bottom = 96.dp))
+                    .asPaddingValues()
+            },
+        ) {
+            // Hosted pages put brand actions in the real app bar. Keep the original
+            // inline brand header only for standalone/dashboard preview hosts.
+            if (showStandaloneMaterialChrome) {
+                item { BrandHeader() }
             }
             item {
                 DashboardSummarySection(
                     overview = uiState.overview,
                     findings = uiState.topFindings,
                     showLoadingOverlay = uiState.isLoading,
+                    onExportReport = { exportLauncher.launch(generateExportReportFileName()) },
+                    onFindingClick = { finding ->
+                        val detectorId = finding.detectorId ?: return@DashboardSummarySection
+                        val detectorIndex = orderedDetectors.indexOfFirst { it.id == detectorId }
+                        if (detectorIndex >= 0) {
+                            val detectorStartIndex = if (showStandaloneMaterialChrome) 2 else 1
+                            coroutineScope.launch {
+                                listState.animateScrollToItem(detectorStartIndex + detectorIndex)
+                                expansionRequest = DashboardExpansionRequest(
+                                    detectorId = detectorId,
+                                    signal = (expansionRequest?.signal ?: 0L) + 1L,
+                                )
+                            }
+                        }
+                    },
                 )
             }
             items(
                 items = orderedDetectors,
                 key = { detector -> detector.id.value },
             ) { detector ->
-                detector.Card()
+                val expansionSignal = expansionRequest
+                    ?.takeIf { request -> request.detectorId == detector.id }
+                    ?.signal
+                    ?: 0L
+                CompositionLocalProvider(
+                    LocalDetectorCardExpansionSignal provides expansionSignal,
+                ) {
+                    detector.Card()
+                }
             }
             item {
                 deviceProfile.Card()
             }
         }
 
-        StatusBarProtection(modifier = Modifier.align(Alignment.TopCenter))
+        if (showStandaloneMaterialChrome) {
+            StatusBarProtection(modifier = Modifier.align(Alignment.TopCenter))
+        }
     }
 }
+
+private data class DashboardExpansionRequest(
+    val detectorId: DetectorId,
+    val signal: Long,
+)
 
 @Composable
 private fun DashboardSummarySection(
     overview: DashboardOverviewModel,
     findings: List<DashboardFindingModel>,
     showLoadingOverlay: Boolean,
+    onExportReport: () -> Unit,
+    onFindingClick: (DashboardFindingModel) -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            DashboardOverviewCard(model = overview)
-            DashboardFindingsCard(findings = findings)
-        }
-
-        if (showLoadingOverlay) {
-            DashboardLoadingOverlay(
-                modifier = Modifier.matchParentSize(),
+    if (showLoadingOverlay) {
+        // Do not draw the finished Danger card behind an opaque loading overlay. Its independent
+        // Material radius leaked through the MIUIX squircle corners, and made the placeholder
+        // inherit the combined height of cards that are not ready yet.
+        DashboardLoadingOverlay()
+    } else {
+        // The status hero and finding queue already have their own internal spacing.
+        // An additional 24dp here produced the empty band between the two cards.
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            DashboardOverviewCard(model = overview, onExportReport = onExportReport)
+            DashboardFindingsCard(
+                findings = findings,
+                onFindingClick = onFindingClick,
             )
         }
     }
@@ -191,61 +279,36 @@ private fun DashboardSummarySection(
 private fun DashboardLoadingOverlay(
     modifier: Modifier = Modifier,
 ) {
-    // The summary it covers is taller than the screen, so the message sits near its top edge.
-    Box(
-        modifier = modifier.background(
-            color = DuckTheme.palette.groupedSurface,
-            shape = ShapeTokens.CornerExtraLargeIncreased,
-        ),
-        contentAlignment = Alignment.TopCenter,
+    DuckPanel(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 28.dp, end = 28.dp, top = 44.dp, bottom = 44.dp),
     ) {
         Column(
-            modifier = Modifier.padding(start = 32.dp, end = 32.dp, top = 88.dp, bottom = 24.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            LoadingIndicator(modifier = Modifier.size(56.dp))
+            AdaptiveContent(
+                miuix = {
+                    // Native MIUIX indeterminate progress: grey track and moving accent arc.
+                    AdaptiveCircularProgressIndicator(size = 48.dp)
+                },
+                material = { LoadingIndicator(modifier = Modifier.size(56.dp)) },
+            )
             WrapSafeText(
-                text = "Running local checks",
+                text = stringResource(R.string.dashboard_loading_title),
                 modifier = Modifier.padding(top = 6.dp),
-                style = DuckTypography.Headline,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = DuckTypography.LoadingTitle,
+                color = adaptiveContainerContentColor(),
                 textAlign = TextAlign.Center,
             )
             WrapSafeText(
-                text = "Dashboard summary will unlock when the detector cards finish collecting evidence.",
-                style = DuckTypography.Footnote,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(R.string.dashboard_loading_summary),
+                style = DuckTypography.LoadingSupporting,
+                color = adaptiveSecondaryTextColor(),
                 textAlign = TextAlign.Center,
             )
         }
-    }
-}
-
-@Composable
-private fun ExportButton(
-    onClick: () -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = ShapeTokens.CornerLarge,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = DuckTheme.palette.groupedSurface,
-            contentColor = MaterialTheme.colorScheme.primary,
-        ),
-        contentPadding = PaddingValues(vertical = 15.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.FileDownload,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(modifier = Modifier.size(8.dp))
-        WrapSafeText(
-            text = "Export Report",
-            style = DuckTypography.Headline,
-        )
     }
 }
 

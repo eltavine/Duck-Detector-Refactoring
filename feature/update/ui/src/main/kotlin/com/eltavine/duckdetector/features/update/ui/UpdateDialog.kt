@@ -47,9 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
-import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
 import com.eltavine.duckdetector.features.update.domain.UpdateChannel
+import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
 
 @Composable
 fun UpdateDialog(

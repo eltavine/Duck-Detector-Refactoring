@@ -42,7 +42,7 @@ import androidx.compose.foundation.text.input.then
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,6 +67,12 @@ import com.eltavine.duckdetector.core.designsystem.theme.ContinuousCornerShape
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import top.yukonga.miuix.kmp.basic.TextField as MiuixTextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val AnswerFieldShape = ContinuousCornerShape(10.dp)
 private val ConditionGlyphSize = 22.dp
@@ -94,40 +100,67 @@ internal fun AgreementRiskBanner() {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = DuckTheme.palette.groupedSurface,
-                shape = ShapeTokens.CornerExtraLargeIncreased,
-            )
-            .padding(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
-            )
-            Text(
-                text = stringResource(R.string.agreement_risk_title),
-                style = DuckTypography.Headline,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        Text(
-            text = riskSummary,
-            style = DuckTypography.Callout,
-            color = MaterialTheme.colorScheme.onSurface,
-            lineHeight = DuckTypography.Callout.lineHeight * 1.25,
-        )
-    }
+    AdaptiveContent(
+        miuix = {
+            MiuixCard(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            ) {
+                BasicComponent(
+                    title = stringResource(R.string.agreement_risk_title),
+                    startAction = {
+                        DuckIcon(
+                            imageVector = Icons.Outlined.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 12.dp).size(22.dp),
+                            tint = MiuixTheme.colorScheme.onSurface,
+                        )
+                    },
+                )
+                MiuixText(
+                    text = riskSummary,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    style = MiuixTheme.textStyles.paragraph,
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
+            }
+        },
+        material = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = DuckTheme.palette.groupedSurface,
+                        shape = MaterialTheme.shapes.large,
+                    )
+                    .padding(horizontal = 18.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    DuckIcon(
+                        imageVector = Icons.Outlined.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.agreement_risk_title),
+                        style = DuckTypography.Headline,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                Text(
+                    text = riskSummary,
+                    style = DuckTypography.Callout,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = DuckTypography.Callout.lineHeight * 1.25,
+                )
+            }
+        },
+    )
 }
 
 /** One row of the consent checklist; a met condition trades its glyph for a check mark. */
@@ -147,41 +180,63 @@ internal fun ConditionRow(
         label = "agreement_condition_icon_scale",
     )
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            imageVector = if (isComplete) Icons.Rounded.CheckCircle else icon,
-            contentDescription = null,
-            modifier = Modifier
-                .size(ConditionGlyphSize)
-                .graphicsLayer {
-                    scaleX = iconScale
-                    scaleY = iconScale
+    AdaptiveContent(
+        miuix = {
+            BasicComponent(
+                title = text,
+                startAction = {
+                    DuckIcon(
+                        imageVector = if (isComplete) Icons.Rounded.CheckCircle else icon,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 12.dp).size(ConditionGlyphSize),
+                        tint = if (isComplete) {
+                            MiuixTheme.colorScheme.onSurface
+                        } else {
+                            MiuixTheme.colorScheme.onSurfaceVariantActions
+                        },
+                    )
                 },
-            tint = if (isComplete) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-        )
-        Text(
-            text = text,
-            modifier = Modifier.weight(1f),
-            style = if (isComplete) DuckTypography.CalloutEmphasized else DuckTypography.Callout,
-            color = if (isComplete) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-        )
-        trailing?.invoke()
-    }
+                endActions = trailing?.let { content -> { content() } },
+            )
+        },
+        material = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                DuckIcon(
+                    imageVector = if (isComplete) Icons.Rounded.CheckCircle else icon,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(ConditionGlyphSize)
+                        .graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                        },
+                    tint = if (isComplete) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                Text(
+                    text = text,
+                    modifier = Modifier.weight(1f),
+                    style = if (isComplete) DuckTypography.CalloutEmphasized else DuckTypography.Callout,
+                    color = if (isComplete) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                trailing?.invoke()
+            }
+        },
+    )
 }
 
 /** A compact field for the arithmetic answer, outlined in the text color once the answer is right. */
@@ -197,31 +252,49 @@ internal fun AgreementAnswerField(
         label = "agreement_answer_border",
     )
 
-    BasicTextField(
-        state = state,
-        modifier = Modifier.width(88.dp),
-        inputTransformation = AnswerInputTransformation,
-        textStyle = DuckTypography.Headline.copy(
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        ),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Done,
-        ),
-        onKeyboardAction = { focusManager.clearFocus() },
-        lineLimits = TextFieldLineLimits.SingleLine,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        decorator = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .background(color = palette.groupedSurface, shape = AnswerFieldShape)
-                    .border(width = 1.dp, color = borderColor, shape = AnswerFieldShape)
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                innerTextField()
-            }
+    AdaptiveContent(
+        miuix = {
+            MiuixTextField(
+                state = state,
+                modifier = Modifier.width(88.dp),
+                inputTransformation = AnswerInputTransformation,
+                textStyle = MiuixTheme.textStyles.headline2.copy(textAlign = TextAlign.Center),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+                onKeyboardAction = { focusManager.clearFocus() },
+                lineLimits = TextFieldLineLimits.SingleLine,
+            )
+        },
+        material = {
+            BasicTextField(
+                state = state,
+                modifier = Modifier.width(88.dp),
+                inputTransformation = AnswerInputTransformation,
+                textStyle = DuckTypography.Headline.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+                onKeyboardAction = { focusManager.clearFocus() },
+                lineLimits = TextFieldLineLimits.SingleLine,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                decorator = { innerTextField ->
+                    Box(
+                        modifier = Modifier
+                            .background(color = palette.groupedSurface, shape = AnswerFieldShape)
+                            .border(width = 1.dp, color = borderColor, shape = AnswerFieldShape)
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        innerTextField()
+                    }
+                },
+            )
         },
     )
 }

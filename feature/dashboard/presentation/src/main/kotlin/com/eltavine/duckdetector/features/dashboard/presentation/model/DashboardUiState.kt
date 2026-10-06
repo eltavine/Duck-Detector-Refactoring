@@ -60,17 +60,28 @@ data class DashboardOverviewModel(
     val status: DetectorStatus,
     val metrics: List<DashboardOverviewMetricModel>,
     val verdict: OverviewVerdict,
+    val focusTitles: List<String> = emptyList(),
+    val scanDurationMillis: Long? = null,
+    val scanCompletedAtEpochMillis: Long? = null,
     /** True when [title] reports the completion time and duration of a finished scan. */
     val titleDescribesCompletedScan: Boolean,
     val showTitleIcon: Boolean = false,
 )
 
 data class DashboardFindingModel(
+    val detectorId: DetectorId? = null,
     val detectorTitle: String,
     val headline: String,
     val detail: String,
     val status: DetectorStatus,
+    val kind: DashboardFindingKind = DashboardFindingKind.DETECTOR,
 )
+
+enum class DashboardFindingKind {
+    DETECTOR,
+    SCAN_STATUS,
+    OVERVIEW,
+}
 
 data class DashboardUiState(
     val overview: DashboardOverviewModel,
@@ -147,6 +158,9 @@ fun buildDashboardOverview(
         summary = summary,
         status = overviewStatus,
         verdict = verdict,
+        focusTitles = focusTitles,
+        scanDurationMillis = scanDurationMillis,
+        scanCompletedAtEpochMillis = scanCompletedAtEpochMillis,
         titleDescribesCompletedScan = titleDescribesCompletedScan,
         metrics = listOf(
             DashboardOverviewMetricModel(
@@ -209,6 +223,7 @@ fun buildDashboardFindings(
     if (attentionFindings.isNotEmpty()) {
         return attentionFindings.take(3).map { contribution ->
             DashboardFindingModel(
+                detectorId = contribution.id,
                 detectorTitle = contribution.title,
                 headline = contribution.headline,
                 detail = contribution.findingDetail ?: contribution.summary,
@@ -224,6 +239,7 @@ fun buildDashboardFindings(
                 headline = "Waiting for detector evidence",
                 detail = "Detector cards will expand as modules finish collecting local evidence.",
                 status = DetectorStatus.info(InfoKind.SUPPORT),
+                kind = DashboardFindingKind.SCAN_STATUS,
             ),
         )
     }
@@ -234,6 +250,7 @@ fun buildDashboardFindings(
             headline = "No urgent findings in ready modules",
             detail = "Open detector cards below to review detailed local evidence and secondary checks.",
             status = DetectorStatus.allClear(),
+            kind = DashboardFindingKind.OVERVIEW,
         ),
     )
 }

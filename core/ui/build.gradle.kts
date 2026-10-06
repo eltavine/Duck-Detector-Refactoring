@@ -29,6 +29,8 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.uihelper)
+    implementation(libs.miuix.ui)
     implementation(project(":core:designsystem"))
     api(project(":core:detector"))
     api(project(":core:evidence"))

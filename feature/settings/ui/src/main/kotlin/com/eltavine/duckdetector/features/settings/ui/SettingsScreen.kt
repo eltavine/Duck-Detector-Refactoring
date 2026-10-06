@@ -17,68 +17,42 @@
 
 package com.eltavine.duckdetector.features.settings.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.overscroll
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.components.StatusBarProtection
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
-import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUiState
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.ui.components.AboutSection
 import com.eltavine.duckdetector.features.settings.ui.components.ConsentSettingItem
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorNameWordmark
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorsSection
+import com.eltavine.duckdetector.features.settings.ui.components.SettingsGroup
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsSection
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsSwitchItem
-import com.eltavine.duckdetector.features.settings.ui.licenses.OpenSourceLicensesScreen
-
-private const val SettingsPageKey = "settings"
-
-private val PageSlide = spring(
-    stiffness = Spring.StiffnessMediumLow,
-    visibilityThreshold = IntOffset.VisibilityThreshold,
-)
+import com.eltavine.duckdetector.features.settings.ui.components.UiStyleSettingItem
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
 fun SettingsScreen(
@@ -87,69 +61,71 @@ fun SettingsScreen(
     onUpdateChannelChange: (SettingsUpdateChannel) -> Unit,
     onCheckForUpdates: () -> Unit,
     onGitHubAccelerationChange: (Boolean) -> Unit,
+    onUiModeChange: (UiMode) -> Unit,
+    onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
+    scaffoldPadding: PaddingValues,
+    pageModifier: Modifier = Modifier,
 ) {
-    var showingLicenses by rememberSaveable { mutableStateOf(false) }
-    // The settings page leaves composition while the licenses page shows; this keeps its scroll
-    // position and expanded rows for the way back.
-    val pageStates = rememberSaveableStateHolder()
-
-    AnimatedContent(
-        targetState = showingLicenses,
-        modifier = modifier
-            .fillMaxSize()
-            .background(DuckTheme.palette.groupedBackground),
-        transitionSpec = { pageTransition() },
-        label = "settingsPage",
-    ) { licenses ->
-        if (licenses) {
-            OpenSourceLicensesScreen(
-                onBack = { showingLicenses = false },
-                modifier = Modifier.fillMaxSize(),
+    val uiMode = LocalUiMode.current
+    AdaptiveContent(
+        miuix = {
+            SettingsMiuixPage(
+                uiState = uiState,
+                uiMode = uiMode,
+                consentToggles = consentToggles,
+                onUpdateChannelChange = onUpdateChannelChange,
+                onCheckForUpdates = onCheckForUpdates,
+                onGitHubAccelerationChange = onGitHubAccelerationChange,
+                onUiModeChange = onUiModeChange,
+                onOpenLicenses = onOpenLicenses,
+                scaffoldPadding = scaffoldPadding,
+                pageModifier = pageModifier,
             )
-        } else {
-            pageStates.SaveableStateProvider(SettingsPageKey) {
-                SettingsPage(
-                    uiState = uiState,
-                    consentToggles = consentToggles,
-                    onUpdateChannelChange = onUpdateChannelChange,
-                    onCheckForUpdates = onCheckForUpdates,
-                    onGitHubAccelerationChange = onGitHubAccelerationChange,
-                    onOpenLicenses = { showingLicenses = true },
-                )
-            }
-        }
-    }
-}
-
-/** Opening the licenses page moves both pages towards the start edge; going back reverses it. */
-private fun AnimatedContentTransitionScope<Boolean>.pageTransition(): ContentTransform {
-    val towards = if (targetState) SlideDirection.Start else SlideDirection.End
-    val enter = slideIntoContainer(towards, PageSlide) { it / 5 } + fadeIn(MotionTokens.FadeInOut)
-    val exit = slideOutOfContainer(towards, PageSlide) { it / 5 } + fadeOut(MotionTokens.FadeInOut)
-    return enter togetherWith exit
+        },
+        material = {
+            SettingsPage(
+                uiState = uiState,
+                uiMode = uiMode,
+                consentToggles = consentToggles,
+                onUpdateChannelChange = onUpdateChannelChange,
+                onCheckForUpdates = onCheckForUpdates,
+                onGitHubAccelerationChange = onGitHubAccelerationChange,
+                onUiModeChange = onUiModeChange,
+                onOpenLicenses = onOpenLicenses,
+                modifier = modifier,
+                scaffoldPadding = scaffoldPadding,
+            )
+        },
+    )
 }
 
 @Composable
 private fun SettingsPage(
     uiState: SettingsUiState,
+    uiMode: UiMode,
     consentToggles: List<ConsentToggle>,
     onUpdateChannelChange: (SettingsUpdateChannel) -> Unit,
     onCheckForUpdates: () -> Unit,
     onGitHubAccelerationChange: (Boolean) -> Unit,
+    onUiModeChange: (UiMode) -> Unit,
     onOpenLicenses: () -> Unit,
+    modifier: Modifier = Modifier,
+    scaffoldPadding: PaddingValues,
 ) {
+    val materialOverscrollEffect = rememberOverscrollEffect()
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .background(DuckTheme.palette.groupedBackground),
+            .background(DuckTheme.palette.groupedBackground)
+            .overscroll(materialOverscrollEffect),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 20.dp, vertical = 20.dp),
+                .padding(scaffoldPadding)
+                .verticalScroll(rememberScrollState(), overscrollEffect = materialOverscrollEffect)
+                .padding(horizontal = 16.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(
@@ -158,18 +134,27 @@ private fun SettingsPage(
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
-                WrapSafeText(
-                    text = stringResource(R.string.settings_title),
-                    modifier = Modifier.semantics { heading() },
-                    style = DuckTypography.LargeTitle,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
+                    val styleItems = listOf(
+                        stringResource(R.string.settings_style_miuix),
+                        stringResource(R.string.settings_style_material),
+                    )
+                    SettingsGroup {
+                        UiStyleSettingItem(
+                            title = stringResource(R.string.settings_ui_style_title),
+                            description = stringResource(R.string.settings_ui_style_description),
+                            items = styleItems,
+                            selectedIndex = if (uiMode == UiMode.Miuix) 0 else 1,
+                            onItemSelected = { index ->
+                                onUiModeChange(if (index == 0) UiMode.Miuix else UiMode.Material)
+                            },
+                        )
+                    }
+                }
 
                 if (consentToggles.isNotEmpty()) {
                     SettingsSection(title = stringResource(R.string.settings_section_detection)) {
-                        consentToggles.forEach { toggle ->
-                            ConsentSettingItem(toggle = toggle)
-                        }
+                        consentToggles.forEach { toggle -> ConsentSettingItem(toggle = toggle) }
                     }
                 }
 
@@ -177,7 +162,6 @@ private fun SettingsPage(
                     SettingsSwitchItem(
                         headline = stringResource(R.string.github_acceleration_title),
                         summary = stringResource(R.string.github_acceleration_summary),
-                        footer = stringResource(R.string.github_acceleration_footer),
                         icon = Icons.Rounded.Speed,
                         checked = uiState.gitHubAccelerationEnabled,
                         onCheckedChange = onGitHubAccelerationChange,
@@ -193,10 +177,8 @@ private fun SettingsPage(
 
                 ContributorsSection()
                 ContributorNameWordmark()
-                Spacer(modifier = Modifier.height(96.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
-
-        StatusBarProtection(modifier = Modifier.align(Alignment.TopCenter))
     }
 }

@@ -11,6 +11,7 @@ import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import {{package}}.presentation.model.{{Class}}CardModel
 import {{package}}.presentation.model.{{Class}}DetailRowModel
 
@@ -28,8 +29,13 @@ internal fun {{Class}}DetectorCard(
         leadingIcon = Icons.Rounded.Search,
         modifier = modifier,
     ) {
-        {{Class}}RowSection(title = "Signals", icon = Icons.Rounded.Policy, rows = model.signalRows)
-        {{Class}}RowSection(title = "Scan", icon = Icons.Rounded.Info, rows = model.scanRows)
+        {{Class}}RowSection(
+            title = "Signals",
+            icon = Icons.Rounded.Policy,
+            rows = model.signalRows,
+            showDivider = model.scanRows.isNotEmpty(),
+        )
+        {{Class}}RowSection(title = "Scan", icon = Icons.Rounded.Info, rows = model.scanRows, showDivider = false)
     }
 }
 
@@ -38,11 +44,17 @@ private fun {{Class}}RowSection(
     title: String,
     icon: ImageVector,
     rows: List<{{Class}}DetailRowModel>,
+    showDivider: Boolean,
 ) {
     if (rows.isEmpty()) {
         return
     }
-    DetectorSectionFrame(title = title, icon = icon) {
+    DetectorSectionFrame(
+        title = title,
+        icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
+    ) {
         rows.forEachIndexed { index, row ->
             DetectorDetailRowBlock(
                 label = row.label,

@@ -17,6 +17,7 @@
 
 package com.eltavine.duckdetector.features.dangerousapps.ui.card
 
+import com.eltavine.duckdetector.features.dangerousapps.ui.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,17 +25,20 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
@@ -42,6 +46,7 @@ import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsCardModel
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsPackageItemModel
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 
 @Composable
 internal fun DangerousAppsPackageSection(
@@ -53,12 +58,12 @@ internal fun DangerousAppsPackageSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .background(color = DuckTheme.palette.groupedInset, shape = ShapeTokens.CornerLarge)
+                    .background(color = DuckTheme.palette.groupedInset, shape = AdaptiveShapeTokens.CornerLarge)
                     .padding(horizontal = 14.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 WrapSafeText(
-                    text = "No package hits",
+                    text = stringResource(R.string.dangerousapps_no_package_hits),
                     style = DuckTypography.CalloutEmphasized,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -122,17 +127,32 @@ internal fun DangerousAppsMethodChip(
     warningTone: Boolean = false,
 ) {
     val critical = DuckTheme.palette.critical
-    val containerColor = if (warningTone) critical.copy(alpha = 0.12f) else DuckTheme.palette.groupedInset
-    val iconTint = if (warningTone) critical else MaterialTheme.colorScheme.primary
+    val containerColor = adaptiveValue(
+        material = if (warningTone) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        miuix = if (warningTone) critical.copy(alpha = 0.12f) else DuckTheme.palette.groupedInset,
+    )
+    val contentColor = adaptiveValue(
+        material = if (warningTone) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface,
+        miuix = MaterialTheme.colorScheme.onSurface,
+    )
+    val iconTint = adaptiveValue(
+        material = if (warningTone) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.primary,
+        miuix = if (warningTone) critical else MaterialTheme.colorScheme.primary,
+    )
 
     Row(
         modifier = Modifier
-            .background(color = containerColor, shape = ShapeTokens.CornerFull)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .fillMaxWidth()
+            .heightIn(min = 44.dp)
+            .background(
+                color = containerColor,
+                shape = AdaptiveShapeTokens.CornerMedium,
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = Icons.Rounded.Search,
             contentDescription = null,
             tint = iconTint,
@@ -141,7 +161,7 @@ internal fun DangerousAppsMethodChip(
         WrapSafeText(
             text = label,
             style = DuckTypography.Caption.copy(fontFamily = FontFamily.Monospace),
-            color = MaterialTheme.colorScheme.onSurface,
+            color = contentColor,
         )
     }
 }

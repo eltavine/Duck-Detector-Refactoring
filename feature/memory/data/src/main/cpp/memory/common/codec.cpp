@@ -28,6 +28,7 @@ namespace duckdetector::memory {
         findings.reserve(
                 snapshot.hooks.findings.size() +
                 snapshot.maps.findings.size() +
+                snapshot.copies.findings.size() +
                 snapshot.fd.findings.size() +
                 snapshot.signal.findings.size() +
                 snapshot.vdso.findings.size() +
@@ -37,6 +38,8 @@ namespace duckdetector::memory {
                         snapshot.hooks.findings.end());
         findings.insert(findings.end(), snapshot.maps.findings.begin(),
                         snapshot.maps.findings.end());
+        findings.insert(findings.end(), snapshot.copies.findings.begin(),
+                        snapshot.copies.findings.end());
         findings.insert(findings.end(), snapshot.fd.findings.begin(), snapshot.fd.findings.end());
         findings.insert(findings.end(), snapshot.signal.findings.begin(),
                         snapshot.signal.findings.end());
@@ -91,6 +94,10 @@ namespace duckdetector::memory {
         output << "ANONYMOUS_EXEC=" << (snapshot.maps.anonymous_exec ? '1' : '0') << '\n';
         output << "SWAPPED_EXEC=" << (snapshot.maps.swapped_exec ? '1' : '0') << '\n';
         output << "SHARED_DIRTY_EXEC=" << (snapshot.maps.shared_dirty_exec ? '1' : '0') << '\n';
+
+        output << "SYSTEM_ANONYMOUS_EXEC=" << (snapshot.copies.copies_present ? '1' : '0') << '\n';
+        output << "SYSTEM_COPY_MODIFIED=" << (snapshot.copies.modified ? '1' : '0') << '\n';
+        output << "SYSTEM_COPY_UNVERIFIED=" << (snapshot.copies.unverified ? '1' : '0') << '\n';
 
         output << "DELETED_SO=" << (snapshot.fd.deleted_so ? '1' : '0') << '\n';
         output << "SUSPICIOUS_MEMFD=" << (snapshot.fd.suspicious_memfd ? '1' : '0') << '\n';

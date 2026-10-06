@@ -90,4 +90,6 @@ limitations under the License.
     <string name="startup_package_low_inventory_detail">จำนวนแพ็กเกจที่มองเห็นได้ในขณะนี้: %1$d รายการ การเริ่มต้นจะดำเนินต่อไป แต่ Dangerous Apps จะตรวจทบทวนสภาวะรายการต่ำนี้เป็นหลักฐานของการกรองที่อาจเกิดขึ้น</string>
     <string name="startup_package_ready_headline">รายการ PackageManager ดูครบถ้วน</string>
     <string name="startup_package_ready_detail">จำนวนแพ็กเกจที่มองเห็นได้ในขณะนี้: %1$d รายการ Dangerous Apps สามารถใช้เส้นทางรายการแพ็กเกจมาตรฐานได้</string>
+    <string name="navigation_home">หน้าหลัก</string>
+    <string name="navigation_settings">การตั้งค่า</string>
 </resources>

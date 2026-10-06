@@ -86,6 +86,13 @@ class SourceFileLengthCheckerTest(unittest.TestCase):
         result = self.run_checker()
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_ignores_checked_out_submodule_sources(self) -> None:
+        self.write_lines("uihelper/src/main/kotlin/Huge.kt", LIMIT * 2)
+        with open(os.path.join(self.root, "uihelper", ".git"), "w", encoding="utf-8") as handle:
+            handle.write("gitdir: ../.git/modules/uihelper\n")
+        result = self.run_checker()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_reports_every_violation(self) -> None:
         self.write_lines("feature/a/src/main/kotlin/A.kt", LIMIT)
         self.write_lines("feature/b/src/main/kotlin/B.kt", LIMIT + 50)

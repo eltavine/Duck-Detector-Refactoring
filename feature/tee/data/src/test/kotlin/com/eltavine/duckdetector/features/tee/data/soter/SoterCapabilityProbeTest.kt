@@ -17,9 +17,12 @@
 
 package com.eltavine.duckdetector.features.tee.data.soter
 
+import com.eltavine.duckdetector.features.tee.domain.TeeSoterAnomalyKind
 import com.tencent.soter.core.SoterCore
 import com.tencent.soter.core.model.SoterCoreResult
+import com.tencent.soter.core.model.SoterPubKeyModel
 import com.tencent.soter.soterserver.SoterSessionResult
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,7 +37,7 @@ class SoterCapabilityProbeTest {
             trebleConnected = false,
         )
 
-        val state = SoterCapabilityProbe(client).inspect()
+        val state = probe(client).inspect()
 
         assertFalse(state.serviceReachable)
         assertFalse(state.damaged)
@@ -53,16 +56,14 @@ class SoterCapabilityProbeTest {
             trebleConnected = false,
         )
 
-        val state = SoterCapabilityProbe(
-            client = client,
-            environmentInspector = SoterEnvironmentInspector {
-                SoterEnvironmentSnapshot(
-                    supportExpected = true,
-                    simplifiedChineseLocale = true,
-                    servicePackageVisible = false,
-                    biometricAuthenticationAvailable = false,
-                )
-            },
+        val state = probe(
+            client,
+            environment = SoterEnvironmentSnapshot(
+                supportExpected = true,
+                simplifiedChineseLocale = true,
+                servicePackageVisible = false,
+                biometricAuthenticationAvailable = false,
+            ),
         ).inspect()
 
         assertFalse(state.serviceReachable)
@@ -79,16 +80,14 @@ class SoterCapabilityProbeTest {
             trebleConnected = false,
         )
 
-        val state = SoterCapabilityProbe(
-            client = client,
-            environmentInspector = SoterEnvironmentInspector {
-                SoterEnvironmentSnapshot(
-                    supportExpected = true,
-                    simplifiedChineseLocale = true,
-                    servicePackageVisible = false,
-                    biometricAuthenticationAvailable = true,
-                )
-            },
+        val state = probe(
+            client,
+            environment = SoterEnvironmentSnapshot(
+                supportExpected = true,
+                simplifiedChineseLocale = true,
+                servicePackageVisible = false,
+                biometricAuthenticationAvailable = true,
+            ),
         ).inspect()
 
         assertFalse(state.abnormalEnvironment)
@@ -97,27 +96,78 @@ class SoterCapabilityProbeTest {
 
     @Test
     fun `pre existing ask is not removed during cleanup`() {
-        val client = FakeSoterClient(
-            nativeSupport = true,
-            coreType = SoterCore.IS_TREBLE,
-            trebleConnected = true,
-            hasAsk = true,
-            askModelPresent = true,
-            authGenerateSuccess = true,
-            hasAuth = true,
-            authModelPresent = true,
-            sessionResult = SoterSessionResult().apply {
-                resultCode = 0
-                session = 42L
-            },
-        )
+        val client = workingClient()
 
-        val state = SoterCapabilityProbe(client).inspect()
+        val state = probe(client).inspect()
 
         assertTrue(state.available)
         assertFalse(state.damaged)
+        assertTrue(state.anomalies.isEmpty())
         assertTrue(client.removeAuthCalled)
         assertFalse(client.removeAskCalled)
+    }
+
+    @Test
+    fun `treble uid is set to the app uid before initialization`() {
+        val client = FakeSoterClient(
+            nativeSupport = true,
+            coreType = SoterCore.IS_TREBLE,
+            trebleConnected = false,
+        )
+
+        probe(client).inspect()
+
+        assertEquals(TEST_UID, client.trebleUid)
+        assertTrue(client.trebleUidSetBeforeInit)
+    }
+
+    @Test
+    fun `soter models captured during preparation feed reply review`() {
+        val relayJson = """{"pub_key":"","cpu_id":"090000005171734c42866bea148b21f5","counter":1,"uid":"$TEST_UID"}"""
+        val client = workingClient(modelJson = relayJson)
+
+        val state = probe(client).inspect()
+
+        assertTrue(state.available)
+        assertEquals(listOf(TeeSoterAnomalyKind.KNOWN_RELAY_CPU_ID), state.anomalies.map { it.kind })
+    }
+
+    @Test
+    fun `stock hal stopped before and after a signing session is reported`() {
+        val state = probe(workingClient(), halStates = listOf("stopped", "stopped")).inspect()
+
+        assertEquals(listOf(TeeSoterAnomalyKind.SOFTWARE_HAL_TAKEOVER), state.anomalies.map { it.kind })
+    }
+
+    @Test
+    fun `on demand hal started by the probe is not reported`() {
+        val state = probe(workingClient(), halStates = listOf("stopped", "running")).inspect()
+
+        assertTrue(state.anomalies.isEmpty())
+    }
+
+    @Test
+    fun `alternate soter init service property names are reported`() {
+        val properties = mapOf(
+            "init.svc.vendor.qcom-soter" to "stopped",
+            "init.svc.qti_soter_hal" to "stopped",
+        )
+
+        val state = probe(workingClient(), halStates = listOf("stopped", "stopped"), halProperties = properties).inspect()
+
+        assertEquals(listOf(TeeSoterAnomalyKind.SOFTWARE_HAL_TAKEOVER), state.anomalies.map { it.kind })
+    }
+
+    @Test
+    fun `running alternate soter service suppresses stopped unrelated service`() {
+        val properties = mapOf(
+            "init.svc.vendor.qcom-soter" to "running",
+            "init.svc.unrelated-soter-helper" to "stopped",
+        )
+
+        val state = probe(workingClient(), halProperties = properties).inspect()
+
+        assertTrue(state.anomalies.isEmpty())
     }
 
     @Test
@@ -128,23 +178,24 @@ class SoterCapabilityProbeTest {
             trebleConnected = true,
             hasAsk = false,
             askGenerateSuccess = true,
-            askModelPresent = true,
+            askModelJson = CLEAN_MODEL_JSON,
             authGenerateSuccess = true,
             hasAuth = true,
-            authModelPresent = true,
+            authModelJson = CLEAN_MODEL_JSON,
             sessionResult = SoterSessionResult().apply {
                 resultCode = 7
                 session = 0L
             },
         )
 
-        val state = SoterCapabilityProbe(client).inspect()
+        val state = probe(client, halStates = listOf("stopped", "stopped")).inspect()
 
         assertTrue(state.serviceReachable)
         assertTrue(state.keyPrepared)
         assertFalse(state.signSessionAvailable)
         assertFalse(state.available)
         assertTrue(state.damaged)
+        assertTrue(state.anomalies.isEmpty())
         assertTrue(client.initSighCalled)
     }
 
@@ -156,13 +207,11 @@ class SoterCapabilityProbeTest {
             trebleConnected = true,
             hasAsk = false,
             askGenerateSuccess = false,
-            askModelPresent = false,
             authGenerateSuccess = false,
             hasAuth = false,
-            authModelPresent = false,
         )
 
-        val state = SoterCapabilityProbe(client).inspect()
+        val state = probe(client).inspect()
 
         assertTrue(state.serviceReachable)
         assertFalse(state.keyPrepared)
@@ -172,6 +221,40 @@ class SoterCapabilityProbeTest {
         assertTrue(client.generateAskCalled)
         assertFalse(client.initSighCalled)
     }
+
+    private fun probe(
+        client: FakeSoterClient,
+        environment: SoterEnvironmentSnapshot = SoterEnvironmentSnapshot(),
+        halStates: List<String> = emptyList(),
+        halProperties: Map<String, String> = emptyMap(),
+    ): SoterCapabilityProbe {
+        val remainingHalStates = ArrayDeque(halStates.ifEmpty { List(2) { null } })
+        return SoterCapabilityProbe(
+            client = client,
+            environmentInspector = SoterEnvironmentInspector { environment },
+            currentUid = { TEST_UID },
+            soterHalStates = {
+                remainingHalStates.removeFirstOrNull()
+                    ?.let { state -> mapOf("init.svc.vendor.soter" to state) }
+                    ?: halProperties
+            },
+        )
+    }
+
+    private fun workingClient(modelJson: String = CLEAN_MODEL_JSON) = FakeSoterClient(
+        nativeSupport = true,
+        coreType = SoterCore.IS_TREBLE,
+        trebleConnected = true,
+        hasAsk = true,
+        askModelJson = modelJson,
+        authGenerateSuccess = true,
+        hasAuth = true,
+        authModelJson = modelJson,
+        sessionResult = SoterSessionResult().apply {
+            resultCode = 0
+            session = 42L
+        },
+    )
 }
 
 private class FakeSoterClient(
@@ -180,10 +263,10 @@ private class FakeSoterClient(
     private val trebleConnected: Boolean,
     private var hasAsk: Boolean = false,
     private val askGenerateSuccess: Boolean = false,
-    private val askModelPresent: Boolean = false,
+    private val askModelJson: String? = null,
     private val authGenerateSuccess: Boolean = false,
     private val hasAuth: Boolean = false,
-    private val authModelPresent: Boolean = false,
+    private val authModelJson: String? = null,
     private val sessionResult: SoterSessionResult? = null,
 ) : SoterClient {
 
@@ -192,6 +275,13 @@ private class FakeSoterClient(
     var initSighCalled = false
     var removeAuthCalled = false
     var removeAskCalled = false
+    var trebleUid: Int? = null
+    var trebleUidSetBeforeInit = false
+
+    override fun setTrebleUid(uid: Int) {
+        trebleUid = uid
+        trebleUidSetBeforeInit = !initTrebleCalled
+    }
 
     override fun tryToInitSoterBeforeTreble() = Unit
 
@@ -223,14 +313,16 @@ private class FakeSoterClient(
         return if (askGenerateSuccess) SoterCoreResult(0) else SoterCoreResult(6, "ask failed")
     }
 
-    override fun getAppGlobalSecureKeyModel(): Any? = if (askModelPresent) Any() else null
+    override fun getAppGlobalSecureKeyModel(): SoterPubKeyModel? =
+        askModelJson?.let { SoterPubKeyModel(it, "") }
 
     override fun generateAuthKey(alias: String): SoterCoreResult? =
         if (authGenerateSuccess) SoterCoreResult(0) else SoterCoreResult(6, "auth failed")
 
     override fun hasAuthKey(alias: String): Boolean = hasAuth
 
-    override fun getAuthKeyModel(alias: String): Any? = if (authModelPresent) Any() else null
+    override fun getAuthKeyModel(alias: String): SoterPubKeyModel? =
+        authModelJson?.let { SoterPubKeyModel(it, "") }
 
     override fun initSigh(alias: String, challenge: String): SoterSessionResult? {
         initSighCalled = true
@@ -248,3 +340,8 @@ private class FakeSoterClient(
         return SoterCoreResult(0)
     }
 }
+
+private const val TEST_UID = 10234
+
+private const val CLEAN_MODEL_JSON =
+    """{"pub_key":"","cpu_id":"00000000201ca0e1874c2b3eac6b67c2","counter":1,"uid":"$TEST_UID"}"""

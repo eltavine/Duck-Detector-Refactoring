@@ -17,117 +17,137 @@
 
 package com.eltavine.duckdetector.features.dashboard.ui
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
+import com.eltavine.duckdetector.core.designsystem.components.DuckPanel
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.ui.components.AdaptiveSeverityTag
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
-import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardFindingModel
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
 
-private val FindingInset = 18.dp
+private val FindingInset = 16.dp
 private const val FINDING_DETAIL_MAX_LINES = 3
 
 @Composable
 internal fun DashboardFindingsCard(
     findings: List<DashboardFindingModel>,
+    onFindingClick: (DashboardFindingModel) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        DashboardFindingsHeader(findings = findings)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = DuckTheme.palette.groupedSurface,
-                    shape = ShapeTokens.CornerExtraLargeIncreased,
-                ),
-        ) {
-            findings.forEachIndexed { index, finding ->
-                DashboardFindingRow(finding = finding)
-                if (index < findings.lastIndex) {
-                    DetectorHairline(startInset = FindingInset)
+    AdaptiveContent(
+        material = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
+                findings.forEachIndexed { index, finding ->
+                    val baseShapes = ListItemDefaults.segmentedShapes(index, findings.size)
+                    val shapes = if (findings.size == 1) {
+                        baseShapes.copy(shape = MaterialTheme.shapes.large)
+                    } else {
+                        baseShapes
+                    }
+                    val colors = ListItemDefaults.segmentedColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceBright,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceBright,
+                        supportingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    val contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 16.dp,
+                        vertical = 16.dp,
+                    )
+                    if (finding.detectorId != null) {
+                        SegmentedListItem(
+                            onClick = { onFindingClick(finding) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shapes = shapes,
+                            colors = colors,
+                            contentPadding = contentPadding,
+                            content = {
+                                DashboardFindingContent(finding = finding)
+                            },
+                        )
+                    } else {
+                        SegmentedListItem(
+                            modifier = Modifier.fillMaxWidth(),
+                            shapes = shapes,
+                            colors = colors,
+                            contentPadding = contentPadding,
+                            content = {
+                                DashboardFindingContent(finding = finding)
+                            },
+                        )
+                    }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun DashboardFindingsHeader(
-    findings: List<DashboardFindingModel>,
-) {
-    val headerStatus = findings.firstOrNull()?.status ?: DetectorStatus.allClear()
-    val appearance = rememberStatusAppearance(headerStatus)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Icon(
-            imageVector = appearance.icon,
-            contentDescription = null,
-            tint = appearance.iconTint,
-            modifier = Modifier.size(22.dp),
-        )
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .semantics(mergeDescendants = true) { heading() },
-        ) {
-            WrapSafeText(
-                text = "Top findings",
-                style = DuckTypography.Title3,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            WrapSafeText(
-                text = "Priority review queue",
-                style = DuckTypography.Footnote,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        WrapSafeText(
-            text = findings.size.toString(),
-            modifier = Modifier
-                .background(color = DuckTheme.palette.groupedSurface, shape = ShapeTokens.CornerFull)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            style = DuckTypography.CalloutEmphasized.copy(fontFeatureSettings = "tnum"),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+        },
+        miuix = {
+            DuckPanel {
+                findings.forEachIndexed { index, finding ->
+                    DashboardFindingRow(
+                        finding = finding,
+                        onClick = if (finding.detectorId != null) {
+                            { onFindingClick(finding) }
+                        } else {
+                            null
+                        },
+                    )
+                    if (index < findings.lastIndex) {
+                        DetectorHairline(
+                            modifier = Modifier.padding(end = FindingInset),
+                            startInset = FindingInset,
+                        )
+                    }
+                }
+            }
+        },
+    )
 }
 
 @Composable
 private fun DashboardFindingRow(
     finding: DashboardFindingModel,
+    onClick: (() -> Unit)?,
 ) {
-    val appearance = rememberStatusAppearance(finding.status)
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = FindingInset, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        DashboardFindingContent(finding = finding)
+    }
+}
+
+@Composable
+private fun DashboardFindingContent(
+    finding: DashboardFindingModel,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(
@@ -135,38 +155,28 @@ private fun DashboardFindingRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(
-                imageVector = appearance.icon,
-                contentDescription = null,
-                tint = appearance.iconTint,
-                modifier = Modifier.size(16.dp),
-            )
             WrapSafeText(
-                text = finding.detectorTitle,
+                text = dashboardFindingTitle(finding),
                 modifier = Modifier.weight(1f),
-                style = DuckTypography.FootnoteEmphasized,
+                style = DuckTypography.FindingEyebrow,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            WrapSafeText(
-                text = findingSeverityLabel(finding),
-                modifier = Modifier
-                    .background(color = appearance.tintWash, shape = ShapeTokens.CornerFull)
-                    .padding(horizontal = 10.dp, vertical = 3.dp),
-                style = DuckTypography.Caption,
-                color = MaterialTheme.colorScheme.onSurface,
+            AdaptiveSeverityTag(
+                status = finding.status,
+                label = findingSeverityLabel(finding),
             )
         }
         WrapSafeText(
-            text = finding.headline,
+            text = dashboardFindingHeadline(finding),
             modifier = Modifier.fillMaxWidth(),
-            style = DuckTypography.Headline,
+            style = DuckTypography.PanelTitle,
             color = MaterialTheme.colorScheme.onSurface,
         )
         // The full evidence stays in the detector's card; a finding only points to it.
         WrapSafeText(
-            text = finding.detail,
+            text = dashboardFindingDetail(finding),
             modifier = Modifier.fillMaxWidth(),
-            style = DuckTypography.Footnote,
+            style = DuckTypography.PanelSupporting,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = FINDING_DETAIL_MAX_LINES,
             overflow = TextOverflow.Ellipsis,
@@ -174,13 +184,14 @@ private fun DashboardFindingRow(
     }
 }
 
+@Composable
 private fun findingSeverityLabel(
     finding: DashboardFindingModel,
 ): String {
     return when (finding.status.severity) {
-        DetectionSeverity.DANGER -> "High"
-        DetectionSeverity.WARNING -> "Warn"
-        DetectionSeverity.INFO -> "Check"
-        DetectionSeverity.ALL_CLEAR -> "Clear"
+        DetectionSeverity.DANGER -> stringResource(R.string.dashboard_severity_high)
+        DetectionSeverity.WARNING -> stringResource(R.string.dashboard_severity_medium)
+        DetectionSeverity.INFO -> stringResource(R.string.dashboard_severity_check)
+        DetectionSeverity.ALL_CLEAR -> stringResource(R.string.dashboard_severity_clear)
     }
 }

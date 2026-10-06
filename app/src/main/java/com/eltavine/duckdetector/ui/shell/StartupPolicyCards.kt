@@ -31,7 +31,6 @@ import com.eltavine.duckdetector.core.ui.detector.ConsentPrompt
 import com.eltavine.duckdetector.notifications.ScanNotificationPermissionState
 import com.eltavine.duckdetector.notifications.preferences.ScanNotificationPrefs
 import com.eltavine.duckdetector.sdk.PackageVisibility
-
 @Composable
 internal fun notificationPolicyCard(
     notificationPrefs: ScanNotificationPrefs,

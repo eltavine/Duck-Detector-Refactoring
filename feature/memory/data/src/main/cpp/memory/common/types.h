@@ -46,7 +46,11 @@ namespace duckdetector::memory {
         bool writable = false;
         bool executable = false;
         bool private_mapping = false;
-        unsigned long inode = 0;
+        // The file offset of start and the device and inode of the mapped file, as maps prints them.
+        std::uint64_t offset = 0;
+        unsigned int dev_major = 0;
+        unsigned int dev_minor = 0;
+        std::uint64_t inode = 0;
         std::string path;
     };
 
@@ -77,6 +81,19 @@ namespace duckdetector::memory {
         bool anonymous_exec = false;
         bool swapped_exec = false;
         bool shared_dirty_exec = false;
+        std::vector<Finding> findings;
+    };
+
+    // Pages of executable system file mappings that became private copies, which smaps counts as
+    // Anonymous. A write makes one, but on kernels whose get_user_pages forces a COW break so does
+    // any read that pins the page, such as printing an anonymous VMA name in /proc/self/maps on
+    // ACK 4.19, so only the copy's bytes tell whether the code was changed.
+    struct SystemCopySignals {
+        bool copies_present = false;
+        // A copy holds bytes the file does not have at the same offset.
+        bool modified = false;
+        // A copy could not be compared with the file, so whether it was changed is unknown.
+        bool unverified = false;
         std::vector<Finding> findings;
     };
 
@@ -114,6 +131,7 @@ namespace duckdetector::memory {
         bool available = false;
         HookSignals hooks;
         MapsSignals maps;
+        SystemCopySignals copies;
         FdSignals fd;
         SignalSignals signal;
         VdsoSignals vdso;

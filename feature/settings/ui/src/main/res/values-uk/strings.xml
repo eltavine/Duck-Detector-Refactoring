@@ -78,4 +78,5 @@ limitations under the License.
     <string name="update_status_current">У вас найновіша збірка %1$s</string>
     <string name="update_status_failed">Не вдалося перевірити GitHub; торкніться, щоб повторити</string>
     <string name="update_status_idle">%1$s на GitHub перевіряється після холодного запуску; торкніться, щоб перевірити зараз</string>
+    <string name="settings_section_appearance">Вигляд</string>
 </resources>

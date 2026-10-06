@@ -102,6 +102,7 @@ class DashboardUiStateTest {
             "Grant self-domain certificate chain diverged; open TEE details for stage diagnostics.",
             findings.single().detail,
         )
+        assertEquals(DetectorId("tee"), findings.single().detectorId)
     }
     @Test
     fun `cards order by severity then title`() {

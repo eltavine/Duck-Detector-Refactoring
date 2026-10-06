@@ -17,11 +17,8 @@
 
 package com.eltavine.duckdetector.features.settings.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,17 +30,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
+import com.eltavine.duckdetector.core.designsystem.components.DuckPanel
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.settings.ui.R
+import io.github.xiaotong6666.uihelper.dialog.rememberRetainedDialogPayload
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
 internal fun ContributorsSection(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val miuix = LocalUiMode.current == UiMode.Miuix
     val contributorSnapshots = remember(context) { loadContributorSnapshots(context) }
     val authors = contributorSnapshots.map { snapshot ->
         AuthorProfile(
@@ -58,20 +58,19 @@ internal fun ContributorsSection(
     if (authors.isEmpty()) return
 
     var selectedLogin by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedProfile = authors.firstOrNull { it.login == selectedLogin }
+    val retainedProfile = rememberRetainedDialogPayload(
+        value = selectedProfile,
+        retainDuringExit = miuix,
+    )
 
     SettingsSection(
         title = stringResource(R.string.author_wall_title),
         badge = authors.size.toString(),
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = DuckTheme.palette.groupedSurface,
-                    shape = ShapeTokens.CornerExtraLargeIncreased,
-                )
-                .padding(18.dp),
+        DuckPanel(
+            contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             ContributorWallCanvas(
@@ -86,7 +85,12 @@ internal fun ContributorsSection(
         }
     }
 
-    authors.firstOrNull { it.login == selectedLogin }?.let { profile ->
-        AuthorDetailsDialog(profile = profile, onDismiss = { selectedLogin = null })
+    retainedProfile.value?.let { profile ->
+        AuthorDetailsDialog(
+            show = selectedLogin != null,
+            profile = profile,
+            onDismiss = { selectedLogin = null },
+            onDismissFinished = retainedProfile.onDismissFinished,
+        )
     }
 }

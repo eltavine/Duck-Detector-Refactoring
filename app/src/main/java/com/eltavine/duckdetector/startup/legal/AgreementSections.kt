@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +42,11 @@ import com.eltavine.duckdetector.core.designsystem.theme.ContinuousCornerShape
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val SectionIconShape = ContinuousCornerShape(10.dp)
 
@@ -52,59 +57,87 @@ internal fun AgreementSection(
     content: String,
     tone: AgreementSectionTone = AgreementSectionTone.Standard,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = DuckTheme.palette.groupedSurface,
-                shape = ShapeTokens.CornerExtraLargeIncreased,
-            )
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(color = DuckTheme.palette.groupedInset, shape = SectionIconShape),
-                contentAlignment = Alignment.Center,
+    AdaptiveContent(
+        miuix = {
+            MiuixCard(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = androidx.compose.foundation.layout.PaddingValues(0.dp),
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
+                BasicComponent(
+                    title = title,
+                    startAction = {
+                        DuckIcon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 12.dp).size(20.dp),
+                            tint = MiuixTheme.colorScheme.onSurface,
+                        )
+                    },
+                    modifier = Modifier.semantics { heading() },
+                )
+                AgreementSectionContent(
+                    content = content,
+                    tone = tone,
+                    miuix = true,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 )
             }
-            Text(
-                text = title,
+        },
+        material = {
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .semantics { heading() },
-                style = DuckTypography.Title3,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        AgreementSectionContent(
-            content = content,
-            tone = tone,
-        )
-    }
+                    .fillMaxWidth()
+                    .background(
+                        color = DuckTheme.palette.groupedSurface,
+                        shape = MaterialTheme.shapes.large,
+                    )
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(color = DuckTheme.palette.groupedInset, shape = MaterialTheme.shapes.medium),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DuckIcon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Text(
+                        text = title,
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { heading() },
+                        style = DuckTypography.Title3,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                AgreementSectionContent(content = content, tone = tone)
+            }
+        },
+    )
 }
 
 @Composable
 private fun AgreementSectionContent(
     content: String,
     tone: AgreementSectionTone,
+    modifier: Modifier = Modifier,
+    miuix: Boolean = false,
 ) {
     val lines = remember(content) { content.lines() }
     val firstContentIndex = remember(lines) { lines.indexOfFirst { it.isNotBlank() } }
 
     Column(
+        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         lines.forEachIndexed { index, rawLine ->
@@ -121,14 +154,45 @@ private fun AgreementSectionContent(
 
                     else -> AgreementLineStyle.Body
                 }
-                AgreementStyledLine(
-                    text = line,
-                    lineStyle = lineStyle,
-                    tone = tone,
-                )
+                if (miuix) {
+                    AgreementStyledLineMiuix(
+                        text = line,
+                        lineStyle = lineStyle,
+                        tone = tone,
+                    )
+                } else {
+                    AgreementStyledLine(
+                        text = line,
+                        lineStyle = lineStyle,
+                        tone = tone,
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun AgreementStyledLineMiuix(
+    text: String,
+    lineStyle: AgreementLineStyle,
+    tone: AgreementSectionTone,
+) {
+    val color = when (lineStyle) {
+        AgreementLineStyle.Callout,
+        AgreementLineStyle.SectionHeading -> MiuixTheme.colorScheme.onSurface
+        AgreementLineStyle.Body -> when (tone) {
+            AgreementSectionTone.Warning -> MiuixTheme.colorScheme.onSurface
+            AgreementSectionTone.Notice,
+            AgreementSectionTone.Standard -> MiuixTheme.colorScheme.onSurfaceVariantSummary
+        }
+    }
+    val style = when (lineStyle) {
+        AgreementLineStyle.Callout,
+        AgreementLineStyle.SectionHeading -> MiuixTheme.textStyles.headline1
+        AgreementLineStyle.Body -> MiuixTheme.textStyles.paragraph
+    }
+    MiuixText(text = text, style = style, color = color)
 }
 
 @Composable

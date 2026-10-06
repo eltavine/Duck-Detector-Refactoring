@@ -55,6 +55,10 @@ limitations under the License.
     <string name="startup_status_optional">可选</string>
     <string name="startup_status_acknowledged">已确认</string>
     <string name="startup_status_review_later">稍后检查</string>
+    <string name="startup_ui_style_title">UI 风格</string>
+    <string name="startup_ui_style_detail">选择 Duck Detector 使用的界面引擎。之后仍可在设置中随时切换。</string>
+    <string name="startup_ui_style_material">Material 3</string>
+    <string name="startup_ui_style_miuix">MIUIX</string>
     <string name="startup_notifications_title">通知</string>
     <string name="startup_notifications_ready_headline">扫描通知已启用。</string>
     <string name="startup_notifications_ready_detail">Duck Detector 可以在检测卡片收集证据时发布扫描进度通知。</string>
@@ -90,4 +94,6 @@ limitations under the License.
     <string name="startup_package_low_inventory_detail">当前可见软件包数量：%1$d。启动将继续，但 Dangerous Apps 会将这种低清单状态作为潜在过滤证据进行审查。</string>
     <string name="startup_package_ready_headline">PackageManager 清单看起来完整。</string>
     <string name="startup_package_ready_detail">当前可见软件包数量：%1$d。Dangerous Apps 可以使用标准的软件包清单路径。</string>
+    <string name="navigation_home">主页</string>
+    <string name="navigation_settings">设置</string>
 </resources>

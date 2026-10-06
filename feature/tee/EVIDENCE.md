@@ -94,6 +94,17 @@ The TEE detector asks whether this device's hardware-backed keystore behaves lik
 - Result states: available, damaged, abnormal environment, skipped.
 - Interpretation: WARN or FAIL as a supplementary indicator, never a policy verdict.
 
+### SOTER reply integrity
+
+- Observable signal: the ASK and AuthKey blobs the SOTER service exports to this app (their public key, signature, cpu_id and uid), and whether init reports the stock vendor.soter service as stopped while SOTER answers (the Soter and Soter reply integrity rows).
+- Producing subsystem: Tencent's SOTER service, which forwards ISoterService calls to the vendor SOTER HAL and its TA, and any module that answers in their place.
+- Mechanism: a TA exports a length-prefixed JSON followed by an RSA-PSS signature, and the JSON carries the TA's cpu_id, an anti-replay counter and the uid the caller passed; the probe sets SoterCoreTreble.uid, which defaults to 0, to this app's uid. OhMyKeymint's D-Soter mode answers inside the SOTER service process with D-Soter's fixed placeholder key, a 256-byte all-zero signature, cpu_id 0000000000000000, counter 0 and uid 0; its relay mode returns blobs made by the relay's own device, whose cpu_id and uid 0 ASK key were sampled; its software TA takes the HAL's service name after stopping vendor.soter. D-Soter's exact zero signature and zero cpu_id are reported as D-Soter markers, and the same all-zero values in other lengths separately; the signature is checked even when the JSON cannot be read. The cpu_id, uid and counter rules apply only to a blob that carries all three.
+- References: system/sepolicy private/property_contexts and private/domain.te (init.svc.vendor.* is vendor_default_prop, which appdomain can read only where compatible properties are not enforced). Tencent soter 2.0.7 soter-core SoterCoreTreble, SoterCoreBase and SoterPubKeyModel, and its server-sample RSAUtil and example AuthKey. OhMyKeymint pif-spoof/src/soter/wire.rs, soter-ta/src/remote.rs, soter-ta/src/state.rs and template/soterta.sh.
+- Applicability: devices whose SOTER service answers the probe; the vendor.soter check only where init.svc.vendor.soter is readable and the stock HAL runs under that service name.
+- Visibility limits: only what the SOTER service returns is visible, so a module that signs with real keys and a plausible cpu_id, as OhMyKeymint's local software TA does, leaves no blob marker; the relay checks know only the relay OhMyKeymint fills in by default, and its uid 0 ASK key appears only when uid 0 is queried, while this probe queries its own uid; where compatible properties are enforced the vendor.soter state reads empty and that check stays silent.
+- Result states: no marker, placeholder key, D-Soter zero signature, zero signature of another length, D-Soter zero cpu_id, zero cpu_id of another length, known relay cpu_id, known relay key, uid mismatch, cpu_id mismatch, non-positive counter, stock HAL stopped.
+- Interpretation: the placeholder key and an all-zero signature of any length, which no RSA signing operation produces, are a supplementary FAIL; the other markers are a supplementary WARN; none of them changes the attestation verdict. No specification fixes a TA's first counter value, so a non-positive counter is a heuristic that has been checked against Tencent's sample and OhMyKeymint's TA but not against every vendor TA.
+
 ## Known gaps
 
 - The oversized challenge probe treats any exception as a rejection; distinguishing a length rejection needs the KeyStoreException error code (API 33 and later).

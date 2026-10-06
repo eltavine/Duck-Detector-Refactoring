@@ -63,6 +63,29 @@ class MemoryNativeBridgeTest {
     }
 
     @Test
+    fun `parse keeps anonymous mappings apart from anonymous pages on system mappings`() {
+        val snapshot = bridge.parse("AVAILABLE=1\nANONYMOUS_EXEC=0\nSYSTEM_ANONYMOUS_EXEC=1\n")
+
+        assertFalse(snapshot.anonymousExec)
+        assertTrue(snapshot.systemAnonymousExec)
+    }
+
+    @Test
+    fun `parse reads whether copied system pages differ from their file or went unverified`() {
+        val modified = bridge.parse(
+            "AVAILABLE=1\nSYSTEM_ANONYMOUS_EXEC=1\nSYSTEM_COPY_MODIFIED=1\nSYSTEM_COPY_UNVERIFIED=0\n",
+        )
+        val unverified = bridge.parse(
+            "AVAILABLE=1\nSYSTEM_ANONYMOUS_EXEC=1\nSYSTEM_COPY_MODIFIED=0\nSYSTEM_COPY_UNVERIFIED=1\n",
+        )
+
+        assertTrue(modified.systemCopyModified)
+        assertFalse(modified.systemCopyUnverified)
+        assertFalse(unverified.systemCopyModified)
+        assertTrue(unverified.systemCopyUnverified)
+    }
+
+    @Test
     fun `parse falls back safely on blank raw data`() {
         val snapshot = bridge.parse("")
 

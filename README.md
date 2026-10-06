@@ -97,6 +97,7 @@ Duck-Detector-Refactoring/
 ├─ feature/               # One detector or supporting feature per directory, split into layers
 ├─ samples/sdk-consumer/  # A separate application built from the published AAR alone
 ├─ build-logic/           # Convention plugins, module boundary and dependency validation, generated assets
+├─ uihelper/              # Pinned Git submodule: MIUIX / Material UI, included as a separate Gradle build
 ├─ docs/                  # Architecture overview, guides, and follow-ups
 ├─ .github/policies/      # Module, native, detector touch point, reflection, and text protocol policies
 ├─ .github/scripts/       # Repository guards and their self-tests
@@ -136,6 +137,13 @@ Native sources are organized into units. Each unit lives in `src/main/cpp/<unit>
 - CMake 4.1.2
 
 Dependency and tool versions are defined in [`gradle.properties`](./gradle.properties) and [`gradle/libs.versions.toml`](./gradle/libs.versions.toml).
+
+Initialize the UI submodule after cloning (or clone with `--recurse-submodules`). It is an
+independent Gradle build; the detector SDK never depends on it:
+
+```bash
+git submodule update --init --recursive
+```
 
 ## Commands
 

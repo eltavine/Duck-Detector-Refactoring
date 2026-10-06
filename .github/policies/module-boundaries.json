@@ -120,6 +120,8 @@
       "org.jetbrains.kotlinx:kotlinx-coroutines-android"
     ],
     "ui_only_dependencies": [
+      "io.github.xiaotong6666:uihelper",
+      "top.yukonga.miuix.kmp:*",
       "androidx.compose:*",
       "androidx.compose.*:*",
       "androidx.activity:activity-compose",
@@ -142,6 +144,11 @@
       ]
     },
     ":core:designsystem": {
+      "kind": "android-library",
+      "ui": true,
+      "allowed_project_dependencies": []
+    },
+    ":core:navigation": {
       "kind": "android-library",
       "ui": true,
       "allowed_project_dependencies": []

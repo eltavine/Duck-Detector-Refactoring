@@ -17,60 +17,97 @@
 
 package com.eltavine.duckdetector.core.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
+import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
+import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
+import com.eltavine.duckdetector.core.ui.R
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveExpandableSection
+import io.github.xiaotong6666.uihelper.adaptive.LocalAdaptiveSectionGeometry
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveErrorColor
+import io.github.xiaotong6666.uihelper.adaptive.rememberExpandableSectionState
+import io.github.xiaotong6666.uihelper.common.StatusTag
 
 /**
- * A titled run of rows inside a detector card. It adds no container of its own: the card is the
- * container, and a quiet heading with hairlines between the rows is enough to group them.
+ * One expandable evidence group across both skins. Duck owns severity semantics; uihelper owns
+ * native container, interaction, chevron and expansion motion.
  */
 @Composable
 public fun DetectorSectionFrame(
     title: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,
+    severity: SectionSeverity? = null,
+    stateKey: String? = null,
+    showDivider: Boolean = true,
+    showMiuixIcon: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) { heading() },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp),
-            )
-            WrapSafeText(
-                text = title,
-                style = DuckTypography.FootnoteEmphasized,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Column(modifier = Modifier.fillMaxWidth(), content = content)
-    }
+    val sectionState = rememberExpandableSectionState(identity = stateKey)
+    val materialShape = LocalAdaptiveSectionGeometry.current
+
+    AdaptiveExpandableSection(
+        title = title,
+        icon = icon,
+        expanded = sectionState.expanded,
+        onToggle = sectionState::toggle,
+        modifier = modifier,
+        showDivider = adaptiveValue(material = false, miuix = showDivider),
+        materialDividerColor = DuckTheme.palette.separator,
+        materialContainerColor = DuckTheme.palette.groupedInset,
+        materialIconRotationSpec = MotionTokens.IconRotation,
+        materialExpandSpec = MotionTokens.smoothSpring(IntSize.VisibilityThreshold),
+        materialFadeSpec = MotionTokens.FadeInOut,
+        materialTopRadius = materialShape.topRadius,
+        materialBottomRadius = materialShape.bottomRadius,
+        miuixIcon = if (showMiuixIcon) icon else null,
+        trailingContent = {
+            severity?.let { resolvedSeverity ->
+                val label = sectionSeverityLabel(resolvedSeverity)
+                AdaptiveContent(
+                    miuix = {
+                        val accent = when (resolvedSeverity) {
+                            SectionSeverity.HIGH -> adaptiveErrorColor()
+                            SectionSeverity.MEDIUM -> DuckTheme.palette.caution
+                            SectionSeverity.PROBE_ERROR -> DuckTheme.palette.critical
+                        }
+                        StatusTag(
+                            label = label,
+                            backgroundColor = accent.copy(alpha = 0.16f),
+                            contentColor = accent,
+                        )
+                    },
+                    material = {
+                        MaterialSeverityTag(
+                            status = resolvedSeverity.representativeStatus(),
+                            label = label,
+                        )
+                    },
+                )
+            }
+        },
+        content = {
+            CompositionLocalProvider(LocalMaterialDetectorHairlineStartInset provides 28.dp) {
+                content()
+            }
+        },
+    )
 }
+
+@Composable
+private fun sectionSeverityLabel(severity: SectionSeverity): String = stringResource(
+    when (severity) {
+        SectionSeverity.HIGH -> R.string.severity_high
+        SectionSeverity.MEDIUM -> R.string.severity_medium
+        SectionSeverity.PROBE_ERROR -> R.string.status_info_error
+    },
+)

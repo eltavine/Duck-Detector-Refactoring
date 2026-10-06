@@ -42,6 +42,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          submodules: true
           persist-credentials: false
 
       # Every checker ships a fixture-based self-test so that a regression in the checker
@@ -82,6 +84,33 @@ jobs:
       - name: Verify no layer or unit branches on another's text
         run: python3 .github/scripts/check-text-protocols.py
 
+      - name: Verify bundled uihelper inventory matches the pinned submodule
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          expected="$(git -C uihelper rev-list --count HEAD)"
+          actual="$(
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(
+              Path("feature/settings/ui/src/main/res/raw/aboutlibraries.json").read_text()
+          )
+          library = next(
+              item
+              for item in data["libraries"]
+              if item["uniqueId"] == "io.github.xiaotong6666:uihelper"
+          )
+          print(library["artifactVersion"])
+          PY
+          )"
+          test "$actual" = "$expected" || {
+            echo "uihelper inventory is stale: aboutlibraries=$actual submodule=$expected" >&2
+            exit 1
+          }
+
   verify:
     name: Unit tests, lint, and native build
     runs-on: ubuntu-24.04
@@ -91,6 +120,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          submodules: true
           persist-credentials: false
 
       - name: Set up Android build toolchain
@@ -193,7 +224,7 @@ jobs:
             exit 1
           fi
           grep -q "feature/$probe/EVIDENCE.md is still a draft" /tmp/evidence-errors
-          ./gradlew --stacktrace unitTest :app:assembleDebug buildHealth
+          ./gradlew --no-configuration-cache --stacktrace unitTest :app:assembleDebug buildHealth
 
       - name: Upload test and lint reports
         if: always()

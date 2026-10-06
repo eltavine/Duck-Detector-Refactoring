@@ -90,4 +90,6 @@ limitations under the License.
     <string name="startup_package_low_inventory_detail">現在表示されているパッケージ数: %1$d 件。起動は続行しますが、Dangerous Apps はこの少数一覧状態を潜在的なフィルタリング証拠として確認します。</string>
     <string name="startup_package_ready_headline">PackageManager の一覧は完全に見えます。</string>
     <string name="startup_package_ready_detail">現在表示されているパッケージ数: %1$d 件。Dangerous Apps は標準のパッケージ一覧経路を使えます。</string>
+    <string name="navigation_home">ホーム</string>
+    <string name="navigation_settings">設定</string>
 </resources>

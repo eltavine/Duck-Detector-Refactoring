@@ -78,4 +78,5 @@ limitations under the License.
     <string name="update_status_current">لديك أحدث إصدار %1$s</string>
     <string name="update_status_failed">تعذر التحقق من GitHub؛ اضغط لإعادة المحاولة</string>
     <string name="update_status_idle">يتم فحص %1$s على GitHub بعد التشغيل البارد؛ اضغط للفحص الآن</string>
+    <string name="settings_section_appearance">المظهر</string>
 </resources>

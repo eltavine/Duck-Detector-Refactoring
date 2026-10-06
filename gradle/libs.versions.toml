@@ -12,6 +12,7 @@ annotation = "1.11.0"
 composeBom = "2026.09.00"
 browser = "1.10.0"
 material3 = "1.5.0-alpha29"
+materialKolor = "5.0.1"
 graphicsShapes = "1.1.0"
 datastore = "1.2.1"
 bouncycastle = "1.86"
@@ -20,6 +21,7 @@ soter = "2.0.7"
 coroutines = "1.11.0"
 composeIcons = "1.1.1"
 aboutLibraries = "15.2.0"
+miuix = "0.9.4"
 dependencyAnalysis = "3.19.2"
 poko = "0.23.2"
 
@@ -42,6 +44,8 @@ androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+material-kolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
+material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities", version.ref = "materialKolor" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-graphics-shapes = { group = "androidx.graphics", name = "graphics-shapes", version.ref = "graphicsShapes" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
@@ -58,6 +62,12 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 compose-icons-simple = { module = "br.com.devsrsouza.compose.icons:simple-icons-android", version.ref = "composeIcons" }
 aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
+miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
+miuix-nav = { module = "top.yukonga.miuix.kmp:miuix-nav-android", version.ref = "miuix" }
+miuix-core = { module = "top.yukonga.miuix.kmp:miuix-core", version.ref = "miuix" }
+miuix-squircle = { module = "top.yukonga.miuix.kmp:miuix-squircle", version.ref = "miuix" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version = "1.11.0" }
 
 [bundles]
 test-unit = [
@@ -69,3 +79,4 @@ test-unit = [
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

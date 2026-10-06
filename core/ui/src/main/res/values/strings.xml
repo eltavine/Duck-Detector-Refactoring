@@ -20,4 +20,6 @@ limitations under the License.
     <string name="social_github">GitHub</string>
     <string name="social_telegram">Telegram</string>
     <string name="tee_diagnostic_copied_toast">Diagnostic detail copied</string>
+    <string name="severity_high">High</string>
+    <string name="severity_medium">Medium</string>
 </resources>

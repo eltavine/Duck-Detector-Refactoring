@@ -43,8 +43,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
-import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
+import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

@@ -48,6 +48,12 @@ def count_lines(path: str) -> int:
 
 def iter_source_files(repo_root: str):
     for directory, subdirectories, files in os.walk(repo_root):
+        # A checked-out Git submodule (and any other nested worktree) owns its own source
+        # policies. actions/checkout represents submodules with a `.git` file, so without
+        # this boundary the parent repository accidentally audits vendored source too.
+        if os.path.abspath(directory) != os.path.abspath(repo_root) and os.path.exists(os.path.join(directory, ".git")):
+            subdirectories[:] = []
+            continue
         subdirectories[:] = sorted(name for name in subdirectories if name not in SKIPPED_DIRECTORIES)
         for name in sorted(files):
             if name.endswith(SOURCE_SUFFIXES):

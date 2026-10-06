@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Icon
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,7 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.ui.model.MetricChipModel
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 
@@ -46,7 +46,7 @@ public fun MetricChip(
     Column(
         modifier = modifier
             .widthIn(min = 124.dp, max = 220.dp)
-            .background(color = DuckTheme.palette.groupedInset, shape = ShapeTokens.CornerLarge)
+            .background(color = DuckTheme.palette.groupedInset, shape = AdaptiveShapeTokens.CornerLarge)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -54,7 +54,7 @@ public fun MetricChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            Icon(
+            AdaptiveIcon(
                 imageVector = appearance.icon,
                 contentDescription = null,
                 tint = appearance.iconTint,

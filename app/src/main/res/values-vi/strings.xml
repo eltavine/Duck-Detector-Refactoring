@@ -90,4 +90,6 @@ limitations under the License.
     <string name="startup_package_low_inventory_detail">Số gói hiện đang hiển thị: %1$d. Quá trình khởi động vẫn tiếp tục, nhưng Dangerous Apps sẽ xem tình trạng danh mục thấp này như bằng chứng lọc tiềm năng.</string>
     <string name="startup_package_ready_headline">Danh mục PackageManager có vẻ đầy đủ.</string>
     <string name="startup_package_ready_detail">Số gói hiện đang hiển thị: %1$d. Dangerous Apps có thể dùng đường danh mục gói tiêu chuẩn.</string>
+    <string name="navigation_home">Trang chủ</string>
+    <string name="navigation_settings">Cài đặt</string>
 </resources>

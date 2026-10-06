@@ -45,19 +45,23 @@ import com.eltavine.duckdetector.sdk.PackageVisibility
 import com.eltavine.duckdetector.startup.legal.AgreementAcceptancePrefs
 import com.eltavine.duckdetector.startup.legal.AgreementAcceptanceStore
 import com.eltavine.duckdetector.startup.legal.AgreementScreen
+import com.eltavine.duckdetector.startup.StartupPolicyReviewPrefs
+import com.eltavine.duckdetector.startup.StartupPolicyReviewStore
 import com.eltavine.duckdetector.core.detector.ConsentDecision
 import com.eltavine.duckdetector.core.detector.ConsentId
 import com.eltavine.duckdetector.core.ui.components.AlphaBuildBanner
 import com.eltavine.duckdetector.core.ui.components.ScreenshotWatermarkOverlay
 import com.eltavine.duckdetector.ui.shell.AppDestination
+import com.eltavine.duckdetector.ui.shell.StartupGateState
 import com.eltavine.duckdetector.ui.shell.StartupPolicyScreen
 import com.eltavine.duckdetector.ui.shell.combineConsentDecisions
 import com.eltavine.duckdetector.ui.shell.resolveStartupGateState
 import com.eltavine.duckdetector.ui.shell.shouldCreateDetectorViewModels
 import kotlinx.coroutines.launch
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
-fun DuckDetectorApp() {
+fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
     val blacklistMatch = remember { DeviceBlacklist.matchCurrentDevice() }
     if (blacklistMatch != null) {
         Surface {
@@ -75,6 +79,9 @@ fun DuckDetectorApp() {
     val notificationConsentStore = remember(appContext) {
         ScanNotificationConsentStore.getInstance(appContext)
     }
+    val startupPolicyReviewStore = remember(appContext) {
+        StartupPolicyReviewStore.getInstance(appContext)
+    }
     val packageVisibilityReviewStore = remember(appContext) {
         PackageVisibilityReviewStore.getInstance(appContext)
     }
@@ -87,6 +94,19 @@ fun DuckDetectorApp() {
         }
     }
     val agreementAccepted = agreementPrefs?.accepted == true
+    val startupPolicyReviewPrefs by produceState<StartupPolicyReviewPrefs?>(
+        initialValue = null,
+        key1 = startupPolicyReviewStore,
+        key2 = agreementAccepted,
+    ) {
+        if (!agreementAccepted) {
+            value = null
+            return@produceState
+        }
+        startupPolicyReviewStore.prefs.collect { currentPrefs ->
+            value = currentPrefs
+        }
+    }
     val consentDecisions by produceState<Map<ConsentId, ConsentDecision>?>(
         initialValue = null,
         key1 = appContext,
@@ -161,6 +181,7 @@ fun DuckDetectorApp() {
                 packageVisibilityReviewPrefs?.restrictedInventoryAcknowledged == true,
         )
     }
+    val startupPolicyReviewCompleted = startupPolicyReviewPrefs?.completed == true
     val startupPoliciesReady = shouldCreateDetectorViewModels(gateState)
     var destination by rememberSaveable { mutableStateOf(AppDestination.MAIN) }
     val scope = rememberCoroutineScope()
@@ -193,6 +214,21 @@ fun DuckDetectorApp() {
         }
     }
 
+    LaunchedEffect(
+        agreementAccepted,
+        startupPolicyReviewPrefs,
+        gateState,
+    ) {
+        if (
+            agreementAccepted &&
+            startupPolicyReviewPrefs != null &&
+            !startupPolicyReviewCompleted &&
+            gateState == StartupGateState.READY
+        ) {
+            startupPolicyReviewStore.complete()
+        }
+    }
+
     Surface {
         Box(modifier = Modifier.fillMaxSize()) {
             when {
@@ -215,6 +251,7 @@ fun DuckDetectorApp() {
                     AppReadyShell(
                         destination = destination,
                         onSelectDestination = { selected -> destination = selected },
+                        onUiModeChange = onUiModeChange,
                         consentDecisions = requireNotNull(consentDecisions),
                         notificationPermissionState = notificationPermissionState,
                     )
@@ -272,6 +309,8 @@ fun DuckDetectorApp() {
                                 packageVisibilityReviewStore.acknowledgeRestrictedInventory()
                             }
                         },
+                        showUiStyleSelection = startupPolicyReviewPrefs?.completed == false,
+                        onUiModeChange = onUiModeChange,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

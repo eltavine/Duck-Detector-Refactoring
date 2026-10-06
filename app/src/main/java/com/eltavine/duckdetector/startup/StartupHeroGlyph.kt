@@ -19,8 +19,9 @@ package com.eltavine.duckdetector.startup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,6 +30,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.ContinuousCornerShape
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val HeroGlyphShape = ContinuousCornerShape(22.dp)
 
@@ -41,17 +45,39 @@ internal fun StartupHeroGlyph(
     icon: ImageVector,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .size(80.dp)
-            .background(color = DuckTheme.palette.groupedSurface, shape = HeroGlyphShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(42.dp),
-        )
-    }
+    AdaptiveContent(
+        miuix = {
+            Card(
+                modifier = modifier.size(80.dp),
+                insideMargin = PaddingValues(0.dp),
+            ) {
+                Box(
+                    modifier = Modifier.size(80.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DuckIcon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(40.dp),
+                    )
+                }
+            }
+        },
+        material = {
+            Box(
+                modifier = modifier
+                    .size(80.dp)
+                    .background(color = DuckTheme.palette.groupedSurface, shape = HeroGlyphShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                DuckIcon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(42.dp),
+                )
+            }
+        },
+    )
 }

@@ -1,0 +1,4 @@
+[submodule "uihelper"]
+	path = uihelper
+	url = https://github.com/XiaoTong6666/uihelper.git
+	branch = main

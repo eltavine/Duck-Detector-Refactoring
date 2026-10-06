@@ -24,26 +24,30 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Details
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.IntrinsicSize
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
+import com.eltavine.duckdetector.core.designsystem.theme.AdaptiveShapeTokens
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.ui.components.DetectorActionButton
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.tee.presentation.model.TeeCardModel
@@ -52,6 +56,7 @@ import com.eltavine.duckdetector.features.tee.presentation.model.TeeFooterAction
 import com.eltavine.duckdetector.features.tee.presentation.model.TeeHeaderFact
 import com.eltavine.duckdetector.features.tee.ui.TeeCertificatesDialog
 import com.eltavine.duckdetector.features.tee.ui.TeeDetailsDialog
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -65,22 +70,22 @@ internal fun TeeDetectorCard(
     onDismissCertificates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (showDetailsDialog) {
-        TeeDetailsDialog(
-            exportText = model.exportText,
-            certificateCount = model.certificateSummary.certificates.size,
-            onDismiss = onDismissDetails,
-        )
-    }
+    // Keep the dialog composables mounted while show changes to false. Native MIUIX
+    // overlays need the same instance to finish their transition before releasing the host.
+    TeeDetailsDialog(
+        show = showDetailsDialog,
+        exportText = model.exportText,
+        certificateCount = model.certificateSummary.certificates.size,
+        onDismiss = onDismissDetails,
+    )
 
-    if (showCertificatesDialog) {
-        TeeCertificatesDialog(
-            label = model.certificateSummary.label,
-            count = model.certificateSummary.count,
-            certificates = model.certificateSummary.certificates,
-            onDismiss = onDismissCertificates,
-        )
-    }
+    TeeCertificatesDialog(
+        show = showCertificatesDialog,
+        label = model.certificateSummary.label,
+        count = model.certificateSummary.count,
+        certificates = model.certificateSummary.certificates,
+        onDismiss = onDismissCertificates,
+    )
 
     DetectorCardFrame(
         title = model.title,
@@ -88,7 +93,7 @@ internal fun TeeDetectorCard(
         status = model.status,
         verdict = model.verdict,
         summary = model.summary,
-        leadingIcon = Icons.Rounded.Security,
+        leadingIcon = Icons.Rounded.Fingerprint,
         modifier = modifier,
         expanded = model.isExpanded,
         onExpandedChange = onExpandedChange,
@@ -98,12 +103,24 @@ internal fun TeeDetectorCard(
         footerActions = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 TeeNetworkBanner(model = model)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     model.actions.forEach { action ->
-                        TeeFooterButton(action = action, onClick = onFooterAction)
+                        TeeFooterButton(
+                            action = action,
+                            onClick = onFooterAction,
+                            modifier = Modifier.weight(
+                                when (action.id) {
+                                    TeeFooterActionId.DETAILS -> 0.8f
+                                    TeeFooterActionId.CERTIFICATES -> 1.2f
+                                    TeeFooterActionId.RESCAN -> 1f
+                                },
+                            ),
+                            singleLineLabel = true,
+                        )
                     }
                 }
             }
@@ -111,6 +128,10 @@ internal fun TeeDetectorCard(
     ) {
         if (model.highlightSignals.isNotEmpty()) {
             FlowRow(
+                modifier = Modifier.padding(
+                    horizontal = adaptiveValue(material = 0.dp, miuix = 12.dp),
+                    vertical = 8.dp,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -120,8 +141,16 @@ internal fun TeeDetectorCard(
             }
         }
 
-        model.factGroups.forEach { group ->
-            TeeFactGroup(group = group)
+        DetectorSectionGroup {
+            model.factGroups.forEachIndexed { index, group ->
+                item {
+                    TeeFactGroup(
+                        group = group,
+                        stateKey = "tee-fact-$index",
+                        showDivider = index < model.factGroups.lastIndex,
+                    )
+                }
+            }
         }
     }
 }
@@ -149,7 +178,7 @@ private fun TeeCollapsedOverview(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top,
         ) {
@@ -180,7 +209,7 @@ private fun TeeRkpBadge(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = Icons.Rounded.Verified,
             contentDescription = null,
             tint = appearance.iconTint,
@@ -200,12 +229,12 @@ private fun TeeNetworkBanner(model: TeeCardModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color = DuckTheme.palette.groupedInset, shape = ShapeTokens.CornerLarge)
+            .background(color = DuckTheme.palette.groupedInset, shape = AdaptiveShapeTokens.CornerLarge)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,
@@ -233,6 +262,8 @@ private fun TeeNetworkBanner(model: TeeCardModel) {
 private fun TeeFooterButton(
     action: TeeFooterActionModel,
     onClick: (TeeFooterActionId) -> Unit,
+    modifier: Modifier = Modifier,
+    singleLineLabel: Boolean = false,
 ) {
     DetectorActionButton(
         label = action.counter?.let { "${action.label} (${it})" } ?: action.label,
@@ -242,7 +273,9 @@ private fun TeeFooterButton(
             TeeFooterActionId.RESCAN -> Icons.Rounded.Refresh
         },
         onClick = { onClick(action.id) },
+        modifier = modifier,
         enabled = action.enabled,
         prominent = action.id == TeeFooterActionId.RESCAN,
+        singleLineLabel = singleLineLabel,
     )
 }

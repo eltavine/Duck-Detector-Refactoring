@@ -49,7 +49,7 @@ data class KernelSuThroneHuntProbeResult(
 // directory observes a directory IN_OPEN/IN_ACCESS that no ordinary app activity produces.
 //
 // The watch is installed during app_zygote preload and the packages.list rewrite is driven by
-// KernelSuThroneHuntRound from the main process. Reading the stream consumes it, so this probe only
+// the main-process stimulus round. Reading the stream consumes it, so this probe only
 // turns the counts the round already collected into findings.
 class KernelSuThroneHuntProbe {
 

@@ -17,6 +17,7 @@
 
 package com.eltavine.duckdetector.features.dangerousapps.presentation.model
 
+import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.report.DetectorHeadline
 
@@ -31,7 +32,19 @@ data class DangerousAppsCardModel(
     val packageItems: List<DangerousAppsPackageItemModel>,
     val context: List<DangerousAppsContextItemModel>,
     val targetApps: List<DangerousAppsTargetAppModel>,
-) : DetectorHeadline
+) : DetectorHeadline {
+    /** Rendering-only severity for the Packages section. */
+    val packageSectionSeverity: DetectionSeverity?
+        get() {
+            val hidden = headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.HIDDEN }?.status?.severity
+            val hits = headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.HITS }?.status?.severity
+            return when {
+                hidden == DetectionSeverity.DANGER -> DetectionSeverity.DANGER
+                hits == DetectionSeverity.WARNING -> DetectionSeverity.WARNING
+                else -> null
+            }
+        }
+}
 
 /** The facts in the card's header, in the order the export lists them. */
 enum class DangerousAppsHeaderFact(val label: String) {

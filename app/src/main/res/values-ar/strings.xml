@@ -90,4 +90,6 @@ limitations under the License.
     <string name="startup_package_low_inventory_detail">عدد الحزم المرئية الحالي: %1$d. ستستمر عملية البدء، لكن التطبيقات الخطرة ستراجع هذا الانخفاض في الفهرس كدليل محتمل على التصفية.</string>
     <string name="startup_package_ready_headline">يبدو فهرس PackageManager كاملًا.</string>
     <string name="startup_package_ready_detail">عدد الحزم المرئية الحالي: %1$d. يمكن لـ التطبيقات الخطرة استخدام مسار فهرس الحزم القياسي.</string>
+    <string name="navigation_home">الرئيسية</string>
+    <string name="navigation_settings">الإعدادات</string>
 </resources>

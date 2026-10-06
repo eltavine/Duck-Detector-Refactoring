@@ -80,6 +80,9 @@ class MemoryRepository(
             suspiciousJump = snapshot.suspiciousJump,
             writableExec = snapshot.writableExec,
             anonymousExec = snapshot.anonymousExec,
+            systemAnonymousExec = snapshot.systemAnonymousExec,
+            systemCopyModified = snapshot.systemCopyModified,
+            systemCopyUnverified = snapshot.systemCopyUnverified,
             swappedExec = snapshot.swappedExec,
             sharedDirtyExec = snapshot.sharedDirtyExec,
             deletedSo = snapshot.deletedSo,
@@ -133,16 +136,18 @@ class MemoryRepository(
             MemoryMethodResult(
                 method = MemoryMethod.MAPS_SMAPS,
                 summary = when {
-                    snapshot.writableExec || snapshot.anonymousExec || snapshot.sharedDirtyExec -> "Anomaly"
-                    snapshot.swappedExec -> "Review"
+                    snapshot.writableExec || snapshot.anonymousExec || snapshot.sharedDirtyExec ||
+                            snapshot.systemCopyModified -> "Anomaly"
+                    snapshot.swappedExec || snapshot.systemCopyUnverified -> "Review"
                     else -> "Clean"
                 },
                 outcome = when {
-                    snapshot.writableExec || snapshot.anonymousExec || snapshot.sharedDirtyExec -> MemoryMethodOutcome.DETECTED
-                    snapshot.swappedExec -> MemoryMethodOutcome.REVIEW
+                    snapshot.writableExec || snapshot.anonymousExec || snapshot.sharedDirtyExec ||
+                            snapshot.systemCopyModified -> MemoryMethodOutcome.DETECTED
+                    snapshot.swappedExec || snapshot.systemCopyUnverified -> MemoryMethodOutcome.REVIEW
                     else -> MemoryMethodOutcome.CLEAN
                 },
-                detail = "Scans non-ART executable mappings for writable code, unexpected swapped pages, and shared-dirty system code.",
+                detail = "Scans non-ART executable mappings for writable or anonymous code, shared-dirty system code and swapped pages, and compares each privately copied page of system code with its file.",
             ),
             MemoryMethodResult(
                 method = MemoryMethod.FD_BACKED_CODE,

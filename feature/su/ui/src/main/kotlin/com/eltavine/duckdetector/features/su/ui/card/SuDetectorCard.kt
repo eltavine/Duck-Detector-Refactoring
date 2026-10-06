@@ -17,10 +17,12 @@
 
 package com.eltavine.duckdetector.features.su.ui.card
 
+import com.eltavine.duckdetector.features.su.ui.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AdminPanelSettings
@@ -29,12 +31,15 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Policy
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
@@ -42,6 +47,8 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import com.eltavine.duckdetector.features.su.presentation.model.SuCardModel
@@ -62,49 +69,58 @@ internal fun SuDetectorCard(
         verdict = model.verdict,
         summary = model.summary,
         leadingIcon = Icons.Rounded.AdminPanelSettings,
+        miuixLeadingIcon = ImageVector.vectorResource(R.drawable.ic_kernelsu),
         modifier = modifier,
         headerFacts = {
             SuCollapsedOverview(model = model)
         },
     ) {
-        if (model.artifactRows.isNotEmpty()) {
-            SuDetailSection(
-                title = "Root artifacts",
+        DetectorSectionGroup {
+            item(visible = model.artifactRows.isNotEmpty()) {
+                SuDetailSection(
+                title = stringResource(R.string.su_section_root_artifacts),
                 icon = Icons.Rounded.Shield,
                 rows = model.artifactRows,
-            )
-        }
+                showDivider = model.contextRows.isNotEmpty() || model.impactItems.isNotEmpty() ||
+                    model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.contextRows.isNotEmpty()) {
-            SuDetailSection(
-                title = "Native context",
+            item(visible = model.contextRows.isNotEmpty()) {
+                SuDetailSection(
+                title = stringResource(R.string.su_section_native_context),
                 icon = Icons.Rounded.Policy,
                 rows = model.contextRows,
-            )
-        }
+                showDivider = model.impactItems.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.impactItems.isNotEmpty()) {
-            SuImpactSection(
-                title = "Impact",
+            item(visible = model.impactItems.isNotEmpty()) {
+                SuImpactSection(
+                title = stringResource(R.string.su_section_impact),
                 icon = Icons.Rounded.CrisisAlert,
                 items = model.impactItems,
-            )
-        }
+                showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.methodRows.isNotEmpty()) {
-            SuDetailSection(
-                title = "Detection methods",
+            item(visible = model.methodRows.isNotEmpty()) {
+                SuDetailSection(
+                title = stringResource(R.string.su_section_detection_methods),
                 icon = Icons.Rounded.Search,
                 rows = model.methodRows,
-            )
-        }
+                showDivider = model.scanRows.isNotEmpty(),
+                )
+            }
 
-        if (model.scanRows.isNotEmpty()) {
-            SuDetailSection(
-                title = "Scan summary",
+            item(visible = model.scanRows.isNotEmpty()) {
+                SuDetailSection(
+                title = stringResource(R.string.su_section_scan_summary),
                 icon = Icons.Rounded.Info,
                 rows = model.scanRows,
-            )
+                showDivider = false,
+                )
+            }
         }
     }
 }
@@ -119,7 +135,7 @@ private fun SuCollapsedOverview(
     val processes = model.headerFacts.firstOrNull { it.fact == SuHeaderFact.PROCESSES } ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -157,10 +173,13 @@ private fun SuDetailSection(
     title: String,
     icon: ImageVector,
     rows: List<SuDetailRowModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             rows.forEachIndexed { index, row ->
@@ -191,10 +210,13 @@ private fun SuImpactSection(
     title: String,
     icon: ImageVector,
     items: List<SuImpactItemModel>,
+    showDivider: Boolean = true,
 ) {
     DetectorSectionFrame(
         title = title,
         icon = icon,
+        severity = highestSectionSeverity(items.map { it.status }),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items.forEach { item ->
@@ -214,7 +236,7 @@ private fun SuImpactRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
+        DuckIcon(
             imageVector = appearance.icon,
             contentDescription = null,
             tint = appearance.iconTint,

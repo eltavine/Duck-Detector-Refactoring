@@ -61,7 +61,7 @@ limitations under the License.
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
     <string name="author_summary_zg089">Arabic translation</string>
     <string name="github_acceleration_footer">gh-proxy.com is a third-party service. While this is on, update checks and downloads go through it instead of connecting to GitHub directly. It cannot relay commit comparisons, so a Nightly update for a build older than the latest Stable release may list only the most recent changes.</string>
-    <string name="github_acceleration_summary">Check for and download updates through gh-proxy.com</string>
+    <string name="github_acceleration_summary">Use third-party gh-proxy.com for update checks and downloads. It cannot relay commit comparisons, so a Nightly update for a build older than the latest Stable may list only recent changes</string>
     <string name="github_acceleration_title">GitHub acceleration</string>
     <string name="licenses_dialog_close">Close</string>
     <string name="licenses_dialog_home_page">Home page</string>
@@ -69,15 +69,20 @@ limitations under the License.
     <string name="licenses_dialog_open">Open</string>
     <string name="licenses_dialog_source_repo">Source repo</string>
     <string name="licenses_dialog_version">Version %1$s</string>
-    <string name="licenses_entry_subtitle">Browse bundled third-party projects and inspect their license notices.</string>
+    <string name="licenses_entry_subtitle">Browse bundled third-party projects and inspect their license notices</string>
     <string name="licenses_entry_title">Open-source libraries</string>
-    <string name="licenses_inventory_subtitle">Tap any dependency to inspect license text and upstream project links.</string>
+    <string name="licenses_inventory_subtitle">Tap any dependency to inspect license text and upstream project links</string>
     <string name="licenses_inventory_title">Bundled library inventory</string>
     <string name="licenses_screen_back">Back</string>
-    <string name="licenses_screen_subtitle">Third-party components bundled in this build.</string>
+    <string name="licenses_screen_subtitle">Third-party components bundled in this build</string>
     <string name="licenses_screen_title">Open-source licenses</string>
     <string name="settings_section_detection">Detection options</string>
     <string name="settings_section_network">Network</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_ui_style_title">UI style</string>
+    <string name="settings_ui_style_description">Choose the look of Duck Detector</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
     <string name="settings_title">Settings</string>
     <string name="update_channel_label">Update channel</string>
     <string name="update_channel_nightly" translatable="false">Nightly</string>
@@ -85,10 +90,10 @@ limitations under the License.
     <string name="update_channel_stable" translatable="false">Stable</string>
     <string name="update_channel_stable_summary">Tested releases, published under a version tag</string>
     <string name="update_settings_label">Check for updates</string>
-    <string name="update_status_ahead">This build is newer than the latest %1$s, %2$s; the next newer one will be offered</string>
-    <string name="update_status_available">A newer %1$s build is available; tap for details</string>
+    <string name="update_status_ahead">This build is newer than the latest %1$s (%2$s), the next newer one will be offered</string>
+    <string name="update_status_available">A newer %1$s build is available, tap for details</string>
     <string name="update_status_checking">Checking GitHub…</string>
     <string name="update_status_current">You have the latest %1$s build</string>
-    <string name="update_status_failed">Could not check GitHub; tap to retry</string>
-    <string name="update_status_idle">Checks %1$s on GitHub after a cold start; tap to check now</string>
+    <string name="update_status_failed">Could not check GitHub, tap to retry</string>
+    <string name="update_status_idle">Checks %1$s on GitHub after a cold start, tap to check now</string>
 </resources>

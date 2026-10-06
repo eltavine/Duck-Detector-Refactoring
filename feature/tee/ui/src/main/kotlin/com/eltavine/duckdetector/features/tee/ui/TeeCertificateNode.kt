@@ -38,7 +38,7 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.VpnKey
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -46,10 +46,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.capability.attestation.domain.TeeCertificateItem
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixDetailField
+import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixDetailSection
+import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixDetailSectionsCard
 
 @Composable
 internal fun TeeCertificateNode(
@@ -57,15 +62,40 @@ internal fun TeeCertificateNode(
     isLast: Boolean,
 ) {
     val role = remember(certificate.slotLabel) { certificateRole(certificate.slotLabel) }
-    val accent = when (role) {
-        TeeCertificateRole.LEAF -> MaterialTheme.colorScheme.primary
-        TeeCertificateRole.INTERMEDIATE -> MaterialTheme.colorScheme.tertiary
-        TeeCertificateRole.ROOT -> MaterialTheme.colorScheme.secondary
-    }
     val roleIcon = when (role) {
         TeeCertificateRole.LEAF -> Icons.Rounded.VpnKey
         TeeCertificateRole.INTERMEDIATE -> Icons.Rounded.Hub
         TeeCertificateRole.ROOT -> Icons.Rounded.Security
+    }
+
+    AdaptiveContent(
+        material = {
+            TeeCertificateNodeMaterial(
+                certificate = certificate,
+                isLast = isLast,
+                role = role,
+                roleIcon = roleIcon,
+            )
+        },
+        miuix = {
+            TeeCertificateNodeMiuix(
+                certificate = certificate,
+            )
+        },
+    )
+}
+
+@Composable
+private fun TeeCertificateNodeMaterial(
+    certificate: TeeCertificateItem,
+    isLast: Boolean,
+    role: TeeCertificateRole,
+    roleIcon: ImageVector,
+) {
+    val accent = when (role) {
+        TeeCertificateRole.LEAF -> MaterialTheme.colorScheme.primary
+        TeeCertificateRole.INTERMEDIATE -> MaterialTheme.colorScheme.tertiary
+        TeeCertificateRole.ROOT -> MaterialTheme.colorScheme.secondary
     }
 
     Row(
@@ -81,7 +111,7 @@ internal fun TeeCertificateNode(
                 color = accent.copy(alpha = 0.14f),
                 shape = CircleShape,
             ) {
-                Icon(
+                DuckIcon(
                     imageVector = roleIcon,
                     contentDescription = null,
                     tint = accent,
@@ -103,11 +133,7 @@ internal fun TeeCertificateNode(
             }
         }
 
-        Surface(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shape = ShapeTokens.CornerExtraLarge,
-        ) {
+        TeeDialogSurface(tone = TeeDialogTone.Low, modifier = Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -137,12 +163,12 @@ internal fun TeeCertificateNode(
                 }
 
                 TeeCertificateGroup(
-                    title = "Identity",
+                    title = stringResource(R.string.tee_certificate_section_identity),
                     icon = Icons.Rounded.VerifiedUser,
                 ) {
                     TeeCertificateField(
                         icon = Icons.Rounded.Security,
-                        label = "Issuer",
+                        label = stringResource(R.string.tee_certificate_field_issuer),
                         value = certificate.issuer,
                     )
                     HorizontalDivider(
@@ -151,18 +177,18 @@ internal fun TeeCertificateNode(
                     )
                     TeeCertificateField(
                         icon = Icons.Rounded.Fingerprint,
-                        label = "Serial number",
+                        label = stringResource(R.string.tee_certificate_field_serial_number),
                         value = certificate.serialNumber,
                     )
                 }
 
                 TeeCertificateGroup(
-                    title = "Crypto",
+                    title = stringResource(R.string.tee_certificate_section_crypto),
                     icon = Icons.Rounded.Key,
                 ) {
                     TeeCertificateField(
                         icon = Icons.Rounded.Key,
-                        label = "Public key",
+                        label = stringResource(R.string.tee_certificate_field_public_key),
                         value = certificate.publicKeySummary,
                     )
                     HorizontalDivider(
@@ -171,19 +197,23 @@ internal fun TeeCertificateNode(
                     )
                     TeeCertificateField(
                         icon = Icons.Rounded.VpnKey,
-                        label = "Signature algorithm",
+                        label = stringResource(R.string.tee_certificate_field_signature_algorithm),
                         value = certificate.signatureAlgorithm,
                     )
                 }
 
                 TeeCertificateGroup(
-                    title = "Validity",
+                    title = stringResource(R.string.tee_certificate_section_validity),
                     icon = Icons.Rounded.Schedule,
                 ) {
                     TeeCertificateField(
                         icon = Icons.Rounded.Schedule,
-                        label = "Active window",
-                        value = "${certificate.validFrom} to ${certificate.validUntil}",
+                        label = stringResource(R.string.tee_certificate_field_active_window),
+                        value = stringResource(
+                            R.string.tee_certificate_active_window_value,
+                            certificate.validFrom,
+                            certificate.validUntil,
+                        ),
                     )
                 }
             }
@@ -192,15 +222,68 @@ internal fun TeeCertificateNode(
 }
 
 @Composable
+private fun TeeCertificateNodeMiuix(
+    certificate: TeeCertificateItem,
+) {
+    MiuixDetailSectionsCard(
+        sections = listOf(
+            MiuixDetailSection(
+                title = stringResource(R.string.tee_certificate_section_identity),
+                icon = Icons.Rounded.VerifiedUser,
+                fields = listOf(
+                    MiuixDetailField(
+                        stringResource(R.string.tee_certificate_field_subject),
+                        certificate.subject,
+                    ),
+                    MiuixDetailField(
+                        stringResource(R.string.tee_certificate_field_issuer),
+                        certificate.issuer,
+                    ),
+                    MiuixDetailField(
+                        stringResource(R.string.tee_certificate_field_serial_number),
+                        certificate.serialNumber,
+                    ),
+                ),
+            ),
+            MiuixDetailSection(
+                title = stringResource(R.string.tee_certificate_section_crypto),
+                icon = Icons.Rounded.Key,
+                fields = listOf(
+                    MiuixDetailField(
+                        stringResource(R.string.tee_certificate_field_public_key),
+                        certificate.publicKeySummary,
+                    ),
+                    MiuixDetailField(
+                        stringResource(R.string.tee_certificate_field_signature_algorithm),
+                        certificate.signatureAlgorithm,
+                    ),
+                ),
+            ),
+            MiuixDetailSection(
+                title = stringResource(R.string.tee_certificate_section_validity),
+                icon = Icons.Rounded.Schedule,
+                fields = listOf(
+                    MiuixDetailField(
+                        stringResource(R.string.tee_certificate_field_active_window),
+                        stringResource(
+                            R.string.tee_certificate_active_window_value,
+                            certificate.validFrom,
+                            certificate.validUntil,
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+}
+
+@Composable
 private fun TeeCertificateGroup(
     title: String,
     icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = ShapeTokens.CornerLargeIncreased,
-    ) {
+    TeeDialogSurface(tone = TeeDialogTone.High, cornerRadius = 12.dp) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -211,11 +294,8 @@ private fun TeeCertificateGroup(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shape = ShapeTokens.CornerLarge,
-                ) {
-                    Icon(
+                TeeDialogSurface(tone = TeeDialogTone.Highest, cornerRadius = 12.dp) {
+                    DuckIcon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
@@ -249,11 +329,8 @@ private fun TeeCertificateField(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            shape = ShapeTokens.CornerLarge,
-        ) {
-            Icon(
+        TeeDialogSurface(tone = TeeDialogTone.Highest, cornerRadius = 12.dp) {
+            DuckIcon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,

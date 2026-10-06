@@ -53,6 +53,7 @@ class DangerousAppsCardModelMapperTest {
         )
 
         assertEquals(DetectionSeverity.WARNING, model.status.severity)
+        assertEquals(null, model.packageSectionSeverity)
         assertEquals("Package inventory unusually small", model.verdict)
         assertTrue(model.summary.contains("HMA-style whitelist filtering"))
         assertTrue(model.subtitle.contains("43 visible"))
@@ -89,6 +90,7 @@ class DangerousAppsCardModelMapperTest {
         )
 
         assertEquals(DetectionSeverity.DANGER, model.status.severity)
+        assertEquals(DetectionSeverity.DANGER, model.packageSectionSeverity)
         assertTrue(model.summary.contains("direct corroboration probes"))
         assertTrue(model.summary.contains("PackageManager inventory"))
         assertTrue(model.hmaAlert?.summary.orEmpty().contains("direct corroboration probes"))
@@ -118,7 +120,62 @@ class DangerousAppsCardModelMapperTest {
         )
 
         assertEquals(DetectionSeverity.WARNING, model.status.severity)
+        assertEquals(null, model.packageSectionSeverity)
         assertEquals("Shared storage baseline denied", model.verdict)
         assertTrue(model.summary.contains("shared user gid"))
+    }
+
+    @Test
+    fun `a detected package without hma gets medium section severity`() {
+        val target = DangerousAppsCatalog.targets.first()
+        val finding = DangerousAppFinding(
+            target = target,
+            methods = listOf(DangerousDetectionMethod(DangerousDetectionMethodKind.PACKAGE_MANAGER)),
+        )
+        val model = mapper.map(
+            DangerousAppsReport(
+                stage = DangerousAppsStage.READY,
+                packageVisibility = DangerousPackageVisibility.FULL,
+                packageManagerVisibleCount = 120,
+                suspiciousLowPmInventory = false,
+                suspiciousSharedStorageDenied = false,
+                targets = DangerousAppsCatalog.targets,
+                findings = listOf(finding),
+                hiddenFromPackageManager = emptyList(),
+                probesRan = listOf(DangerousDetectionMethodKind.PACKAGE_MANAGER),
+            ),
+        )
+        assertEquals(DetectionSeverity.WARNING, model.packageSectionSeverity)
+    }
+
+    @Test
+    fun `scene debugfs corroboration hidden from pm marks packages high`() {
+        val scene = DangerousAppsCatalog.targets.first { it.packageName == "com.omarea.vtools" }
+        val finding = DangerousAppFinding(
+            target = scene,
+            methods = listOf(
+                DangerousDetectionMethod(
+                    DangerousDetectionMethodKind.SCENE_DEBUGFS_CONTEXT,
+                    detail = "Scene debugfs context: /dev/example",
+                ),
+            ),
+        )
+        val model = mapper.map(
+            DangerousAppsReport(
+                stage = DangerousAppsStage.READY,
+                packageVisibility = DangerousPackageVisibility.FULL,
+                packageManagerVisibleCount = 578,
+                suspiciousLowPmInventory = false,
+                suspiciousSharedStorageDenied = false,
+                targets = DangerousAppsCatalog.targets,
+                findings = listOf(finding),
+                hiddenFromPackageManager = listOf(finding),
+                probesRan = listOf(DangerousDetectionMethodKind.SCENE_DEBUGFS_CONTEXT),
+            ),
+        )
+
+        assertEquals(DetectionSeverity.DANGER, model.packageSectionSeverity)
+        assertEquals("Scene", model.packageItems.single().appName)
+        assertEquals("Scene", model.hmaAlert?.hiddenPackages?.single()?.appName)
     }
 }

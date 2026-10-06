@@ -30,7 +30,6 @@ internal fun ConsentSettingItem(
     SettingsSwitchItem(
         headline = stringResource(toggle.setting.title),
         summary = stringResource(toggle.setting.summary),
-        footer = stringResource(toggle.setting.footer),
         icon = toggle.setting.icon,
         checked = toggle.checked,
         onCheckedChange = toggle.onCheckedChange,

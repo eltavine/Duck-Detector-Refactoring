@@ -22,30 +22,42 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DisplaySettings
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.components.DuckButtonDefaults
+import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.designsystem.theme.ContinuousCornerShape
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
 import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
 import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveSingleChoiceButtonGroup
+import io.github.xiaotong6666.uihelper.mode.UiMode
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Button as MiuixButton
+import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val IconTileShape = ContinuousCornerShape(11.dp)
 
@@ -53,12 +65,153 @@ private val IconTileShape = ContinuousCornerShape(11.dp)
 internal fun StartupPolicyCard(
     card: StartupPolicyCardUi,
 ) {
+    AdaptiveContent(
+        miuix = { StartupPolicyCardMiuix(card) },
+        material = { StartupPolicyCardMaterial(card) },
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun StartupUiStyleCard(
+    uiMode: UiMode,
+    onUiModeChange: (UiMode) -> Unit,
+) {
+    AdaptiveContent(
+        miuix = {
+            MiuixCard(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = PaddingValues(0.dp),
+            ) {
+                BasicComponent(
+                    title = stringResource(R.string.startup_ui_style_title),
+                    summary = stringResource(R.string.startup_ui_style_detail),
+                    startAction = {
+                        DuckIcon(
+                            imageVector = Icons.Rounded.DisplaySettings,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(end = 12.dp).size(22.dp),
+                        )
+                    },
+                )
+                AdaptiveSingleChoiceButtonGroup(
+                    labels = listOf(
+                        stringResource(R.string.startup_ui_style_material),
+                        stringResource(R.string.startup_ui_style_miuix),
+                    ),
+                    selectedIndex = if (uiMode == UiMode.Material) 0 else 1,
+                    onSelectedIndexChange = { index ->
+                        onUiModeChange(if (index == 0) UiMode.Material else UiMode.Miuix)
+                    },
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                )
+            }
+        },
+        material = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = DuckTheme.palette.groupedSurface,
+                        shape = MaterialTheme.shapes.large,
+                    )
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(
+                                color = DuckTheme.palette.groupedInset,
+                                shape = MaterialTheme.shapes.medium,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DuckIcon(
+                            imageVector = Icons.Rounded.DisplaySettings,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    WrapSafeText(
+                        text = stringResource(R.string.startup_ui_style_title),
+                        style = DuckTypography.Headline,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                WrapSafeText(
+                    text = stringResource(R.string.startup_ui_style_detail),
+                    style = DuckTypography.Footnote,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                AdaptiveSingleChoiceButtonGroup(
+                    labels = listOf(
+                        stringResource(R.string.startup_ui_style_material),
+                        stringResource(R.string.startup_ui_style_miuix),
+                    ),
+                    selectedIndex = if (uiMode == UiMode.Material) 0 else 1,
+                    onSelectedIndexChange = { index ->
+                        onUiModeChange(if (index == 0) UiMode.Material else UiMode.Miuix)
+                    },
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun StartupPolicyCardMiuix(card: StartupPolicyCardUi) {
+    MiuixCard(
+        modifier = Modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(0.dp),
+    ) {
+        BasicComponent(
+            title = card.title,
+            summary = card.headline,
+            startAction = {
+                DuckIcon(
+                    imageVector = card.icon,
+                    contentDescription = null,
+                    tint = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(end = 12.dp).size(22.dp),
+                )
+            },
+            endActions = {
+                MiuixText(
+                    text = card.statusLabel,
+                    style = MiuixTheme.textStyles.body2,
+                    color = if (card.requiresAction) {
+                        MiuixTheme.colorScheme.onSurface
+                    } else {
+                        MiuixTheme.colorScheme.onSurfaceVariantActions
+                    },
+                )
+            },
+        )
+        MiuixText(
+            text = card.detail,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+        PolicyActionsMiuix(card)
+    }
+}
+
+@Composable
+private fun StartupPolicyCardMaterial(card: StartupPolicyCardUi) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 color = DuckTheme.palette.groupedSurface,
-                shape = ShapeTokens.CornerExtraLargeIncreased,
+                shape = MaterialTheme.shapes.large,
             )
             .animateContentSize(MotionTokens.smoothSpring())
             .padding(18.dp),
@@ -72,10 +225,10 @@ internal fun StartupPolicyCard(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(color = DuckTheme.palette.groupedInset, shape = IconTileShape),
+                    .background(color = DuckTheme.palette.groupedInset, shape = MaterialTheme.shapes.medium),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
+                DuckIcon(
                     imageVector = card.icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurface,
@@ -110,115 +263,5 @@ internal fun StartupPolicyCard(
         }
 
         PolicyActions(card = card)
-    }
-}
-
-/** A card's state. One that still needs a decision is inverted, so it reads first in either theme. */
-@Composable
-private fun PolicyStatusCapsule(
-    label: String,
-    tone: StartupPolicyTone,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val inset = DuckTheme.palette.groupedInset
-    val (container, content) = when (tone) {
-        StartupPolicyTone.REQUIRED -> colorScheme.onSurface to colorScheme.surface
-        StartupPolicyTone.READY -> inset to colorScheme.onSurface
-        StartupPolicyTone.ACKNOWLEDGED,
-        StartupPolicyTone.SUPPORT -> inset to colorScheme.onSurfaceVariant
-    }
-    WrapSafeText(
-        text = label,
-        modifier = Modifier
-            .background(color = container, shape = ShapeTokens.CornerFull)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        style = DuckTypography.Caption,
-        color = content,
-    )
-}
-
-private class PolicyAction(
-    val label: String,
-    val onClick: () -> Unit,
-)
-
-/**
- * The card's choices. A required card leads with its recommended action above a quieter way out.
- * An optional consent gives both answers the same weight, so neither is nudged.
- */
-@Composable
-private fun PolicyActions(
-    card: StartupPolicyCardUi,
-) {
-    val primary = card.primaryActionLabel?.let { label ->
-        card.onPrimaryAction?.let { onClick -> PolicyAction(label, onClick) }
-    }
-    val secondary = card.secondaryActionLabel?.let { label ->
-        card.onSecondaryAction?.let { onClick -> PolicyAction(label, onClick) }
-    }
-    if (primary == null && secondary == null) {
-        return
-    }
-
-    if (card.requiresAction) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            primary?.let { action ->
-                Button(
-                    onClick = action.onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = DuckButtonDefaults.filledColors(),
-                    contentPadding = DuckButtonDefaults.LargeContentPadding,
-                ) {
-                    WrapSafeText(
-                        text = action.label,
-                        style = DuckTypography.Headline,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-            secondary?.let { action ->
-                TextButton(
-                    onClick = action.onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-                ) {
-                    WrapSafeText(
-                        text = action.label,
-                        style = DuckTypography.CalloutEmphasized,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
-    } else {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-                .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            listOfNotNull(secondary, primary).forEach { action ->
-                Button(
-                    onClick = action.onClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    colors = DuckButtonDefaults.tonalColors(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-                ) {
-                    WrapSafeText(
-                        text = action.label,
-                        style = DuckTypography.CalloutEmphasized,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
     }
 }

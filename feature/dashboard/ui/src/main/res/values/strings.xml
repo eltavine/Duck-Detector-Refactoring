@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">Tap to export full report</string>
+    <string name="dashboard_report_saved">Report saved</string>
+    <string name="dashboard_report_save_failed">Save failed: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">Save failed</string>
+    <string name="dashboard_build_time_utc">Build (UTC) · %1$s</string>
+    <string name="dashboard_loading_title">Running local checks</string>
+    <string name="dashboard_loading_summary">Dashboard summary will unlock when the detector cards finish collecting evidence.</string>
+    <string name="dashboard_severity_high">High</string>
+    <string name="dashboard_severity_medium">Medium</string>
+    <string name="dashboard_severity_check">Check</string>
+    <string name="dashboard_severity_clear">Clear</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">Security overview</string>
+    <string name="dashboard_scan_completed_title">Scanned at %1$s\nTotal time %2$s</string>
+    <string name="dashboard_duration_ms">%1$sms</string>
+    <string name="dashboard_duration_seconds">%1$ss</string>
+    <string name="dashboard_focus_pair">%1$s and %2$s</string>
+    <string name="dashboard_headline_danger">Danger</string>
+    <string name="dashboard_headline_warning">Warning</string>
+    <string name="dashboard_headline_info">Info</string>
+    <string name="dashboard_headline_ready">Ready</string>
+    <string name="dashboard_headline_pending">Pending</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">Start with %1$s.</string>
+    <string name="dashboard_summary_warning">Review %1$s next.</string>
+    <string name="dashboard_summary_info">%1$s need more context before treating results as clean.</string>
+    <string name="dashboard_summary_ready">Detector cards will populate as local checks complete.</string>
+    <string name="dashboard_summary_pending">Additional modules are still collecting their local evidence.</string>
+    <string name="dashboard_summary_ok">Use the detector cards below to inspect local evidence in detail.</string>
+    <string name="dashboard_metric_danger">Danger</string>
+    <string name="dashboard_metric_warning">Warning</string>
+    <string name="dashboard_metric_ready">Ready</string>
+    <string name="dashboard_metric_pending">Pending</string>
+    <string name="dashboard_finding_scan_status_title">Scan status</string>
+    <string name="dashboard_finding_scan_status_headline">Waiting for detector evidence</string>
+    <string name="dashboard_finding_scan_status_detail">Detector cards will expand as modules finish collecting local evidence.</string>
+    <string name="dashboard_finding_overview_title">Overview</string>
+    <string name="dashboard_finding_overview_headline">No urgent findings in ready modules</string>
+    <string name="dashboard_finding_overview_detail">Open detector cards below to review detailed local evidence and secondary checks.</string>
+</resources>

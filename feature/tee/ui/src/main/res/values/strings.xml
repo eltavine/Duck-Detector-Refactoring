@@ -28,6 +28,44 @@ limitations under the License.
     <string name="tee_revocation_network_declined_headline">TEE revocation checks use the built-in snapshot.</string>
     <string name="tee_revocation_network_declined_detail">Duck Detector will not perform online CRL refresh until you re-enable it in Settings. Built-in revocation checks remain active.</string>
     <string name="tee_revocation_network_setting_title">Allow online CRL refresh</string>
-    <string name="tee_revocation_network_setting_summary">TEE revocation checks always use the built-in snapshot; this only permits fetching Google\'s latest attestation revocation feed.</string>
+    <string name="tee_revocation_network_setting_summary">Built-in TEE revocation checks stay enabled, this only allows fetching Google\'s latest revocation data</string>
     <string name="tee_revocation_network_setting_footer">Changes apply immediately to online refresh behavior. Built-in TEE revocation checks remain enabled.</string>
+    <string name="tee_dialog_close">Close</string>
+
+    <string name="tee_details_title">TEE details</string>
+    <string name="tee_details_summary">Structured export for debugging, sharing, and manual verification.</string>
+    <string name="tee_details_snapshot_title">Current attestation snapshot</string>
+    <string name="tee_details_snapshot_summary">Review the current attestation export for debugging, evidence sharing, and manual verification.</string>
+    <string name="tee_details_metric_lines">Lines</string>
+    <string name="tee_details_metric_certificates">Certificates</string>
+    <string name="tee_details_no_export">No export available</string>
+    <string name="tee_details_no_export_summary">Run the detector again after a full attestation pass to populate the raw TEE report.</string>
+    <string name="tee_details_no_export_summary_short">Run the detector again after a full attestation pass.</string>
+    <string name="tee_details_report_body">Normalized report body</string>
+    <string name="tee_details_report_body_summary">Optimized for inspection and copy-paste.</string>
+    <string name="tee_details_report_body_summary_selectable">Selectable normalized text for inspection and copy-paste.</string>
+    <string name="tee_details_section_overview">Overview</string>
+    <string name="tee_details_section_report">Report</string>
+
+    <string name="tee_certificate_chain_title">Certificate chain</string>
+    <string name="tee_certificate_chain_summary">Attestation certificates exposed by the current scan.</string>
+    <string name="tee_certificate_none_available">No certificates available</string>
+    <string name="tee_certificate_none_available_summary">This scan did not expose a valid attestation certificate chain.</string>
+    <string name="tee_certificate_chain_overview">Chain overview</string>
+    <string name="tee_certificate_chain_order">Order</string>
+    <string name="tee_certificate_chain_order_leaf_root">Leaf → Root</string>
+    <string name="tee_certificate_count">%1$s certs</string>
+    <string name="tee_certificate_leaf">Leaf</string>
+    <string name="tee_certificate_root">Root</string>
+    <string name="tee_certificate_none">None</string>
+    <string name="tee_certificate_section_identity">Identity</string>
+    <string name="tee_certificate_section_crypto">Crypto</string>
+    <string name="tee_certificate_section_validity">Validity</string>
+    <string name="tee_certificate_field_subject">Subject</string>
+    <string name="tee_certificate_field_issuer">Issuer</string>
+    <string name="tee_certificate_field_serial_number">Serial number</string>
+    <string name="tee_certificate_field_public_key">Public key</string>
+    <string name="tee_certificate_field_signature_algorithm">Signature algorithm</string>
+    <string name="tee_certificate_field_active_window">Active window</string>
+    <string name="tee_certificate_active_window_value">%1$s to %2$s</string>
 </resources>

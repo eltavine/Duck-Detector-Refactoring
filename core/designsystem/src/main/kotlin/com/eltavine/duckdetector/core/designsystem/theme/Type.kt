@@ -186,3 +186,18 @@ internal val Typography: Typography = Typography(
         ), LineBreak.Paragraph
     ),
 )
+
+/**
+ * Keep the Material skin on the platform-default typography baseline. Duck's Google Sans Flex
+ * family is intentionally limited to the legacy/custom skin so Material Expressive list rows keep
+ * the expected metrics and density.
+ */
+internal val ExpressiveTypography: Typography = Typography(
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp,
+    ),
+)

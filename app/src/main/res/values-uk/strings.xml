@@ -98,4 +98,6 @@ limitations under the License.
     <string name="startup_package_low_inventory_detail">Поточна кількість видимих пакетів: %1$d. Запуск продовжиться, але детектор небезпечних програм розгляне цю умову як потенційний доказ фільтрації.</string>
     <string name="startup_package_ready_headline">Інвентар PackageManager виглядає повним.</string>
     <string name="startup_package_ready_detail">Поточна кількість видимих пакетів: %1$d. Детектор небезпечних програм може використовувати стандартний шлях інвентаризації пакетів.</string>
+    <string name="navigation_home">Головна</string>
+    <string name="navigation_settings">Налаштування</string>
 </resources>

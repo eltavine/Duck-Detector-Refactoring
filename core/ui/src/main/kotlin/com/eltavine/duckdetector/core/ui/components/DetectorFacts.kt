@@ -20,23 +20,31 @@ package com.eltavine.duckdetector.core.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveIcon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveInsetSurfaceColor
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveHorizontalDivider
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceBackground
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
+
+internal val LocalMaterialDetectorHairlineStartInset = compositionLocalOf<Dp?> { null }
 
 /** One fact of a card's header: a short label over its value, and the status it reports, if any. */
 @Immutable
@@ -53,28 +61,57 @@ public fun DetectorFactPair(
     secondary: DetectorFact,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .background(color = DuckTheme.palette.groupedInset, shape = ShapeTokens.CornerLarge)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        DetectorFactLine(fact = primary)
-        DetectorHairline()
-        DetectorFactLine(fact = secondary)
-    }
+    AdaptiveContent(
+        miuix = {
+            Column(
+                modifier = modifier
+                    .fillMaxHeight()
+                    .adaptiveSurfaceBackground(
+                        materialColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        materialShape = MaterialTheme.shapes.large,
+                        miuixColor = adaptiveInsetSurfaceColor(),
+                        miuixCornerRadius = 16.dp,
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                DetectorFactLine(fact = primary)
+                DetectorHairline()
+                DetectorFactLine(fact = secondary)
+            }
+        },
+        material = {
+            Column(
+                modifier = modifier
+                    .fillMaxHeight()
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = MaterialTheme.shapes.large,
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                DetectorFactLine(fact = primary)
+                DetectorHairline()
+                DetectorFactLine(fact = secondary)
+            }
+        },
+    )
 }
 
 @Composable
-private fun DetectorFactLine(fact: DetectorFact) {
+private fun DetectorFactLine(
+    fact: DetectorFact,
+    showStatusIcon: Boolean = true,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            fact.status?.let { status ->
+            fact.status?.takeIf { showStatusIcon }?.let { status ->
                 val appearance = rememberStatusAppearance(status)
-                Icon(
+                AdaptiveIcon(
                     imageVector = appearance.icon,
                     contentDescription = null,
                     tint = appearance.iconTint,
@@ -83,13 +120,13 @@ private fun DetectorFactLine(fact: DetectorFact) {
             }
             WrapSafeText(
                 text = fact.label,
-                style = DuckTypography.Caption,
+                style = DuckTypography.PanelCaption,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         WrapSafeText(
             text = fact.value,
-            style = DuckTypography.Headline,
+            style = DuckTypography.PanelTitle,
             color = MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -101,9 +138,17 @@ public fun DetectorHairline(
     modifier: Modifier = Modifier,
     startInset: Dp = 0.dp,
 ) {
-    HorizontalDivider(
-        modifier = modifier.padding(start = startInset),
+    val resolvedStartInset = if (
+        LocalUiMode.current == UiMode.Material &&
+        startInset == 0.dp
+    ) {
+        LocalMaterialDetectorHairlineStartInset.current ?: startInset
+    } else {
+        startInset
+    }
+    AdaptiveHorizontalDivider(
+        modifier = modifier.padding(start = resolvedStartInset),
         thickness = Dp.Hairline,
-        color = DuckTheme.palette.separator,
+        materialColor = DuckTheme.palette.separator,
     )
 }

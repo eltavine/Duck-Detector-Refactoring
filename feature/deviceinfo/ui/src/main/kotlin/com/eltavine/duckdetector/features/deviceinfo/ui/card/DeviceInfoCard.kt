@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
@@ -43,6 +45,7 @@ import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
 import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.deviceinfo.domain.DeviceInfoSectionKind
 import com.eltavine.duckdetector.features.deviceinfo.presentation.model.DeviceInfoCardModel
@@ -67,10 +70,15 @@ internal fun DeviceInfoCard(
             DeviceInfoHeader(model.headerFacts)
         },
     ) {
-        model.sections.forEach { section ->
-            DeviceInfoSection(
-                model = section,
-            )
+        DetectorSectionGroup {
+            model.sections.forEachIndexed { index, section ->
+                item {
+                    DeviceInfoSection(
+                        model = section,
+                        showDivider = index < model.sections.lastIndex,
+                    )
+                }
+            }
         }
     }
 }
@@ -85,7 +93,7 @@ private fun DeviceInfoHeader(
     val sdk = facts.getOrNull(3) ?: return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -118,10 +126,12 @@ private fun DeviceInfoFactCard(
 @Composable
 private fun DeviceInfoSection(
     model: DeviceInfoSectionModel,
+    showDivider: Boolean,
 ) {
     DetectorSectionFrame(
         title = model.title,
         icon = sectionIcon(model.kind),
+        showDivider = showDivider,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
             model.rows.forEachIndexed { index, row ->

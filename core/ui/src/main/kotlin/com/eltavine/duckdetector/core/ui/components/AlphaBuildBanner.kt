@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.eltavine.duckdetector.core.ui.LocalAppBuildInfo
 import com.eltavine.duckdetector.core.ui.R
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** A ribbon across the top end corner that marks every screen of an alpha build. */
 @Composable
@@ -49,8 +51,14 @@ public fun AlphaBuildBanner(
     }
 
     val isDarkTheme = isSystemInDarkTheme()
-    val bannerColor = if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFD84315)
-    val textColor = if (isDarkTheme) Color.Black else Color.White
+    val bannerColor = adaptiveValue(
+        material = if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFD84315),
+        miuix = MiuixTheme.colorScheme.primary,
+    )
+    val textColor = adaptiveValue(
+        material = if (isDarkTheme) Color.Black else Color.White,
+        miuix = MiuixTheme.colorScheme.onPrimary,
+    )
 
     Box(
         modifier = modifier.fillMaxSize(),

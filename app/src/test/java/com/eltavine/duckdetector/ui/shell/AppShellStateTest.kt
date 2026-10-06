@@ -155,4 +155,5 @@ class AppShellStateTest {
         assertEquals(StartupGateState.READY, gateState)
         assertTrue(shouldCreateDetectorViewModels(gateState))
     }
+
 }

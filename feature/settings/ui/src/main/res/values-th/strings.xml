@@ -73,4 +73,5 @@ limitations under the License.
     <string name="update_status_current">คุณใช้ %1$s รุ่นล่าสุดแล้ว</string>
     <string name="update_status_failed">ตรวจสอบ GitHub ไม่สำเร็จ; แตะเพื่อลองใหม่</string>
     <string name="update_status_idle">ตรวจสอบ %1$s บน GitHub หลัง cold start; แตะเพื่อตรวจตอนนี้</string>
+    <string name="settings_section_appearance">รูปลักษณ์</string>
 </resources>

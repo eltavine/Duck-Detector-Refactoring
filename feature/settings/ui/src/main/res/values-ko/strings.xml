@@ -73,4 +73,5 @@ limitations under the License.
     <string name="update_status_current">최신 %1$s 빌드입니다</string>
     <string name="update_status_failed">GitHub를 확인하지 못했습니다. 다시 시도하려면 탭하세요</string>
     <string name="update_status_idle">콜드 스타트 후 GitHub에서 %1$s 업데이트를 확인합니다. 지금 확인하려면 탭하세요</string>
+    <string name="settings_section_appearance">모양</string>
 </resources>
