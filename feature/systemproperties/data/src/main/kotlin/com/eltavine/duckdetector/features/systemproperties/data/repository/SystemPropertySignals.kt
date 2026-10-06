@@ -24,6 +24,7 @@ import com.eltavine.duckdetector.capability.systemproperties.domain.SystemProper
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySeverity
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySignal
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySource
+import com.eltavine.duckdetector.capability.systemproperties.domain.assessAdbRootProperty
 import com.eltavine.duckdetector.features.systemproperties.data.rules.SystemPropertiesCatalog
 import com.eltavine.duckdetector.features.systemproperties.data.rules.SystemPropertyRule
 
@@ -84,34 +85,16 @@ internal fun SystemPropertiesRepository.buildAdbRootSignal(
         category = SystemPropertyCategory.SECURITY_CORE,
         cache = cache,
         nativeSnapshot = nativeSnapshot,
-    ).preferredValue
-    val severity = when {
-        adbRoot.preferredValue == "1" && debuggable == "1" -> SystemPropertySeverity.DANGER
-        adbRoot.preferredValue == "1" -> SystemPropertySeverity.WARNING
-        adbRoot.preferredValue == "0" -> SystemPropertySeverity.SAFE
-        else -> SystemPropertySeverity.NEUTRAL
-    }
-    val detail = when {
-        adbRoot.preferredValue == "1" && debuggable == "1" ->
-            "adbd can remain root because service.adb.root=1 and ro.debuggable=1."
-
-        adbRoot.preferredValue == "1" ->
-            "service.adb.root is set, but ro.debuggable=$debuggable means adbd may not actually stay root."
-
-        adbRoot.preferredValue == "0" ->
-            "ADB root property is disabled."
-
-        else ->
-            "ADB root property is present but does not match the usual production values."
-    }
+    )
+    val assessment = assessAdbRootProperty(adbRoot, debuggable) ?: return null
     return SystemPropertySignal(
         property = SERVICE_ADB_ROOT,
         description = "ADB running as root",
-        value = adbRoot.preferredValue,
+        value = assessment.value,
         category = SystemPropertyCategory.SECURITY_CORE,
-        severity = severity,
-        source = adbRoot.preferredSource,
-        detail = detail,
+        severity = assessment.severity,
+        source = assessment.source,
+        detail = assessment.detail,
     )
 }
 

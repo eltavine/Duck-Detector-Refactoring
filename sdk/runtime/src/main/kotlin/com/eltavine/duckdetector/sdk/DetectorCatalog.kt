@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.sdk
 
 import com.eltavine.duckdetector.core.detector.Detector
+import com.eltavine.duckdetector.features.adbruntime.detector.AdbRuntimeDetector
 import com.eltavine.duckdetector.features.bootloader.detector.BootloaderDetector
 import com.eltavine.duckdetector.features.customrom.detector.CustomRomDetector
 import com.eltavine.duckdetector.features.dangerousapps.detector.DangerousAppsDetector
@@ -46,6 +47,7 @@ public object DetectorCatalog {
     public val all: List<Detector<*, *>> = listOf(
         BootloaderDetector,
         TeeDetector,
+        AdbRuntimeDetector,
         CustomRomDetector,
         DangerousAppsDetector,
         KernelCheckDetector,
