@@ -130,6 +130,11 @@ jobs:
             exit 1
           fi
 
+          # The checkout step fetched the submodules at the workflow revision's commits. Build the
+          # ones the tag records, which differ when a manual run publishes an older tag.
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
           # A published stable release is final: users and update.json already refer to its files.
           # A draft is what an interrupted run leaves behind, and this run rebuilds it.
           releases=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")
