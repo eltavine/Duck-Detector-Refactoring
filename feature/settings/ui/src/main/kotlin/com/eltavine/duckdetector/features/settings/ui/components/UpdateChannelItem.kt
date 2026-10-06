@@ -19,14 +19,10 @@ package com.eltavine.duckdetector.features.settings.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material3.ListItemShapes
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.ui.R
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveSingleChoiceButtonGroup
 
 /** The channel the update check follows; picking the other one checks it at once. */
 @Composable
@@ -42,28 +39,20 @@ internal fun UpdateChannelItem(
     shapes: ListItemShapes,
     onChannelChange: (SettingsUpdateChannel) -> Unit,
 ) {
+    val options = SettingsUpdateChannel.entries
     SettingsItem(
         headline = stringResource(R.string.update_channel_label),
         shapes = shapes,
-        leadingContent = { SettingsIconTile(icon = Icons.Rounded.Layers) },
+        leadingContent = { AboutLeadingIcon(icon = Icons.Rounded.Layers) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 WrapSafeText(text = stringResource(channel.summary()))
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 2.dp),
-                ) {
-                    val options = SettingsUpdateChannel.entries
-                    options.forEachIndexed { index, option ->
-                        SegmentedButton(
-                            selected = option == channel,
-                            onClick = { onChannelChange(option) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                            label = { WrapSafeText(text = stringResource(option.label())) },
-                        )
-                    }
-                }
+                AdaptiveSingleChoiceButtonGroup(
+                    labels = options.map { option -> stringResource(option.label()) },
+                    selectedIndex = options.indexOf(channel),
+                    onSelectedIndexChange = { index -> onChannelChange(options[index]) },
+                    modifier = Modifier.padding(bottom = 2.dp),
+                )
             }
         },
     )
