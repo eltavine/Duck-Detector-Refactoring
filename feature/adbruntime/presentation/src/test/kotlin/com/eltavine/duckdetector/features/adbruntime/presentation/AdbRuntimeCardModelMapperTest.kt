@@ -44,7 +44,7 @@ class AdbRuntimeCardModelMapperTest {
                 stage = AdbRuntimeStage.READY,
                 platformApiLevel = 36,
                 samples = emptyList(),
-                mdns = AdbMdnsSnapshot(AdbProbeState.UNAVAILABLE),
+                mdnsSamples = listOf(AdbMdnsSnapshot(AdbProbeState.UNAVAILABLE)),
                 probed = false,
             ),
         )
@@ -83,7 +83,6 @@ class AdbRuntimeCardModelMapperTest {
                 stage = AdbRuntimeStage.READY,
                 platformApiLevel = 36,
                 samples = listOf(sample, sample),
-                mdns = mdns,
                 mdnsSamples = listOf(mdns, mdns),
                 probed = true,
             ),
@@ -91,9 +90,10 @@ class AdbRuntimeCardModelMapperTest {
         val export = model.toDetectorReport()
 
         assertEquals(DetectorStatus.danger(), model.status)
-        assertTrue(model.signalRows.isNotEmpty())
-        assertEquals(DetectorStatus.danger(), model.signalRows.first().status)
-        assertTrue(model.scanRows.any { it.detail?.contains("protocol=START_TLS") == true })
+        val finding = model.signalRows.single()
+        assertEquals(DetectorStatus.danger(), finding.status)
+        assertTrue(finding.detail.orEmpty().contains("192.0.2.5:37123"))
+        assertTrue(model.scanRows.any { it.detail?.contains("protocol=ADB STLS request") == true })
         val rows = export.blocks
             .filterIsInstance<ReportBlock.Rows>()
             .single { it.title == "Inconsistencies" }

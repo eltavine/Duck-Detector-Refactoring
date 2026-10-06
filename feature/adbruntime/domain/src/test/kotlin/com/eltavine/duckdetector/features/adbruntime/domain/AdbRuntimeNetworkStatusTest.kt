@@ -66,6 +66,42 @@ class AdbRuntimeNetworkStatusTest {
     }
 
     @Test
+    fun findingCarriesTheConfirmedEndpoint() {
+        val mdns = endpoint(
+            kind = AdbMdnsServiceKind.TLS_CONNECT,
+            response = AdbProtocolResponseKind.START_TLS,
+        )
+
+        val finding = report(mdns, mdns, wifiEnabled = true).findings().single()
+
+        assertEquals(
+            AdbProtocolEndpoint(
+                serviceKind = AdbMdnsServiceKind.TLS_CONNECT,
+                address = "192.0.2.5",
+                port = 5555,
+                responseKind = AdbProtocolResponseKind.START_TLS,
+            ),
+            finding.endpoint,
+        )
+    }
+
+    @Test
+    fun sameListenerMayAnswerWithEitherLegacyFirstPacket() {
+        val first = endpoint(
+            kind = AdbMdnsServiceKind.LEGACY_TCP,
+            response = AdbProtocolResponseKind.AUTH_TOKEN,
+        )
+        val second = endpoint(
+            kind = AdbMdnsServiceKind.LEGACY_TCP,
+            response = AdbProtocolResponseKind.CONNECT,
+        )
+
+        val finding = report(first, second).findings().single()
+
+        assertEquals(AdbProtocolResponseKind.CONNECT, finding.endpoint.responseKind)
+    }
+
+    @Test
     fun oneShotProtocolConfirmationStaysWarning() {
         val first = endpoint(
             kind = AdbMdnsServiceKind.TLS_CONNECT,
@@ -73,6 +109,30 @@ class AdbRuntimeNetworkStatusTest {
         )
         val second = endpoint(AdbMdnsServiceKind.TLS_CONNECT)
         val report = report(first, second, wifiEnabled = true)
+
+        assertTrue(report.findings().isEmpty())
+        assertEquals(DetectorStatus.warning(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun singleDiscoveryPassNeverContradictsInit() {
+        val mdns = endpoint(
+            kind = AdbMdnsServiceKind.LEGACY_TCP,
+            response = AdbProtocolResponseKind.AUTH_TOKEN,
+        )
+        val report = report(mdns)
+
+        assertTrue(report.findings().isEmpty())
+        assertEquals(DetectorStatus.warning(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun initRunningInOneSampleStaysWarning() {
+        val mdns = endpoint(
+            kind = AdbMdnsServiceKind.LEGACY_TCP,
+            response = AdbProtocolResponseKind.AUTH_TOKEN,
+        )
+        val report = report(mdns, mdns, secondInitState = "running")
 
         assertTrue(report.findings().isEmpty())
         assertEquals(DetectorStatus.warning(), report.toDetectorStatus())
@@ -126,11 +186,11 @@ class AdbRuntimeNetworkStatusTest {
     )
 
     private fun report(
-        firstMdns: AdbMdnsSnapshot,
-        secondMdns: AdbMdnsSnapshot,
+        vararg mdnsSamples: AdbMdnsSnapshot,
         wifiEnabled: Boolean = false,
+        secondInitState: String = "stopped",
     ): AdbRuntimeReport {
-        val sample = AdbRuntimeSample(
+        val first = AdbRuntimeSample(
             usbDebuggingEnabled = true,
             wirelessDebuggingEnabled = wifiEnabled,
             debuggingFeaturesRestricted = false,
@@ -140,12 +200,12 @@ class AdbRuntimeNetworkStatusTest {
             ),
             usb = UsbRuntimeSnapshot(state = AdbProbeState.OBSERVED),
         )
+        val second = first.copy(properties = first.properties.copy(initAdbdState = secondInitState))
         return AdbRuntimeReport(
             stage = AdbRuntimeStage.READY,
             platformApiLevel = 36,
-            samples = listOf(sample, sample),
-            mdns = secondMdns,
-            mdnsSamples = listOf(firstMdns, secondMdns),
+            samples = listOf(first, second),
+            mdnsSamples = mdnsSamples.toList(),
             probed = true,
         )
     }

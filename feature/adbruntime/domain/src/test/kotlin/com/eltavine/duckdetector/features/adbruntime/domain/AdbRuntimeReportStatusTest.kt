@@ -45,19 +45,6 @@ class AdbRuntimeReportStatusTest {
     }
 
     @Test
-    fun serviceAdbRootOneIsDanger() {
-        val sample = sample(
-            usbEnabled = true,
-            initState = "running",
-            serviceAdbRoot = "1",
-        )
-        val report = ready(samples = listOf(sample, sample))
-
-        assertTrue(report.findings().any { it.kind == AdbFindingKind.ADB_ROOT_PROPERTY })
-        assertEquals(DetectorStatus.danger(), report.toDetectorStatus())
-    }
-
-    @Test
     fun settingsVersusStoppedInitStaysWarningWithoutProtocolEvidence() {
         val sample = sample(usbEnabled = true, initState = "stopped")
         val report = ready(samples = listOf(sample, sample))
@@ -150,7 +137,6 @@ class AdbRuntimeReportStatusTest {
         debuggingFeaturesRestricted: Boolean? = false,
         testHarnessMode: String? = "0",
         initState: String? = "running",
-        serviceAdbRoot: String? = null,
         sysUsbState: String? = null,
         usbConfigured: Boolean? = false,
         usbFunctions: Set<String> = emptySet(),
@@ -162,16 +148,6 @@ class AdbRuntimeReportStatusTest {
             testHarnessMode = testHarnessMode,
             initAdbdState = initState,
             sysUsbState = sysUsbState,
-            serviceAdbRoot = serviceAdbRoot,
-            serviceAdbRootRequested = serviceAdbRoot?.let { it == "1" },
-            serviceAdbRootSource = serviceAdbRoot?.let { "REFLECTION" },
-            serviceAdbRootDetail = serviceAdbRoot?.let {
-                if (it == "1") {
-                    "service.adb.root=1 records an explicit adb root request/state."
-                } else {
-                    "ADB root property is disabled."
-                }
-            },
         ),
         usb = UsbRuntimeSnapshot(
             state = AdbProbeState.OBSERVED,
@@ -184,13 +160,11 @@ class AdbRuntimeReportStatusTest {
         apiLevel: Int = 36,
         probed: Boolean = true,
         samples: List<AdbRuntimeSample> = emptyList(),
-        mdns: AdbMdnsSnapshot = AdbMdnsSnapshot(AdbProbeState.NOT_OBSERVED),
         mdnsSamples: List<AdbMdnsSnapshot> = emptyList(),
     ) = AdbRuntimeReport(
         stage = AdbRuntimeStage.READY,
         platformApiLevel = apiLevel,
         samples = samples,
-        mdns = mdns,
         mdnsSamples = mdnsSamples,
         probed = probed,
     )

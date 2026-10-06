@@ -24,7 +24,6 @@ import android.provider.Settings
 import com.eltavine.duckdetector.capability.systemproperties.data.SystemPropertyReadUtils
 import com.eltavine.duckdetector.capability.systemproperties.domain.MultiSourcePropertyRead
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertyCategory
-import com.eltavine.duckdetector.capability.systemproperties.domain.assessAdbRootProperty
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProbeState
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbPropertySnapshot
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeSample
@@ -53,17 +52,8 @@ internal class AdbStateProbe(
     }.getOrNull()
 
     /**
-     * AOSP AdbService catches SecurityException when synchronizing ADB_ENABLED while
-     * DISALLOW_DEBUGGING_FEATURES is active. In that case Settings may be stale and must not be
-     * treated as a faithful mirror of the transport state.
-     *
-     * Android 11 reference (tag android-11.0.0_r48, commit 1d9b9ab57d844b18b3b1b4297725141e7788109b):
-     * Settings sync catches SecurityException and names DISALLOW_DEBUGGING_FEATURES at lines 261-266:
-     * https://android.googlesource.com/platform/frameworks/base/+/1d9b9ab57d844b18b3b1b4297725141e7788109b/services/core/java/com/android/server/adb/AdbService.java#261
-     *
-     * UserManager.hasUserRestriction() is public for the current user:
-     * Android 10 tag android-10.0.0_r47, lines 1944-1963:
-     * https://android.googlesource.com/platform/frameworks/base/+/dff3deab5d25f8bbfd49abfb423043c9be47b7db/core/java/android/os/UserManager.java#1944
+     * AdbService cannot synchronise the ADB Settings while DISALLOW_DEBUGGING_FEATURES is active, so
+     * a restricted user's Settings may be stale (EVIDENCE.md, "Settings and lifecycle context").
      */
     private fun readDebuggingRestriction(): Boolean? = runCatching {
         context.getSystemService(UserManager::class.java)
@@ -74,52 +64,26 @@ internal class AdbStateProbe(
         val nativeSnapshot = propertyReads.collectNativeSnapshot(PROPERTY_NAMES)
         val cache = linkedMapOf<String, MultiSourcePropertyRead>()
 
-        fun readRaw(name: String): MultiSourcePropertyRead =
+        fun read(name: String): String? =
             propertyReads.readProperty(
                 property = name,
                 category = SystemPropertyCategory.SECURITY_CORE,
                 cache = cache,
                 nativeSnapshot = nativeSnapshot,
-            )
-
-        fun read(name: String): String? =
-            readRaw(name).preferredValue.trim().ifBlank { null }
-
-        val adbRootRead = readRaw(SERVICE_ADB_ROOT)
-        val debuggableRead = readRaw(RO_DEBUGGABLE)
-        val adbRootAssessment = assessAdbRootProperty(adbRootRead, debuggableRead)
+            ).preferredValue.trim().ifBlank { null }
 
         return AdbPropertySnapshot(
             testHarnessMode = read(PERSIST_SYS_TEST_HARNESS),
             initAdbdState = read(INIT_SVC_ADBD),
             sysUsbState = read(SYS_USB_STATE),
-            serviceAdbRoot = adbRootAssessment?.value,
-            serviceAdbRootRequested = adbRootAssessment?.rootRequested,
-            serviceAdbRootSource = adbRootAssessment?.source?.name,
-            serviceAdbRootDetail = adbRootAssessment?.detail,
         )
     }
 
     /**
-     * ACTION_USB_STATE is a sticky framework snapshot, not a direct adbd process probe.
-     * UsbDeviceManager publishes "connected", "configured", and applied function names. Even a
-     * configured adb gadget is kept at warning/context severity because configfs can clear
-     * sys.usb.ffs.ready when adbd stops without tearing the gadget links down in that same trigger.
-     *
-     * Android 10 tag android-10.0.0_r47, frameworks/base commit
-     * dff3deab5d25f8bbfd49abfb423043c9be47b7db:
-     * broadcast extras are built at lines 701-718 and ADB is added by getAppliedFunctions()
-     * at lines 786-793:
-     * https://android.googlesource.com/platform/frameworks/base/+/dff3deab5d25f8bbfd49abfb423043c9be47b7db/services/usb/java/com/android/server/usb/UsbDeviceManager.java#701
-     *
-     * Android 16 tag android-16.0.0_r3, frameworks/base commit
-     * 33b96ce8a122757002e5040ac59824bd7a262e00:
-     * broadcast extras are at lines 989-1006 and getAppliedFunctions() at lines 1193-1201:
-     * https://android.googlesource.com/platform/frameworks/base/+/33b96ce8a122757002e5040ac59824bd7a262e00/services/usb/java/com/android/server/usb/UsbDeviceManager.java#989
-     *
-     * Android 16 configfs clears only sys.usb.ffs.ready on init.svc.adbd=stopped at lines 14-15;
-     * ffs.adb/UDC setup is performed by the separate ready=1 action at lines 20-24:
-     * https://android.googlesource.com/platform/system/core/+/4deec4059670028cccb7f9f22bb73813ae71c6f3/rootdir/init.usb.configfs.rc#14
+     * ACTION_USB_STATE is UsbDeviceManager's sticky snapshot of the applied gadget functions, not a
+     * probe of adbd: configfs can clear sys.usb.ffs.ready when adbd stops without tearing the gadget
+     * down in the same trigger, so even a configured adb gadget stays context (EVIDENCE.md,
+     * "USB runtime broadcast").
      */
     private fun readUsbState(): UsbRuntimeSnapshot {
         val intent = runCatching {
@@ -151,15 +115,11 @@ internal class AdbStateProbe(
         const val PERSIST_SYS_TEST_HARNESS = "persist.sys.test_harness"
         const val INIT_SVC_ADBD = "init.svc.adbd"
         const val SYS_USB_STATE = "sys.usb.state"
-        const val RO_DEBUGGABLE = "ro.debuggable"
-        const val SERVICE_ADB_ROOT = "service.adb.root"
 
         val PROPERTY_NAMES = listOf(
             PERSIST_SYS_TEST_HARNESS,
             INIT_SVC_ADBD,
             SYS_USB_STATE,
-            RO_DEBUGGABLE,
-            SERVICE_ADB_ROOT,
         )
 
         val USB_FUNCTIONS = listOf(

@@ -17,6 +17,8 @@
 
 package com.eltavine.duckdetector.features.adbruntime.data.repository
 
+import android.system.ErrnoException
+import android.system.OsConstants
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbMdnsServiceKind
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProbeState
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProtocolResponseKind
@@ -25,6 +27,7 @@ import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
 import java.net.InetSocketAddress
+import java.net.NoRouteToHostException
 import java.net.Socket
 import java.net.SocketTimeoutException
 import java.nio.ByteBuffer
@@ -32,52 +35,13 @@ import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 
 /**
- * Identifies an ADB network listener by speaking only the first ADB protocol round trip.
+ * Identifies an ADB listener by the one packet it answers to an initial A_CNXN.
  *
- * The probe sends A_CNXN and reads exactly one response. Legacy ADB answers with A_AUTH/TOKEN or
- * A_CNXN; the Wireless Debugging secure-connect transport answers with A_STLS before the TLS
- * handshake. The probe never sends an AUTH signature, RSA public key, A_STLS reply, OPEN, TLS
- * handshake bytes, or any service command.
- *
- * Android 10 tag android-10.0.0_r47, system/core commit
- * 1dea9a052b7f214c10a77d5ed6ffd3602722a817:
- * - A_CNXN/A_AUTH and protocol versions: adb/adb.h lines 34-54
- *   https://android.googlesource.com/platform/system/core/+/1dea9a052b7f214c10a77d5ed6ffd3602722a817/adb/adb.h#34
- * - six-word little-endian message header: adb/types.h lines 125-132
- *   https://android.googlesource.com/platform/system/core/+/1dea9a052b7f214c10a77d5ed6ffd3602722a817/adb/types.h#125
- * - canonical A_CNXN construction: adb/adb.cpp lines 212-233
- *   https://android.googlesource.com/platform/system/core/+/1dea9a052b7f214c10a77d5ed6ffd3602722a817/adb/adb.cpp#212
- * - authenticated devices answer with A_CNXN, otherwise send_auth_request(): lines 294-307
- *   https://android.googlesource.com/platform/system/core/+/1dea9a052b7f214c10a77d5ed6ffd3602722a817/adb/adb.cpp#294
- * - AUTH TOKEN=1, SIGNATURE=2, RSAPUBLICKEY=3: adb/adb_auth.h lines 27-32
- *   https://android.googlesource.com/platform/system/core/+/1dea9a052b7f214c10a77d5ed6ffd3602722a817/adb/adb_auth.h#27
- * - adbd emits the AUTH token at daemon/auth.cpp lines 262-276
- *   https://android.googlesource.com/platform/system/core/+/1dea9a052b7f214c10a77d5ed6ffd3602722a817/adb/daemon/auth.cpp#262
- *
- * Android 16 tag android-16.0.0_r3, packages/modules/adb commit
- * cf10d3798f0847f89820381b541aedfd27a30375:
- * - A_STLS and its version are adb.h lines 49 and 61-62:
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/adb.h#49
- * - TlsServer accepts the secure-connect socket and registers it with use_tls=true at
- *   daemon/adb_wifi.cpp lines 127-142:
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/daemon/adb_wifi.cpp#127
- * - register_socket_transport stores that flag in atransport::use_tls at transport.cpp
- *   lines 1510-1520:
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/transport.cpp#1510
- * - send_tls_request() constructs A_STLS/A_STLS_VERSION with no payload at adb.cpp lines 318-324:
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/adb.cpp#318
- * - after the initial CNXN, use_tls selects send_tls_request(t) at adb.cpp lines 420-430:
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/adb.cpp#420
- * - AUTH token size is fixed at 20 bytes in adb.h line 103
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/adb.h#103
- * - send_packet sets magic/checksum at transport.cpp lines 565-576
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/transport.cpp#565
- * - header validation checks magic and payload length at lines 1705-1718
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/transport.cpp#1705
- * - RSAPUBLICKEY is the branch that calls adbd_auth_confirm_key(): adb.cpp lines 462-490
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/adb.cpp#462
- * - adbd_auth_confirm_key() is the user-prompt path: daemon/auth.cpp lines 311-318
- *   https://android.googlesource.com/platform/packages/modules/adb/+/cf10d3798f0847f89820381b541aedfd27a30375/daemon/auth.cpp#311
+ * Legacy adbd answers A_AUTH/ADB_AUTH_TOKEN, or A_CNXN when it requires no authentication; the
+ * Wireless debugging secure-connect transport answers A_STLS before any TLS. The probe reads that
+ * packet and closes. It never sends an AUTH signature or RSA public key, the packets that reach
+ * adbd's authorization prompt, nor an A_STLS reply, TLS bytes, A_OPEN or a service command.
+ * EVIDENCE.md, "ADB wire protocol identity", traces every constant and branch to AOSP.
  */
 internal class AdbProtocolProbe(
     private val connectTimeoutMs: Int = CONNECT_TIMEOUT_MS,
@@ -91,7 +55,7 @@ internal class AdbProtocolProbe(
         if (address.isBlank() || port !in 1..65535) {
             return AdbProtocolSnapshot(
                 state = AdbProbeState.UNAVAILABLE,
-                detail = "Legacy ADB endpoint was not valid.",
+                detail = "The advertised ADB endpoint was not valid.",
             )
         }
 
@@ -117,7 +81,7 @@ internal class AdbProtocolProbe(
             )
         } catch (failure: IOException) {
             AdbProtocolSnapshot(
-                state = AdbProbeState.NOT_OBSERVED,
+                state = failure.probeState(),
                 detail = failure.message ?: "The local listener did not complete an ADB handshake.",
             )
         } catch (failure: RuntimeException) {
@@ -253,5 +217,26 @@ internal class AdbProtocolProbe(
         const val HOST_BANNER = "host::features="
         const val CONNECT_TIMEOUT_MS = 500
         const val READ_TIMEOUT_MS = 750
+    }
+}
+
+/*
+ * A refused, reset or silent listener is an answer about the endpoint; a permission or routing
+ * error is not. libcore keeps the errno as an ErrnoException cause: a socket without INTERNET fails
+ * EACCES, and a connection a network policy blocks fails EPERM.
+ */
+private fun IOException.probeState(): AdbProbeState {
+    if (this is NoRouteToHostException) {
+        return AdbProbeState.UNAVAILABLE
+    }
+    val errno = generateSequence<Throwable>(this) { it.cause }
+        .filterIsInstance<ErrnoException>()
+        .firstOrNull()
+        ?.errno
+        ?: return AdbProbeState.NOT_OBSERVED
+    return when (errno) {
+        OsConstants.EACCES, OsConstants.EPERM -> AdbProbeState.PERMISSION_REQUIRED
+        OsConstants.ENETUNREACH, OsConstants.EHOSTUNREACH -> AdbProbeState.UNAVAILABLE
+        else -> AdbProbeState.NOT_OBSERVED
     }
 }

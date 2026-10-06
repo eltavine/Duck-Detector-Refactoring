@@ -143,6 +143,8 @@ The SDK declares no permissions, so the host decides what its process may observ
 | `QUERY_ALL_PACKAGES` | The package inventory behind Custom ROM, Dangerous Apps, LSPosed, Native Root and Virtualization | Android's package visibility filtering applies, and the inventory records that the permission was not requested |
 | `USE_BIOMETRIC`, `USE_FINGERPRINT` | TEE's biometric and SOTER environment checks, which call `BiometricManager.canAuthenticate` | That call requires `USE_BIOMETRIC` |
 | `INTERNET`, `ACCESS_NETWORK_STATE` | TEE's online refresh of Google's attestation revocation list | TEE cannot refresh the list online |
+| `INTERNET` | ADB Runtime's first-packet probe of an ADB endpoint this device advertises; the connection never leaves the device | The probe reports the endpoint as permission-limited, so the network contradiction is not evaluated |
+| `ACCESS_LOCAL_NETWORK` | ADB Runtime's `NsdManager` discovery of this device's ADB services on Android 17 and later. Neither the app nor the SDK requests it; the user grants it in system settings | Discovery reports that the permission is required, so the network contradiction is not evaluated |
 
 `DuckDetector.packageVisibility(context)` reports whether this process sees the full package list, a filtered one or an unreadable one, with the number of visible packages, so a host can tell before it reads the package-based results whether filtering bounds them.
 

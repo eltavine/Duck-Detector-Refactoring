@@ -100,6 +100,32 @@ class AdbProtocolProbeTest {
     }
 
     @Test
+    fun refusedConnectionIsNotConfirmed() {
+        val loopback = InetAddress.getLoopbackAddress()
+        val closedPort = ServerSocket(0, 1, loopback).use { server -> server.localPort }
+
+        val snapshot = AdbProtocolProbe(connectTimeoutMs = 1_000, readTimeoutMs = 1_000).collect(
+            address = loopback.hostAddress ?: "127.0.0.1",
+            port = closedPort,
+            serviceKind = AdbMdnsServiceKind.LEGACY_TCP,
+        )
+
+        assertFalse(snapshot.confirmed)
+        assertEquals(AdbProbeState.NOT_OBSERVED, snapshot.state)
+    }
+
+    @Test
+    fun invalidEndpointIsUnavailable() {
+        val snapshot = AdbProtocolProbe().collect(
+            address = "",
+            port = 5555,
+            serviceKind = AdbMdnsServiceKind.LEGACY_TCP,
+        )
+
+        assertEquals(AdbProbeState.UNAVAILABLE, snapshot.state)
+    }
+
+    @Test
     fun authTokenDoesNotImpersonateWirelessAdbSecureConnect() {
         withServer(AdbMdnsServiceKind.TLS_CONNECT) { input, output ->
             assertCanonicalConnect(readPacket(input))

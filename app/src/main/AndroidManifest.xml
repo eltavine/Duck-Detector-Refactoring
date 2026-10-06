@@ -29,13 +29,9 @@ limitations under the License.
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!--
-    Android 17 / API 37 gates silent NSD discovery behind ACCESS_LOCAL_NETWORK.
-    Duck declares it so the ADB mDNS probe can become available when the user grants it; the
-    detector never prompts during an automatic scan and treats a missing grant as unavailable.
-    Android 17 tag android-17.0.0_r1, frameworks/base commit
-    94b4c163b7dfe5ce3607f7bb8456f9573f7de57d:
-    ACCESS_LOCAL_NETWORK is defined as a dangerous permission at lines 2670-2677:
-    https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/res/AndroidManifest.xml#2670
+    Android 17 allows silent NsdManager discovery only with ACCESS_LOCAL_NETWORK, which ADB Runtime
+    needs to find this device's own ADB services. The app never requests it; a user who grants it
+    in system settings lets the detector evaluate network ADB.
     -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 

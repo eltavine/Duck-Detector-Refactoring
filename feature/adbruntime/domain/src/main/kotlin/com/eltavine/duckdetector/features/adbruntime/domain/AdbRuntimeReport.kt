@@ -28,7 +28,7 @@ enum class AdbProbeState {
     NOT_OBSERVED,
     UNAVAILABLE,
     PERMISSION_REQUIRED,
-    UNSUPPORTED,
+    NOT_PROBED,
 }
 
 enum class AdbFindingSeverity {
@@ -36,7 +36,6 @@ enum class AdbFindingSeverity {
 }
 
 enum class AdbFindingKind {
-    ADB_ROOT_PROPERTY,
     INIT_STOPPED_WITH_ADB_PROTOCOL,
 }
 
@@ -44,10 +43,6 @@ data class AdbPropertySnapshot(
     val testHarnessMode: String? = null,
     val initAdbdState: String? = null,
     val sysUsbState: String? = null,
-    val serviceAdbRoot: String? = null,
-    val serviceAdbRootRequested: Boolean? = null,
-    val serviceAdbRootSource: String? = null,
-    val serviceAdbRootDetail: String? = null,
 )
 
 data class UsbRuntimeSnapshot(
@@ -72,7 +67,7 @@ enum class AdbProtocolResponseKind {
 }
 
 data class AdbProtocolSnapshot(
-    val state: AdbProbeState = AdbProbeState.UNSUPPORTED,
+    val state: AdbProbeState = AdbProbeState.NOT_PROBED,
     val responseKind: AdbProtocolResponseKind? = null,
     val detail: String? = null,
 ) {
@@ -100,10 +95,18 @@ data class AdbMdnsSnapshot(
     val localServiceObserved: Boolean get() = state == AdbProbeState.OBSERVED && port != null
 }
 
+/** A local endpoint that answered with the AOSP first packet of the service type it advertised. */
+data class AdbProtocolEndpoint(
+    val serviceKind: AdbMdnsServiceKind,
+    val address: String,
+    val port: Int,
+    val responseKind: AdbProtocolResponseKind,
+)
+
 data class AdbRuntimeFinding(
     val kind: AdbFindingKind,
     val severity: AdbFindingSeverity,
-    val detail: String,
+    val endpoint: AdbProtocolEndpoint,
 )
 
 /** What one ADB runtime scan observed, before the domain layer correlates the sources. */
@@ -111,28 +114,25 @@ data class AdbRuntimeReport(
     val stage: AdbRuntimeStage,
     val platformApiLevel: Int? = null,
     val samples: List<AdbRuntimeSample>,
-    val mdns: AdbMdnsSnapshot,
+    /** One entry per discovery pass; the second pass runs only after the first confirmed an endpoint. */
     val mdnsSamples: List<AdbMdnsSnapshot> = emptyList(),
     val probed: Boolean,
     val unavailableReason: String? = null,
     val errorMessage: String? = null,
 ) {
+    val latestMdns: AdbMdnsSnapshot
+        get() = mdnsSamples.lastOrNull() ?: AdbMdnsSnapshot(AdbProbeState.NOT_PROBED)
+
     companion object {
         fun loading(): AdbRuntimeReport = AdbRuntimeReport(
             stage = AdbRuntimeStage.LOADING,
-            platformApiLevel = null,
             samples = emptyList(),
-            mdns = AdbMdnsSnapshot(AdbProbeState.UNAVAILABLE),
-            mdnsSamples = emptyList(),
             probed = false,
         )
 
         fun failed(message: String): AdbRuntimeReport = AdbRuntimeReport(
             stage = AdbRuntimeStage.FAILED,
-            platformApiLevel = null,
             samples = emptyList(),
-            mdns = AdbMdnsSnapshot(AdbProbeState.UNAVAILABLE),
-            mdnsSamples = emptyList(),
             probed = false,
             errorMessage = message,
         )

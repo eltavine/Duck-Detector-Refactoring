@@ -57,7 +57,6 @@ object SystemPropertiesCatalog {
             property = "service.adb.root",
             description = "ADB running as root",
             category = SystemPropertyCategory.SECURITY_CORE,
-            dangerousValues = listOf("1"),
             expectedSafeValue = "0",
         ),
         SystemPropertyRule(

@@ -23,6 +23,8 @@ import com.eltavine.duckdetector.features.adbruntime.domain.AdbFindingKind
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbMdnsServiceKind
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbMdnsSnapshot
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProbeState
+import com.eltavine.duckdetector.features.adbruntime.domain.AdbProtocolResponseKind
+import com.eltavine.duckdetector.features.adbruntime.domain.AdbProtocolSnapshot
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeFinding
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeReport
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeSample
@@ -82,8 +84,15 @@ class AdbRuntimeCardModelMapper {
             label = finding.kind.label(),
             value = "Contradiction",
             status = DetectorStatus.danger(),
-            detail = finding.detail,
+            detail = finding.detail(),
         )
+
+    private fun AdbRuntimeFinding.detail(): String = when (kind) {
+        AdbFindingKind.INIT_STOPPED_WITH_ADB_PROTOCOL ->
+            "The local ${endpoint.serviceKind.label()} endpoint ${endpoint.address}:${endpoint.port} " +
+                "answered with the ${endpoint.responseKind.label()} in both discovery passes while " +
+                "init.svc.adbd stayed stopped."
+    }
 
     private fun scanRows(report: AdbRuntimeReport): List<AdbRuntimeDetailRowModel> {
         if (report.stage != AdbRuntimeStage.READY) {
@@ -92,33 +101,17 @@ class AdbRuntimeCardModelMapper {
         val sample = report.samples.lastOrNull() ?: return listOf(
             infoRow("Probe", "Unavailable", report.unavailableReason),
         )
-        return buildList {
-            add(infoRow("Platform API", report.platformApiLevel?.toString() ?: "Unavailable"))
-            add(infoRow("Debugging restricted", sample.debuggingFeaturesRestricted.enabledLabel()))
-            add(infoRow("Test harness mode", sample.properties.testHarnessMode ?: "Unavailable"))
-            add(infoRow("USB debugging setting", sample.usbDebuggingEnabled.enabledLabel()))
-            add(infoRow("Wireless debugging setting", sample.wirelessDebuggingEnabled.enabledLabel()))
-            add(infoRow("init.svc.adbd", sample.properties.initAdbdState ?: "Unavailable"))
-            add(usbRuntimeRow(sample))
-            add(mdnsRow(report.mdns))
-            add(infoRow("sys.usb.state", sample.properties.sysUsbState ?: "Unavailable"))
-            add(
-                infoRow(
-                    "service.adb.root",
-                    sample.properties.serviceAdbRoot ?: "Absent / unavailable",
-                    buildString {
-                        sample.properties.serviceAdbRootSource?.let { source ->
-                            append("Property source=")
-                            append(source)
-                        }
-                        sample.properties.serviceAdbRootDetail?.let { detail ->
-                            if (isNotEmpty()) append(". ")
-                            append(detail)
-                        }
-                    }.ifBlank { null },
-                ),
-            )
-        }
+        return listOf(
+            infoRow("Platform API", report.platformApiLevel?.toString() ?: "Unavailable"),
+            infoRow("Debugging restricted", sample.debuggingFeaturesRestricted.enabledLabel()),
+            infoRow("Test harness mode", sample.properties.testHarnessMode ?: "Unavailable"),
+            infoRow("USB debugging setting", sample.usbDebuggingEnabled.enabledLabel()),
+            infoRow("Wireless debugging setting", sample.wirelessDebuggingEnabled.enabledLabel()),
+            infoRow("init.svc.adbd", sample.properties.initAdbdState ?: "Unavailable"),
+            usbRuntimeRow(sample),
+            mdnsRow(report.latestMdns),
+            infoRow("sys.usb.state", sample.properties.sysUsbState ?: "Unavailable"),
+        )
     }
 
     private fun usbRuntimeRow(sample: AdbRuntimeSample): AdbRuntimeDetailRowModel {
@@ -127,7 +120,7 @@ class AdbRuntimeCardModelMapper {
             AdbProbeState.OBSERVED, AdbProbeState.NOT_OBSERVED ->
                 usb.functions.takeIf(Set<String>::isNotEmpty)?.joinToString(",") ?: "No functions"
             AdbProbeState.PERMISSION_REQUIRED -> "Permission required"
-            AdbProbeState.UNSUPPORTED -> "Unsupported"
+            AdbProbeState.NOT_PROBED -> "Not probed"
             AdbProbeState.UNAVAILABLE -> "Unavailable"
         }
         return infoRow(
@@ -147,26 +140,19 @@ class AdbRuntimeCardModelMapper {
             }
             AdbProbeState.NOT_OBSERVED -> "Not observed"
             AdbProbeState.PERMISSION_REQUIRED -> "Permission required"
-            AdbProbeState.UNSUPPORTED -> "Unsupported"
+            AdbProbeState.NOT_PROBED -> "Not probed"
             AdbProbeState.UNAVAILABLE -> "Unavailable"
         }
-        val endpoint = if (mdns.address != null && mdns.port != null) {
-            buildString {
-                append("${mdns.address}:${mdns.port}")
-                append("; protocol=")
-                append(
-                    when {
-                        mdns.protocol.confirmed -> mdns.protocol.responseKind?.name ?: "confirmed"
-                        mdns.protocol.state == AdbProbeState.NOT_OBSERVED -> "not confirmed"
-                        mdns.protocol.state == AdbProbeState.UNAVAILABLE -> "unavailable"
-                        else -> "not probed"
-                    },
-                )
-            }
-        } else {
-            null
+        val detail = when {
+            mdns.address != null && mdns.port != null ->
+                "${mdns.address}:${mdns.port}; protocol=${mdns.protocol.label()}"
+            mdns.state == AdbProbeState.PERMISSION_REQUIRED ->
+                "Android 17 allows silent NsdManager discovery only with the local network permission. " +
+                    "Duck Detector never asks for it during a scan; grant it in the app's system settings " +
+                    "to evaluate network ADB."
+            else -> mdns.detail
         }
-        return infoRow("ADB mDNS", value, endpoint ?: mdns.detail)
+        return infoRow("ADB mDNS", value, detail)
     }
 
     private fun infoRow(label: String, value: String, detail: String? = null) =
@@ -178,9 +164,28 @@ class AdbRuntimeCardModelMapper {
         )
 
     private fun AdbFindingKind.label(): String = when (this) {
-        AdbFindingKind.ADB_ROOT_PROPERTY -> "ADB root property"
         AdbFindingKind.INIT_STOPPED_WITH_ADB_PROTOCOL -> "ADB protocol vs init"
     }
+
+    private fun AdbMdnsServiceKind.label(): String = when (this) {
+        AdbMdnsServiceKind.LEGACY_TCP -> "legacy ADB"
+        AdbMdnsServiceKind.TLS_CONNECT -> "Wireless debugging secure-connect"
+    }
+
+    private fun AdbProtocolResponseKind.label(): String = when (this) {
+        AdbProtocolResponseKind.AUTH_TOKEN -> "ADB AUTH token"
+        AdbProtocolResponseKind.CONNECT -> "ADB CNXN banner"
+        AdbProtocolResponseKind.START_TLS -> "ADB STLS request"
+    }
+
+    private fun AdbProtocolSnapshot.label(): String =
+        responseKind?.takeIf { confirmed }?.label() ?: when (state) {
+            AdbProbeState.OBSERVED -> "confirmed"
+            AdbProbeState.NOT_OBSERVED -> "not confirmed"
+            AdbProbeState.UNAVAILABLE -> "unavailable"
+            AdbProbeState.PERMISSION_REQUIRED -> "permission required"
+            AdbProbeState.NOT_PROBED -> "not probed"
+        }
 
     private fun Boolean?.enabledLabel(): String = when (this) {
         true -> "Enabled"

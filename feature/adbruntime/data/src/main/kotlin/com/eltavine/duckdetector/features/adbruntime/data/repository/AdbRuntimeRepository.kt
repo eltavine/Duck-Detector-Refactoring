@@ -48,36 +48,26 @@ class AdbRuntimeRepository(
         }
     }
 
+    /*
+     * The interval between the state samples debounces one-shot transitions; it is not an AOSP
+     * settling deadline (EVIDENCE.md, "Sampling"). A network finding needs both discovery passes to
+     * confirm one endpoint, so the second pass runs only after the first one confirmed it.
+     */
     private suspend fun collect(): AdbRuntimeReport {
-        /*
-         * This is a detector-side debounce, not an AOSP "fully settled" deadline.
-         * UsbDeviceManager itself has longer recovery windows (for example function-switch and
-         * enumeration timeouts), which is why Settings/property disagreement is never promoted to
-         * danger merely because it survives this interval. Hard findings additionally require a
-         * protocol-confirmed ADB runtime. USB gadget and mDNS-only state stay at
-         * warning/context because neither one authenticates a daemon by itself.
-         *
-         * Android 11 tag android-11.0.0_r48, frameworks/base commit
-         * 1d9b9ab57d844b18b3b1b4297725141e7788109b:
-         * SET_FUNCTIONS_TIMEOUT_MS/ENUMERATION_TIME_OUT_MS are defined at lines 1676-1692 and
-         * scheduled together at lines 1910-1916:
-         * https://android.googlesource.com/platform/frameworks/base/+/1d9b9ab57d844b18b3b1b4297725141e7788109b/services/usb/java/com/android/server/usb/UsbDeviceManager.java#1676
-        */
         val firstSampleAt = SystemClock.elapsedRealtime()
         val first = stateProbe.collect()
-        val firstMdns = mdnsProbe.collect(
-            confirmProtocol = first.properties.initAdbdState.equals("stopped", ignoreCase = true),
-        )
+        val firstMdns = mdnsProbe.collect(confirmProtocol = first.initStopped())
         val elapsed = SystemClock.elapsedRealtime() - firstSampleAt
         if (elapsed < MIN_CONFIRMATION_INTERVAL_MS) {
             delay(MIN_CONFIRMATION_INTERVAL_MS - elapsed)
         }
         val second = stateProbe.collect()
-        val secondMdns = mdnsProbe.collect(
-            confirmProtocol = second.properties.initAdbdState.equals("stopped", ignoreCase = true),
-        )
+        val mdnsSamples = if (firstMdns.protocol.confirmed) {
+            listOf(firstMdns, mdnsProbe.collect(confirmProtocol = second.initStopped()))
+        } else {
+            listOf(firstMdns)
+        }
         val samples = listOf(first, second)
-        val mdnsSamples = listOf(firstMdns, secondMdns)
         val probed = samples.any { sample -> sample.hasObservableSource() } ||
             mdnsSamples.any { snapshot ->
                 snapshot.state == AdbProbeState.OBSERVED ||
@@ -88,7 +78,6 @@ class AdbRuntimeRepository(
             stage = AdbRuntimeStage.READY,
             platformApiLevel = Build.VERSION.SDK_INT,
             samples = samples,
-            mdns = secondMdns,
             mdnsSamples = mdnsSamples,
             probed = probed,
             unavailableReason = if (probed) null else {
@@ -96,6 +85,9 @@ class AdbRuntimeRepository(
             },
         )
     }
+
+    private fun AdbRuntimeSample.initStopped(): Boolean =
+        properties.initAdbdState.equals("stopped", ignoreCase = true)
 
     private fun AdbRuntimeSample.hasObservableSource(): Boolean =
         properties.initAdbdState != null ||

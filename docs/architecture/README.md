@@ -54,7 +54,7 @@ Arrows point from a module to the modules it may depend on. Feature units never 
 | `helperprocess` | Isolated and helper process services, remote snapshots, dex path and UID identity collectors | mount, nativeroot, virtualization |
 | `packageinventory` | Installed package inventory and visibility checks | customrom, dangerousapps, lsposed, nativeroot, virtualization |
 | `selinuxpolicy` | SELinux context validity carriers, proc attr and policyload seqno probes, dirty policy preload queries | lsposed, selinux |
-| `systemproperties` | Multi-source system property reads, native property snapshots, and the native parser of bionic's property areas | bootloader, systemproperties; customrom's native unit uses the property area parser |
+| `systemproperties` | Multi-source system property reads, native property snapshots, and the native parser of bionic's property areas | adbruntime, bootloader, systemproperties; customrom's native unit uses the property area parser |
 
 A capability collects; each consumer interprets. A capability exists only because at least two features consume the same evidence.
 
