@@ -106,6 +106,7 @@ import io.github.xiaotong6666.uihelper.chrome.NavigationShellPagerGesturePolicy
 import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
 import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 import kotlinx.coroutines.launch
+import io.github.xiaotong6666.uihelper.dialog.rememberRetainedDialogPayload
 import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
@@ -137,6 +138,8 @@ internal fun AppReadyShell(
     // The scan coordinator, the dashboard and the export list detectors by id.
     val detectors = remember(detectorSessions) { detectorSessions.sortedBy { it.id.value } }
     val updateUiState by updateViewModel.uiState.collectAsState()
+    val visibleUpdate = updateUiState.availableUpdate.takeIf { updateUiState.isDialogVisible }
+    val updateDialogPayload = rememberRetainedDialogPayload(visibleUpdate)
 
     val automaticUpdateCheckReady = gitHubAcceleration != null && !offerGitHubAcceleration
     LaunchedEffect(updateViewModel, automaticUpdateCheckReady) {
@@ -301,13 +304,14 @@ internal fun AppReadyShell(
             },
         )
 
-        if (updateUiState.isDialogVisible && updateUiState.availableUpdate != null) {
-            val availableUpdate = requireNotNull(updateUiState.availableUpdate)
+        updateDialogPayload.value?.let { availableUpdate ->
             UpdateDialog(
+                show = visibleUpdate != null,
                 currentVersionName = BuildConfig.VERSION_NAME,
                 update = availableUpdate,
                 downloadEnabled = !isResolvingUpdateDownload,
                 onDismiss = updateViewModel::dismissUpdate,
+                onDismissFinished = updateDialogPayload.onDismissFinished,
                 onViewChanges = {
                     if (!openExternalUri(context, availableUpdate.changesUrl)) {
                         Toast.makeText(

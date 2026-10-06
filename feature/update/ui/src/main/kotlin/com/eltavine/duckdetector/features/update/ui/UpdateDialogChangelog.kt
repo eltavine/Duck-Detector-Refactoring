@@ -41,28 +41,39 @@ import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
 // The release page keeps the full notes; the dialog shows enough to decide on the update.
 private const val MAX_RELEASE_NOTE_ITEMS = 40
 
+/** The changelog both dialog styles show: release notes keep their sections, commits form one group. */
+internal data class ChangelogView(
+    val heading: String,
+    val groups: List<ChangelogGroup>,
+    val footnote: String?,
+)
+
+internal data class ChangelogGroup(val title: String?, val lines: List<ChangelogLine>)
+
+internal data class ChangelogLine(val text: String, val detail: String?, val monospaceDetail: Boolean = false)
+
+/** Null when there is nothing to list, as for release notes without items. */
 @Composable
-internal fun UpdateChangelogSection(changelog: UpdateChangelog) {
-    when (changelog) {
-        is UpdateChangelog.Commits -> CommitChangelog(changelog)
-        is UpdateChangelog.ReleaseNotes -> ReleaseNotesChangelog(changelog)
-    }
+internal fun changelogView(changelog: UpdateChangelog): ChangelogView? = when (changelog) {
+    is UpdateChangelog.Commits -> commitChangelog(changelog)
+    is UpdateChangelog.ReleaseNotes -> releaseNotesChangelog(changelog)
 }
 
 @Composable
-private fun CommitChangelog(changelog: UpdateChangelog.Commits) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        ChangelogHeading(stringResource(R.string.update_changelog_title))
-        changelog.entries.forEach { entry ->
-            ChangelogBullet(
-                text = entry.subject,
-                detail = listOfNotNull(entry.sha.take(SHORT_SHA_LENGTH), entry.pullRequest?.let { "#$it" })
-                    .joinToString(DETAIL_SEPARATOR),
-                monospaceDetail = true,
-            )
-        }
-        val remainingCount = changelog.remainingCount
-        val remaining = when {
+private fun commitChangelog(changelog: UpdateChangelog.Commits): ChangelogView {
+    val lines = changelog.entries.map { entry ->
+        ChangelogLine(
+            text = entry.subject,
+            detail = listOfNotNull(entry.sha.take(SHORT_SHA_LENGTH), entry.pullRequest?.let { "#$it" })
+                .joinToString(DETAIL_SEPARATOR),
+            monospaceDetail = true,
+        )
+    }
+    val remainingCount = changelog.remainingCount
+    return ChangelogView(
+        heading = stringResource(R.string.update_changelog_title),
+        groups = listOf(ChangelogGroup(title = null, lines = lines)),
+        footnote = when {
             remainingCount == null -> stringResource(R.string.update_remaining_commits_unknown)
             remainingCount > 0 -> pluralStringResource(
                 R.plurals.update_remaining_commits,
@@ -70,42 +81,37 @@ private fun CommitChangelog(changelog: UpdateChangelog.Commits) {
                 remainingCount,
             )
             else -> null
-        }
-        if (remaining != null) {
-            ChangelogFootnote(remaining)
-        }
-    }
+        },
+    )
 }
 
 @Composable
-private fun ReleaseNotesChangelog(changelog: UpdateChangelog.ReleaseNotes) {
+private fun releaseNotesChangelog(changelog: UpdateChangelog.ReleaseNotes): ChangelogView? {
     if (changelog.sections.isEmpty()) {
-        return
+        return null
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        ChangelogHeading(stringResource(R.string.update_release_notes_title))
-        var shown = 0
-        changelog.sections.forEach { section ->
-            val items = section.items.take((MAX_RELEASE_NOTE_ITEMS - shown).coerceAtLeast(0))
-            if (items.isEmpty()) {
-                return@forEach
-            }
-            section.title?.let { title ->
-                WrapSafeText(
-                    text = title,
-                    modifier = Modifier.padding(top = 4.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            items.forEach { item -> ChangelogBullet(text = item.text, detail = item.detail()) }
-            shown += items.size
+    var shown = 0
+    val groups = changelog.sections.mapNotNull { section ->
+        val items = section.items.take((MAX_RELEASE_NOTE_ITEMS - shown).coerceAtLeast(0))
+        if (items.isEmpty()) {
+            return@mapNotNull null
         }
-        val hidden = changelog.sections.sumOf { it.items.size } - shown
-        if (hidden > 0) {
-            ChangelogFootnote(pluralStringResource(R.plurals.update_release_notes_more, hidden, hidden))
-        }
+        shown += items.size
+        ChangelogGroup(
+            title = section.title,
+            lines = items.map { item -> ChangelogLine(text = item.text, detail = item.detail()) },
+        )
     }
+    val hidden = changelog.sections.sumOf { it.items.size } - shown
+    return ChangelogView(
+        heading = stringResource(R.string.update_release_notes_title),
+        groups = groups,
+        footnote = if (hidden > 0) {
+            pluralStringResource(R.plurals.update_release_notes_more, hidden, hidden)
+        } else {
+            null
+        },
+    )
 }
 
 private fun ReleaseNotesItem.detail(): String? =
@@ -114,16 +120,36 @@ private fun ReleaseNotesItem.detail(): String? =
         .ifEmpty { null }
 
 @Composable
-private fun ChangelogHeading(text: String) {
-    WrapSafeText(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
+internal fun UpdateChangelogMaterial(changelog: ChangelogView) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        WrapSafeText(
+            text = changelog.heading,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        changelog.groups.forEach { group ->
+            group.title?.let { title ->
+                WrapSafeText(
+                    text = title,
+                    modifier = Modifier.padding(top = 4.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            group.lines.forEach { line -> ChangelogBulletMaterial(line) }
+        }
+        changelog.footnote?.let { footnote ->
+            WrapSafeText(
+                text = footnote,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable
-private fun ChangelogBullet(text: String, detail: String?, monospaceDetail: Boolean = false) {
+private fun ChangelogBulletMaterial(line: ChangelogLine) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -140,30 +166,21 @@ private fun ChangelogBullet(text: String, detail: String?, monospaceDetail: Bool
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             WrapSafeText(
-                text = text,
+                text = line.text,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            if (detail != null) {
+            line.detail?.let { detail ->
                 WrapSafeText(
                     text = detail,
                     style = MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = if (monospaceDetail) FontFamily.Monospace else null,
+                        fontFamily = if (line.monospaceDetail) FontFamily.Monospace else null,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
-}
-
-@Composable
-private fun ChangelogFootnote(text: String) {
-    WrapSafeText(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 private const val DETAIL_SEPARATOR = " · "

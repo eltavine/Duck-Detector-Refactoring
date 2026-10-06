@@ -42,25 +42,82 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
 import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
+/**
+ * The waiting update in the dialog of the current UI style. The MIUIX dialog keeps showing [update]
+ * while it animates out after [show] turns false, and reports the end through [onDismissFinished].
+ */
 @Composable
 fun UpdateDialog(
+    show: Boolean,
     currentVersionName: String,
     update: AvailableUpdate,
     downloadEnabled: Boolean,
     onDismiss: () -> Unit,
     onViewChanges: () -> Unit,
     onDownload: () -> Unit,
+    onDismissFinished: () -> Unit = {},
 ) {
     val stable = update.manifest.channel == UpdateChannel.STABLE
+    val content = UpdateDialogContent(
+        title = stringResource(if (stable) R.string.update_dialog_title_stable else R.string.update_dialog_title),
+        versionChange = stringResource(
+            R.string.update_version_change,
+            currentVersionName,
+            update.manifest.versionName,
+        ),
+        details = updateDetails(update),
+        changelog = changelogView(update.changelog),
+        viewChangesLabel = stringResource(if (stable) R.string.update_view_release else R.string.update_view_changes),
+    )
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> UpdateDialogMiuix(
+            show = show,
+            content = content,
+            downloadEnabled = downloadEnabled,
+            onDismiss = onDismiss,
+            onViewChanges = onViewChanges,
+            onDownload = onDownload,
+            onDismissFinished = onDismissFinished,
+        )
+
+        UiMode.Material -> if (show) {
+            UpdateDialogMaterial(
+                content = content,
+                downloadEnabled = downloadEnabled,
+                onDismiss = onDismiss,
+                onViewChanges = onViewChanges,
+                onDownload = onDownload,
+            )
+        }
+    }
+}
+
+/** What both dialog styles show of an update. */
+internal class UpdateDialogContent(
+    val title: String,
+    val versionChange: String,
+    val details: List<UpdateDetail>,
+    val changelog: ChangelogView?,
+    val viewChangesLabel: String,
+)
+
+@Composable
+private fun UpdateDialogMaterial(
+    content: UpdateDialogContent,
+    downloadEnabled: Boolean,
+    onDismiss: () -> Unit,
+    onViewChanges: () -> Unit,
+    onDownload: () -> Unit,
+) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -73,12 +130,10 @@ fun UpdateDialog(
         ) {
             Surface(
                 modifier = Modifier
-                    .widthIn(max = 600.dp)
+                    .widthIn(max = 560.dp)
                     .heightIn(max = 680.dp),
-                shape = ShapeTokens.CornerExtraLarge,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 10.dp,
-                shadowElevation = 18.dp,
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
                 Column(
                     modifier = Modifier
@@ -86,16 +141,7 @@ fun UpdateDialog(
                         .padding(horizontal = 22.dp, vertical = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    UpdateDialogHeader(
-                        title = stringResource(
-                            if (stable) R.string.update_dialog_title_stable else R.string.update_dialog_title,
-                        ),
-                        versionChange = stringResource(
-                            R.string.update_version_change,
-                            currentVersionName,
-                            update.manifest.versionName,
-                        ),
-                    )
+                    UpdateDialogHeaderMaterial(title = content.title, versionChange = content.versionChange)
 
                     Column(
                         modifier = Modifier
@@ -103,8 +149,8 @@ fun UpdateDialog(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        UpdateMetadataRows(update = update)
-                        UpdateChangelogSection(changelog = update.changelog)
+                        UpdateDetailsMaterial(details = content.details)
+                        content.changelog?.let { changelog -> UpdateChangelogMaterial(changelog) }
                     }
 
                     TextButton(
@@ -119,14 +165,12 @@ fun UpdateDialog(
                             modifier = Modifier.size(18.dp),
                         )
                         WrapSafeText(
-                            text = stringResource(
-                                if (stable) R.string.update_view_release else R.string.update_view_changes,
-                            ),
+                            text = content.viewChangesLabel,
                             modifier = Modifier.padding(start = 8.dp),
                             style = MaterialTheme.typography.labelLarge,
                         )
                     }
-                    UpdateDialogActions(
+                    UpdateDialogActionsMaterial(
                         downloadEnabled = downloadEnabled,
                         onDismiss = onDismiss,
                         onDownload = onDownload,
@@ -138,14 +182,14 @@ fun UpdateDialog(
 }
 
 @Composable
-private fun UpdateDialogHeader(title: String, versionChange: String) {
+private fun UpdateDialogHeaderMaterial(title: String, versionChange: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            shape = ShapeTokens.CornerLarge,
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.primaryContainer,
         ) {
             Box(
@@ -167,7 +211,7 @@ private fun UpdateDialogHeader(title: String, versionChange: String) {
         ) {
             WrapSafeText(
                 text = title,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             WrapSafeText(
@@ -180,7 +224,7 @@ private fun UpdateDialogHeader(title: String, versionChange: String) {
 }
 
 @Composable
-private fun UpdateDialogActions(
+private fun UpdateDialogActionsMaterial(
     downloadEnabled: Boolean,
     onDismiss: () -> Unit,
     onDownload: () -> Unit,

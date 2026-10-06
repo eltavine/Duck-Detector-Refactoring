@@ -42,7 +42,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
 import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
 import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
 import java.time.Instant
@@ -51,57 +50,72 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 
+/** One fact about the update. A [selectable] value can be copied, as the SHA-256 must be. */
+internal data class UpdateDetail(
+    val icon: ImageVector,
+    val label: String,
+    val value: String,
+    val monospace: Boolean = false,
+    val selectable: Boolean = false,
+)
+
 /** What the update is, and the size and SHA-256 that let the user check the file they download. */
 @Composable
-internal fun UpdateMetadataRows(update: AvailableUpdate) {
+internal fun updateDetails(update: AvailableUpdate): List<UpdateDetail> {
     val manifest = update.manifest
     val release = manifest.release
-    if (release != null) {
-        UpdateMetadataRow(
-            icon = Icons.Rounded.NewReleases,
-            label = stringResource(R.string.update_release_label),
-            value = "${release.tag} · ${manifest.commit.sha.take(SHORT_SHA_LENGTH)}",
-            monospace = true,
+    val shortSha = manifest.commit.sha.take(SHORT_SHA_LENGTH)
+    val origin = if (release != null) {
+        listOf(
+            UpdateDetail(
+                icon = Icons.Rounded.NewReleases,
+                label = stringResource(R.string.update_release_label),
+                value = "${release.tag} · $shortSha",
+                monospace = true,
+            ),
         )
     } else {
-        UpdateMetadataRow(
-            icon = Icons.Rounded.Source,
-            label = stringResource(R.string.update_branch_hash_label),
-            value = "${manifest.branch} · ${manifest.commit.sha.take(SHORT_SHA_LENGTH)}",
-            monospace = true,
-        )
-        UpdateMetadataRow(
-            icon = Icons.Rounded.AccountCircle,
-            label = stringResource(R.string.update_author_label),
-            value = manifest.commit.authorName,
+        listOf(
+            UpdateDetail(
+                icon = Icons.Rounded.Source,
+                label = stringResource(R.string.update_branch_hash_label),
+                value = "${manifest.branch} · $shortSha",
+                monospace = true,
+            ),
+            UpdateDetail(
+                icon = Icons.Rounded.AccountCircle,
+                label = stringResource(R.string.update_author_label),
+                value = manifest.commit.authorName,
+            ),
         )
     }
-    UpdateMetadataRow(
-        icon = Icons.Rounded.Schedule,
-        label = stringResource(R.string.update_time_label),
-        value = formatUpdateTime(manifest.builtAtUtc),
-    )
-    UpdateMetadataRow(
-        icon = Icons.Rounded.Android,
-        label = stringResource(R.string.update_apk_label),
-        value = "${Formatter.formatFileSize(LocalContext.current, manifest.apk.sizeBytes)}\n${manifest.apk.sha256}",
-        monospace = true,
-        selectable = true,
+    return origin + listOf(
+        UpdateDetail(
+            icon = Icons.Rounded.Schedule,
+            label = stringResource(R.string.update_time_label),
+            value = formatUpdateTime(manifest.builtAtUtc),
+        ),
+        UpdateDetail(
+            icon = Icons.Rounded.Android,
+            label = stringResource(R.string.update_apk_label),
+            value = "${Formatter.formatFileSize(LocalContext.current, manifest.apk.sizeBytes)}\n${manifest.apk.sha256}",
+            monospace = true,
+            selectable = true,
+        ),
     )
 }
 
 @Composable
-private fun UpdateMetadataRow(
-    icon: ImageVector,
-    label: String,
-    value: String,
-    monospace: Boolean = false,
-    selectable: Boolean = false,
-) {
+internal fun UpdateDetailsMaterial(details: List<UpdateDetail>) {
+    details.forEach { detail -> UpdateDetailRowMaterial(detail) }
+}
+
+@Composable
+private fun UpdateDetailRowMaterial(detail: UpdateDetail) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = ShapeTokens.CornerLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
@@ -109,7 +123,7 @@ private fun UpdateMetadataRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = icon,
+                imageVector = detail.icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
@@ -119,26 +133,30 @@ private fun UpdateMetadataRow(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 WrapSafeText(
-                    text = label,
+                    text = detail.label,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                val valueText: @Composable () -> Unit = {
+                SelectableValue(selectable = detail.selectable) {
                     WrapSafeText(
-                        text = value,
+                        text = detail.value,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = if (monospace) FontFamily.Monospace else null,
+                            fontFamily = if (detail.monospace) FontFamily.Monospace else null,
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                if (selectable) {
-                    SelectionContainer(content = valueText)
-                } else {
-                    valueText()
-                }
             }
         }
+    }
+}
+
+@Composable
+internal fun SelectableValue(selectable: Boolean, value: @Composable () -> Unit) {
+    if (selectable) {
+        SelectionContainer(content = value)
+    } else {
+        value()
     }
 }
 
