@@ -55,7 +55,7 @@ object SystemPropertiesCatalog {
         ),
         SystemPropertyRule(
             property = "service.adb.root",
-            description = "ADB running as root",
+            description = "ADB root request",
             category = SystemPropertyCategory.SECURITY_CORE,
             expectedSafeValue = "0",
         ),

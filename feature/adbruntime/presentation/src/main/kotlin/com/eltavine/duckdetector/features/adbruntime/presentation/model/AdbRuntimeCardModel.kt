@@ -26,7 +26,6 @@ data class AdbRuntimeCardModel(
     override val status: DetectorStatus,
     override val verdict: String,
     override val summary: String,
-    val riskRows: List<AdbRuntimeDetailRowModel>,
     val signalRows: List<AdbRuntimeDetailRowModel>,
     val scanRows: List<AdbRuntimeDetailRowModel>,
 ) : DetectorHeadline

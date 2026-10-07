@@ -47,12 +47,6 @@ internal fun AdbRuntimeDetectorCard(
         modifier = modifier,
     ) {
         AdbRuntimeRowSection(
-            title = "Risk state",
-            icon = Icons.Rounded.Policy,
-            rows = model.riskRows,
-            showDivider = model.signalRows.isNotEmpty() || model.scanRows.isNotEmpty(),
-        )
-        AdbRuntimeRowSection(
             title = "Inconsistencies",
             icon = Icons.Rounded.Policy,
             rows = model.signalRows,

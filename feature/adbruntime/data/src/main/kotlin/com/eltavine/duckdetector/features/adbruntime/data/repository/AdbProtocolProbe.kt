@@ -222,8 +222,9 @@ internal class AdbProtocolProbe(
 
 /*
  * A refused, reset or silent listener is an answer about the endpoint; a permission or routing
- * error is not. libcore keeps the errno as an ErrnoException cause: a socket without INTERNET fails
- * EACCES, and a connection a network policy blocks fails EPERM.
+ * error is not. libcore keeps the errno as an ErrnoException cause. Without INTERNET, netd's BPF
+ * socket-create filter fails socket() with EPERM, as does a network policy that blocks the
+ * connection, and an SELinux denial fails with EACCES (EVIDENCE.md, "ADB wire protocol identity").
  */
 private fun IOException.probeState(): AdbProbeState {
     if (this is NoRouteToHostException) {

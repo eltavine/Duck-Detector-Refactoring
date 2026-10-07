@@ -43,8 +43,6 @@ data class AdbPropertySnapshot(
     val testHarnessMode: String? = null,
     val initAdbdState: String? = null,
     val sysUsbState: String? = null,
-    val serviceAdbRoot: String? = null,
-    val roDebuggable: String? = null,
 )
 
 data class UsbRuntimeSnapshot(

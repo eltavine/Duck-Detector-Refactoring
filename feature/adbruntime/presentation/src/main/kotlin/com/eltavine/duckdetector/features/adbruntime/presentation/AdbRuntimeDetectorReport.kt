@@ -29,7 +29,6 @@ fun AdbRuntimeCardModel.toDetectorReport(): DetectorReport = DetectorReport(
     severity = status.severity,
     quickFacts = emptyList(),
     blocks = listOf(
-        ReportBlock.Rows("Risk state", riskRows.toReportRows()),
         ReportBlock.Rows("Inconsistencies", signalRows.toReportRows()),
         ReportBlock.Rows("Sources", scanRows.toReportRows()),
     ),
