@@ -119,6 +119,53 @@ class AdbRuntimeReportStatusTest {
     }
 
     @Test
+    fun adbRootMarkerIsWarning() {
+        val sample = sample(
+            usbEnabled = false,
+            wifiEnabled = false,
+            initState = "stopped",
+            serviceAdbRoot = "1",
+            roDebuggable = "0",
+        )
+        val report = ready(samples = listOf(sample, sample))
+
+        assertEquals(AdbRootRisk.MARKER, report.adbRootRisk())
+        assertTrue(report.findings().isEmpty())
+        assertEquals(DetectorStatus.warning(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun adbRootRequestOnDebuggableBuildIsDanger() {
+        val sample = sample(
+            usbEnabled = false,
+            wifiEnabled = false,
+            initState = "stopped",
+            serviceAdbRoot = "1",
+            roDebuggable = "1",
+        )
+        val report = ready(samples = listOf(sample, sample))
+
+        assertEquals(AdbRootRisk.ROOT_CAPABLE, report.adbRootRisk())
+        assertTrue(report.findings().isEmpty())
+        assertEquals(DetectorStatus.danger(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun debuggableWithoutAdbRootMarkerDoesNotAffectVerdict() {
+        val sample = sample(
+            usbEnabled = false,
+            wifiEnabled = false,
+            initState = "stopped",
+            serviceAdbRoot = null,
+            roDebuggable = "1",
+        )
+        val report = ready(samples = listOf(sample, sample))
+
+        assertEquals(AdbRootRisk.NONE, report.adbRootRisk())
+        assertEquals(DetectorStatus.allClear(), report.toDetectorStatus())
+    }
+
+    @Test
     fun disabledAdbWithStoppedInitIsClear() {
         val sample = sample(
             usbEnabled = false,
@@ -138,6 +185,8 @@ class AdbRuntimeReportStatusTest {
         testHarnessMode: String? = "0",
         initState: String? = "running",
         sysUsbState: String? = null,
+        serviceAdbRoot: String? = null,
+        roDebuggable: String? = null,
         usbConfigured: Boolean? = false,
         usbFunctions: Set<String> = emptySet(),
     ) = AdbRuntimeSample(
@@ -148,6 +197,8 @@ class AdbRuntimeReportStatusTest {
             testHarnessMode = testHarnessMode,
             initAdbdState = initState,
             sysUsbState = sysUsbState,
+            serviceAdbRoot = serviceAdbRoot,
+            roDebuggable = roDebuggable,
         ),
         usb = UsbRuntimeSnapshot(
             state = AdbProbeState.OBSERVED,

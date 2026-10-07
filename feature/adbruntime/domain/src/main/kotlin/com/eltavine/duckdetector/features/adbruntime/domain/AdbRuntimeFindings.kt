@@ -21,8 +21,8 @@ package com.eltavine.duckdetector.features.adbruntime.domain
  * The only hard contradiction is a protocol-confirmed ADB endpoint against init.svc.adbd. Settings
  * express control intent and USB_STATE / sys.usb.state describe the gadget; AOSP lets both lag the
  * daemon on every release from Android 10 to 17, so neither is compared with init as danger
- * (EVIDENCE.md, "Settings and lifecycle context" and "USB runtime broadcast"). service.adb.root is
- * left to the System Properties detector (EVIDENCE.md, "ADB property context").
+ * (EVIDENCE.md, "Settings and lifecycle context" and "USB runtime broadcast"). ADB-root property
+ * risk is interpreted separately by adbRootRisk(); it is not a runtime contradiction.
  */
 fun AdbRuntimeReport.findings(): List<AdbRuntimeFinding> {
     if (stage != AdbRuntimeStage.READY || samples.size < 2) {

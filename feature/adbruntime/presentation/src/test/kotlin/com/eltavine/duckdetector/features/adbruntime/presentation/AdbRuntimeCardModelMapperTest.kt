@@ -54,6 +54,72 @@ class AdbRuntimeCardModelMapperTest {
     }
 
     @Test
+    fun adbRootMarkerGetsWarningRiskRow() {
+        val sample = AdbRuntimeSample(
+            usbDebuggingEnabled = false,
+            wirelessDebuggingEnabled = false,
+            debuggingFeaturesRestricted = false,
+            properties = AdbPropertySnapshot(
+                testHarnessMode = "0",
+                initAdbdState = "stopped",
+                serviceAdbRoot = "1",
+                roDebuggable = "0",
+            ),
+            usb = UsbRuntimeSnapshot(state = AdbProbeState.OBSERVED),
+        )
+
+        val model = mapper.map(
+            AdbRuntimeReport(
+                stage = AdbRuntimeStage.READY,
+                platformApiLevel = 36,
+                samples = listOf(sample, sample),
+                probed = true,
+            ),
+        )
+
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals("ADB root marker", model.verdict)
+        assertEquals(DetectorStatus.warning(), model.riskRows.single().status)
+        assertTrue(model.signalRows.isEmpty())
+        assertTrue(model.scanRows.any { it.label == "service.adb.root" && it.value == "1" })
+    }
+
+    @Test
+    fun adbRootCapableStateGetsDangerRiskRow() {
+        val sample = AdbRuntimeSample(
+            usbDebuggingEnabled = false,
+            wirelessDebuggingEnabled = false,
+            debuggingFeaturesRestricted = false,
+            properties = AdbPropertySnapshot(
+                testHarnessMode = "0",
+                initAdbdState = "stopped",
+                serviceAdbRoot = "1",
+                roDebuggable = "1",
+            ),
+            usb = UsbRuntimeSnapshot(state = AdbProbeState.OBSERVED),
+        )
+
+        val model = mapper.map(
+            AdbRuntimeReport(
+                stage = AdbRuntimeStage.READY,
+                platformApiLevel = 36,
+                samples = listOf(sample, sample),
+                probed = true,
+            ),
+        )
+        val export = model.toDetectorReport()
+
+        assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals("ADB root request", model.verdict)
+        assertEquals(DetectorStatus.danger(), model.riskRows.single().status)
+        val rows = export.blocks
+            .filterIsInstance<ReportBlock.Rows>()
+            .single { it.title == "Risk state" }
+            .rows
+        assertTrue(rows.isNotEmpty())
+    }
+
+    @Test
     fun protocolContradictionBecomesDangerRowAndExportBlock() {
         val sample = AdbRuntimeSample(
             usbDebuggingEnabled = true,

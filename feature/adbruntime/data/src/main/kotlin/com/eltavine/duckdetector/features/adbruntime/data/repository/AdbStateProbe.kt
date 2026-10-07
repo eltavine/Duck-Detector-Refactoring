@@ -76,6 +76,8 @@ internal class AdbStateProbe(
             testHarnessMode = read(PERSIST_SYS_TEST_HARNESS),
             initAdbdState = read(INIT_SVC_ADBD),
             sysUsbState = read(SYS_USB_STATE),
+            serviceAdbRoot = read(SERVICE_ADB_ROOT),
+            roDebuggable = read(RO_DEBUGGABLE),
         )
     }
 
@@ -115,11 +117,15 @@ internal class AdbStateProbe(
         const val PERSIST_SYS_TEST_HARNESS = "persist.sys.test_harness"
         const val INIT_SVC_ADBD = "init.svc.adbd"
         const val SYS_USB_STATE = "sys.usb.state"
+        const val SERVICE_ADB_ROOT = "service.adb.root"
+        const val RO_DEBUGGABLE = "ro.debuggable"
 
         val PROPERTY_NAMES = listOf(
             PERSIST_SYS_TEST_HARNESS,
             INIT_SVC_ADBD,
             SYS_USB_STATE,
+            SERVICE_ADB_ROOT,
+            RO_DEBUGGABLE,
         )
 
         val USB_FUNCTIONS = listOf(

@@ -25,10 +25,12 @@ import com.eltavine.duckdetector.features.adbruntime.domain.AdbMdnsSnapshot
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProbeState
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProtocolResponseKind
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProtocolSnapshot
+import com.eltavine.duckdetector.features.adbruntime.domain.AdbRootRisk
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeFinding
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeReport
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeSample
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeStage
+import com.eltavine.duckdetector.features.adbruntime.domain.adbRootRisk
 import com.eltavine.duckdetector.features.adbruntime.domain.findings
 import com.eltavine.duckdetector.features.adbruntime.domain.isAdbActive
 import com.eltavine.duckdetector.features.adbruntime.domain.toDetectorStatus
@@ -46,6 +48,7 @@ class AdbRuntimeCardModelMapper {
             status = report.toDetectorStatus(),
             verdict = verdict(report, findings),
             summary = summary(report, findings),
+            riskRows = rootRiskRows(report),
             signalRows = findings.map(::findingRow),
             scanRows = scanRows(report),
         )
@@ -57,6 +60,8 @@ class AdbRuntimeCardModelMapper {
             AdbRuntimeStage.FAILED -> "Scan failed"
             AdbRuntimeStage.READY -> when {
                 findings.isNotEmpty() -> "Runtime contradiction"
+                report.adbRootRisk() == AdbRootRisk.ROOT_CAPABLE -> "ADB root request"
+                report.adbRootRisk() == AdbRootRisk.MARKER -> "ADB root marker"
                 report.isAdbActive() -> "ADB enabled"
                 !report.probed -> "Not evaluated"
                 else -> "ADB state consistent"
@@ -70,13 +75,39 @@ class AdbRuntimeCardModelMapper {
             AdbRuntimeStage.READY -> when {
                 findings.isNotEmpty() ->
                     "Independent ADB state sources disagree. The rows below show the persistent contradictions."
+                report.adbRootRisk() == AdbRootRisk.ROOT_CAPABLE ->
+                    "service.adb.root=1 is present on a debuggable build, so AOSP adbd can honor the root request."
+                report.adbRootRisk() == AdbRootRisk.MARKER ->
+                    "service.adb.root=1 is present, but this marker alone does not prove that adbd retained UID 0."
                 report.isAdbActive() ->
                     "ADB is enabled or runtime activity was observed; no persistent hard runtime contradiction was confirmed."
                 !report.probed ->
                     report.unavailableReason ?: "No ADB state source was observable from this app process."
                 else ->
-                    "No persistent contradiction was observed across the ADB state sources that were available."
+                    "No persistent contradiction or ADB root risk was observed across the available sources."
             }
+        }
+
+
+    private fun rootRiskRows(report: AdbRuntimeReport): List<AdbRuntimeDetailRowModel> =
+        when (report.adbRootRisk()) {
+            AdbRootRisk.NONE -> emptyList()
+            AdbRootRisk.MARKER -> listOf(
+                AdbRuntimeDetailRowModel(
+                    label = "ADB root marker",
+                    value = "service.adb.root=1",
+                    status = DetectorStatus.warning(),
+                    detail = "The ADB root marker is present, but ro.debuggable is not 1, so this alone does not prove that adbd retained UID 0.",
+                ),
+            )
+            AdbRootRisk.ROOT_CAPABLE -> listOf(
+                AdbRuntimeDetailRowModel(
+                    label = "ADB root request",
+                    value = "service.adb.root=1",
+                    status = DetectorStatus.danger(),
+                    detail = "service.adb.root=1 and ro.debuggable=1 allow AOSP adbd to keep root privileges.",
+                ),
+            )
         }
 
     private fun findingRow(finding: AdbRuntimeFinding): AdbRuntimeDetailRowModel =
@@ -111,6 +142,8 @@ class AdbRuntimeCardModelMapper {
             usbRuntimeRow(sample),
             mdnsRow(report.latestMdns),
             infoRow("sys.usb.state", sample.properties.sysUsbState ?: "Unavailable"),
+            infoRow("service.adb.root", sample.properties.serviceAdbRoot ?: "Absent / unavailable"),
+            infoRow("ro.debuggable", sample.properties.roDebuggable ?: "Unavailable"),
         )
     }
 

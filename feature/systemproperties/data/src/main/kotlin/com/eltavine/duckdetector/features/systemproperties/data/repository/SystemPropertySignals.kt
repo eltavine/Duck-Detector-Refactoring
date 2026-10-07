@@ -106,7 +106,7 @@ internal fun SystemPropertiesRepository.buildAdbRootSignal(
     }
     return SystemPropertySignal(
         property = SERVICE_ADB_ROOT,
-        description = "ADB running as root",
+        description = "ADB root request",
         value = adbRoot.preferredValue,
         category = SystemPropertyCategory.SECURITY_CORE,
         severity = severity,

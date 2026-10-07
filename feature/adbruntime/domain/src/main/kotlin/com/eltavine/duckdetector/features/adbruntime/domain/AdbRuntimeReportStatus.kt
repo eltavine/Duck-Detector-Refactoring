@@ -27,6 +27,8 @@ fun AdbRuntimeReport.toDetectorStatus(): DetectorStatus = when (stage) {
         val findings = findings()
         when {
             findings.isNotEmpty() -> DetectorStatus.danger()
+            adbRootRisk() == AdbRootRisk.ROOT_CAPABLE -> DetectorStatus.danger()
+            adbRootRisk() == AdbRootRisk.MARKER -> DetectorStatus.warning()
             isAdbActive() -> DetectorStatus.warning()
             !probed -> DetectorStatus.info(InfoKind.SUPPORT)
             else -> DetectorStatus.allClear()
