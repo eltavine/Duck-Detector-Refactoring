@@ -35,11 +35,19 @@ fun NativeRootReport.toDetectorStatus(): DetectorStatus {
 }
 
 fun NativeRootReport.hasReducedCoverage(): Boolean {
-    return (srcuTiming.requested && srcuTiming.analysis.verdict in setOf(
-        SrcuTimingVerdict.NOT_EVALUATED, SrcuTimingVerdict.INCONCLUSIVE,
-    )) || ksuSupercallBlocked ||
+    return srcuTiming.reducesCoverage() || ksuSupercallBlocked ||
             !ksuSupercallAttempted ||
             hasRuntimeReducedCoverage()
+}
+
+// The timing experiment is opt-in. An Android or kernel it never applies to is not a gap in this
+// detector's coverage, so only an applicable run that failed or stayed inconclusive counts.
+private fun SrcuTimingObservation.reducesCoverage(): Boolean = when (collection) {
+    SrcuTimingCollection.NOT_REQUESTED,
+    SrcuTimingCollection.UNSUPPORTED_ANDROID,
+    SrcuTimingCollection.UNSUPPORTED_KERNEL -> false
+    else -> analysis.verdict == SrcuTimingVerdict.NOT_EVALUATED ||
+        analysis.verdict == SrcuTimingVerdict.INCONCLUSIVE
 }
 
 fun NativeRootReport.hasRuntimeReducedCoverage(): Boolean {

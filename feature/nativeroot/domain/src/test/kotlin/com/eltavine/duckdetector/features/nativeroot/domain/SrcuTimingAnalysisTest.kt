@@ -40,10 +40,21 @@ class SrcuTimingAnalysisTest {
         assertTrue(report.detectedFamilies.isEmpty())
         assertTrue(report.directFindings.isEmpty())
     }
-    @Test fun `failed requested experiment reduces shared report coverage`() {
-        val report = NativeRootReport.loading().copy(stage = NativeRootStage.READY,
-            srcuTiming = SrcuTimingObservation(SrcuTimingCollection.TIMED_OUT))
-        assertTrue(report.hasReducedCoverage())
+    // Every other coverage path is complete, so only the timing experiment can reduce coverage here.
+    private val covered = NativeRootReport.loading().copy(stage = NativeRootStage.READY,
+        cgroupAvailable = true, ksuSupercallAttempted = true, isolatedMountProbeAvailable = true,
+        ksuThroneHuntAvailable = true, ksuThroneHuntStimulusApplied = true)
+    @Test fun `an applicable run that fails or stays inconclusive reduces coverage`() {
+        assertFalse(covered.hasReducedCoverage())
+        for (timing in listOf(SrcuTimingObservation(SrcuTimingCollection.TIMED_OUT), observation(5000, 5000))) {
+            assertTrue(covered.copy(srcuTiming = timing).hasReducedCoverage())
+        }
+        assertFalse(covered.copy(srcuTiming = observation(100)).hasReducedCoverage())
+    }
+    @Test fun `an unsupported Android or kernel is not a coverage gap`() {
+        for (state in listOf(SrcuTimingCollection.UNSUPPORTED_ANDROID, SrcuTimingCollection.UNSUPPORTED_KERNEL)) {
+            assertFalse(covered.copy(srcuTiming = SrcuTimingObservation(state)).hasReducedCoverage())
+        }
     }
     @Test fun `equal distributions do not claim a clean device`() {
         assertEquals(SrcuTimingVerdict.NOT_OBSERVED, observation(100).analysis.verdict)
