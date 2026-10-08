@@ -72,6 +72,17 @@ class SrcuTimingAnalysisTest {
         })
         assertEquals(SrcuTimingVerdict.INCONCLUSIVE, result.analysis.verdict)
     }
+    @Test fun `one long close a p95 cannot see is inconclusive rather than absent`() {
+        val single = window(100, 24).let { w ->
+            w.copy(samples = w.samples.mapIndexed { i, s ->
+                if (i == w.samples.lastIndex) s.copy(endNanos = s.beginNanos + 5000) else s
+            })
+        }
+        val result = observation(100).let { base -> base.copy(rounds = base.rounds.map {
+            it.copy(idle = window(100, 24), stimulated = single, sequential = window(100, 24))
+        }) }
+        assertEquals(SrcuTimingVerdict.INCONCLUSIVE, result.analysis.verdict)
+    }
     @Test fun `replication is required in every temporal block`() {
         val candidate = observation(5000)
         val result = candidate.copy(rounds = candidate.rounds.mapIndexed { index, round ->

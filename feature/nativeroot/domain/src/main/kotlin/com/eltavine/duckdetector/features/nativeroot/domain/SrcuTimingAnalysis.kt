@@ -47,6 +47,12 @@ fun analyzeSrcuTiming(observation: SrcuTimingObservation): SrcuTimingAnalysis {
             percentile(durations(round.sequential), 0.95))
         percentile(durations(round.stimulated), 0.95).toDouble() - baseline > noise.toDouble() * 6
     }
+    // One reader blocks one close per stimulated window, and a p95 stops seeing a single close once a
+    // window holds 20 samples. A stimulated close longer than both controls cannot then read as absence.
+    val outlier = rounds.any { round ->
+        durations(round.stimulated).max().toDouble() -
+            maxOf(durations(round.idle).max(), durations(round.sequential).max()) > noise.toDouble() * 6
+    }
     // An elevated sequential control or unstable idle distribution defeats attribution to overlap.
     val noisy = abs(sequentialMedian.toDouble() - idleMedian) > noise.toDouble() * 6 ||
         idleP95.toDouble() - idleMedian > maxOf(idleMedian.toDouble(), noise.toDouble() * 12)
@@ -56,7 +62,7 @@ fun analyzeSrcuTiming(observation: SrcuTimingObservation): SrcuTimingAnalysis {
         noisy -> SrcuTimingVerdict.INCONCLUSIVE
         replicated && stimulatedP95.toDouble() - maxOf(idleP95, sequentialP95) > noise.toDouble() * 6 ->
             SrcuTimingVerdict.REPEATABLE_DELAY
-        delayed.any { it } -> SrcuTimingVerdict.INCONCLUSIVE
+        delayed.any { it } || outlier -> SrcuTimingVerdict.INCONCLUSIVE
         else -> SrcuTimingVerdict.NOT_OBSERVED
     }
     return SrcuTimingAnalysis(verdict, rounds.size, delayed.count { it }, idleP95,
