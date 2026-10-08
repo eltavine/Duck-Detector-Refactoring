@@ -42,6 +42,25 @@ class SelinuxContextValidityPreloadTest {
             listOf("Kotlin preload fallback produced a parseable SELinux snapshot."),
             snapshot.notes,
         )
+        assertEquals(SelinuxSidtabCollection.NOT_COLLECTED, snapshot.sidtab.collection)
+    }
+
+    @Test
+    fun `fallback payload keeps a SID-table experiment that already ran`() {
+        val sidtab = SelinuxSidtabSnapshot(
+            collection = SelinuxSidtabCollection.INCONCLUSIVE,
+            attempted = true,
+            step = SelinuxSidtabStep.ATTR_CURRENT,
+            errno = 13,
+            carrierContext = "u:r:app_zygote:s0",
+        )
+
+        val snapshot = SelinuxContextValidityBridge().parse(
+            SelinuxContextValidityPreload().fallbackPayload("later step failed", sidtab),
+        )
+
+        assertEquals(sidtab, snapshot.sidtab)
+        assertEquals("later step failed", snapshot.failureReason)
     }
 
     @Test

@@ -44,12 +44,6 @@ namespace duckdetector::selinux::sidtab {
         }
     }
 
-    State error_state(const int error) {
-        if (error == EACCES || error == EPERM) return State::kPermissionLimited;
-        // ENOENT is unavailable: a namespace or path filter may hide a supported interface.
-        return error != 0 ? State::kUnavailable : State::kInconclusive;
-    }
-
     // Parse only the full first line. Do not accept prefixes, negative counts, overflow or duplicates.
     // ACK ss/sidtab.c emits "entries: %d\n"; statistics are one RCU traversal, not a locked snapshot.
     bool parse_entries(const char *buffer, const std::size_t length, int64_t &entries) {

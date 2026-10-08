@@ -18,11 +18,11 @@
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
 /** Linux UAPI errno-base.h, used by bionic on all four supported ABIs; these are wire codes.
- * android-15.0.0_r1 libc/kernel/uapi/asm-generic/errno-base.h defines 1, 13 and 22.
+ * android-15.0.0_r1 libc/kernel/uapi/asm-generic/errno-base.h defines 13 and 22.
  * Keep parsing independent of android.system.OsConstants initialization (including JVM hosts).
  */
 public enum class SelinuxSidtabErrno(public val code: Int) {
-    SUCCESS(0), OPERATION_NOT_PERMITTED(1), PERMISSION_DENIED(13), INVALID_ARGUMENT(22),
+    SUCCESS(0), PERMISSION_DENIED(13), INVALID_ARGUMENT(22),
 }
 
 /** Collection outcomes only; the SELinux feature interprets the counter differences. */
@@ -54,6 +54,7 @@ public data class SelinuxSidtabRound(
     val idleEnd: Long?,
     val positiveErrno: Int?,
     val negativeErrno: Int?,
+    val attrNegativeErrno: Int?,
     val samples: List<SelinuxSidtabSample>,
 )
 

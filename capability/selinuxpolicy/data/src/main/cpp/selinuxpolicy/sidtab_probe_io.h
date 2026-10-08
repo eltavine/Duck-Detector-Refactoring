@@ -28,6 +28,5 @@ namespace duckdetector::selinux::sidtab {
     IoResult check_context(const char *context, bool &canonical_match);
     IoResult write_current(const char *context);
     bool parse_entries(const char *buffer, std::size_t length, int64_t &entries);
-    State error_state(int error);
 } // namespace duckdetector::selinux::sidtab
 #endif

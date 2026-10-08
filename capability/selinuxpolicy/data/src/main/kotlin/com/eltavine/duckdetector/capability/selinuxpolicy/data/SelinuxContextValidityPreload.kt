@@ -39,6 +39,8 @@ public class SelinuxContextValidityPreload {
         trace: (step: String) -> Unit = {},
         beforeCollection: () -> Unit,
     ) {
+        // Kept outside the try: a finished experiment's kernel side effects outlive a later failure.
+        var sidtab = SelinuxSidtabSnapshot()
         val payload = try {
             beforeCollection()
             val currentUid = Os.getuid()
@@ -49,7 +51,7 @@ public class SelinuxContextValidityPreload {
             val accessCheckBlockReason = statusPage.accessCheckBlockReason
             // Direct I/O, isolated from libselinux and from any identity change in its child.
             trace("selinux: SID-table experiment")
-            val sidtab = if (currentUid == appInfo.uid) sidtabProbe.inspect() else SelinuxSidtabSnapshot(
+            sidtab = if (currentUid == appInfo.uid) sidtabProbe.inspect() else SelinuxSidtabSnapshot(
                 collection = SelinuxSidtabCollection.UNSUPPORTED,
                 failureReason = "Carrier UID does not match the application UID.",
             )
@@ -79,7 +81,7 @@ public class SelinuxContextValidityPreload {
             )
             SelinuxContextValidityPayloadCodec.encode(snapshot)
         } catch (throwable: Throwable) {
-            fallbackPayload(throwable.message ?: "SELinux app zygote preload failed.")
+            fallbackPayload(throwable.message ?: "SELinux app zygote preload failed.", sidtab)
         } finally {
             // The access checks above leave libselinux's AVC netlink socket open. Before Android 12,
             // AppZygoteInit does not exempt what doPreload opened, so the next fork of this app zygote
@@ -229,8 +231,8 @@ public class SelinuxContextValidityPreload {
         )
     }
 
-    internal fun fallbackPayload(reason: String): String {
-        return SelinuxContextValidityPayloadCodec.encode(fallbackSnapshot(reason))
+    internal fun fallbackPayload(reason: String, sidtab: SelinuxSidtabSnapshot = SelinuxSidtabSnapshot()): String {
+        return SelinuxContextValidityPayloadCodec.encode(fallbackSnapshot(reason).copy(sidtab = sidtab))
     }
 
     private fun fallbackSnapshot(reason: String): SelinuxContextValiditySnapshot {

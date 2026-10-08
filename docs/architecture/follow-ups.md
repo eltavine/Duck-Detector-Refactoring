@@ -106,6 +106,8 @@ Before relying on this warning in a release, compare the same device/kernel conf
 with stock SELinux, pre-a810677 KernelSU hiding enabled/disabled, and the synchronization fix.
 Also exercise permission-limited/vendor kernels, existing candidates, background process
 activity, policy reloads, repeated carrier starts and non-arm64 devices. Verify preload
-latency, bounded SID-table/AVC effects and child cleanup. Global statistics cannot exclude
+latency, bounded SID-table/AVC effects and child cleanup. Record how often a normal scan ends
+inconclusive: processes that start while the app zygote preloads, including the scan's own helper
+and isolated processes, can register new labels and break the quiet bookends. Global statistics cannot exclude
 hidden reloads or attribute inserts to one process, so even a repeatable pattern remains
 supporting evidence and must not be promoted to tool identification or a danger finding.

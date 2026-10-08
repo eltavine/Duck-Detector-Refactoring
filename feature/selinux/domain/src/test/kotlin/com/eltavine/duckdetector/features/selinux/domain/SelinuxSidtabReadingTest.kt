@@ -57,8 +57,7 @@ class SelinuxSidtabReadingTest {
         listOf<(SelinuxSidtabReading) -> SelinuxSidtabReading>(
             { it.copy(attempted = false) }, { it.copy(carrierVerified = false) },
             { it.copy(canonicalMismatch = true) }, { it.copy(identityChanged = true) },
-            { it.copy(capturedUptimeMs = null) }, { it.copy(completedRounds = 1) },
-            { it.copy(rounds = it.rounds.take(1)) },
+            { it.copy(completedRounds = 1) }, { it.copy(rounds = it.rounds.take(1)) },
         ).forEach { assertInconclusive(it) }
         listOf<(SelinuxSidtabRound) -> SelinuxSidtabRound>(
             { it.copy(stockContextsVerified = false) }, { it.copy(controlsPassed = false) }, { it.copy(contextWritesAccepted = false) },
@@ -66,6 +65,11 @@ class SelinuxSidtabReadingTest {
             { it.copy(before = null) }, { it.copy(before = -1) },
             { it.copy(contexts = it.contexts.take(3)) }, { it.copy(beforeControls = Long.MAX_VALUE) },
         ).forEach { mutate -> assertInconclusive { it.copy(rounds = it.rounds.map(mutate)) } }
+    }
+
+    @Test fun `capture time is presentation metadata, not part of the verdict`() {
+        assertEquals(SelinuxSidtabVerdict.DISCREPANCY_OBSERVED, reading(true).copy(capturedUptimeMs = null).verdict)
+        assertEquals(SelinuxSidtabVerdict.NOT_OBSERVED, reading(false).copy(capturedUptimeMs = null).verdict)
     }
 
     @Test fun `duplicate candidates even between rounds cannot pass`() {

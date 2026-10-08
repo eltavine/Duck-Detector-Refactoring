@@ -67,6 +67,7 @@ data class SelinuxSidtabRound(
     val positiveErrno: Int? = null,
     val negativeErrno: Int? = null,
     val stockContextsVerified: Boolean = false,
+    val attrNegativeErrno: Int? = null,
 )
 
 data class SelinuxSidtabReading(
@@ -90,7 +91,7 @@ data class SelinuxSidtabReading(
                 SelinuxSidtabCollection.INCONCLUSIVE -> return SelinuxSidtabVerdict.INCONCLUSIVE
                 SelinuxSidtabCollection.COMPLETE -> Unit
             }
-            if (!attempted || !carrierVerified || canonicalMismatch || identityChanged || capturedUptimeMs == null ||
+            if (!attempted || !carrierVerified || canonicalMismatch || identityChanged ||
                 completedRounds != 2 || rounds.size != 2 || rounds.any { !it.usable() }
             ) return SelinuxSidtabVerdict.INCONCLUSIVE
             val contexts = rounds.flatMap { it.contexts }

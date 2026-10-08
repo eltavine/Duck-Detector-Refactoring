@@ -47,6 +47,7 @@ namespace duckdetector::selinux::sidtab {
         int64_t idle_end = -1;
         int positive_error = -1;
         int negative_error = -1;
+        int attr_negative_error = -1;
         std::array<Sample, kSamples> samples{};
     };
     // Fixed-size child report: no allocation or Java/libselinux calls after fork.

@@ -74,6 +74,7 @@ namespace {
             out << prefix << "IDLE_END=" << round.idle_end << '\n';
             out << prefix << "POSITIVE_ERRNO=" << round.positive_error << '\n';
             out << prefix << "NEGATIVE_ERRNO=" << round.negative_error << '\n';
+            out << prefix << "ATTR_NEGATIVE_ERRNO=" << round.attr_negative_error << '\n';
             for (unsigned sample_index = 0; sample_index < kSamples; ++sample_index) {
                 const auto &sample = round.samples[sample_index];
                 const auto key = prefix + "S" + std::to_string(sample_index) + "_";

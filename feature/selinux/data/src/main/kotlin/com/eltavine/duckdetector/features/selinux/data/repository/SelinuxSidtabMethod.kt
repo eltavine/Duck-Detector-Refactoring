@@ -57,17 +57,19 @@ internal fun buildSidtabMethod(snapshot: SelinuxSidtabSnapshot): SelinuxCheckRes
                 afterAttr = round.afterAttr,
                 afterRepeat = round.afterRepeat,
                 idleEnd = round.idleEnd,
-                controlsPassed = round.positiveErrno == 0 && round.negativeErrno == SelinuxSidtabErrno.INVALID_ARGUMENT.code,
+                controlsPassed = round.positiveErrno == 0 &&
+                    round.negativeErrno == SelinuxSidtabErrno.INVALID_ARGUMENT.code &&
+                    round.attrNegativeErrno == SelinuxSidtabErrno.INVALID_ARGUMENT.code,
                 contexts = round.samples.map { it.context },
                 contextWritesAccepted = round.samples.all { it.contextErrno == 0 },
-                attrWritesRejected = round.samples.all {
-                    it.attrErrno == SelinuxSidtabErrno.PERMISSION_DENIED.code ||
-                        it.attrErrno == SelinuxSidtabErrno.OPERATION_NOT_PERMITTED.code
-                },
+                // With the attr control passed, EACCES comes from a check after conversion. EPERM does not:
+                // proc_pid_attr_write returns it before the LSM hook.
+                attrWritesRejected = round.samples.all { it.attrErrno == SelinuxSidtabErrno.PERMISSION_DENIED.code },
                 repeatWritesAccepted = round.samples.all { it.repeatErrno == 0 },
                 transactions = round.samples.map { SelinuxSidtabTransaction(it.context, it.contextErrno, it.attrErrno, it.repeatErrno) },
                 positiveErrno = round.positiveErrno,
                 negativeErrno = round.negativeErrno,
+                attrNegativeErrno = round.attrNegativeErrno,
                 stockContextsVerified = round.samples.size == 4 &&
                     round.samples.all { it.context.startsWith("u:r:app_zygote:s0:c") },
             )

@@ -63,6 +63,7 @@ internal object SelinuxSidtabPayloadCodec {
                     idleEnd = number(prefix + "IDLE_END"),
                     positiveErrno = error(prefix + "POSITIVE_ERRNO"),
                     negativeErrno = error(prefix + "NEGATIVE_ERRNO"),
+                    attrNegativeErrno = error(prefix + "ATTR_NEGATIVE_ERRNO"),
                     samples = (0 until 4).map { sample ->
                         val key = prefix + "S${sample}_"
                         SelinuxSidtabSample(
@@ -107,6 +108,7 @@ internal object SelinuxSidtabPayloadCodec {
             entry(prefix + "IDLE_END", round.idleEnd)
             entry(prefix + "POSITIVE_ERRNO", round.positiveErrno)
             entry(prefix + "NEGATIVE_ERRNO", round.negativeErrno)
+            entry(prefix + "ATTR_NEGATIVE_ERRNO", round.attrNegativeErrno)
             round.samples.forEachIndexed { sampleIndex, sample ->
                 val key = prefix + "S${sampleIndex}_"
                 entry(key + "CONTEXT", sample.context)

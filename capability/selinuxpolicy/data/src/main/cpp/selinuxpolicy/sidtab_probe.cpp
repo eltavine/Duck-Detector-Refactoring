@@ -23,7 +23,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
-#include <fcntl.h>
+#include <sys/random.h>
 #include <sys/utsname.h>
 #include <time.h>
 #include <unistd.h>
@@ -33,6 +33,12 @@ namespace duckdetector::selinux::sidtab {
         constexpr char kCarrier[] = "u:r:app_zygote:s0";
         constexpr char kMalformed[] = "duckdetector-invalid-context";
         constexpr common::ChildDeadlines kDeadlines{std::chrono::milliseconds(1000), std::chrono::milliseconds(250)};
+
+        State error_state(const int error) {
+            if (error == EACCES || error == EPERM) return State::kPermissionLimited;
+            // ENOENT is unavailable: a namespace or path filter may hide a supported interface.
+            return error != 0 ? State::kUnavailable : State::kInconclusive;
+        }
 
         bool send_report(const int fd, const Report &report) {
             const auto *bytes = reinterpret_cast<const unsigned char *>(&report);
@@ -53,14 +59,16 @@ namespace duckdetector::selinux::sidtab {
             return false;
         }
 
-        bool query(Report &report, const char *context, int &error) {
+        // invalid_state is what EINVAL means for this context: a policy that rejects the stock type + MLS
+        // candidates does not support the experiment, while rejecting the carrier's own label contradicts
+        // the process that is running under it.
+        bool query(Report &report, const char *context, int &error, const State invalid_state) {
             bool canonical = false;
             const auto result = check_context(context, canonical);
             error = result.error;
             if (!result.complete && result.error == 0) report.canonical_mismatch = !canonical;
             if (!result.complete && result.error == EINVAL) {
-                // These are stock type + MLS candidates, not root-tool context names.
-                report.state = State::kUnsupported;
+                report.state = invalid_state;
                 report.error = result.error;
                 return false;
             }
@@ -79,7 +87,7 @@ namespace duckdetector::selinux::sidtab {
         bool run_round(Report &report, Round &round, const int fd) {
             report.step = Step::kControls;
             if (!require_io(report, read_entries(round.before_controls))) return false;
-            if (!query(report, report.carrier, round.positive_error)) return false;
+            if (!query(report, report.carrier, round.positive_error, State::kInconclusive)) return false;
             bool canonical = false;
             const auto negative = check_context(kMalformed, canonical);
             round.negative_error = negative.error;
@@ -89,12 +97,23 @@ namespace duckdetector::selinux::sidtab {
                 report.error = negative.error;
                 return false;
             }
+            // selinux_setprocattr checks setcurrent before it converts the label, and only conversion fails
+            // a malformed label with EINVAL. Passing this control places a later EACCES after conversion:
+            // a single-threaded child has only the dyntransition and ptrace checks left to fail.
+            const auto attr_negative = write_current(kMalformed);
+            round.attr_negative_error = attr_negative.error;
+            if (!attr_negative.submitted) return require_io(report, attr_negative);
+            if (attr_negative.complete || attr_negative.error != EINVAL) {
+                report.state = attr_negative.error == EACCES ? State::kPermissionLimited : State::kInconclusive;
+                report.error = attr_negative.error;
+                return false;
+            }
             if (!require_io(report, read_entries(round.before))) return false;
             if (!send_report(fd, report)) return false;
 
             report.step = Step::kContext;
             for (auto &sample : round.samples) {
-                if (!query(report, sample.context, sample.context_error)) return false;
+                if (!query(report, sample.context, sample.context_error, State::kUnsupported)) return false;
             }
             if (!require_io(report, read_entries(round.after_context))) return false;
             if (!send_report(fd, report)) return false;
@@ -106,7 +125,9 @@ namespace duckdetector::selinux::sidtab {
                 const auto result = write_current(sample.context);
                 sample.attr_error = result.error;
                 if (!result.submitted) return require_io(report, result);
-                if (result.complete || (result.error != EACCES && result.error != EPERM)) {
+                // Not EPERM: proc_pid_attr_write returns it before the LSM hook runs, and the
+                // bounded-transition EPERM applies only to multi-threaded callers.
+                if (result.complete || result.error != EACCES) {
                     report.state = State::kInconclusive;
                     report.error = result.error;
                     // A permitted transition is never attempted in the carrier itself.
@@ -120,7 +141,7 @@ namespace duckdetector::selinux::sidtab {
 
             report.step = Step::kRepeat;
             for (auto &sample : round.samples) {
-                if (!query(report, sample.context, sample.repeat_error)) return false;
+                if (!query(report, sample.context, sample.repeat_error, State::kUnsupported)) return false;
             }
             return require_io(report, read_entries(round.after_repeat)) &&
                    require_io(report, read_entries(round.idle_end)) && identity(report);
@@ -154,17 +175,14 @@ namespace duckdetector::selinux::sidtab {
         }
 
         bool prepare_contexts(Report &report) {
-            std::array<unsigned char, kRounds * kSamples * 8> entropy{};
-            const int fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
-            if (fd < 0) { report.error = errno; return false; }
-            std::size_t offset = 0;
-            while (offset < entropy.size()) {
-                const ssize_t count = read(fd, entropy.data() + offset, entropy.size() - offset);
-                if (count < 0 && errno == EINTR) continue;
-                if (count <= 0) { report.error = count < 0 ? errno : 0; close(fd); return false; }
-                offset += static_cast<std::size_t>(count);
+            constexpr std::size_t kEntropyBytes = kRounds * kSamples * 8;
+            static_assert(kEntropyBytes <= 256, "getentropy accepts at most 256 bytes");
+            std::array<unsigned char, kEntropyBytes> entropy{};
+            // bionic's getentropy (API 28) falls back to /dev/urandom when getrandom fails.
+            if (getentropy(entropy.data(), entropy.size()) != 0) {
+                report.error = errno;
+                return false;
             }
-            close(fd);
             unsigned cursor = 0;
             for (auto &round : report.rounds) {
                 for (auto &sample : round.samples) {
@@ -183,6 +201,14 @@ namespace duckdetector::selinux::sidtab {
             }
             return true;
         }
+
+        // The record is copied out of another process; bound its strings before they are encoded.
+        void terminate_strings(Report &report) {
+            report.carrier[kContextBytes - 1] = 0;
+            for (auto &round : report.rounds) {
+                for (auto &sample : round.samples) sample.context[kContextBytes - 1] = 0;
+            }
+        }
     }
 
     Result collect() {
@@ -195,7 +221,8 @@ namespace duckdetector::selinux::sidtab {
         utsname kernel{};
         if (uname(&kernel) == 0) result.kernel_release = kernel.release;
         if (!prepare_contexts(result.report)) {
-            result.report.state = error_state(result.report.error);
+            // Candidate generation is local setup; its failure says nothing about the probed interfaces.
+            result.report.state = State::kUnavailable;
             result.child_end = "NOT_STARTED";
             return result;
         }
@@ -210,6 +237,7 @@ namespace duckdetector::selinux::sidtab {
         if (child.report_length >= sizeof(Report)) {
             const auto offset = (child.report_length / sizeof(Report) - 1) * sizeof(Report);
             std::memcpy(&result.report, bytes.data() + offset, sizeof(Report));
+            terminate_strings(result.report);
         }
         result.signal = child.signal;
         switch (child.end) {

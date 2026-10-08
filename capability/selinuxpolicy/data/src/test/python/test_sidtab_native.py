@@ -76,24 +76,25 @@ IoResult read_entries(int64_t &value) {
     value = 100 + registered.size();
     return {0, true};
 }
-State error_state(int error) {
-    return error == EACCES || error == EPERM ? State::kPermissionLimited :
-        (error ? State::kUnavailable : State::kInconclusive);
-}
 IoResult check_context(const char *context, bool &canonical) {
     canonical = false;
+    const bool carrier = strcmp(context, "u:r:app_zygote:s0") == 0;
     if (strcmp(context, "duckdetector-invalid-context") == 0) return {EINVAL, false};
-    if (mode == "canonical" && strcmp(context, "u:r:app_zygote:s0") != 0) return {0, false};
-    if (mode == "invalid_candidate" && strcmp(context, "u:r:app_zygote:s0") != 0) return {EINVAL, false};
+    if (mode == "carrier_invalid" && carrier) return {EINVAL, false};
+    if (mode == "canonical" && !carrier) return {0, false};
+    if (mode == "invalid_candidate" && !carrier) return {EINVAL, false};
     if (mode != "hidden") registered.insert(context);
     canonical = true;
     return {0, true};
 }
 IoResult write_current(const char *context) {
     if (mode == "attr_open_denied") return {EACCES, false, false};
+    // selinux_setprocattr: setcurrent is checked first, then a malformed label fails conversion.
+    if (strcmp(context, "duckdetector-invalid-context") == 0)
+        return {mode == "attr_control_denied" ? EACCES : EINVAL, false, true};
     if (mode == "identity") return {0, true, true};
     registered.insert(context);
-    return {EACCES, false, true};
+    return {mode == "attr_eperm" ? EPERM : EACCES, false, true};
 }
 }
 
@@ -117,16 +118,20 @@ ChildOutcome run_disposable_child(std::span<unsigned char> report, ChildDeadline
 int main() {
     using namespace duckdetector::selinux::sidtab;
     for (const char *test : {"stock", "hidden", "synchronized", "stats_denied", "wrong_domain", "wrong_uid",
-                            "identity", "attr_open_denied", "canonical", "invalid_candidate", "timeout", "truncated"}) {
+                            "identity", "attr_open_denied", "attr_control_denied", "attr_eperm", "carrier_invalid",
+                            "canonical", "invalid_candidate", "timeout", "truncated"}) {
         mode = test;
         registered = {"u:r:app_zygote:s0"};
         reads = 0;
         const auto value = collect();
+        const auto &first = value.report.rounds[0];
         if (mode == "stock" || mode == "synchronized" || mode == "hidden") {
             assert(value.report.state == State::kComplete);
             assert(value.report.completed_rounds == 2);
             std::set<std::string> candidates;
             for (const auto &round : value.report.rounds) {
+                assert(round.positive_error == 0 && round.negative_error == EINVAL);
+                assert(round.attr_negative_error == EINVAL);
                 assert(round.before == round.before_controls);
                 assert(round.idle_end == round.after_repeat && round.after_repeat == round.after_attr);
                 assert(round.after_context - round.before == (mode == "hidden" ? 0 : 4));
@@ -138,7 +143,7 @@ int main() {
             }
             assert(candidates.size() == 8);
             assert(registered.size() == 9); // bounded insertion count, includes the carrier control
-        } else if (mode == "stats_denied" || mode == "attr_open_denied") {
+        } else if (mode == "stats_denied" || mode == "attr_open_denied" || mode == "attr_control_denied") {
             assert(value.report.state == State::kPermissionLimited);
         } else if (mode == "wrong_domain" || mode == "wrong_uid" || mode == "invalid_candidate") {
             assert(value.report.state == State::kUnsupported);
@@ -148,6 +153,19 @@ int main() {
         if (mode == "identity") assert(value.report.identity_changed && value.report.completed_rounds == 0);
         if (mode == "canonical") assert(value.report.canonical_mismatch);
         if (mode == "wrong_domain" || mode == "wrong_uid") assert(reads == 0);
+        if (mode == "attr_control_denied") {
+            // A denied setcurrent stops the round before any candidate is queried or written.
+            assert(value.report.step == Step::kControls && first.attr_negative_error == EACCES);
+            assert(registered.size() == 1);
+        }
+        if (mode == "attr_eperm") {
+            assert(value.report.step == Step::kAttrCurrent && value.report.error == EPERM);
+            assert(first.samples[0].attr_error == EPERM && !value.report.identity_changed);
+        }
+        if (mode == "carrier_invalid") {
+            assert(value.report.step == Step::kControls && value.report.error == EINVAL);
+            assert(first.positive_error == EINVAL);
+        }
     }
 }
 '''

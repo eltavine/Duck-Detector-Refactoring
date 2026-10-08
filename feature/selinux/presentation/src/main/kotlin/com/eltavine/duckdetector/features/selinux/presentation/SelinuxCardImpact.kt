@@ -25,12 +25,14 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityV
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyWeakness
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxSidtabVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
 import com.eltavine.duckdetector.features.selinux.domain.contextValidityResult
 import com.eltavine.duckdetector.features.selinux.domain.contextValiditySupportState
 import com.eltavine.duckdetector.features.selinux.domain.firstTrustedPolicyRuleHit
 import com.eltavine.duckdetector.features.selinux.domain.policyloadSeqnoResult
 import com.eltavine.duckdetector.features.selinux.domain.procAttrCurrentResult
+import com.eltavine.duckdetector.features.selinux.domain.sidtabReading
 import com.eltavine.duckdetector.features.selinux.presentation.model.SelinuxImpactItemModel
 
 internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemModel> {
@@ -216,6 +218,12 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
     if (dirtyPolicyHit != null) {
         items += SelinuxImpactItemModel(
             trustedPolicyRuleImpact(dirtyPolicyHit),
+            DetectorStatus.warning(),
+        )
+    }
+    if (sidtabReading(report)?.verdict == SelinuxSidtabVerdict.DISCREPANCY_OBSERVED) {
+        items += SelinuxImpactItemModel(
+            "The app_zygote SID-table experiment twice saw accepted context queries leave the live SID-table count unchanged and rejected attr/current writes increase it. This is supporting evidence, not tool identification or root proof.",
             DetectorStatus.warning(),
         )
     }

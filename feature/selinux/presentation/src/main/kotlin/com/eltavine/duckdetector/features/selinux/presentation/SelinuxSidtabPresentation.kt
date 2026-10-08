@@ -41,7 +41,8 @@ internal fun sidtabRow(result: SelinuxCheckResult): SelinuxDetailRowModel {
             reading.rounds.forEachIndexed { index, round ->
                 append("\nRound ${index + 1}: entries ${round.beforeControls} → ${round.before} → ")
                 append("${round.afterContext} → ${round.afterAttr} → ${round.afterRepeat} → ${round.idleEnd}")
-                append("\nControls: positive errno=${round.positiveErrno}, malformed errno=${round.negativeErrno}")
+                append("\nControls: positive errno=${round.positiveErrno}, malformed errno=${round.negativeErrno}, ")
+                append("malformed attr/current errno=${round.attrNegativeErrno}")
                 round.transactions.forEach {
                     append("\n${it.context}: context errno=${it.contextErrno}, attr/current errno=${it.attrErrno}, repeat errno=${it.repeatErrno}")
                 }

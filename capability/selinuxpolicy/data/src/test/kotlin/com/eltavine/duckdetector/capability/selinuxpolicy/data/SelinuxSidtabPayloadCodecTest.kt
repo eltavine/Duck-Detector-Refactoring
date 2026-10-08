@@ -35,8 +35,7 @@ class SelinuxSidtabPayloadCodecTest {
         val value = SelinuxContextValidityBridge().parse("AVAILABLE=1\n")
         assertEquals(SelinuxSidtabCollection.NOT_COLLECTED, value.sidtab.collection)
         assertFalse(value.sidtab.attempted)
-        assertEquals(true, value.component1())
-        assertEquals(true, SelinuxContextValiditySnapshot(true).available)
+        assertEquals(true, value.available)
     }
 
     @Test fun `unknown duplicate truncated and malformed headers become unavailable`() {
@@ -55,6 +54,7 @@ class SelinuxSidtabPayloadCodecTest {
             assertNull(SelinuxSidtabPayloadCodec.decode(wire.replace("R0_BEFORE=100", "R0_BEFORE=$invalid")).rounds[0].before)
         }
         assertNull(SelinuxSidtabPayloadCodec.decode(wire.replace("R0_BEFORE=100\n", "")).rounds[0].before)
+        assertNull(SelinuxSidtabPayloadCodec.decode(wire.replace("R0_ATTR_NEGATIVE_ERRNO=22\n", "")).rounds[0].attrNegativeErrno)
     }
 
     @Test fun `malformed nested evidence does not discard other carrier observations`() {
@@ -78,8 +78,12 @@ class SelinuxSidtabPayloadCodecTest {
         signal = 0, failureReason = "diagnostic\tvalue",
         rounds = (0 until 2).map { index ->
             val before = 100L + index * 4
-            SelinuxSidtabRound(before, before, before, before + 4, before + 4, before + 4, 0, 22,
-                (0 until 4).map { SelinuxSidtabSample("u:r:app_zygote:s0:c${index * 4 + it}", 0, 13, 0) })
+            SelinuxSidtabRound(
+                beforeControls = before, before = before, afterContext = before, afterAttr = before + 4,
+                afterRepeat = before + 4, idleEnd = before + 4, positiveErrno = 0, negativeErrno = 22,
+                attrNegativeErrno = 22,
+                samples = (0 until 4).map { SelinuxSidtabSample("u:r:app_zygote:s0:c${index * 4 + it}", 0, 13, 0) },
+            )
         },
     )
 }
