@@ -66,6 +66,8 @@ The SELinux area also retains an app-zygote SID-table query/registration experim
 
 `Play Integrity Fix` refers to local indicators associated with integrity-spoofing modifications; DuckDetector does not return an official Google Play Integrity API verdict. The TEE area evaluates Android KeyStore and attestation evidence, including certificate chains, security levels, revocation data, and selected KeyMint, StrongBox, and Soter behavior where supported.
 
+Native Root also offers an optional [fsnotify SRCU timing experiment](feature/nativeroot/SRCU_TIMING.md), disabled by default. It requires an explicit choice, uses a temporary private dynamic permission on supported Android 12–14 systems, and reports repeatable contention as supporting evidence. Its thresholds await device calibration; it does not identify KernelSU, and its private-process deadline cannot recover a blocked kernel.
+
 Supporting modules provide the dashboard, device information, settings, update checks, notifications, license information, and common UI infrastructure.
 
 # How it works

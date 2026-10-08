@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.nativeroot.detector
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.eltavine.duckdetector.core.detector.Detector
+import com.eltavine.duckdetector.core.detector.DetectorConsent
 import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.core.detector.DetectorSpecificApi
 import com.eltavine.duckdetector.core.evidence.DetectorId
@@ -42,6 +43,9 @@ import com.eltavine.duckdetector.features.nativeroot.presentation.toDetectorRepo
 @DetectorSpecificApi
 public object NativeRootDetector : Detector<NativeRootReport, NativeRootCardModel> {
     override val id: DetectorId = DetectorId("native_root")
+
+    override val consents: List<DetectorConsent> =
+        listOf(NativeRootSrcuTimingConsent)
 
     override fun createScanner(context: Context): DetectorScanner<NativeRootReport> = NativeRootRepository(context)
 

@@ -3,6 +3,8 @@ duckdetector_native_unit(duckdetector_nativeroot
     common/io_utils.cpp
     cgroup_bridge.cpp
     throne_hunt_native_bridge.cpp
+    srcu_timing_native_bridge.cpp
+    probes/srcu_close_probe.cpp
     probes/prctl_probe.cpp
     probes/kernelpatch_nr_supercall_latency_probe.cpp
     probes/kernelpatch_superkey_probe.cpp

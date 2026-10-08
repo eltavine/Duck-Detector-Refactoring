@@ -110,3 +110,7 @@ The manager key is read only in the caller's profile, because PackageManager ans
 user. Reading the v2 signature block from `ApplicationInfo.sourceDir` would extend the key to apps
 installed only in another profile; that needs an APK signing-block parser and a device pass on the
 SELinux access to other profiles' APKs.
+
+## Optional SRCU timing calibration
+
+Native Root's disabled-by-default timing experiment is implemented with typed failures, controls and a private same-UID carrier. Its source chain and remaining device matrix are in [SRCU_TIMING.md](../../feature/nativeroot/SRCU_TIMING.md). No device result establishes its thresholds yet. Verify each vendor's synchronous permission persistence and fsnotify teardown, measure stock and fixed-KernelSU noise, and exercise cancellation/process-death cleanup before relying on a warning or changing the default. Latest KernelSU moves the normal scan outside SRCU and removes manager-absent full scans, so lack of delay cannot exclude it. A watchdog cannot recover the old kernel/system_server lock inversion.

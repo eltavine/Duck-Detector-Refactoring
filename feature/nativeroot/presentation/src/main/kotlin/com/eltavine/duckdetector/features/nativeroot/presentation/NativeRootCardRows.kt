@@ -189,7 +189,7 @@ internal fun buildMethodRows(report: NativeRootReport): List<NativeRootDetailRow
                 },
                 detailMonospace = true,
             )
-        }
+        } + srcuTimingRow(report.srcuTiming)
     }
 }
 

@@ -43,7 +43,7 @@ dependencies {
 }
 ```
 
-The AAR's manifest brings in the SDK's services, the MIME group Native Root's throne-hunt stimulus flips, and the app zygote preload; `soter-core` brings the SOTER keystore permission, library and package query. The SDK itself declares no permissions; see [Permissions](#permissions).
+The AAR's manifest brings in the SDK's services, the MIME group Native Root's throne-hunt stimulus flips, and the app zygote preload; `soter-core` brings the SOTER keystore permission, library and package query. Native Root also contributes a permission tree for its disabled-by-default timing experiment; the SDK declares no requested permissions; see [Permissions](#permissions).
 
 ## Scan
 
@@ -136,7 +136,7 @@ The sampler's renderer runs as an isolated service of your package, so ActivityM
 
 ## Permissions
 
-The SDK declares no permissions, so the host decides what its process may observe. The app declares these for detection:
+The SDK declares no requested permissions, so the host decides what its process may observe. The app declares these for detection:
 
 | Permission | Used by | Without it |
 |---|---|---|
@@ -150,9 +150,13 @@ The SDK declares no permissions, so the host decides what its process may observ
 
 The SDK declares two `<queries>` entries, which the manifest merger adds to the host. TEE's entry for `com.tencent.soter.soterserver` lets the SOTER environment check tell a missing service from one that package visibility filtering hides. Root Managers' `MAIN`/`LAUNCHER` intent is broad: it makes every app with a launcher activity visible to the host, so that a renamed root manager is still listed. A host that does not want that visibility can drop it with `tools:node="remove"` on the same `<intent>`, at the cost of hiding renamed managers from the launcher enumeration. Either way, a host without `QUERY_ALL_PACKAGES` has filtered package visibility, so Root Managers reports an empty result as partially evaluated rather than clean. Root Managers keeps only matched apps and counts, never the identities of the other apps it checked.
 
-The online revocation refresh also needs the user's consent, which the SDK never asks for itself. Every detector lists the choices it needs in `consents`; today only TEE declares one, `TeeRevocationNetworkConsent`. Read the current answer from `decisions(context)`, record the user's with `decide(context, granted)`, and scan again. Until the user allows it, TEE checks revocation against the bundled snapshot and says so in its report.
+The online revocation refresh also needs the user's consent, which the SDK never asks for itself. Every detector lists the choices it needs in `consents`; TEE declares `TeeRevocationNetworkConsent`; Native Root declares `NativeRootSrcuTimingConsent` for an active local experiment. Read the current answer from `decisions(context)`, record the user's with `decide(context, granted)`, and scan again. Until the user allows it, TEE checks revocation against the bundled snapshot and says so in its report.
 
 ```kotlin
 val consents = DuckDetector.detectors.flatMap { it.consents }   // what the host should ask the user
 TeeRevocationNetworkConsent.decide(context, granted = true)      // then scan again
+// Only after explaining the active experiment and obtaining an explicit choice:
+NativeRootSrcuTimingConsent.decide(context, granted = true)
 ```
+
+Native Root's timing experiment stays disabled until its consent is granted. It temporarily adds and removes one signature-protected dynamic permission under `${applicationId}.duckdetector.srcu`, using the merged non-exported `:srcu_timing` service. Do not override that service to run in the main process. The supported trigger is limited to API 31–34 and reviewed kernel families; OEM differences can still make it inconclusive. The watchdog bounds host waiting, but older modified kernels have a known lock-inversion risk that it cannot recover. Timing is supporting contention evidence and does not identify KernelSU. Failure and unconfirmed cleanup remain visible in the report. See [the source, lifecycle and validation record](../../feature/nativeroot/SRCU_TIMING.md) before exposing this consent in a host UI. Removing the permission tree from the merged manifest makes the stimulus unavailable.

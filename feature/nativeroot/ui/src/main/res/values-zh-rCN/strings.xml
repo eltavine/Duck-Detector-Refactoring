@@ -1,0 +1,35 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="native_root_diagnostic_clipboard_label">Native Root 诊断详情</string>
+    <string name="nativeroot_section_native_probes">原生探针</string>
+    <string name="nativeroot_section_runtime_artifacts">运行时痕迹</string>
+    <string name="nativeroot_section_kernel_traces">内核痕迹</string>
+    <string name="nativeroot_section_property_residue">属性残留</string>
+    <string name="nativeroot_section_impact">影响</string>
+    <string name="nativeroot_section_detection_methods">检测方法</string>
+    <string name="nativeroot_section_scan_summary">扫描摘要</string>
+    <string name="srcu_timing_title">实验性 fsnotify 时序检测</string>
+    <string name="srcu_timing_headline">运行可选的本地时序诊断</string>
+    <string name="srcu_timing_detail">在支持的系统上，此实验会反复改写一项私有动态权限并测量关闭 watch 的耗时。运行期间可能拖慢软件包操作。在存在已知锁反转缺陷的较旧或经修改内核上，这种强制写入可能使系统死锁，设备可能卡死并需要强制重启，独立进程超时也无法避免。结果仅作为辅助证据，阈值仍待真机校准。</string>
+    <string name="srcu_timing_allow">启用实验</string>
+    <string name="srcu_timing_decline">保持关闭</string>
+    <string name="srcu_timing_granted">已启用实验性诊断</string>
+    <string name="srcu_timing_disabled">已关闭</string>
+    <string name="srcu_timing_declined_detail">不会运行可选的时序实验，其他 Native Root 探针继续运行。</string>
+</resources>

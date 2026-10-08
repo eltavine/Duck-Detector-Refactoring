@@ -76,6 +76,8 @@ SELinux 检测还保留了 app-zygote 阶段的 SID 表查询与注册对照实�
 - **进程隔离：** 部分 Zygisk、Mount、Native Root、虚拟化、SELinux、LSPosed 和 TEE 检查运行在独立进程或隔离服务中，用于对照不同进程边界下的证据。
 - **证据关联：** 仪表盘分别展示检测项与覆盖状态，不将单个启发式信号视为确定结论。
 
+Native Root 另有默认关闭的 [fsnotify SRCU 时序实验](feature/nativeroot/SRCU_TIMING.md)。用户明确启用后，它在支持的 Android 12–14 环境中临时修改私有动态权限，比较 inotify 实例关闭的延迟。重复延迟只作为竞争的辅助证据，不判定 KernelSU；阈值仍待真机校准，独立进程超时也无法恢复阻塞的内核。
+
 # 兼容性
 
 | 项目 | 说明 |

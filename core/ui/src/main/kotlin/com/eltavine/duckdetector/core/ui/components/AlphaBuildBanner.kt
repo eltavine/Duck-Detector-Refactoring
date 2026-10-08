@@ -30,10 +30,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import com.eltavine.duckdetector.core.ui.LocalAppBuildInfo
 import com.eltavine.duckdetector.core.ui.R
@@ -51,6 +53,7 @@ public fun AlphaBuildBanner(
     }
 
     val isDarkTheme = isSystemInDarkTheme()
+    val layoutDirection = LocalLayoutDirection.current
     val bannerColor = adaptiveValue(
         material = if (isDarkTheme) Color(0xFFFFB74D) else Color(0xFFD84315),
         miuix = MiuixTheme.colorScheme.primary,
@@ -67,7 +70,7 @@ public fun AlphaBuildBanner(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .offset(x = 32.dp, y = 28.dp)
-                .rotate(45f)
+                .rotate(if (layoutDirection == LayoutDirection.Rtl) -45f else 45f)
                 .background(bannerColor)
                 .width(140.dp)
                 .heightIn(min = 24.dp),

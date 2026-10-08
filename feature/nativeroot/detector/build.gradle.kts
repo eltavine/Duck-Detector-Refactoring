@@ -29,6 +29,7 @@ kotlin {
 
 dependencies {
     api(project(":core:detector"))
+    api(libs.kotlinx.coroutines.core)
     implementation(project(":core:evidence"))
     api(project(":core:report"))
     implementation(project(":feature:nativeroot:data"))

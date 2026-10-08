@@ -25,4 +25,12 @@ limitations under the License.
     <string name="nativeroot_section_impact">Impact</string>
     <string name="nativeroot_section_detection_methods">Detection methods</string>
     <string name="nativeroot_section_scan_summary">Scan summary</string>
+    <string name="srcu_timing_title">Experimental fsnotify timing</string>
+    <string name="srcu_timing_headline">Run an optional local timing diagnostic</string>
+    <string name="srcu_timing_detail">On supported systems this repeatedly rewrites one private dynamic permission and times how long closing a watch takes. It can slow package operations while it runs. On older or modified kernels with a known lock-inversion bug, the forced write can deadlock the system, so the device may freeze and need a forced restart; the private-process deadline cannot prevent that. Results are supporting evidence only and await device calibration.</string>
+    <string name="srcu_timing_allow">Enable experiment</string>
+    <string name="srcu_timing_decline">Keep disabled</string>
+    <string name="srcu_timing_granted">Experimental diagnostic enabled</string>
+    <string name="srcu_timing_disabled">Disabled</string>
+    <string name="srcu_timing_declined_detail">The optional timing experiment will not run. Other Native Root probes continue.</string>
 </resources>

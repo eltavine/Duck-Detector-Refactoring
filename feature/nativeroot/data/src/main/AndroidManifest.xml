@@ -19,7 +19,13 @@ limitations under the License.
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <permission-tree android:name="${applicationId}.duckdetector.srcu" />
+
     <application>
+        <service
+            android:name="com.eltavine.duckdetector.features.nativeroot.data.service.SrcuTimingCarrierService"
+            android:exported="false"
+            android:process=":srcu_timing" />
         <!-- The package directory watch is installed during app_zygote preload and inherited through
              fork, so this carrier only drains the event stream from the isolated child. The intent
              filter declares the MIME group the throne-hunt stimulus flips: setMimeGroup accepts only
