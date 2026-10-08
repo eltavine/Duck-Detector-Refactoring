@@ -26,7 +26,7 @@ limitations under the License.
     <string name="nativeroot_section_scan_summary">扫描摘要</string>
     <string name="srcu_timing_title">实验性 fsnotify 时序检测</string>
     <string name="srcu_timing_headline">运行可选的本地时序诊断</string>
-    <string name="srcu_timing_detail">在支持的系统上，此实验会临时修改一项私有动态权限并比较 watch 关闭耗时。它可能延迟软件包操作；较旧的修改内核存在已知死锁风险。独立进程超时只能限制应用等待，无法恢复阻塞的内核。结果仅作为辅助证据，阈值仍待真机校准。</string>
+    <string name="srcu_timing_detail">在支持的系统上，此实验会反复改写一项私有动态权限并测量关闭 watch 的耗时。运行期间可能拖慢软件包操作。在存在已知锁反转缺陷的较旧或经修改内核上，这种强制写入可能使系统死锁，设备可能卡死并需要强制重启，独立进程超时也无法避免。结果仅作为辅助证据，阈值仍待真机校准。</string>
     <string name="srcu_timing_allow">启用实验</string>
     <string name="srcu_timing_decline">保持关闭</string>
     <string name="srcu_timing_granted">已启用实验性诊断</string>
