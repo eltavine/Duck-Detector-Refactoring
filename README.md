@@ -62,9 +62,9 @@ Current feature areas, each linked to its evidence record, which explains what t
 
 [`ADB Runtime`](./feature/adbruntime/EVIDENCE.md) · [`Bootloader`](./feature/bootloader/EVIDENCE.md) · [`Custom ROM`](./feature/customrom/EVIDENCE.md) · [`Dangerous Apps`](./feature/dangerousapps/EVIDENCE.md) · [`Kernel Check`](./feature/kernelcheck/EVIDENCE.md) · [`LSPosed`](./feature/lsposed/EVIDENCE.md) · [`Memory`](./feature/memory/EVIDENCE.md) · [`Mount`](./feature/mount/EVIDENCE.md) · [`Native Root`](./feature/nativeroot/EVIDENCE.md) · [`Play Integrity Fix`](./feature/playintegrityfix/EVIDENCE.md) · [`Root Managers`](./feature/rootmanagers/EVIDENCE.md) · [`SELinux`](./feature/selinux/EVIDENCE.md) · [`SU`](./feature/su/EVIDENCE.md) · [`System Properties`](./feature/systemproperties/EVIDENCE.md) · [`TEE`](./feature/tee/EVIDENCE.md) · [`Virtualization`](./feature/virtualization/EVIDENCE.md) · [`Zygisk`](./feature/zygisk/EVIDENCE.md)
 
-`Play Integrity Fix` refers to local indicators associated with integrity-spoofing modifications; DuckDetector does not return an official Google Play Integrity API verdict. The TEE area evaluates Android KeyStore and attestation evidence, including certificate chains, security levels, revocation data, and selected KeyMint, StrongBox, and Soter behavior where supported.
-
 The SELinux area also retains an app-zygote SID-table query/registration experiment. Repeated discrepancies are supporting warnings; synchronized policy hiding can leave no discrepancy. Access failures and incomplete experiments remain explicit coverage states. See the [SELinux evidence record](./feature/selinux/EVIDENCE.md) for source references and device-validation limits.
+
+`Play Integrity Fix` refers to local indicators associated with integrity-spoofing modifications; DuckDetector does not return an official Google Play Integrity API verdict. The TEE area evaluates Android KeyStore and attestation evidence, including certificate chains, security levels, revocation data, and selected KeyMint, StrongBox, and Soter behavior where supported.
 
 Supporting modules provide the dashboard, device information, settings, update checks, notifications, license information, and common UI infrastructure.
 
