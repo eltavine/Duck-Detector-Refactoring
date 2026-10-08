@@ -55,7 +55,7 @@ After a warmup, 12 rounds randomize these three arms, with a 25 ms washout betwe
 
 Idle duration follows the previous stimulated window, clamped to 20–500 ms. Washout does not establish that global readers are idle. Cleanup removes the private dynamic permission and verifies absence. Existing permission names are refused before any mutation, even if they belong to this package; the diagnostic never overwrites an existing declaration.
 
-The host uses asynchronous Messenger request/reply and a 30 s response deadline. The carrier uses an independent 25 s watchdog. Host unbinding asks acquisition to stop between windows while retaining cleanup. A feature-owned mutex rejects overlapping host requests; the carrier independently rejects concurrent requests. Process-name validation prevents a manifest override from making the watchdog kill the host.
+The host uses asynchronous Messenger request/reply and a 30 s response deadline. The carrier uses an independent 25 s watchdog. Host unbinding asks acquisition to stop between windows while retaining cleanup. A feature-owned mutex rejects overlapping host requests; the carrier independently rejects concurrent requests process-wide, including from a new service instance created by a rebind while an earlier run is still finishing. Process-name validation prevents a manifest override from making the watchdog kill the host.
 
 The watchdog bounds ordinary host waiting. A close stuck in uninterruptible kernel sleep can survive SIGKILL; system_server can also remain blocked. The pre-fix KernelSU ABBA deadlock is a documented risk of the stimulus. Process isolation cannot fix kernel recovery. This is why the experiment requires explicit consent and remains disabled by default.
 

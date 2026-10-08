@@ -38,7 +38,6 @@ import kotlinx.coroutines.launch
 
 /** One-way request/reply: the host never blocks inside a synchronous remote Binder transaction. */
 class SrcuTimingCarrierService : Service() {
-    private val active = AtomicBoolean(false)
     private val cancelled = AtomicBoolean(false)
     private val handler = Handler(Looper.getMainLooper())
     private val watchdog = Runnable {
@@ -97,5 +96,10 @@ class SrcuTimingCarrierService : Service() {
         internal const val COLLECT = 1
         internal const val PAYLOAD = "payload"
         private const val WATCHDOG_MS = 25_000L
+
+        // A run outlives its service instance: after an unbind, the next bind creates a new instance
+        // in this process while the old run is still finishing, so admission is process-wide.
+        // Cancellation stays per instance, because each run reads the flag its own unbind set.
+        private val active = AtomicBoolean(false)
     }
 }
