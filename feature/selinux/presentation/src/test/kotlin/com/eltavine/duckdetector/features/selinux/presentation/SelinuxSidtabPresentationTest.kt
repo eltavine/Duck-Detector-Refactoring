@@ -1,0 +1,70 @@
+/*
+ * Copyright 2026 Duck Apps Contributor
+ * If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.eltavine.duckdetector.features.selinux.presentation
+
+import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
+import com.eltavine.duckdetector.features.selinux.domain.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SelinuxSidtabPresentationTest {
+    @Test fun `finding stays warning in headline row and export`() {
+        val model = SelinuxCardModelMapper().map(report(reading(true)))
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals("Enforcing with SID-table query discrepancy", model.verdict)
+        val row = model.methodRows.single()
+        assertEquals(DetectorStatus.warning(), row.status)
+        assertTrue(row.detail!!.contains("does not identify KernelSU or prove root"))
+        assertTrue(row.detail.contains("retained measurement"))
+        assertTrue(model.summary.contains("hidden policy reloads cannot be excluded"))
+        assertTrue(!model.summary.contains("internally consistent"))
+        assertEquals(model.verdict, model.toDetectorReport().verdict)
+    }
+
+    @Test fun `negative and missing evidence have informational rows`() {
+        listOf(reading(false), reading(false).copy(collection = SelinuxSidtabCollection.NOT_COLLECTED, attempted = false),
+            reading(false).copy(collection = SelinuxSidtabCollection.PERMISSION_LIMITED),
+        ).forEach {
+            val row = SelinuxCardModelMapper().map(report(it)).methodRows.single()
+            assertEquals(DetectorStatus.info(InfoKind.SUPPORT), row.status)
+            if (!it.attempted) assertTrue(row.detail!!.contains("no measurement was retained"))
+        }
+    }
+
+    private fun report(reading: SelinuxSidtabReading) = SelinuxReport(
+        stage = SelinuxStage.READY, mode = SelinuxMode.ENFORCING, resolvedStatusLabel = "Enforcing",
+        filesystemMounted = true, paradoxDetected = false,
+        methods = listOf(SelinuxCheckResult(SelinuxOracle.SIDTAB_CONSISTENCY.label, reading.verdict.label, null, false,
+            oracle = SelinuxOracle.SIDTAB_CONSISTENCY, sidtab = reading)),
+        processContext = null, contextType = null, policyAnalysis = null, auditIntegrity = null,
+        androidVersion = "15", apiLevel = 35,
+    )
+
+    private fun reading(split: Boolean) = SelinuxSidtabReading(
+        collection = SelinuxSidtabCollection.COMPLETE, attempted = true, completedRounds = 2,
+        carrierVerified = true, canonicalMismatch = false, identityChanged = false, capturedUptimeMs = 1000,
+        collectionDetails = SelinuxSidtabCollectionDetails("FINISHED", 0, "EXITED", 0, "u:r:app_zygote:s0", 10000, 123, "6.6", null),
+        rounds = (0 until 2).map { index ->
+            val before = 100L + index * 4
+            SelinuxSidtabRound(before, before, before + if (split) 0 else 4, before + 4, before + 4, before + 4,
+                true, (0 until 4).map { "u:r:app_zygote:s0:c${index * 4 + it}" }, true, true, true, stockContextsVerified = true)
+        },
+    )
+}

@@ -113,6 +113,7 @@ internal fun buildMethodRows(report: SelinuxReport): List<SelinuxDetailRowModel>
 }
 
 private fun methodRow(result: SelinuxCheckResult): SelinuxDetailRowModel {
+    if (result.oracle == SelinuxOracle.SIDTAB_CONSISTENCY && result.sidtab != null) return sidtabRow(result)
     return SelinuxDetailRowModel(
         label = result.method,
         value = result.status,

@@ -98,6 +98,7 @@ public open class SelinuxContextValidityBridge(
         value: String,
     ): SelinuxContextValiditySnapshot {
         return when (key) {
+            "SIDTAB_SNAPSHOT" -> copy(sidtab = SelinuxSidtabPayloadCodec.decode(value.decodeValue()))
             "AVAILABLE" -> copy(available = value.asBool())
             "PROBE_ATTEMPTED" -> copy(probeAttempted = value.asBool())
             "CARRIER_CONTEXT" -> copy(carrierContext = value.decodeValue())

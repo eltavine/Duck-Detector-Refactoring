@@ -53,8 +53,13 @@ Arrows point from a module to the modules it may depend on. Feature units never 
 | `earlypreload` | Mount and virtualization evidence captured by the transparent `NativeActivity` before the activity it launches | mount, virtualization |
 | `helperprocess` | Isolated and helper process services, remote snapshots, dex path and UID identity collectors | mount, nativeroot, virtualization |
 | `packageinventory` | Installed package inventory and visibility checks | customrom, dangerousapps, lsposed, nativeroot, virtualization |
-| `selinuxpolicy` | SELinux context validity carriers, proc attr and policyload seqno probes, dirty policy preload queries | lsposed, selinux |
+| `selinuxpolicy` | SELinux context validity carriers, proc attr and policyload seqno probes, dirty policy preload queries, bounded SID-table registration observations | lsposed, selinux |
 | `systemproperties` | Multi-source system property reads, native property snapshots, and the native parser of bionic's property areas | adbruntime, bootloader, systemproperties; customrom's native unit uses the property area parser |
+
+The selinuxpolicy SID-table experiment uses its existing shared preload/carrier and a narrow JNI
+bridge inside the same native unit. It reports fixed-size child observations and collection outcomes;
+only the SELinux domain classifies paired counter patterns. A nested versioned payload keeps the new
+measurements independent of older context-oracle fields. Missing fields remain not collected.
 
 A capability collects; each consumer interprets. A capability exists only because at least two features consume the same evidence.
 

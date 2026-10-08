@@ -96,6 +96,7 @@ class SelinuxRepository(
         methods += buildPolicyloadSeqnoMethod(contextValidityResult)
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
         methods += buildDirtyPolicyMethods(carrierSnapshot)
+        methods += buildSidtabMethod(carrierSnapshot.sidtab)
 
         val statusResolution = determineStatusWithParadoxLogic(methods)
         val processContext = readProcessContext()

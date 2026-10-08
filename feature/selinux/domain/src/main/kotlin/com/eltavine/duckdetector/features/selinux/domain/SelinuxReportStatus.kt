@@ -35,6 +35,7 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 contextValidity?.contextValidity?.verdict == SelinuxContextValidityVerdict.KSU_PRESENT -> DetectorStatus.danger()
                 policyloadSeqno?.isSecure == false -> DetectorStatus.danger()
                 procAttrCurrent?.isSecure == false -> DetectorStatus.danger()
+                sidtabReading(this)?.verdict == SelinuxSidtabVerdict.DISCREPANCY_OBSERVED -> DetectorStatus.warning()
                 dirtyPolicyHit != null -> DetectorStatus.warning()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)

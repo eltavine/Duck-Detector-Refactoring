@@ -24,6 +24,8 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegritySt
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyWeakness
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxSidtabVerdict
+import com.eltavine.duckdetector.features.selinux.domain.sidtabReading
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
 import com.eltavine.duckdetector.features.selinux.domain.contextValidityResult
@@ -67,6 +69,8 @@ internal fun buildVerdict(report: SelinuxReport): String {
                     "Enforcing with KSU context materialized"
                 policyloadSeqno?.isSecure == false -> "Enforcing with app_zygote seqno split"
                 procAttrCurrent?.isSecure == false -> "Enforcing with app_zygote attr-write anomaly"
+                sidtabReading(report)?.verdict == SelinuxSidtabVerdict.DISCREPANCY_OBSERVED ->
+                    "Enforcing with SID-table query discrepancy"
                 dirtyPolicyHit != null -> trustedPolicyRuleVerdict()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
                     "Enforcing with untrusted app_zygote carrier"
@@ -126,9 +130,12 @@ internal fun buildSummary(report: SelinuxReport): String {
                         "SELinux is enforcing and only minor policy drift surfaced."
 
                     SelinuxPolicyWeakness.NONE, null ->
-                        "SELinux is enforcing and the visible policy surface looks internally consistent."
+                        if (sidtabReading(report)?.verdict == SelinuxSidtabVerdict.DISCREPANCY_OBSERVED)
+                            "SELinux is enforcing, but the paired SID-table experiment observed a repeatable query/registration discrepancy."
+                        else "SELinux is enforcing and the visible policy surface looks internally consistent."
                 }
                 val extra = buildList {
+                    sidtabReading(report)?.let { add(sidtabExplanation(it)) }
                     if (report.paradoxDetected) {
                         add("Permission-denied probes also reinforced the enforcing verdict.")
                     }

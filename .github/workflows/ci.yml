@@ -62,6 +62,9 @@ jobs:
           python3 .github/scripts/test-text-protocols.py
           python3 scripts/test_new_detector.py
 
+      - name: Test SID-table native parsing and experiment control flow
+        run: python3 capability/selinuxpolicy/data/src/test/python/test_sidtab_native.py
+
       - name: Verify every detector stays inside its own directory
         run: python3 .github/scripts/check-detector-touch-points.py
 

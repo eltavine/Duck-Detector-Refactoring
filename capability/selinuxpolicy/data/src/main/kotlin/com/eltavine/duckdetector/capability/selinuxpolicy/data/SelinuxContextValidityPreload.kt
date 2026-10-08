@@ -24,6 +24,7 @@ import java.lang.reflect.Method
 
 public class SelinuxContextValidityPreload {
 
+    private val sidtabProbe = SelinuxSidtabProbe()
     private val bridge = SelinuxContextValidityBridge()
     private val statusPageProbe = SelinuxStatusPageProbe()
     private val procAttrCurrentProbe = SelinuxProcAttrCurrentProbe()
@@ -46,7 +47,14 @@ public class SelinuxContextValidityPreload {
             trace("selinux: status page probe")
             val statusPage = statusPageProbe.inspect()
             val accessCheckBlockReason = statusPage.accessCheckBlockReason
+            // Direct I/O, isolated from libselinux and from any identity change in its child.
+            trace("selinux: SID-table experiment")
+            val sidtab = if (currentUid == appInfo.uid) sidtabProbe.inspect() else SelinuxSidtabSnapshot(
+                collection = SelinuxSidtabCollection.UNSUPPORTED,
+                failureReason = "Carrier UID does not match the application UID.",
+            )
             val baseSnapshot = collectBaseSnapshot(currentUid, appInfo.uid, accessCheckBlockReason, trace)
+                .copy(sidtab = sidtab)
             var dirtyPolicyTraced = false
             val snapshot = augmentPreloadSnapshot(
                 baseSnapshot = baseSnapshot,

@@ -97,3 +97,15 @@ user. Reading the v2 signature block from `ApplicationInfo.sourceDir` would exte
 installed only in another profile; that needs an APK signing-block parser and a device pass on the
 SELinux access to other profiles' APKs.
 
+
+## SID-table consistency device validation
+
+The SID-table experiment is implemented with pinned ACK/AOSP/KernelSU source references,
+JVM regressions and host-native injected IO/runner tests. No Android device was attached.
+Before relying on this warning in a release, compare the same device/kernel configuration
+with stock SELinux, pre-a810677 KernelSU hiding enabled/disabled, and the synchronization fix.
+Also exercise permission-limited/vendor kernels, existing candidates, background process
+activity, policy reloads, repeated carrier starts and non-arm64 devices. Verify preload
+latency, bounded SID-table/AVC effects and child cleanup. Global statistics cannot exclude
+hidden reloads or attribute inserts to one process, so even a repeatable pattern remains
+supporting evidence and must not be promoted to tool identification or a danger finding.

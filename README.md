@@ -64,6 +64,8 @@ Current feature areas, each linked to its evidence record, which explains what t
 
 `Play Integrity Fix` refers to local indicators associated with integrity-spoofing modifications; DuckDetector does not return an official Google Play Integrity API verdict. The TEE area evaluates Android KeyStore and attestation evidence, including certificate chains, security levels, revocation data, and selected KeyMint, StrongBox, and Soter behavior where supported.
 
+The SELinux area also retains an app-zygote SID-table query/registration experiment. Repeated discrepancies are supporting warnings; synchronized policy hiding can leave no discrepancy. Access failures and incomplete experiments remain explicit coverage states. See the [SELinux evidence record](./feature/selinux/EVIDENCE.md) for source references and device-validation limits.
+
 Supporting modules provide the dashboard, device information, settings, update checks, notifications, license information, and common UI infrastructure.
 
 # How it works

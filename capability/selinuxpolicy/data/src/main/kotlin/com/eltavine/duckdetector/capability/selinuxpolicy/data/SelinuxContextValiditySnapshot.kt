@@ -116,6 +116,7 @@ public data class SelinuxContextValiditySnapshot(
      * the same information in the wording the report shows.
      */
     val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
+    val sidtab: SelinuxSidtabSnapshot = SelinuxSidtabSnapshot(),
 ) {
     /**
      * Whether the native dirty-policy access oracle passed its own checks: it ran in the expected
