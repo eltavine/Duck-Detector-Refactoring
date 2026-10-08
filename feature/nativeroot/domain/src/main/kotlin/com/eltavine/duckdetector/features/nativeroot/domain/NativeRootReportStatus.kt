@@ -35,7 +35,9 @@ fun NativeRootReport.toDetectorStatus(): DetectorStatus {
 }
 
 fun NativeRootReport.hasReducedCoverage(): Boolean {
-    return ksuSupercallBlocked ||
+    return (srcuTiming.requested && srcuTiming.analysis.verdict in setOf(
+        SrcuTimingVerdict.NOT_EVALUATED, SrcuTimingVerdict.INCONCLUSIVE,
+    )) || ksuSupercallBlocked ||
             !ksuSupercallAttempted ||
             hasRuntimeReducedCoverage()
 }

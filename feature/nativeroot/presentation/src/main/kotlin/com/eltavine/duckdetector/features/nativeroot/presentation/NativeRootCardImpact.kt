@@ -21,6 +21,7 @@ import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootReport
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootStage
+import com.eltavine.duckdetector.features.nativeroot.domain.SrcuTimingVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.hasReducedCoverage
 import com.eltavine.duckdetector.features.nativeroot.presentation.model.NativeRootImpactItemModel
 
@@ -48,6 +49,11 @@ internal fun buildImpactItems(report: NativeRootReport): List<NativeRootImpactIt
                         status = DetectorStatus.danger(),
                     ),
                 )
+            } else if (report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY) {
+                add(NativeRootImpactItemModel(
+                    text = "The optional timing experiment found a repeatable delay relative to both controls. Background fsnotify readers and scheduling remain possible causes; this does not identify a root solution.",
+                    status = DetectorStatus.warning(),
+                ))
             } else if (report.hasWarningFindings) {
                 add(
                     NativeRootImpactItemModel(

@@ -28,6 +28,7 @@ import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneH
 import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntRound
 import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceDriftProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.RootProcessAuditProbe
+import com.eltavine.duckdetector.features.nativeroot.data.probes.SrcuTimingProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.ShellTmpMetadataProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.TempRootArtifactProbe
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFinding
@@ -54,6 +55,7 @@ class NativeRootRepository(
         context?.applicationContext
     ),
     private val throneHuntProbe: KernelSuThroneHuntProbe = KernelSuThroneHuntProbe(),
+    private val srcuTimingProbe: SrcuTimingProbe = SrcuTimingProbe(context?.applicationContext),
 ) : DetectorScanner<NativeRootReport> {
 
     override suspend fun scan(): NativeRootReport = withContext(Dispatchers.IO) {
@@ -76,8 +78,9 @@ class NativeRootRepository(
         val mountNamespaceResult = mountNamespaceDriftProbe.run()
         val managerFingerprintResult = kernelSuManagerFingerprintProbe.run()
         val tempRootArtifactResult = tempRootArtifactProbe.run()
-        // The throne hunt round is the only probe that mutates observable system state, so it runs
-        // last and keeps its watch/verdict split explicit.
+        // Both stimuli run last, serially. The timing experiment precedes the asynchronous MIME
+        // rewrite so this detector cannot introduce its own delayed write into the idle controls.
+        val srcuTiming = srcuTimingProbe.collect()
         val throneHuntRoundResult = throneHuntRound.run(scanStartedAt)
         val throneHuntResult = throneHuntProbe.run(throneHuntRoundResult)
         val findings =
@@ -92,6 +95,7 @@ class NativeRootRepository(
 
         return NativeRootReport(
             stage = NativeRootStage.READY,
+            srcuTiming = srcuTiming,
             findings = findings,
             rootDetected = snapshot.rootDetected,
             kernelSuDetected = snapshot.kernelSuDetected,

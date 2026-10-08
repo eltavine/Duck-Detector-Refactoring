@@ -169,6 +169,7 @@ data class NativeRootReport(
     val ksuThroneHuntWatchDescriptor: Int = -1,
     val ksuThroneHuntStimulusDetail: String = "",
     val ksuThroneHuntDiagnosticDetail: String = "",
+    val srcuTiming: SrcuTimingObservation = SrcuTimingObservation(),
 ) {
     val directFindings: List<NativeRootFinding>
         get() = findings.filter { it.group == NativeRootGroup.SYSCALL || it.group == NativeRootGroup.SIDE_CHANNEL }
@@ -193,7 +194,8 @@ data class NativeRootReport(
         get() = findings.count { it.severity == NativeRootFindingSeverity.DANGER }
 
     val warningFindingCount: Int
-        get() = findings.count { it.severity == NativeRootFindingSeverity.WARNING }
+        get() = findings.count { it.severity == NativeRootFindingSeverity.WARNING } +
+            if (srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY) 1 else 0
 
     val hasDangerFindings: Boolean
         get() = dangerFindingCount > 0

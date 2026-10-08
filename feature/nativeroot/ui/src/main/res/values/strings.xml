@@ -25,4 +25,12 @@ limitations under the License.
     <string name="nativeroot_section_impact">Impact</string>
     <string name="nativeroot_section_detection_methods">Detection methods</string>
     <string name="nativeroot_section_scan_summary">Scan summary</string>
+    <string name="srcu_timing_title">Experimental fsnotify timing</string>
+    <string name="srcu_timing_headline">Run an optional local timing diagnostic</string>
+    <string name="srcu_timing_detail">On supported systems, this temporarily changes one private dynamic permission and compares watch-close timings. It may delay package operations; older modified kernels have a known deadlock risk. A private process deadline protects host waiting but cannot recover a blocked kernel. Results are supporting evidence and await device calibration.</string>
+    <string name="srcu_timing_allow">Enable experiment</string>
+    <string name="srcu_timing_decline">Keep disabled</string>
+    <string name="srcu_timing_granted">Experimental diagnostic enabled</string>
+    <string name="srcu_timing_disabled">Disabled</string>
+    <string name="srcu_timing_declined_detail">The optional timing experiment will not run. Other Native Root probes continue.</string>
 </resources>
