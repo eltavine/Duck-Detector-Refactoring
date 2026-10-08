@@ -2502,7 +2502,7 @@
     },
     {
       "uniqueId": "io.github.xiaotong6666:uihelper",
-      "artifactVersion": "52",
+      "artifactVersion": "53",
       "name": "uihelper",
       "description": "Adaptive Material and Miuix Compose components for utility-style Android apps.",
       "website": "https://github.com/XiaoTong6666/uihelper",

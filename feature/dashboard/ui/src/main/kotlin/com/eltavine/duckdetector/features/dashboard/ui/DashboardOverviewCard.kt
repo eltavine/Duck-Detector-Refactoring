@@ -96,6 +96,7 @@ internal fun DashboardOverviewCard(
             },
             tone = heroTone,
             accentColor = appearance.iconTint,
+            miuixMetaContentEndPadding = 16.dp,
             onClick = onExportReport,
             metaContent = { contentColor ->
                 ReportHeroMetadata(
@@ -191,7 +192,7 @@ private fun ReportMetaLine(icon: androidx.compose.ui.graphics.vector.ImageVector
             modifier = Modifier.weight(1f),
             style = DuckTypography.ReportMeta,
             color = color,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
