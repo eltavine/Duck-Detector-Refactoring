@@ -80,17 +80,27 @@ class SrcuTimingCarrierService : Service() {
     }
 
     private fun send(reply: Messenger, observation: SrcuTimingObservation) {
-        val payload = try { SrcuTimingPayloadCodec.encode(observation) } catch (failure: Exception) {
-            SrcuTimingPayloadCodec.encode(SrcuTimingObservation(SrcuTimingCollection.IPC_FAILED,
-                failureDetail = PlatformFailureName.describe(failure),
-                cleanupCompleted = observation.cleanupCompleted))
-        }
-        runCatching {
-            reply.send(Message.obtain(null, COLLECT).apply {
-                data = Bundle().apply { putString(PAYLOAD, payload) }
-            })
-        }
+        if (deliver(reply, encodeOrFailure(observation))) return
+        // The full reply can still exceed the one-way Binder budget or meet a broken channel. A bounded
+        // failure that keeps the cleanup flag lets the host resolve the run instead of waiting out its
+        // deadline and reporting cleanup as unconfirmed.
+        deliver(reply, encodeOrFailure(SrcuTimingObservation(SrcuTimingCollection.IPC_FAILED,
+            failureDetail = "Carrier reply undeliverable", cleanupCompleted = observation.cleanupCompleted)))
     }
+
+    private fun encodeOrFailure(observation: SrcuTimingObservation): String = try {
+        SrcuTimingPayloadCodec.encode(observation)
+    } catch (failure: Exception) {
+        SrcuTimingPayloadCodec.encode(SrcuTimingObservation(SrcuTimingCollection.IPC_FAILED,
+            failureDetail = PlatformFailureName.describe(failure),
+            cleanupCompleted = observation.cleanupCompleted))
+    }
+
+    private fun deliver(reply: Messenger, payload: String): Boolean = runCatching {
+        reply.send(Message.obtain(null, COLLECT).apply {
+            data = Bundle().apply { putString(PAYLOAD, payload) }
+        })
+    }.isSuccess
 
     companion object {
         internal const val COLLECT = 1

@@ -26,7 +26,8 @@ import com.eltavine.duckdetector.features.nativeroot.domain.SrcuTimingRound
 import com.eltavine.duckdetector.features.nativeroot.domain.SrcuTimingWindow
 
 internal object SrcuTimingPayloadCodec {
-    // A full bounded run fits below the Binder buffer even with UTF-16 transport.
+    // Rejects a malformed or oversized reply; a real saturated run stays well below it. The reply can
+    // still exceed the one-way Binder budget, so the carrier falls back to a bounded failure.
     const val MAX_LENGTH = 400_000
     private fun field(key: String, value: String) = "$key=${NativePayloadCodec.encodeValue(value)}\n"
     fun encode(observation: SrcuTimingObservation): String = buildString {
