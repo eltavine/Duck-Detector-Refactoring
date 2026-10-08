@@ -47,7 +47,7 @@ internal fun srcuTimingRow(observation: SrcuTimingObservation): NativeRootDetail
     val detail = buildString {
         appendLine("Compares whole-instance inotify close latency during a synchronous packages.list stimulus, matched idle windows, and post-stimulus sequential controls.")
         appendLine("Experimental supporting evidence of global fsnotify/SRCU contention; it does not identify KernelSU. KernelSU ab23091e moved normal scans outside this reader; 6b5f55bd also removed the manager-absent full scan. No delay cannot exclude KernelSU.")
-        appendLine("Android 11–14 legacy permission backend only; Android 15+ persists dynamic permissions separately. Kernel branch matching is a conservative gate, not proof that a vendor kept ACK semantics.")
+        appendLine("Android 12–14 legacy permission backend only. Android 11 stores the tree's record, so its readback cannot confirm a change; Android 15+ persists dynamic permissions separately. Kernel branch matching is a conservative gate, not proof that a vendor kept ACK semantics.")
         appendLine("Criterion: 12 complete rounds, at least 8 candidate-overlap samples per arm, 10 delayed rounds with replication in each four-round block, and a p95 gap over 6 control scales (maximum of MAD and one tenth of the control median). Thresholds await device calibration; concurrent scans and background readers remain confounders.")
         appendLine("kernel=${observation.kernelRelease}; collection=${observation.collection}; cleanup=${observation.cleanupCompleted}")
         appendLine("rounds=${observation.rounds.size}; usable=${analysis.usableRounds}; delayed=${analysis.delayedRounds}")
