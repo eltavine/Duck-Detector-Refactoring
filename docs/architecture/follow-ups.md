@@ -79,6 +79,20 @@ The evidence review changed what several probes report. These changes were verif
 
 Validate them on a stock device, a rooted device with /data/adb present, an SDK host with an old target SDK, and a non-arm64 device before relying on the new states in a release.
 
+## SID-table consistency device validation
+
+The SID-table experiment is implemented with pinned ACK/AOSP/KernelSU source references,
+JVM regressions and host-native injected IO/runner tests. No Android device was attached.
+Before relying on this warning in a release, compare the same device/kernel configuration
+with stock SELinux, pre-a810677 KernelSU hiding enabled/disabled, and the synchronization fix.
+Also exercise permission-limited/vendor kernels, existing candidates, background process
+activity, policy reloads, repeated carrier starts and non-arm64 devices. Verify preload
+latency, bounded SID-table/AVC effects and child cleanup. Record how often a normal scan ends
+inconclusive: processes that start while the app zygote preloads, including the scan's own helper
+and isolated processes, can register new labels and break the quiet bookends. Global statistics cannot exclude
+hidden reloads or attribute inserts to one process, so even a repeatable pattern remains
+supporting evidence and must not be promoted to tool identification or a danger finding.
+
 ## Root manager catalogues across detectors
 
 Three detectors name root manager packages from separate lists: Root Managers' catalogue, Native
@@ -96,18 +110,3 @@ The manager key is read only in the caller's profile, because PackageManager ans
 user. Reading the v2 signature block from `ApplicationInfo.sourceDir` would extend the key to apps
 installed only in another profile; that needs an APK signing-block parser and a device pass on the
 SELinux access to other profiles' APKs.
-
-
-## SID-table consistency device validation
-
-The SID-table experiment is implemented with pinned ACK/AOSP/KernelSU source references,
-JVM regressions and host-native injected IO/runner tests. No Android device was attached.
-Before relying on this warning in a release, compare the same device/kernel configuration
-with stock SELinux, pre-a810677 KernelSU hiding enabled/disabled, and the synchronization fix.
-Also exercise permission-limited/vendor kernels, existing candidates, background process
-activity, policy reloads, repeated carrier starts and non-arm64 devices. Verify preload
-latency, bounded SID-table/AVC effects and child cleanup. Record how often a normal scan ends
-inconclusive: processes that start while the app zygote preloads, including the scan's own helper
-and isolated processes, can register new labels and break the quiet bookends. Global statistics cannot exclude
-hidden reloads or attribute inserts to one process, so even a repeatable pattern remains
-supporting evidence and must not be promoted to tool identification or a danger finding.
