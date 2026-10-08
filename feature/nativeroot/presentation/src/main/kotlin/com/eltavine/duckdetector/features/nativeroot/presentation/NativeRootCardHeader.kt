@@ -28,6 +28,11 @@ import com.eltavine.duckdetector.features.nativeroot.domain.hasRuntimeReducedCov
 import com.eltavine.duckdetector.features.nativeroot.presentation.model.NativeRootHeaderFact
 import com.eltavine.duckdetector.features.nativeroot.presentation.model.NativeRootHeaderFactModel
 
+// Warnings from real findings, without the opt-in experiment's own warning-level signal. Established
+// findings outrank the experimental timing signal in the headline, summary and impact.
+internal val NativeRootReport.hasFindingWarnings: Boolean
+    get() = findings.any { it.severity == NativeRootFindingSeverity.WARNING }
+
 internal fun buildSubtitle(report: NativeRootReport): String {
     return when (report.stage) {
         NativeRootStage.LOADING -> "supercall + prctl + setresuid + runtime paths + /proc + isolated mount"
@@ -62,8 +67,8 @@ internal fun buildVerdict(report: NativeRootReport): String {
                 "KernelSU manager weak fingerprint detected"
 
             report.ksuManagerPackagePresent -> "KernelSU manager package detected"
+            report.hasFindingWarnings -> "${report.warningFindingCount} native signal(s) need review"
             report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY -> "Experimental fsnotify/SRCU timing anomaly"
-            report.hasWarningFindings -> "${report.warningFindingCount} native signal(s) need review"
             !report.nativeAvailable -> "Native detector unavailable"
             report.hasReducedCoverage() -> "Native root scan has reduced coverage"
             else -> "No native root indicators"
@@ -83,11 +88,11 @@ internal fun buildSummary(report: NativeRootReport): String {
             report.hasDangerFindings ->
                 "Read-only ksu_driver hits, direct syscall hits, self-process IOC, root-manager paths, curated runtime residue paths, /data/local/tmp metadata drift, cgroup/process leakage, unexpected root processes, or isolated-process namespace drift indicate active native root infrastructure."
 
+            report.hasFindingWarnings ->
+                "Only weaker isolated-process mount drift, cross-process mount view divergence, manager manifest fingerprints, process, cgroup, kernel, property, or metadata residue surfaced. These are review-worthy, but not as strong as direct native probes."
+
             report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY ->
                 "The optional experiment observed a repeatable fsnotify/SRCU timing delay relative to both controls. This is supporting contention evidence; it does not identify a root solution. Other indicators retain their own meaning."
-
-            report.hasWarningFindings ->
-                "Only weaker isolated-process mount drift, cross-process mount view divergence, manager manifest fingerprints, process, cgroup, kernel, property, or metadata residue surfaced. These are review-worthy, but not as strong as direct native probes."
 
             !report.nativeAvailable ->
                 "This detector relies mostly on JNI-backed native probes. Native coverage was unavailable on this build, and the remaining runtime checks stayed clean."
