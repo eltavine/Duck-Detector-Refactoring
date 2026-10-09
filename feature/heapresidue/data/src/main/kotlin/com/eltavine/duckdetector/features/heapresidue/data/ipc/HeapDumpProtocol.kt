@@ -24,7 +24,7 @@ import android.os.Parcel
 /** Parcel.enforceNoDataAvail exists only from API 33; this is the same check on every supported release. */
 internal fun Parcel.requireFullyConsumed() {
     val unread = dataAvail()
-    if (unread != 0) throw BadParcelableException("Parcel data not fully consumed, unread size: $unread")
+    if (unread > 0) throw BadParcelableException("Parcel data not fully consumed, unread size: $unread")
 }
 
 internal object HeapDumpProtocol {

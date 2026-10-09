@@ -19,7 +19,6 @@ package com.eltavine.duckdetector.features.heapresidue.data.ipc
 
 import android.app.Service
 import android.content.Intent
-import android.os.Build
 import android.os.Binder
 import android.os.Debug
 import android.os.IBinder
@@ -37,7 +36,7 @@ class IsolatedHeapDumpService : Service() {
     private val used = AtomicBoolean(false)
     private val endpoint = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            if (code != HeapDumpProtocol.DUMP || HeapResidueReleases.classify(Build.VERSION.SDK_INT) == null) {
+            if (code != HeapDumpProtocol.DUMP || HeapResidueReleases.current() == null) {
                 return super.onTransact(code, data, reply, flags)
             }
             data.enforceInterface(HeapDumpProtocol.SERVICE)

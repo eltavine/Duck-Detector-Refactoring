@@ -50,6 +50,17 @@
       ]
     },
     {
+      "id": "vmdebug-12",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "7a9b98f8d296a2b2774702e80d23e610fbb5b34c",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "0341996309fe958f917891f3de4eb91be3010da7e0d5d8e736b45def21f1c096",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
       "id": "debug-12",
       "repository": "https://android.googlesource.com/platform/frameworks/base",
       "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
@@ -67,8 +78,57 @@
       "path": "core/java/android/os/ZygoteProcess.java",
       "sha256": "aeb37d077fc25c926527bac4cd0978e4e50e46c1ef0aae03e142d3b41f6394a2",
       "anchors": [
+        "argsForZygote.add(\"--nice-name=\" + niceName);",
+        "argsForZygote.add(\"--app-data-dir=\" + appDataDir);",
+        "argsForZygote.add(\"--package-name=\" + packageName);",
         "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
         "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "zygote-connection-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "f13ae8d1a67d80ad4de671e70979d55dbb4d9ce957005de3823ccbc56193507e",
+      "anchors": [
+        "ZygoteArguments.getInstance(argBuffer)",
+        "Zygote.forkSimpleApps(argBuffer"
+      ]
+    },
+    {
+      "id": "zygote-arguments-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "97aa0fdfc8e34233b1fe625b37bd45cc8459b450023ee6d5f883a1cba4c68029",
+      "anchors": [
+        "static ZygoteArguments getInstance(ZygoteCommandBuffer args)",
+        "String arg = args.nextArg();",
+        "mNiceName = getAssignmentValue(arg);",
+        "mPackageName = getAssignmentValue(arg);",
+        "mAppDataDir = getAssignmentValue(arg);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "core/java/com/android/internal/os/ZygoteCommandBuffer.java",
+      "sha256": "8f5bb5f4333074f9fcd6a2825d8c3a1908410f5e02118d3fe708dbb6cc553da6",
+      "anchors": [
+        "return nativeNextArg(mNativeBuffer);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-native-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "9844d399b9045e93b784b2a7b534393a23095bd4fc4365f62ac5e02db45ce119",
+      "anchors": [
+        "env->NewStringUTF(",
+        "char mNiceName[NICE_NAME_BYTES];"
       ]
     },
     {
@@ -82,14 +142,23 @@
       ]
     },
     {
-      "id": "vmdebug-12",
-      "repository": "https://android.googlesource.com/platform/libcore",
-      "revision": "7a9b98f8d296a2b2774702e80d23e610fbb5b34c",
-      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
-      "sha256": "0341996309fe958f917891f3de4eb91be3010da7e0d5d8e736b45def21f1c096",
+      "id": "activity-manager-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "1f9a61369af33a9e9da92f5f28270f3914a688a9c258141962bf87ed8ca5f81b",
       "anchors": [
-        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
-        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "process-list-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "c0cc573183e0d777e766be531909bfed0febc9f4d034281ae53eff3aff60ae47",
+      "anchors": [
+        "app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,"
       ]
     },
     {
@@ -102,6 +171,17 @@
         "binder_call(appdomain, appdomain)",
         "appdomain:fifo_file rw_file_perms;",
         "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "te-macros-12",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "27dbd800c94a8fe472f252bb33b499e5ab7df988",
+      "path": "public/te_macros",
+      "sha256": "6e89b8bc81f8108842cec88b8a7b0e26ed96a2544450cf896d0f2a8d5150ca01",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -123,7 +203,8 @@
       "anchors": [
         "mlsconstrain fifo_file { read getattr }",
         "mlsconstrain fifo_file { write setattr append unlink link rename }",
-        "t2 == mlstrustedobject or t2 == domain);"
+        "t2 == mlstrustedobject or t2 == domain);",
+        "#mlsconstrain binder call"
       ]
     },
     {
@@ -135,17 +216,6 @@
       "anchors": [
         "fs_use_task pipefs",
         "fs_use_task sockfs"
-      ]
-    },
-    {
-      "id": "te-macros-12",
-      "repository": "https://android.googlesource.com/platform/system/sepolicy",
-      "revision": "27dbd800c94a8fe472f252bb33b499e5ab7df988",
-      "path": "public/te_macros",
-      "sha256": "6e89b8bc81f8108842cec88b8a7b0e26ed96a2544450cf896d0f2a8d5150ca01",
-      "anchors": [
-        "define(`binder_call'",
-        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -196,6 +266,17 @@
       ]
     },
     {
+      "id": "vmdebug-12l",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "0c0acdd10c4272651144e5b3874e7b9d50256590",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "0341996309fe958f917891f3de4eb91be3010da7e0d5d8e736b45def21f1c096",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
       "id": "debug-12l",
       "repository": "https://android.googlesource.com/platform/frameworks/base",
       "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
@@ -213,8 +294,57 @@
       "path": "core/java/android/os/ZygoteProcess.java",
       "sha256": "aeb37d077fc25c926527bac4cd0978e4e50e46c1ef0aae03e142d3b41f6394a2",
       "anchors": [
+        "argsForZygote.add(\"--nice-name=\" + niceName);",
+        "argsForZygote.add(\"--app-data-dir=\" + appDataDir);",
+        "argsForZygote.add(\"--package-name=\" + packageName);",
         "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
         "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "zygote-connection-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "f13ae8d1a67d80ad4de671e70979d55dbb4d9ce957005de3823ccbc56193507e",
+      "anchors": [
+        "ZygoteArguments.getInstance(argBuffer)",
+        "Zygote.forkSimpleApps(argBuffer"
+      ]
+    },
+    {
+      "id": "zygote-arguments-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "97aa0fdfc8e34233b1fe625b37bd45cc8459b450023ee6d5f883a1cba4c68029",
+      "anchors": [
+        "static ZygoteArguments getInstance(ZygoteCommandBuffer args)",
+        "String arg = args.nextArg();",
+        "mNiceName = getAssignmentValue(arg);",
+        "mPackageName = getAssignmentValue(arg);",
+        "mAppDataDir = getAssignmentValue(arg);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "core/java/com/android/internal/os/ZygoteCommandBuffer.java",
+      "sha256": "8f5bb5f4333074f9fcd6a2825d8c3a1908410f5e02118d3fe708dbb6cc553da6",
+      "anchors": [
+        "return nativeNextArg(mNativeBuffer);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-native-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "9844d399b9045e93b784b2a7b534393a23095bd4fc4365f62ac5e02db45ce119",
+      "anchors": [
+        "env->NewStringUTF(",
+        "char mNiceName[NICE_NAME_BYTES];"
       ]
     },
     {
@@ -228,14 +358,23 @@
       ]
     },
     {
-      "id": "vmdebug-12l",
-      "repository": "https://android.googlesource.com/platform/libcore",
-      "revision": "0c0acdd10c4272651144e5b3874e7b9d50256590",
-      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
-      "sha256": "0341996309fe958f917891f3de4eb91be3010da7e0d5d8e736b45def21f1c096",
+      "id": "activity-manager-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "d393ad5614a325f55ae7445b1b3582ae4e83f6f2de09c8d166e5a0dcb23ff3d5",
       "anchors": [
-        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
-        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "process-list-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "45fe960d8fab94fcd13f0f0dc64b88d5afafaede887301f5003492da2e925149",
+      "anchors": [
+        "app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,"
       ]
     },
     {
@@ -248,6 +387,17 @@
         "binder_call(appdomain, appdomain)",
         "appdomain:fifo_file rw_file_perms;",
         "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "te-macros-12l",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "86c56a47d6d3ac78450d046b52d058293f1d641d",
+      "path": "public/te_macros",
+      "sha256": "6e89b8bc81f8108842cec88b8a7b0e26ed96a2544450cf896d0f2a8d5150ca01",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -269,7 +419,8 @@
       "anchors": [
         "mlsconstrain fifo_file { read getattr }",
         "mlsconstrain fifo_file { write setattr append unlink link rename }",
-        "t2 == mlstrustedobject or t2 == domain);"
+        "t2 == mlstrustedobject or t2 == domain);",
+        "#mlsconstrain binder call"
       ]
     },
     {
@@ -281,17 +432,6 @@
       "anchors": [
         "fs_use_task pipefs",
         "fs_use_task sockfs"
-      ]
-    },
-    {
-      "id": "te-macros-12l",
-      "repository": "https://android.googlesource.com/platform/system/sepolicy",
-      "revision": "86c56a47d6d3ac78450d046b52d058293f1d641d",
-      "path": "public/te_macros",
-      "sha256": "6e89b8bc81f8108842cec88b8a7b0e26ed96a2544450cf896d0f2a8d5150ca01",
-      "anchors": [
-        "define(`binder_call'",
-        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -342,6 +482,17 @@
       ]
     },
     {
+      "id": "vmdebug-13",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "e0b6b2338e580994985244e729034401d5a29bdc",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "6bbc7e5975a968690abea27443c1750311073daf5995cfceae2d7891dc40e404",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
       "id": "debug-13",
       "repository": "https://android.googlesource.com/platform/frameworks/base",
       "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
@@ -359,8 +510,57 @@
       "path": "core/java/android/os/ZygoteProcess.java",
       "sha256": "aeb37d077fc25c926527bac4cd0978e4e50e46c1ef0aae03e142d3b41f6394a2",
       "anchors": [
+        "argsForZygote.add(\"--nice-name=\" + niceName);",
+        "argsForZygote.add(\"--app-data-dir=\" + appDataDir);",
+        "argsForZygote.add(\"--package-name=\" + packageName);",
         "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
         "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "zygote-connection-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "f13ae8d1a67d80ad4de671e70979d55dbb4d9ce957005de3823ccbc56193507e",
+      "anchors": [
+        "ZygoteArguments.getInstance(argBuffer)",
+        "Zygote.forkSimpleApps(argBuffer"
+      ]
+    },
+    {
+      "id": "zygote-arguments-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "97aa0fdfc8e34233b1fe625b37bd45cc8459b450023ee6d5f883a1cba4c68029",
+      "anchors": [
+        "static ZygoteArguments getInstance(ZygoteCommandBuffer args)",
+        "String arg = args.nextArg();",
+        "mNiceName = getAssignmentValue(arg);",
+        "mPackageName = getAssignmentValue(arg);",
+        "mAppDataDir = getAssignmentValue(arg);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "core/java/com/android/internal/os/ZygoteCommandBuffer.java",
+      "sha256": "8f5bb5f4333074f9fcd6a2825d8c3a1908410f5e02118d3fe708dbb6cc553da6",
+      "anchors": [
+        "return nativeNextArg(mNativeBuffer);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-native-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "7b18816998518f9ca02063e6ad761f45005e819949471685043b19d46f1a8a7c",
+      "anchors": [
+        "env->NewStringUTF(",
+        "char mNiceName[NICE_NAME_BYTES];"
       ]
     },
     {
@@ -374,14 +574,23 @@
       ]
     },
     {
-      "id": "vmdebug-13",
-      "repository": "https://android.googlesource.com/platform/libcore",
-      "revision": "e0b6b2338e580994985244e729034401d5a29bdc",
-      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
-      "sha256": "6bbc7e5975a968690abea27443c1750311073daf5995cfceae2d7891dc40e404",
+      "id": "activity-manager-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "f77d16475dee5efab03dbef82733daa7fcddea1251d833db59db1f4629c75514",
       "anchors": [
-        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
-        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "process-list-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "91a4dc49a47615f403617df204e8d4f274407d77973b422885c50ffd10762882",
+      "anchors": [
+        "app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,"
       ]
     },
     {
@@ -394,6 +603,17 @@
         "binder_call(appdomain, appdomain)",
         "appdomain:fifo_file rw_file_perms;",
         "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "te-macros-13",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "9d7c07e50a695859ffb131511991e83f644e4a09",
+      "path": "public/te_macros",
+      "sha256": "ce32413e5cd4f22e53a2b511221bc0d9df347c54c5d5993ea244a90815cd0b89",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -415,7 +635,8 @@
       "anchors": [
         "mlsconstrain fifo_file { read getattr }",
         "mlsconstrain fifo_file { write setattr append unlink link rename }",
-        "t2 == mlstrustedobject or t2 == domain);"
+        "t2 == mlstrustedobject or t2 == domain);",
+        "#mlsconstrain binder call"
       ]
     },
     {
@@ -427,17 +648,6 @@
       "anchors": [
         "fs_use_task pipefs",
         "fs_use_task sockfs"
-      ]
-    },
-    {
-      "id": "te-macros-13",
-      "repository": "https://android.googlesource.com/platform/system/sepolicy",
-      "revision": "9d7c07e50a695859ffb131511991e83f644e4a09",
-      "path": "public/te_macros",
-      "sha256": "ce32413e5cd4f22e53a2b511221bc0d9df347c54c5d5993ea244a90815cd0b89",
-      "anchors": [
-        "define(`binder_call'",
-        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -488,6 +698,17 @@
       ]
     },
     {
+      "id": "vmdebug-14",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "b818b1821996d6d855e1224d50347c2f6ae59a61",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "b64c7b7d3132da697bf13a95fd08f9f14bac59916e69e98ec094b37aac63ec36",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
       "id": "debug-14",
       "repository": "https://android.googlesource.com/platform/frameworks/base",
       "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
@@ -505,8 +726,57 @@
       "path": "core/java/android/os/ZygoteProcess.java",
       "sha256": "c448b28b6576d26f94e06ebaea4479676e206541f7f0eac3f96320e7e2efbb02",
       "anchors": [
+        "argsForZygote.add(\"--nice-name=\" + niceName);",
+        "argsForZygote.add(\"--app-data-dir=\" + appDataDir);",
+        "argsForZygote.add(\"--package-name=\" + packageName);",
         "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
         "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "zygote-connection-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "f13ae8d1a67d80ad4de671e70979d55dbb4d9ce957005de3823ccbc56193507e",
+      "anchors": [
+        "ZygoteArguments.getInstance(argBuffer)",
+        "Zygote.forkSimpleApps(argBuffer"
+      ]
+    },
+    {
+      "id": "zygote-arguments-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "97aa0fdfc8e34233b1fe625b37bd45cc8459b450023ee6d5f883a1cba4c68029",
+      "anchors": [
+        "static ZygoteArguments getInstance(ZygoteCommandBuffer args)",
+        "String arg = args.nextArg();",
+        "mNiceName = getAssignmentValue(arg);",
+        "mPackageName = getAssignmentValue(arg);",
+        "mAppDataDir = getAssignmentValue(arg);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "core/java/com/android/internal/os/ZygoteCommandBuffer.java",
+      "sha256": "8f5bb5f4333074f9fcd6a2825d8c3a1908410f5e02118d3fe708dbb6cc553da6",
+      "anchors": [
+        "return nativeNextArg(mNativeBuffer);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-native-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "bfbc1c6cb249a00379e6c593a0a63c7461e467befc7049b1d5cb167f99ed8ee4",
+      "anchors": [
+        "env->NewStringUTF(",
+        "char mNiceName[NICE_NAME_BYTES];"
       ]
     },
     {
@@ -520,14 +790,23 @@
       ]
     },
     {
-      "id": "vmdebug-14",
-      "repository": "https://android.googlesource.com/platform/libcore",
-      "revision": "b818b1821996d6d855e1224d50347c2f6ae59a61",
-      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
-      "sha256": "b64c7b7d3132da697bf13a95fd08f9f14bac59916e69e98ec094b37aac63ec36",
+      "id": "activity-manager-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "e44b362d23215749ebc2736a2e3202b02eecb7823da67336d4f4b5d39ba20c97",
       "anchors": [
-        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
-        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "process-list-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "c0f58183f8c1dd4890ea2c4fdc440498faf31d2644dd206b6bfe785337538484",
+      "anchors": [
+        "app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,"
       ]
     },
     {
@@ -540,6 +819,17 @@
         "binder_call(appdomain, appdomain)",
         "appdomain:fifo_file rw_file_perms;",
         "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "te-macros-14",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d923a9c74f1ab914d0c6cfafe3d83eb38c2656d2",
+      "path": "public/te_macros",
+      "sha256": "0cfa9b27020a544e6353d104f5f6a95d77ca6f3c6d5009f065a0b5f40fb73e9e",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -561,7 +851,8 @@
       "anchors": [
         "mlsconstrain fifo_file { read getattr }",
         "mlsconstrain fifo_file { write setattr append unlink link rename }",
-        "t2 == mlstrustedobject or t2 == domain);"
+        "t2 == mlstrustedobject or t2 == domain);",
+        "#mlsconstrain binder call"
       ]
     },
     {
@@ -573,17 +864,6 @@
       "anchors": [
         "fs_use_task pipefs",
         "fs_use_task sockfs"
-      ]
-    },
-    {
-      "id": "te-macros-14",
-      "repository": "https://android.googlesource.com/platform/system/sepolicy",
-      "revision": "d923a9c74f1ab914d0c6cfafe3d83eb38c2656d2",
-      "path": "public/te_macros",
-      "sha256": "0cfa9b27020a544e6353d104f5f6a95d77ca6f3c6d5009f065a0b5f40fb73e9e",
-      "anchors": [
-        "define(`binder_call'",
-        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -634,6 +914,17 @@
       ]
     },
     {
+      "id": "vmdebug-15",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "c712224cd42e8cb2f219b23716f7b25914376c21",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "9ce5460d238274acfe44fe9d9446dabcb3460c19ce62cc8672eb79cd353a95b4",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
       "id": "debug-15",
       "repository": "https://android.googlesource.com/platform/frameworks/base",
       "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
@@ -651,8 +942,57 @@
       "path": "core/java/android/os/ZygoteProcess.java",
       "sha256": "c14cdc720b0f0348777443a1741a82efdea14009cfa16acc45a7989fc584d794",
       "anchors": [
+        "argsForZygote.add(\"--nice-name=\" + niceName);",
+        "argsForZygote.add(\"--app-data-dir=\" + appDataDir);",
+        "argsForZygote.add(\"--package-name=\" + packageName);",
         "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
         "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "zygote-connection-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "87943cd2ccd6ecfdb8a0db86c54d34cc012e9b701cf9591907154ede334a90fb",
+      "anchors": [
+        "ZygoteArguments.getInstance(argBuffer)",
+        "Zygote.forkSimpleApps(argBuffer"
+      ]
+    },
+    {
+      "id": "zygote-arguments-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "f079b1d04674e9110136087ff7c2cced655551c4b44c56ad88b6308be58649e6",
+      "anchors": [
+        "static ZygoteArguments getInstance(ZygoteCommandBuffer args)",
+        "String arg = args.nextArg();",
+        "mNiceName = getAssignmentValue(arg);",
+        "mPackageName = getAssignmentValue(arg);",
+        "mAppDataDir = getAssignmentValue(arg);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "core/java/com/android/internal/os/ZygoteCommandBuffer.java",
+      "sha256": "8f5bb5f4333074f9fcd6a2825d8c3a1908410f5e02118d3fe708dbb6cc553da6",
+      "anchors": [
+        "return nativeNextArg(mNativeBuffer);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-native-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "d0f5102efa9a91789195b634c20a464d62b406426f412643a74ca9654e378873",
+      "anchors": [
+        "env->NewStringUTF(",
+        "char mNiceName[NICE_NAME_BYTES];"
       ]
     },
     {
@@ -666,14 +1006,23 @@
       ]
     },
     {
-      "id": "vmdebug-15",
-      "repository": "https://android.googlesource.com/platform/libcore",
-      "revision": "c712224cd42e8cb2f219b23716f7b25914376c21",
-      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
-      "sha256": "9ce5460d238274acfe44fe9d9446dabcb3460c19ce62cc8672eb79cd353a95b4",
+      "id": "activity-manager-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "0519ff531ec964eccd5d3c806ae3538cc10e839ae90106bdd9d96f40a1aa57c3",
       "anchors": [
-        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
-        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "process-list-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "f4ed9143138c6ef1120e53c4d019043ca0ab5763ba4b4cc2c96f0370893c7faf",
+      "anchors": [
+        "app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,"
       ]
     },
     {
@@ -686,6 +1035,17 @@
         "binder_call(appdomain, appdomain)",
         "appdomain:fifo_file rw_file_perms;",
         "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "te-macros-15",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "ad1c4255c49d57fe885894a8b690c0dfd542100b",
+      "path": "public/te_macros",
+      "sha256": "a099c30ad36ede647a9434550b0f2f80652b217cccc2bcc57cd14b3df633c0bf",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -707,7 +1067,8 @@
       "anchors": [
         "mlsconstrain fifo_file { read getattr }",
         "mlsconstrain fifo_file { write setattr append unlink link rename }",
-        "t2 == mlstrustedobject or t2 == domain);"
+        "t2 == mlstrustedobject or t2 == domain);",
+        "#mlsconstrain binder call"
       ]
     },
     {
@@ -719,17 +1080,6 @@
       "anchors": [
         "fs_use_task pipefs",
         "fs_use_task sockfs"
-      ]
-    },
-    {
-      "id": "te-macros-15",
-      "repository": "https://android.googlesource.com/platform/system/sepolicy",
-      "revision": "ad1c4255c49d57fe885894a8b690c0dfd542100b",
-      "path": "public/te_macros",
-      "sha256": "a099c30ad36ede647a9434550b0f2f80652b217cccc2bcc57cd14b3df633c0bf",
-      "anchors": [
-        "define(`binder_call'",
-        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -780,6 +1130,17 @@
       ]
     },
     {
+      "id": "vmdebug-16",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "fff4fcc0cf7f080cf2511cbb57561482b13b218f",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "59a643a9499b1309159e6ae6ba79d3c386c30af9a4c8e9fb5c7eedb51f1aa767",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
       "id": "debug-16",
       "repository": "https://android.googlesource.com/platform/frameworks/base",
       "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
@@ -797,8 +1158,57 @@
       "path": "core/java/android/os/ZygoteProcess.java",
       "sha256": "f8405b21b649dbcbc3c22d09a60aab362a4645c0e1cb220f1a9a4629f886e9dc",
       "anchors": [
+        "argsForZygote.add(\"--nice-name=\" + niceName);",
+        "argsForZygote.add(\"--app-data-dir=\" + appDataDir);",
+        "argsForZygote.add(\"--package-name=\" + packageName);",
         "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
         "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "zygote-connection-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "5f4532d2a53b07b6c809f1f06534e3688d7eac6e16b4fa9d68e9397d07a012c4",
+      "anchors": [
+        "ZygoteArguments.getInstance(argBuffer)",
+        "Zygote.forkSimpleApps(argBuffer"
+      ]
+    },
+    {
+      "id": "zygote-arguments-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "5937acfc95ec2ef7813405cb8f3b2fd31fe3a61ddc9804ade39c345951047d4b",
+      "anchors": [
+        "static ZygoteArguments getInstance(ZygoteCommandBuffer args)",
+        "String arg = args.nextArg();",
+        "mNiceName = getAssignmentValue(arg);",
+        "mPackageName = getAssignmentValue(arg);",
+        "mAppDataDir = getAssignmentValue(arg);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/os/ZygoteCommandBuffer.java",
+      "sha256": "8f5bb5f4333074f9fcd6a2825d8c3a1908410f5e02118d3fe708dbb6cc553da6",
+      "anchors": [
+        "return nativeNextArg(mNativeBuffer);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-native-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "0491b127724d742a24d0fc1c88964dc362ec6e74e98733a5b3292ec7b1049863",
+      "anchors": [
+        "env->NewStringUTF(",
+        "char mNiceName[NICE_NAME_BYTES];"
       ]
     },
     {
@@ -812,14 +1222,23 @@
       ]
     },
     {
-      "id": "vmdebug-16",
-      "repository": "https://android.googlesource.com/platform/libcore",
-      "revision": "fff4fcc0cf7f080cf2511cbb57561482b13b218f",
-      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
-      "sha256": "59a643a9499b1309159e6ae6ba79d3c386c30af9a4c8e9fb5c7eedb51f1aa767",
+      "id": "activity-manager-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "d320cb52bbb2d761c22f454b3636098b3a67979142cd60da70b48fe085572e9b",
       "anchors": [
-        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
-        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "process-list-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "2faefc787442d6f54c801cf21609d9319d932b39aae8156c0e5c34577b70f62e",
+      "anchors": [
+        "app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,"
       ]
     },
     {
@@ -832,6 +1251,17 @@
         "binder_call(appdomain, appdomain)",
         "appdomain:fifo_file rw_file_perms;",
         "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "te-macros-16",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d4a7f392598cee96d9479a8ac0f84259c19b043a",
+      "path": "public/te_macros",
+      "sha256": "39876a485ea1fe6cf76418268bc058dde7ae50690fd2901051e32125c5678243",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -853,7 +1283,8 @@
       "anchors": [
         "mlsconstrain fifo_file { read getattr }",
         "mlsconstrain fifo_file { write setattr append unlink link rename }",
-        "t2 == mlstrustedobject or t2 == domain);"
+        "t2 == mlstrustedobject or t2 == domain);",
+        "#mlsconstrain binder call"
       ]
     },
     {
@@ -865,17 +1296,6 @@
       "anchors": [
         "fs_use_task pipefs",
         "fs_use_task sockfs"
-      ]
-    },
-    {
-      "id": "te-macros-16",
-      "repository": "https://android.googlesource.com/platform/system/sepolicy",
-      "revision": "d4a7f392598cee96d9479a8ac0f84259c19b043a",
-      "path": "public/te_macros",
-      "sha256": "39876a485ea1fe6cf76418268bc058dde7ae50690fd2901051e32125c5678243",
-      "anchors": [
-        "define(`binder_call'",
-        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -928,6 +1348,17 @@
       ]
     },
     {
+      "id": "vmdebug-17",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "4ebfb391ee0109d16abe6e2bc965724b940928c5",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "65401c09dad019fdb3feb0ce04228a88f959ae0922e1070cebfcb6506ae37a85",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
       "id": "debug-17",
       "repository": "https://android.googlesource.com/platform/frameworks/base",
       "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
@@ -945,8 +1376,57 @@
       "path": "core/java/android/os/ZygoteProcess.java",
       "sha256": "9e05288273ed4677d8dfab1d610a63846322db7e42ffb3298bbd1b9f8a8d3b28",
       "anchors": [
+        "argsForZygote.add(\"--nice-name=\" + niceName);",
+        "argsForZygote.add(\"--app-data-dir=\" + appDataDir);",
+        "argsForZygote.add(\"--package-name=\" + packageName);",
         "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
         "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "zygote-connection-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "58f376c5f64387296ef5a669bddc84a5f3d74b94bc7b31b3834233a03aacf746",
+      "anchors": [
+        "ZygoteArguments.getInstance(argBuffer)",
+        "Zygote.forkSimpleApps(argBuffer"
+      ]
+    },
+    {
+      "id": "zygote-arguments-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "52e073e4c275f8ebf53b40d654fa3904318f57aedc9f958e64c40da70db5fde5",
+      "anchors": [
+        "static ZygoteArguments getInstance(ZygoteCommandBuffer args)",
+        "String arg = args.nextArg();",
+        "mNiceName = getAssignmentValue(arg);",
+        "mPackageName = getAssignmentValue(arg);",
+        "mAppDataDir = getAssignmentValue(arg);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "core/java/com/android/internal/os/ZygoteCommandBuffer.java",
+      "sha256": "228ba6b4545906bb782a714b5a55b74b7c82d6008743c3e8058b0c0eade58cd3",
+      "anchors": [
+        "return nativeNextArg(mNativeBuffer);"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer-native-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "d85d804b63c94d06a905bf2791a322cc24e60d613d1c3e0802f38ec10f4be53a",
+      "anchors": [
+        "env->NewStringUTF(",
+        "char mNiceName[NICE_NAME_BYTES];"
       ]
     },
     {
@@ -961,14 +1441,45 @@
       ]
     },
     {
-      "id": "vmdebug-17",
-      "repository": "https://android.googlesource.com/platform/libcore",
-      "revision": "4ebfb391ee0109d16abe6e2bc965724b940928c5",
-      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
-      "sha256": "65401c09dad019fdb3feb0ce04228a88f959ae0922e1070cebfcb6506ae37a85",
+      "id": "activity-manager-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "d61d3962392cc4e3d8ffab66eb9c6782d988d2a030b3b53b1dbe48716d2d898b",
       "anchors": [
-        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
-        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "process-list-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "96bfea0a32f822a04e46a16279100d5fdc718b909999df4962f2bd15c8ac55fc",
+      "anchors": [
+        "app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,"
+      ]
+    },
+    {
+      "id": "service-record-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "services/core/java/com/android/server/am/ServiceRecord.java",
+      "sha256": "1b58456e254495f3e5396334ba93659b160d89307e2c9c1aacd21518c435d942",
+      "anchors": [
+        "mIsNativeIsolated = ((sInfo.flags & ServiceInfo.FLAG_NATIVE_SERVICE) != 0)",
+        "&& ((sInfo.flags & ServiceInfo.FLAG_ISOLATED_PROCESS) != 0);"
+      ]
+    },
+    {
+      "id": "service-info-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "core/java/android/content/pm/ServiceInfo.java",
+      "sha256": "f259a15b5231b8457eecb0ba91c67401392b06e54279fd673d58d1e6028eaa50",
+      "anchors": [
+        "public static final int FLAG_NATIVE_SERVICE = 0x0020;",
+        "Set from the {@link android.R.attr#nativeService} attribute."
       ]
     },
     {
@@ -981,6 +1492,17 @@
         "binder_call(appdomain, appdomain)",
         "appdomain:fifo_file rw_file_perms;",
         "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "te-macros-17",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac",
+      "path": "public/te_macros",
+      "sha256": "9825ba9b9bd742070683f21ad636e930ec24c73e3ec9dcb22b85e2dcb9b0367d",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
       ]
     },
     {
@@ -1002,7 +1524,8 @@
       "anchors": [
         "mlsconstrain fifo_file { read getattr }",
         "mlsconstrain fifo_file { write setattr append unlink link rename }",
-        "t2 == mlstrustedobject or t2 == domain);"
+        "t2 == mlstrustedobject or t2 == domain);",
+        "#mlsconstrain binder call"
       ]
     },
     {
@@ -1014,17 +1537,6 @@
       "anchors": [
         "fs_use_task pipefs",
         "fs_use_task sockfs"
-      ]
-    },
-    {
-      "id": "te-macros-17",
-      "repository": "https://android.googlesource.com/platform/system/sepolicy",
-      "revision": "895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac",
-      "path": "public/te_macros",
-      "sha256": "9825ba9b9bd742070683f21ad636e930ec24c73e3ec9dcb22b85e2dcb9b0367d",
-      "anchors": [
-        "define(`binder_call'",
-        "allow $1 $2:fd use;"
       ]
     }
   ],

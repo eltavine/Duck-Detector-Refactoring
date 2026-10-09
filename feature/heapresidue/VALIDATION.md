@@ -46,8 +46,9 @@ aggregate counts, policy-target matches and diagnostics.
    cancellation. Check UI responsiveness and wall-clock duration. Record the ART module version: a
    Mainline update can run a newer ART than the platform release.
 2. On API 29 or 30, verify explicit unsupported status and that no service or heap dump is started.
-   On a release newer than API 37, verify the "Newer than audited" row, and that a changed format or
-   dump path surfaces as inconclusive or unavailable rather than as a negative result.
+   On a release newer than API 37, verify the "Newer than audited" row, and on a developer preview
+   the "Pre-release build" row; a changed format or dump path must surface as inconclusive or
+   unavailable rather than as a negative result.
 3. On a rooted/modified device in the audited range, start known policy targets before collection.
    Repeat after uninstall/hiding a target and after reboot. Interpret strings as possible traces, not
    installation.
@@ -112,8 +113,8 @@ coverage must not be considered validated by these host tests.
 
 Release support (2026-10-10, same host): API 31–37 were source-audited against the Android 16
 baseline ([release support audit](research/version-support/README.md)); the online fetch and the
-offline run verified all 91 pinned files. Focused tests: 40 passed (33 data, including release
-classification and the Android 17 clock record, 3 domain, 4 presentation). Module lint
+offline run verified all 135 pinned files. Focused tests: 41 passed (34 data, including release
+and pre-release classification and the Android 17 clock record, 3 domain, 4 presentation). Module lint
 (`:feature:heapresidue:data:lintDebug`) reports no issues; before the API 31 annotation it reported
 `Os.fcntlInt` (API 30) twice, which the former API 36 annotation had masked. No device covering
 any of these releases was connected.
