@@ -81,6 +81,14 @@ internal fun buildImpactItems(report: SystemPropertiesReport): List<SystemProper
                     ),
                 )
             }
+            if (report.hasPropertyAreaAnomaly) {
+                add(
+                    SystemPropertiesImpactItemModel(
+                        text = "The system property area is newer than debug and debug is newer than radio. Boot can create them in that order, so a small gap may be normal; a gap close to a full timestamp means the radio area's modification time is near zero.",
+                        status = DetectorStatus.warning(),
+                    ),
+                )
+            }
             if (isEmpty()) {
                 add(
                     if (report.hasReducedCoverage()) {

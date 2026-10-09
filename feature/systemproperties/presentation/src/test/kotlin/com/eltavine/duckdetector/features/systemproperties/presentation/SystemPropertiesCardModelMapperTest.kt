@@ -22,10 +22,12 @@ import com.eltavine.duckdetector.capability.systemproperties.domain.SystemProper
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySignal
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySource
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
+import com.eltavine.duckdetector.features.systemproperties.domain.PropertyAreaClocks
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesMethodOutcome
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesMethodResult
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesReport
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesStage
+import com.eltavine.duckdetector.features.systemproperties.presentation.model.SystemPropertiesHeaderFact
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -122,4 +124,61 @@ class SystemPropertiesCardModelMapperTest {
         assertEquals(DetectionSeverity.INFO, model.status.severity)
         assertTrue(model.verdict.contains("reduced coverage", ignoreCase = true))
     }
+
+    @Test
+    fun `a property area clock gap is a warning on the row and the card`() {
+        val nanos = 1_778_300_194_915_999_998L
+        val model = mapper.map(clockReport(PropertyAreaClocks.Ordered(nanos)))
+        val row = model.consistencyRows.single()
+        val review = model.headerFacts.single { it.fact == SystemPropertiesHeaderFact.REVIEW }
+
+        assertEquals(DetectionSeverity.WARNING, model.status.severity)
+        assertEquals("1 property signal(s) need review", model.verdict)
+        assertEquals("1", review.value)
+        assertEquals(DetectionSeverity.WARNING, row.status.severity)
+        assertEquals("Device property-area anomaly", row.label)
+        assertEquals(nanos.toString(), row.value)
+        assertTrue(model.impactItems.any { it.status.severity == DetectionSeverity.WARNING })
+    }
+
+    @Test
+    fun `property area clocks out of that order show clean`() {
+        val model = mapper.map(clockReport(PropertyAreaClocks.NotOrdered))
+        val row = model.consistencyRows.single()
+
+        assertEquals(DetectionSeverity.ALL_CLEAR, model.status.severity)
+        assertEquals("Device property-area anomaly", row.label)
+        assertEquals("Clean", row.value)
+        assertEquals(DetectionSeverity.ALL_CLEAR, row.status.severity)
+    }
+
+    @Test
+    fun `unreadable property area clocks show unavailable rather than clean`() {
+        val row = mapper.map(clockReport(PropertyAreaClocks.Unreadable)).consistencyRows.single()
+
+        assertEquals("Device property-area anomaly", row.label)
+        assertEquals("Unavailable", row.value)
+        assertEquals(DetectionSeverity.INFO, row.status.severity)
+    }
+
+    private fun clockReport(clocks: PropertyAreaClocks) = SystemPropertiesReport(
+        stage = SystemPropertiesStage.READY,
+        propertySignals = emptyList(),
+        propAreaSignals = emptyList(),
+        infoSignals = emptyList(),
+        checkedRuleCount = 1,
+        observedRuleCount = 1,
+        infoPropertyCount = 0,
+        reflectionHitCount = 1,
+        getpropHitCount = 1,
+        jvmHitCount = 0,
+        nativeHitCount = 1,
+        bootParamHitCount = 0,
+        buildSignalCount = 0,
+        propAreaAvailable = true,
+        propAreaContextCount = 3,
+        propAreaHoleCount = 0,
+        methods = emptyList(),
+        propertyAreaClocks = clocks,
+    )
 }

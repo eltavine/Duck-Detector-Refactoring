@@ -17,6 +17,8 @@
 
 package com.eltavine.duckdetector.features.systemproperties.data.repository
 
+import android.system.ErrnoException
+import android.system.Os
 import com.eltavine.duckdetector.capability.systemproperties.data.SystemPropertyConsistencyUtils
 import com.eltavine.duckdetector.capability.systemproperties.data.SystemPropertyReadUtils
 import com.eltavine.duckdetector.capability.systemproperties.domain.MultiSourcePropertyRead
@@ -25,8 +27,10 @@ import com.eltavine.duckdetector.capability.systemproperties.domain.SystemProper
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySource
 import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.features.systemproperties.data.rules.SystemPropertiesCatalog
+import com.eltavine.duckdetector.features.systemproperties.domain.PropertyAreaClocks
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesReport
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesStage
+import com.eltavine.duckdetector.features.systemproperties.domain.orderedPropertyAreaDelta
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -153,7 +157,28 @@ class SystemPropertiesRepository(
                 propAreaContextCount = nativeSnapshot.propAreaContextCount,
                 propAreaHoleCount = nativeSnapshot.propAreaHoleCount,
             ),
+            propertyAreaClocks = readPropertyAreaClocks(),
         )
+    }
+
+    /**
+     * Init stores each SELinux property context as its own file. A file's modification time moves
+     * when that area is rewritten. The difference is reported only for the system, debug, radio order.
+     */
+    private fun readPropertyAreaClocks(): PropertyAreaClocks {
+        val debug = propertyAreaMtimeNanos(DEBUG_PROP_AREA) ?: return PropertyAreaClocks.Unreadable
+        val system = propertyAreaMtimeNanos(SYSTEM_PROP_AREA) ?: return PropertyAreaClocks.Unreadable
+        val radio = propertyAreaMtimeNanos(RADIO_PROP_AREA) ?: return PropertyAreaClocks.Unreadable
+        return orderedPropertyAreaDelta(debug, system, radio)
+            ?.let(PropertyAreaClocks::Ordered)
+            ?: PropertyAreaClocks.NotOrdered
+    }
+
+    private fun propertyAreaMtimeNanos(path: String): Long? = try {
+        val modified = Os.stat(path).st_mtim
+        modified.tv_sec * NANOS_PER_SECOND + modified.tv_nsec
+    } catch (_: ErrnoException) {
+        null
     }
 
     private fun infoCategory(
@@ -166,4 +191,10 @@ class SystemPropertiesRepository(
         }
     }
 
+    private companion object {
+        const val DEBUG_PROP_AREA = "/dev/__properties__/u:object_r:debug_prop:s0"
+        const val SYSTEM_PROP_AREA = "/dev/__properties__/u:object_r:system_prop:s0"
+        const val RADIO_PROP_AREA = "/dev/__properties__/u:object_r:radio_prop:s0"
+        const val NANOS_PER_SECOND = 1_000_000_000L
+    }
 }

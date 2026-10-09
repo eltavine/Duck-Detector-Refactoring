@@ -47,7 +47,7 @@ internal fun buildVerdict(report: SystemPropertiesReport): String {
         SystemPropertiesStage.FAILED -> "System Properties scan failed"
         SystemPropertiesStage.READY -> when {
             report.hasDangerSignals -> "${report.dangerSignals.size} high-risk property or coherence signal(s)"
-            report.hasWarningSignals -> "${report.warningSignals.size} property signal(s) need review"
+            report.hasWarningSignals -> "${report.reviewCount} property signal(s) need review"
             report.hasReducedCoverage() -> "System property scan has reduced coverage"
             else -> "No risky property or coherence drift"
         }
@@ -107,8 +107,8 @@ internal fun buildHeaderFacts(report: SystemPropertiesReport): List<SystemProper
                 ),
                 SystemPropertiesHeaderFactModel(
                     fact = SystemPropertiesHeaderFact.REVIEW,
-                    value = countLabel(report.warningSignals.size),
-                    status = if (report.warningSignals.isEmpty()) DetectorStatus.allClear() else DetectorStatus.warning(),
+                    value = countLabel(report.reviewCount),
+                    status = if (report.reviewCount == 0) DetectorStatus.allClear() else DetectorStatus.warning(),
                 ),
                 SystemPropertiesHeaderFactModel(
                     fact = SystemPropertiesHeaderFact.BOOT,

@@ -20,6 +20,20 @@ package com.eltavine.duckdetector.features.systemproperties.domain
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 
+/**
+ * Debug minus radio, in nanoseconds, when the system area is newer than debug and debug is newer
+ * than radio. Any other order has no difference. A difference that overflows below zero is not shown.
+ */
+fun orderedPropertyAreaDelta(debugNanos: Long, systemNanos: Long, radioNanos: Long): Long? {
+    if (systemNanos > debugNanos && debugNanos > radioNanos) {
+        val delta = debugNanos - radioNanos
+        if (delta >= 0L) {
+            return delta
+        }
+    }
+    return null
+}
+
 fun SystemPropertiesReport.toDetectorStatus(): DetectorStatus {
     return when (stage) {
         SystemPropertiesStage.LOADING -> DetectorStatus.info(InfoKind.SUPPORT)

@@ -38,3 +38,14 @@ The System Properties detector asks whether security-relevant properties describ
 - Visibility limits: /proc/cmdline and bootconfig are often unreadable for apps.
 - Result states: mismatch, hole found, consistent, unavailable.
 - Interpretation: holes and raw-versus-runtime mismatches are danger or warning by rule.
+
+### Property area modification times
+
+- Observable signal: the nanosecond modification times of the debug, system and radio property-area files, and debug minus radio when the system file is newer than debug and debug is newer than radio.
+- Producing subsystem: init's property service and bionic's per-context property areas.
+- Mechanism: from Android 8, init keeps each SELinux property context in its own file under `/dev/__properties__`. The file name is the context. Writing a property in that context rewrites the file, and the file's `st_mtim` moves with that write. The three files are `u:object_r:debug_prop:s0`, `u:object_r:system_prop:s0` and `u:object_r:radio_prop:s0`. The system-versus-debug comparison only decides whether debug minus radio is shown.
+- References: bionic `libc/system_properties/include/system_properties/prop_area.h` (one area per context); `system/core/init/property_service.cpp` (one file per context under `/dev/__properties__`); `system/sepolicy/private/property_contexts` for the `debug_prop`, `system_prop` and `radio_prop` types.
+- Applicability: Android 8 and later, where property areas are context files under `/dev/__properties__`. This app's minimum release can read `st_mtim`.
+- Visibility limits: an app domain is often denied `stat` on these files. A denial or a missing file is unreadable, not agreement, and shows no number.
+- Result states: one added consistency row. It shows the full nanosecond difference as a warning when that order holds, Clean when all three were read and the order does not hold, and Unavailable when a stat fails. The warning also counts toward the card's Review total and status.
+- Interpretation: the finding is the difference itself. Init can create the three files in this order during one boot, so a small difference can be creation order. A difference close to the debug file's own timestamp means the radio file's modification time is near zero while debug was written later and system was written later still.

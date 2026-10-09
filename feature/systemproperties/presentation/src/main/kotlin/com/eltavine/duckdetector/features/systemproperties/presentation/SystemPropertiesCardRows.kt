@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.capability.systemproperties.domain.SystemProper
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySource
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
+import com.eltavine.duckdetector.features.systemproperties.domain.PropertyAreaClocks
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesReport
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesStage
 import com.eltavine.duckdetector.features.systemproperties.presentation.model.SystemPropertiesDetailRowModel
@@ -168,10 +169,45 @@ internal fun buildConsistencyRows(report: SystemPropertiesReport): List<SystemPr
             monospace = true,
         )
 
-        SystemPropertiesStage.READY -> report.signals.filter {
-            it.category == SystemPropertyCategory.PROPERTY_CONSISTENCY
-        }.sortedBy { it.property }
-            .map(::signalRow)
+        SystemPropertiesStage.READY -> {
+            val rows = report.signals.filter {
+                it.category == SystemPropertyCategory.PROPERTY_CONSISTENCY
+            }.sortedBy { it.property }
+                .map(::signalRow)
+            val clocks = report.propertyAreaClocks ?: return rows
+            rows + propertyAreaAnomalyRow(clocks)
+        }
+    }
+}
+
+private fun propertyAreaAnomalyRow(clocks: PropertyAreaClocks): SystemPropertiesDetailRowModel {
+    return when (clocks) {
+        is PropertyAreaClocks.Ordered -> SystemPropertiesDetailRowModel(
+            label = "Device property-area anomaly",
+            value = clocks.debugMinusRadioNanos.toString(),
+            status = DetectorStatus.warning(),
+            detail = "Nanoseconds from the radio property area's modification time to the debug area's. " +
+                "Shown because the system area is newer than debug, and debug is newer than radio.",
+            detailMonospace = true,
+        )
+
+        PropertyAreaClocks.NotOrdered -> SystemPropertiesDetailRowModel(
+            label = "Device property-area anomaly",
+            value = "Clean",
+            status = DetectorStatus.allClear(),
+            detail = "The debug, system and radio property areas were read. " +
+                "System newer than debug and debug newer than radio did not hold.",
+            detailMonospace = true,
+        )
+
+        PropertyAreaClocks.Unreadable -> SystemPropertiesDetailRowModel(
+            label = "Device property-area anomaly",
+            value = "Unavailable",
+            status = DetectorStatus.info(InfoKind.SUPPORT),
+            detail = "At least one of the debug, system and radio property areas could not be stat'ed from this app, " +
+                "so their modification times were not compared.",
+            detailMonospace = true,
+        )
     }
 }
 
