@@ -1,0 +1,1032 @@
+{
+  "schema": 2,
+  "audited_on": "2026-10-10",
+  "sources": [
+    {
+      "id": "hprof-12",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "7b48741266d552b005a7161ceeceff096d54f5d9",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "462f12561a2ef40bdc56e5639a76f1018c25e8dd0e400fb29056b8dd2e094ea3",
+      "anchors": [
+        "\"JAVA PROFILE 1.0.3\"",
+        "__ AddU4(sizeof(uint32_t));",
+        "__ AddStringId(LookupStringId(\"value\"));",
+        "__ AddObjectId(string_value);",
+        "__ AddU1(HPROF_PRIMITIVE_ARRAY_DUMP);"
+      ]
+    },
+    {
+      "id": "string-12",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "7b48741266d552b005a7161ceeceff096d54f5d9",
+      "path": "runtime/mirror/string.h",
+      "sha256": "d3d30bab025a2173d31b9b0bb464f98aa1bb774b87d1fae37f461863137ea91a",
+      "anchors": [
+        "int32_t count_;",
+        "uint32_t hash_code_;"
+      ]
+    },
+    {
+      "id": "vmdebug-jni-12",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "7b48741266d552b005a7161ceeceff096d54f5d9",
+      "path": "runtime/native/dalvik_system_VMDebug.cc",
+      "sha256": "233b210a4f2c6681b4310d71e87f49b734e2ec633b789028b6f5f9aa491abe92",
+      "anchors": [
+        "static void VMDebug_dumpHprofData(JNIEnv* env, jclass, jstring javaFilename, jint javaFd)",
+        "hprof::DumpHeap(filename.c_str(), fd, false);"
+      ]
+    },
+    {
+      "id": "fd-file-12",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "7b48741266d552b005a7161ceeceff096d54f5d9",
+      "path": "libartbase/base/unix_file/fd_file.cc",
+      "sha256": "e735f51219173a759deb889b141162f6a64f0a8d87d9359e46adf5c51e82feb9",
+      "anchors": [
+        "// Don't report failure if we just tried to flush a pipe or socket.",
+        "return errno == EINVAL ? 0 : -errno;"
+      ]
+    },
+    {
+      "id": "debug-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "core/java/android/os/Debug.java",
+      "sha256": "568ab8547b963bf7d9d0ecd437fb796b200ef2e2cb64923f241a6f102cb2fcab",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "VMDebug.dumpHprofData(fileName, fd);"
+      ]
+    },
+    {
+      "id": "zygote-process-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "aeb37d077fc25c926527bac4cd0978e4e50e46c1ef0aae03e142d3b41f6394a2",
+      "anchors": [
+        "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
+        "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "active-services-12",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "25d54573e0f3d584b428e5a51491b0475932be50",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "12d215925028aa27bf74d58df4208e0bed01261c912c6328b2d83a308ebeab4f",
+      "anchors": [
+        "hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated"
+      ]
+    },
+    {
+      "id": "vmdebug-12",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "7a9b98f8d296a2b2774702e80d23e610fbb5b34c",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "0341996309fe958f917891f3de4eb91be3010da7e0d5d8e736b45def21f1c096",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
+      "id": "app-12",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "27dbd800c94a8fe472f252bb33b499e5ab7df988",
+      "path": "public/app.te",
+      "sha256": "8e1a70bf52a4aa72839953437658a1cbbdcdfd9459f25fb9288956d3472a104e",
+      "anchors": [
+        "binder_call(appdomain, appdomain)",
+        "appdomain:fifo_file rw_file_perms;",
+        "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "isolated-app-12",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "27dbd800c94a8fe472f252bb33b499e5ab7df988",
+      "path": "private/isolated_app.te",
+      "sha256": "b092188d10ed92767d5120d47df674dae1d206e1d703cf9ac8d7c788e12f2f6a",
+      "anchors": [
+        "app_domain(isolated_app)"
+      ]
+    },
+    {
+      "id": "mls-12",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "27dbd800c94a8fe472f252bb33b499e5ab7df988",
+      "path": "private/mls",
+      "sha256": "e356f81480145ac954b6a9fb12e7387a8b42619a4def563af10087c6cfd8fa08",
+      "anchors": [
+        "mlsconstrain fifo_file { read getattr }",
+        "mlsconstrain fifo_file { write setattr append unlink link rename }",
+        "t2 == mlstrustedobject or t2 == domain);"
+      ]
+    },
+    {
+      "id": "fs-use-12",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "27dbd800c94a8fe472f252bb33b499e5ab7df988",
+      "path": "private/fs_use",
+      "sha256": "577777c76e1b96947e37ef3d6b37d380f9dca0f4bfa56ff04c4c67374e9e1265",
+      "anchors": [
+        "fs_use_task pipefs",
+        "fs_use_task sockfs"
+      ]
+    },
+    {
+      "id": "te-macros-12",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "27dbd800c94a8fe472f252bb33b499e5ab7df988",
+      "path": "public/te_macros",
+      "sha256": "6e89b8bc81f8108842cec88b8a7b0e26ed96a2544450cf896d0f2a8d5150ca01",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
+      ]
+    },
+    {
+      "id": "hprof-12l",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ab1f62ad90952006e0a47cabdb3e5a3bcd07124e",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "462f12561a2ef40bdc56e5639a76f1018c25e8dd0e400fb29056b8dd2e094ea3",
+      "anchors": [
+        "\"JAVA PROFILE 1.0.3\"",
+        "__ AddU4(sizeof(uint32_t));",
+        "__ AddStringId(LookupStringId(\"value\"));",
+        "__ AddObjectId(string_value);",
+        "__ AddU1(HPROF_PRIMITIVE_ARRAY_DUMP);"
+      ]
+    },
+    {
+      "id": "string-12l",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ab1f62ad90952006e0a47cabdb3e5a3bcd07124e",
+      "path": "runtime/mirror/string.h",
+      "sha256": "d3d30bab025a2173d31b9b0bb464f98aa1bb774b87d1fae37f461863137ea91a",
+      "anchors": [
+        "int32_t count_;",
+        "uint32_t hash_code_;"
+      ]
+    },
+    {
+      "id": "vmdebug-jni-12l",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ab1f62ad90952006e0a47cabdb3e5a3bcd07124e",
+      "path": "runtime/native/dalvik_system_VMDebug.cc",
+      "sha256": "233b210a4f2c6681b4310d71e87f49b734e2ec633b789028b6f5f9aa491abe92",
+      "anchors": [
+        "static void VMDebug_dumpHprofData(JNIEnv* env, jclass, jstring javaFilename, jint javaFd)",
+        "hprof::DumpHeap(filename.c_str(), fd, false);"
+      ]
+    },
+    {
+      "id": "fd-file-12l",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ab1f62ad90952006e0a47cabdb3e5a3bcd07124e",
+      "path": "libartbase/base/unix_file/fd_file.cc",
+      "sha256": "e735f51219173a759deb889b141162f6a64f0a8d87d9359e46adf5c51e82feb9",
+      "anchors": [
+        "// Don't report failure if we just tried to flush a pipe or socket.",
+        "return errno == EINVAL ? 0 : -errno;"
+      ]
+    },
+    {
+      "id": "debug-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "core/java/android/os/Debug.java",
+      "sha256": "568ab8547b963bf7d9d0ecd437fb796b200ef2e2cb64923f241a6f102cb2fcab",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "VMDebug.dumpHprofData(fileName, fd);"
+      ]
+    },
+    {
+      "id": "zygote-process-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "aeb37d077fc25c926527bac4cd0978e4e50e46c1ef0aae03e142d3b41f6394a2",
+      "anchors": [
+        "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
+        "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "active-services-12l",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "a5fbddcbcccadc3abc89b159625c99ad50eea6a4",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "a2395f74e2787c5c33a75cf0188661187f5651659521ba318d513c71468ec696",
+      "anchors": [
+        "hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated"
+      ]
+    },
+    {
+      "id": "vmdebug-12l",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "0c0acdd10c4272651144e5b3874e7b9d50256590",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "0341996309fe958f917891f3de4eb91be3010da7e0d5d8e736b45def21f1c096",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
+      "id": "app-12l",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "86c56a47d6d3ac78450d046b52d058293f1d641d",
+      "path": "public/app.te",
+      "sha256": "8e1a70bf52a4aa72839953437658a1cbbdcdfd9459f25fb9288956d3472a104e",
+      "anchors": [
+        "binder_call(appdomain, appdomain)",
+        "appdomain:fifo_file rw_file_perms;",
+        "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "isolated-app-12l",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "86c56a47d6d3ac78450d046b52d058293f1d641d",
+      "path": "private/isolated_app.te",
+      "sha256": "b092188d10ed92767d5120d47df674dae1d206e1d703cf9ac8d7c788e12f2f6a",
+      "anchors": [
+        "app_domain(isolated_app)"
+      ]
+    },
+    {
+      "id": "mls-12l",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "86c56a47d6d3ac78450d046b52d058293f1d641d",
+      "path": "private/mls",
+      "sha256": "e356f81480145ac954b6a9fb12e7387a8b42619a4def563af10087c6cfd8fa08",
+      "anchors": [
+        "mlsconstrain fifo_file { read getattr }",
+        "mlsconstrain fifo_file { write setattr append unlink link rename }",
+        "t2 == mlstrustedobject or t2 == domain);"
+      ]
+    },
+    {
+      "id": "fs-use-12l",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "86c56a47d6d3ac78450d046b52d058293f1d641d",
+      "path": "private/fs_use",
+      "sha256": "577777c76e1b96947e37ef3d6b37d380f9dca0f4bfa56ff04c4c67374e9e1265",
+      "anchors": [
+        "fs_use_task pipefs",
+        "fs_use_task sockfs"
+      ]
+    },
+    {
+      "id": "te-macros-12l",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "86c56a47d6d3ac78450d046b52d058293f1d641d",
+      "path": "public/te_macros",
+      "sha256": "6e89b8bc81f8108842cec88b8a7b0e26ed96a2544450cf896d0f2a8d5150ca01",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
+      ]
+    },
+    {
+      "id": "hprof-13",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "4bf98aff91d4be17c884a98dd46bf50e87427bdd",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "462f12561a2ef40bdc56e5639a76f1018c25e8dd0e400fb29056b8dd2e094ea3",
+      "anchors": [
+        "\"JAVA PROFILE 1.0.3\"",
+        "__ AddU4(sizeof(uint32_t));",
+        "__ AddStringId(LookupStringId(\"value\"));",
+        "__ AddObjectId(string_value);",
+        "__ AddU1(HPROF_PRIMITIVE_ARRAY_DUMP);"
+      ]
+    },
+    {
+      "id": "string-13",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "4bf98aff91d4be17c884a98dd46bf50e87427bdd",
+      "path": "runtime/mirror/string.h",
+      "sha256": "2fb1f538dbab58a9368cd2253303c1e69af6633904be62a16027a9a9906709f2",
+      "anchors": [
+        "int32_t count_;",
+        "uint32_t hash_code_;"
+      ]
+    },
+    {
+      "id": "vmdebug-jni-13",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "4bf98aff91d4be17c884a98dd46bf50e87427bdd",
+      "path": "runtime/native/dalvik_system_VMDebug.cc",
+      "sha256": "294f75f84610b136e06ad7e256e18ce445db5c5301b4b587a80ebb1e2bb06006",
+      "anchors": [
+        "static void VMDebug_dumpHprofData(JNIEnv* env, jclass, jstring javaFilename, jint javaFd)",
+        "hprof::DumpHeap(filename.c_str(), fd, false);"
+      ]
+    },
+    {
+      "id": "fd-file-13",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "4bf98aff91d4be17c884a98dd46bf50e87427bdd",
+      "path": "libartbase/base/unix_file/fd_file.cc",
+      "sha256": "da0c7f228d25a72d7c8755d99a133570a461d87207232de063c2d0800b387bef",
+      "anchors": [
+        "// Don't report failure if we just tried to flush a pipe or socket.",
+        "return errno == EINVAL ? 0 : -errno;"
+      ]
+    },
+    {
+      "id": "debug-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "core/java/android/os/Debug.java",
+      "sha256": "568ab8547b963bf7d9d0ecd437fb796b200ef2e2cb64923f241a6f102cb2fcab",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "VMDebug.dumpHprofData(fileName, fd);"
+      ]
+    },
+    {
+      "id": "zygote-process-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "aeb37d077fc25c926527bac4cd0978e4e50e46c1ef0aae03e142d3b41f6394a2",
+      "anchors": [
+        "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
+        "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "active-services-13",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d5622d9ea8a1fca53089cc624e50c542c8ed4aa7",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "efabb1e3085127298fcc7fd0681102285902a5216e5f409a5a693c955ca78f6f",
+      "anchors": [
+        "hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated"
+      ]
+    },
+    {
+      "id": "vmdebug-13",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "e0b6b2338e580994985244e729034401d5a29bdc",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "6bbc7e5975a968690abea27443c1750311073daf5995cfceae2d7891dc40e404",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
+      "id": "app-13",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "9d7c07e50a695859ffb131511991e83f644e4a09",
+      "path": "private/app.te",
+      "sha256": "75dcbf56c4a9bb6bc37b9fff6920c11fdf566a1851140b799289e1ff7a39589a",
+      "anchors": [
+        "binder_call(appdomain, appdomain)",
+        "appdomain:fifo_file rw_file_perms;",
+        "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "isolated-app-13",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "9d7c07e50a695859ffb131511991e83f644e4a09",
+      "path": "private/isolated_app.te",
+      "sha256": "491a1df8e0b48526505ca0c7ca5cd3cfc37079047f5e2928e4d74cca85b8949a",
+      "anchors": [
+        "app_domain(isolated_app)"
+      ]
+    },
+    {
+      "id": "mls-13",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "9d7c07e50a695859ffb131511991e83f644e4a09",
+      "path": "private/mls",
+      "sha256": "e356f81480145ac954b6a9fb12e7387a8b42619a4def563af10087c6cfd8fa08",
+      "anchors": [
+        "mlsconstrain fifo_file { read getattr }",
+        "mlsconstrain fifo_file { write setattr append unlink link rename }",
+        "t2 == mlstrustedobject or t2 == domain);"
+      ]
+    },
+    {
+      "id": "fs-use-13",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "9d7c07e50a695859ffb131511991e83f644e4a09",
+      "path": "private/fs_use",
+      "sha256": "577777c76e1b96947e37ef3d6b37d380f9dca0f4bfa56ff04c4c67374e9e1265",
+      "anchors": [
+        "fs_use_task pipefs",
+        "fs_use_task sockfs"
+      ]
+    },
+    {
+      "id": "te-macros-13",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "9d7c07e50a695859ffb131511991e83f644e4a09",
+      "path": "public/te_macros",
+      "sha256": "ce32413e5cd4f22e53a2b511221bc0d9df347c54c5d5993ea244a90815cd0b89",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
+      ]
+    },
+    {
+      "id": "hprof-14",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "f9801ba4c8ee807cf4283d1a3c30b0aca3a0122a",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "462f12561a2ef40bdc56e5639a76f1018c25e8dd0e400fb29056b8dd2e094ea3",
+      "anchors": [
+        "\"JAVA PROFILE 1.0.3\"",
+        "__ AddU4(sizeof(uint32_t));",
+        "__ AddStringId(LookupStringId(\"value\"));",
+        "__ AddObjectId(string_value);",
+        "__ AddU1(HPROF_PRIMITIVE_ARRAY_DUMP);"
+      ]
+    },
+    {
+      "id": "string-14",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "f9801ba4c8ee807cf4283d1a3c30b0aca3a0122a",
+      "path": "runtime/mirror/string.h",
+      "sha256": "ad783949dedae0e6894a62f0518c16f118ff8d36592a4d5471f1442c58a73af8",
+      "anchors": [
+        "int32_t count_;",
+        "uint32_t hash_code_;"
+      ]
+    },
+    {
+      "id": "vmdebug-jni-14",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "f9801ba4c8ee807cf4283d1a3c30b0aca3a0122a",
+      "path": "runtime/native/dalvik_system_VMDebug.cc",
+      "sha256": "6eef7e13a417b65bb3e8f20d15a66253a5fb9972ffaa12f5496ef812e7f39b09",
+      "anchors": [
+        "static void VMDebug_dumpHprofData(JNIEnv* env, jclass, jstring javaFilename, jint javaFd)",
+        "hprof::DumpHeap(filename.c_str(), fd, false);"
+      ]
+    },
+    {
+      "id": "fd-file-14",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "f9801ba4c8ee807cf4283d1a3c30b0aca3a0122a",
+      "path": "libartbase/base/unix_file/fd_file.cc",
+      "sha256": "da0c7f228d25a72d7c8755d99a133570a461d87207232de063c2d0800b387bef",
+      "anchors": [
+        "// Don't report failure if we just tried to flush a pipe or socket.",
+        "return errno == EINVAL ? 0 : -errno;"
+      ]
+    },
+    {
+      "id": "debug-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "core/java/android/os/Debug.java",
+      "sha256": "602b00cd794cef2be4484471e2681efeb87e4fa6b639b3da78d45d59e548062b",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "VMDebug.dumpHprofData(fileName, fd);"
+      ]
+    },
+    {
+      "id": "zygote-process-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "c448b28b6576d26f94e06ebaea4479676e206541f7f0eac3f96320e7e2efbb02",
+      "anchors": [
+        "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
+        "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "active-services-14",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "06c9632bdbaa778256a054013fc7c3760bfa0355",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "998b1b2956fc457ccbf4352ca5c2f4ef2d24f75c266d5e3c625124d86d99e451",
+      "anchors": [
+        "hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated"
+      ]
+    },
+    {
+      "id": "vmdebug-14",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "b818b1821996d6d855e1224d50347c2f6ae59a61",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "b64c7b7d3132da697bf13a95fd08f9f14bac59916e69e98ec094b37aac63ec36",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
+      "id": "app-14",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d923a9c74f1ab914d0c6cfafe3d83eb38c2656d2",
+      "path": "private/app.te",
+      "sha256": "80f9c40c7df926770ef171a488b331551c33e42ab5ef2a4bec52786bf0022b1d",
+      "anchors": [
+        "binder_call(appdomain, appdomain)",
+        "appdomain:fifo_file rw_file_perms;",
+        "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "isolated-app-14",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d923a9c74f1ab914d0c6cfafe3d83eb38c2656d2",
+      "path": "private/isolated_app.te",
+      "sha256": "cde4bf0d9db990ab76479ab95ed7b2502ede8c9cbaa1c8f785df61b5c16f4ae0",
+      "anchors": [
+        "app_domain(isolated_app)"
+      ]
+    },
+    {
+      "id": "mls-14",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d923a9c74f1ab914d0c6cfafe3d83eb38c2656d2",
+      "path": "private/mls",
+      "sha256": "e356f81480145ac954b6a9fb12e7387a8b42619a4def563af10087c6cfd8fa08",
+      "anchors": [
+        "mlsconstrain fifo_file { read getattr }",
+        "mlsconstrain fifo_file { write setattr append unlink link rename }",
+        "t2 == mlstrustedobject or t2 == domain);"
+      ]
+    },
+    {
+      "id": "fs-use-14",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d923a9c74f1ab914d0c6cfafe3d83eb38c2656d2",
+      "path": "private/fs_use",
+      "sha256": "577777c76e1b96947e37ef3d6b37d380f9dca0f4bfa56ff04c4c67374e9e1265",
+      "anchors": [
+        "fs_use_task pipefs",
+        "fs_use_task sockfs"
+      ]
+    },
+    {
+      "id": "te-macros-14",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d923a9c74f1ab914d0c6cfafe3d83eb38c2656d2",
+      "path": "public/te_macros",
+      "sha256": "0cfa9b27020a544e6353d104f5f6a95d77ca6f3c6d5009f065a0b5f40fb73e9e",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
+      ]
+    },
+    {
+      "id": "hprof-15",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "83b3910c705d6815bcb42b1f3dd48218623fa096",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "a7b1e6ca1696097734c39eaeb6c871469c3df65938d1513555c1acc761303360",
+      "anchors": [
+        "\"JAVA PROFILE 1.0.3\"",
+        "__ AddU4(sizeof(uint32_t));",
+        "__ AddStringId(LookupStringId(\"value\"));",
+        "__ AddObjectId(string_value);",
+        "__ AddU1(HPROF_PRIMITIVE_ARRAY_DUMP);"
+      ]
+    },
+    {
+      "id": "string-15",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "83b3910c705d6815bcb42b1f3dd48218623fa096",
+      "path": "runtime/mirror/string.h",
+      "sha256": "27c9405b136d042ef514d64f0db58b976ad3a7306d0f37dcb7b6b1de5a534a6e",
+      "anchors": [
+        "int32_t count_;",
+        "uint32_t hash_code_;"
+      ]
+    },
+    {
+      "id": "vmdebug-jni-15",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "83b3910c705d6815bcb42b1f3dd48218623fa096",
+      "path": "runtime/native/dalvik_system_VMDebug.cc",
+      "sha256": "f7a4419be9e4715cb672d8f06528932efb2381ab3c2332bc0578ad634fe0cd09",
+      "anchors": [
+        "static void VMDebug_dumpHprofData(JNIEnv* env, jclass, jstring javaFilename, jint javaFd)",
+        "hprof::DumpHeap(filename.c_str(), fd, false);"
+      ]
+    },
+    {
+      "id": "fd-file-15",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "83b3910c705d6815bcb42b1f3dd48218623fa096",
+      "path": "libartbase/base/unix_file/fd_file.cc",
+      "sha256": "a777bc8979b4bdaa621a2cbb732c90c0b1a91d9551a198b67b63400384a1c33e",
+      "anchors": [
+        "// Don't report failure if we just tried to flush a pipe or socket.",
+        "return errno == EINVAL ? 0 : -errno;"
+      ]
+    },
+    {
+      "id": "debug-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "core/java/android/os/Debug.java",
+      "sha256": "30073f59c9622cdbceab0835f0115e2b1b169ee1652b6000d7af919ae3f81be7",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "VMDebug.dumpHprofData(fileName, fd);"
+      ]
+    },
+    {
+      "id": "zygote-process-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "c14cdc720b0f0348777443a1741a82efdea14009cfa16acc45a7989fc584d794",
+      "anchors": [
+        "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
+        "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "active-services-15",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "d10ab1bb774aa9cf43e1282709f00bc4de8ccb8a",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "53c46c8b932221d3d1223c26b9d873b1b718b3d2f80ee2a0114092360a87664d",
+      "anchors": [
+        "hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated"
+      ]
+    },
+    {
+      "id": "vmdebug-15",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "c712224cd42e8cb2f219b23716f7b25914376c21",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "9ce5460d238274acfe44fe9d9446dabcb3460c19ce62cc8672eb79cd353a95b4",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
+      "id": "app-15",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "ad1c4255c49d57fe885894a8b690c0dfd542100b",
+      "path": "private/app.te",
+      "sha256": "8cd4187a499f543374d46434ccb85f23b7c2995fce329c19e8d89a8af1042406",
+      "anchors": [
+        "binder_call(appdomain, appdomain)",
+        "appdomain:fifo_file rw_file_perms;",
+        "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "isolated-app-15",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "ad1c4255c49d57fe885894a8b690c0dfd542100b",
+      "path": "private/isolated_app.te",
+      "sha256": "cde4bf0d9db990ab76479ab95ed7b2502ede8c9cbaa1c8f785df61b5c16f4ae0",
+      "anchors": [
+        "app_domain(isolated_app)"
+      ]
+    },
+    {
+      "id": "mls-15",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "ad1c4255c49d57fe885894a8b690c0dfd542100b",
+      "path": "private/mls",
+      "sha256": "e356f81480145ac954b6a9fb12e7387a8b42619a4def563af10087c6cfd8fa08",
+      "anchors": [
+        "mlsconstrain fifo_file { read getattr }",
+        "mlsconstrain fifo_file { write setattr append unlink link rename }",
+        "t2 == mlstrustedobject or t2 == domain);"
+      ]
+    },
+    {
+      "id": "fs-use-15",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "ad1c4255c49d57fe885894a8b690c0dfd542100b",
+      "path": "private/fs_use",
+      "sha256": "577777c76e1b96947e37ef3d6b37d380f9dca0f4bfa56ff04c4c67374e9e1265",
+      "anchors": [
+        "fs_use_task pipefs",
+        "fs_use_task sockfs"
+      ]
+    },
+    {
+      "id": "te-macros-15",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "ad1c4255c49d57fe885894a8b690c0dfd542100b",
+      "path": "public/te_macros",
+      "sha256": "a099c30ad36ede647a9434550b0f2f80652b217cccc2bcc57cd14b3df633c0bf",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
+      ]
+    },
+    {
+      "id": "hprof-16",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ba2c65bbab5a55e204b32d7b1480011a1bcb57f9",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "a2f039a5d5ea6c71b46ad11447f4e1d7b41f4a4753d985dacf32704b02256821",
+      "anchors": [
+        "\"JAVA PROFILE 1.0.3\"",
+        "__ AddU4(sizeof(uint32_t));",
+        "__ AddStringId(LookupStringId(\"value\"));",
+        "__ AddObjectId(string_value);",
+        "__ AddU1(HPROF_PRIMITIVE_ARRAY_DUMP);"
+      ]
+    },
+    {
+      "id": "string-16",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ba2c65bbab5a55e204b32d7b1480011a1bcb57f9",
+      "path": "runtime/mirror/string.h",
+      "sha256": "27c9405b136d042ef514d64f0db58b976ad3a7306d0f37dcb7b6b1de5a534a6e",
+      "anchors": [
+        "int32_t count_;",
+        "uint32_t hash_code_;"
+      ]
+    },
+    {
+      "id": "vmdebug-jni-16",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ba2c65bbab5a55e204b32d7b1480011a1bcb57f9",
+      "path": "runtime/native/dalvik_system_VMDebug.cc",
+      "sha256": "a02be13c834b8533cfa8424160d7d4b7c7f9b24dd1a88c1b91f362fb3df25000",
+      "anchors": [
+        "static void VMDebug_dumpHprofData(JNIEnv* env, jclass, jstring javaFilename, jint javaFd)",
+        "hprof::DumpHeap(filename.c_str(), fd, false);"
+      ]
+    },
+    {
+      "id": "fd-file-16",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ba2c65bbab5a55e204b32d7b1480011a1bcb57f9",
+      "path": "libartbase/base/unix_file/fd_file.cc",
+      "sha256": "d1c0ec31c0c2a6f4032cc514a53fa037d02d99fbbafc1bce377022323cc97c0a",
+      "anchors": [
+        "// Don't report failure if we just tried to flush a pipe or socket.",
+        "return errno == EINVAL ? 0 : -errno;"
+      ]
+    },
+    {
+      "id": "debug-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/android/os/Debug.java",
+      "sha256": "1e73fe5954f1d72bf59b5996d3ab926625eba967a2eef9f60e473a9299b41093",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "VMDebug.dumpHprofData(fileName, fd);"
+      ]
+    },
+    {
+      "id": "zygote-process-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "f8405b21b649dbcbc3c22d09a60aab362a4645c0e1cb220f1a9a4629f886e9dc",
+      "anchors": [
+        "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
+        "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "active-services-16",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "64df5e8de4b4d99572f139ab27fe49ef6b542d0daf6b75304b4a3ae41204eedc",
+      "anchors": [
+        "hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated"
+      ]
+    },
+    {
+      "id": "vmdebug-16",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "fff4fcc0cf7f080cf2511cbb57561482b13b218f",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "59a643a9499b1309159e6ae6ba79d3c386c30af9a4c8e9fb5c7eedb51f1aa767",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
+      "id": "app-16",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d4a7f392598cee96d9479a8ac0f84259c19b043a",
+      "path": "private/app.te",
+      "sha256": "a50dfdd87f88aca3480a8c9d21cbf6d1243cab8b2beaafbc638bf3b94eed8fd6",
+      "anchors": [
+        "binder_call(appdomain, appdomain)",
+        "appdomain:fifo_file rw_file_perms;",
+        "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "isolated-app-16",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d4a7f392598cee96d9479a8ac0f84259c19b043a",
+      "path": "private/isolated_app.te",
+      "sha256": "cde4bf0d9db990ab76479ab95ed7b2502ede8c9cbaa1c8f785df61b5c16f4ae0",
+      "anchors": [
+        "app_domain(isolated_app)"
+      ]
+    },
+    {
+      "id": "mls-16",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d4a7f392598cee96d9479a8ac0f84259c19b043a",
+      "path": "private/mls",
+      "sha256": "e356f81480145ac954b6a9fb12e7387a8b42619a4def563af10087c6cfd8fa08",
+      "anchors": [
+        "mlsconstrain fifo_file { read getattr }",
+        "mlsconstrain fifo_file { write setattr append unlink link rename }",
+        "t2 == mlstrustedobject or t2 == domain);"
+      ]
+    },
+    {
+      "id": "fs-use-16",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d4a7f392598cee96d9479a8ac0f84259c19b043a",
+      "path": "private/fs_use",
+      "sha256": "577777c76e1b96947e37ef3d6b37d380f9dca0f4bfa56ff04c4c67374e9e1265",
+      "anchors": [
+        "fs_use_task pipefs",
+        "fs_use_task sockfs"
+      ]
+    },
+    {
+      "id": "te-macros-16",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "d4a7f392598cee96d9479a8ac0f84259c19b043a",
+      "path": "public/te_macros",
+      "sha256": "39876a485ea1fe6cf76418268bc058dde7ae50690fd2901051e32125c5678243",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
+      ]
+    },
+    {
+      "id": "hprof-17",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ecd0dfa4cb728c712af42bdd3ae0640888b29bc3",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "5af02b889f2e0c4c8331a8af1e2f6a598f8b9f42f64ffb8e356646c0937a1c3d",
+      "anchors": [
+        "\"JAVA PROFILE 1.0.3\"",
+        "__ AddU4(sizeof(uint32_t));",
+        "__ AddStringId(LookupStringId(\"value\"));",
+        "__ AddObjectId(string_value);",
+        "__ AddU1(HPROF_PRIMITIVE_ARRAY_DUMP);",
+        "HPROF_TAG_ART_CLOCK_MONOTONIC = 0xA0,",
+        "output_->StartNewRecord(HPROF_TAG_ART_CLOCK_MONOTONIC, kHprofTime);"
+      ]
+    },
+    {
+      "id": "string-17",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ecd0dfa4cb728c712af42bdd3ae0640888b29bc3",
+      "path": "runtime/mirror/string.h",
+      "sha256": "dcf28caca730f0b98acc339d5e5ae0dfe9bf2f9b989fd5f237cca44df6ed29c0",
+      "anchors": [
+        "int32_t count_;",
+        "uint32_t hash_code_;"
+      ]
+    },
+    {
+      "id": "vmdebug-jni-17",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ecd0dfa4cb728c712af42bdd3ae0640888b29bc3",
+      "path": "runtime/native/dalvik_system_VMDebug.cc",
+      "sha256": "8f836c27ccf58b282aaeedf40f5dc3d8bb2b3ebaa81b7b944db0f1f2cc2bbb37",
+      "anchors": [
+        "static void VMDebug_dumpHprofData(JNIEnv* env, jclass, jstring javaFilename, jint javaFd)",
+        "hprof::DumpHeap(filename.c_str(), fd, false);"
+      ]
+    },
+    {
+      "id": "fd-file-17",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ecd0dfa4cb728c712af42bdd3ae0640888b29bc3",
+      "path": "libartbase/base/unix_file/fd_file.cc",
+      "sha256": "1d9324f6b10a41356a59f8338e8b749aec9598b61d615cc1dbc391970c84cfcd",
+      "anchors": [
+        "// Don't report failure if we just tried to flush a pipe or socket.",
+        "return errno == EINVAL ? 0 : -errno;"
+      ]
+    },
+    {
+      "id": "debug-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "core/java/android/os/Debug.java",
+      "sha256": "e0bfb24a5fd2ca4b8352eadf0c46e75c2d3c49fbd7501faaa8b516c2a1516a58",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "VMDebug.dumpHprofData(fileName, fd);"
+      ]
+    },
+    {
+      "id": "zygote-process-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "9e05288273ed4677d8dfab1d610a63846322db7e42ffb3298bbd1b9f8a8d3b28",
+      "anchors": [
+        "private static boolean policySpecifiesUsapPoolLaunch(int zygotePolicyFlags)",
+        "== ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;"
+      ]
+    },
+    {
+      "id": "active-services-17",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "48fe68e00b946ec46b6ecd334e6daf31f5bd65f1",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "bd27258e4fd4bacec2924fdd6366166104f5961c6600945ae2aedb0163aca7db",
+      "anchors": [
+        "int policy = ZYGOTE_POLICY_FLAG_EMPTY;",
+        "policy |= ZYGOTE_POLICY_FLAG_NATIVE_PROCESS;"
+      ]
+    },
+    {
+      "id": "vmdebug-17",
+      "repository": "https://android.googlesource.com/platform/libcore",
+      "revision": "4ebfb391ee0109d16abe6e2bc965724b940928c5",
+      "path": "dalvik/src/main/java/dalvik/system/VMDebug.java",
+      "sha256": "65401c09dad019fdb3feb0ce04228a88f959ae0922e1070cebfcb6506ae37a85",
+      "anchors": [
+        "public static void dumpHprofData(String fileName, FileDescriptor fd)",
+        "dumpHprofData(fileName, fd != null ? fd.getInt$() : -1);"
+      ]
+    },
+    {
+      "id": "app-17",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac",
+      "path": "private/app.te",
+      "sha256": "6a18ae176e35cf19ab022cc75887a5c77aae55f00e8a1ebddd7ebd75aea64525",
+      "anchors": [
+        "binder_call(appdomain, appdomain)",
+        "appdomain:fifo_file rw_file_perms;",
+        "appdomain:unix_stream_socket { getopt getattr read write shutdown };"
+      ]
+    },
+    {
+      "id": "isolated-app-17",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac",
+      "path": "private/isolated_app.te",
+      "sha256": "a088dfeaf2dabbfcd4327c01549096c88db22687c2fceb51c797ede552bb2d51",
+      "anchors": [
+        "app_domain(isolated_app)"
+      ]
+    },
+    {
+      "id": "mls-17",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac",
+      "path": "private/mls",
+      "sha256": "d1f0910f4c4224e3a743457b923c52894459b250ed41809f6c478fd9da3a30d2",
+      "anchors": [
+        "mlsconstrain fifo_file { read getattr }",
+        "mlsconstrain fifo_file { write setattr append unlink link rename }",
+        "t2 == mlstrustedobject or t2 == domain);"
+      ]
+    },
+    {
+      "id": "fs-use-17",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac",
+      "path": "private/fs_use",
+      "sha256": "577777c76e1b96947e37ef3d6b37d380f9dca0f4bfa56ff04c4c67374e9e1265",
+      "anchors": [
+        "fs_use_task pipefs",
+        "fs_use_task sockfs"
+      ]
+    },
+    {
+      "id": "te-macros-17",
+      "repository": "https://android.googlesource.com/platform/system/sepolicy",
+      "revision": "895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac",
+      "path": "public/te_macros",
+      "sha256": "9825ba9b9bd742070683f21ad636e930ec24c73e3ec9dcb22b85e2dcb9b0367d",
+      "anchors": [
+        "define(`binder_call'",
+        "allow $1 $2:fd use;"
+      ]
+    }
+  ],
+  "searches": []
+}

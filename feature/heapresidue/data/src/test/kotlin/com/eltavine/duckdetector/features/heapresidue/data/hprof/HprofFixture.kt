@@ -21,7 +21,12 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 
 /** Small binary fixtures exercise record boundaries, not text-shaped stand-ins for a heap. */
-internal class HprofFixture(private val idSize: Int = 4, private val classFirst: Boolean = true, private val fieldBytes: Int = 8) {
+internal class HprofFixture(
+    private val idSize: Int = 4,
+    private val classFirst: Boolean = true,
+    private val fieldBytes: Int = 8,
+    artClock: Boolean = false,
+) {
     private val bytes = ByteArrayOutputStream()
     private val output = DataOutputStream(bytes)
     private var nextId = 10L
@@ -29,6 +34,8 @@ internal class HprofFixture(private val idSize: Int = 4, private val classFirst:
         output.writeBytes("JAVA PROFILE 1.0.3\u0000")
         output.writeInt(idSize)
         output.writeLong(0)
+        // Android 17's WriteFixedHeader adds HPROF_TAG_ART_CLOCK_MONOTONIC (0xA0, one U8) here.
+        if (artClock) record(0xA0) { writeLong(123_456_789L) }
         record(1) { id(1); writeBytes("java.lang.String") }
         record(1) { id(2); writeBytes("value") }
         record(2) { writeInt(1); id(3); writeInt(0); id(1) }

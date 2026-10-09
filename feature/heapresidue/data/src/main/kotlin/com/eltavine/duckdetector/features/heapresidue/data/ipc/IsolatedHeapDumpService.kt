@@ -27,6 +27,7 @@ import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemClock
+import com.eltavine.duckdetector.features.heapresidue.data.HeapResidueReleases
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.atomic.AtomicBoolean
 import org.lsposed.hiddenapibypass.HiddenApiBypass
@@ -36,12 +37,14 @@ class IsolatedHeapDumpService : Service() {
     private val used = AtomicBoolean(false)
     private val endpoint = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            if (code != HeapDumpProtocol.DUMP || Build.VERSION.SDK_INT != 36) return super.onTransact(code, data, reply, flags)
+            if (code != HeapDumpProtocol.DUMP || HeapResidueReleases.classify(Build.VERSION.SDK_INT) == null) {
+                return super.onTransact(code, data, reply, flags)
+            }
             data.enforceInterface(HeapDumpProtocol.SERVICE)
             val output = ParcelFileDescriptor.CREATOR.createFromParcel(data)
             val callback = data.readStrongBinder()
             try {
-                data.enforceNoDataAvail()
+                data.requireFullyConsumed()
                 if (callback != null) {
                     val result = if (used.compareAndSet(false, true)) dump(output) else HeapDumpResult(HeapDumpStatus.REUSED_PROCESS)
                     send(callback, result)

@@ -4,6 +4,7 @@
 
 import hashlib
 import io
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -75,6 +76,19 @@ class SourceAuditTest(unittest.TestCase):
                 patch.object(audit.time, "sleep"), self.assertRaises(urllib.error.HTTPError):
             audit.download("https://example.invalid/source")
         self.assertEqual(1, urlopen.call_count)
+
+    def test_main_verifies_another_lock_offline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "test-source.source").write_bytes(self.data)
+            lock = root / "lock.json"
+            lock.write_text(json.dumps({"schema": audit.LOCK_SCHEMA, "sources": [self.entry], "searches": []}))
+            argv = ["audit_sources.py", "--lock", str(lock), "--cache-dir", str(root)]
+            with patch.object(audit.sys, "argv", argv), patch("builtins.print"):
+                self.assertEqual(0, audit.main())
+            lock.write_text(json.dumps({"schema": 1, "sources": [], "searches": []}))
+            with patch.object(audit.sys, "argv", argv), patch("builtins.print"):
+                self.assertEqual(1, audit.main())
 
     def test_failed_verification_does_not_overwrite_cached_source(self):
         with tempfile.TemporaryDirectory() as directory:

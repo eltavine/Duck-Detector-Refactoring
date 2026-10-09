@@ -24,11 +24,12 @@ import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
 import android.system.StructPollfd
+import com.eltavine.duckdetector.features.heapresidue.data.HeapResidueReleases
 import java.io.InputStream
 import java.net.SocketTimeoutException
 
 /** Nonblocking reads plus finite poll: coroutine cancellation never waits on an unbounded pipe read. */
-@RequiresApi(36)
+@RequiresApi(HeapResidueReleases.FIRST_AUDITED_API)
 internal class DeadlinePipeInput(
     private val pipe: ParcelFileDescriptor,
     private val deadlineMillis: Long,

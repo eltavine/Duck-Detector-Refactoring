@@ -39,6 +39,16 @@ class HeapResidueCardModelMapperTest {
     @Test fun failureAndUnsupportedRemainDistinct() {
         val mapper = HeapResidueCardModelMapper()
         assertEquals("Probe unavailable", mapper.map(HeapResidueReport.failed("IOException")).verdict)
-        assertEquals("Unsupported", mapper.map(HeapResidueReport(HeapResidueStage.READY, HeapResidueOutcome.UNSUPPORTED)).verdict)
+        val unsupported = mapper.map(HeapResidueReport(HeapResidueStage.READY, HeapResidueOutcome.UNSUPPORTED))
+        assertEquals("Unsupported", unsupported.verdict)
+        assertTrue(unsupported.summary.contains("Android 12 to 17"))
+    }
+    @Test fun releaseRowSeparatesAuditedFromNewerReleases() {
+        fun row(release: HeapResidueRelease) = HeapResidueCardModelMapper()
+            .map(HeapResidueReport(HeapResidueStage.READY, HeapResidueOutcome.NOT_OBSERVED, release = release))
+            .scanRows.firstOrNull { it.label == "Android release" }
+        assertEquals("Audited baseline", row(HeapResidueRelease.AUDITED)?.value)
+        assertEquals("Newer than audited", row(HeapResidueRelease.UNAUDITED)?.value)
+        assertNull(row(HeapResidueRelease.UNKNOWN))
     }
 }

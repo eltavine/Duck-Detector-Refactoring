@@ -45,6 +45,14 @@ class ArtHprofScannerTest {
             .string("--package-name=$target", linked = false).finish())
         assertTrue(result.signals.isEmpty()); assertEquals(0, result.candidates)
     }
+    @Test fun android17ClockRecordAfterTheHeaderIsSkipped() {
+        for (idSize in listOf(4, 8)) {
+            val bytes = HprofFixture(idSize, artClock = true).string("--package-name=$target").finish()
+            val result = scan(bytes)
+            assertEquals(target, result.signals.single().packageName)
+            assertEquals(bytes.size.toLong(), result.bytesRead)
+        }
+    }
     @Test fun stringInstanceCanPrecedeItsClassDump() {
         val result = scan(HprofFixture(classFirst = false).string("--package-name=$target").finish())
         assertEquals(target, result.signals.single().packageName)
