@@ -1,0 +1,336 @@
+{
+  "schema": 1,
+  "audited_on": "2026-10-09",
+  "sources": [
+    {
+      "id": "zygote-process",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/android/os/ZygoteProcess.java",
+      "sha256": "f8405b21b649dbcbc3c22d09a60aab362a4645c0e1cb220f1a9a4629f886e9dc",
+      "anchors": [
+        "startViaZygote",
+        "--nice-name=",
+        "startChildZygote"
+      ]
+    },
+    {
+      "id": "zygote-arguments",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/os/ZygoteArguments.java",
+      "sha256": "5937acfc95ec2ef7813405cb8f3b2fd31fe3a61ddc9804ade39c345951047d4b",
+      "anchors": [
+        "mNiceName",
+        "getAssignmentValue(arg)"
+      ]
+    },
+    {
+      "id": "zygote-connection",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/os/ZygoteConnection.java",
+      "sha256": "5f4532d2a53b07b6c809f1f06534e3688d7eac6e16b4fa9d68e9397d07a012c4",
+      "anchors": [
+        "mStartChildZygote",
+        "forkSimpleApps"
+      ]
+    },
+    {
+      "id": "zygote",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/os/Zygote.java",
+      "sha256": "b7375b57940d719753845991d7e89212a57f64792bb4e4d17d1ca84bab4f15c3",
+      "anchors": [
+        "ZygoteArguments.getInstance",
+        "validateUsapCommand"
+      ]
+    },
+    {
+      "id": "active-services",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/ActiveServices.java",
+      "sha256": "64df5e8de4b4d99572f139ab27fe49ef6b542d0daf6b75304b4a3ae41204eedc",
+      "anchors": [
+        "getProcessNameForService",
+        "name.getClassName()",
+        "realComp.getClassName()",
+        "FLAG_USE_APP_ZYGOTE"
+      ]
+    },
+    {
+      "id": "process-list",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/ProcessList.java",
+      "sha256": "2faefc787442d6f54c801cf21609d9319d932b39aae8156c0e5c34577b70f62e",
+      "anchors": [
+        "createAppZygoteForProcessIfNeeded",
+        "appZygote.startProcess",
+        "Process.start(entryPoint"
+      ]
+    },
+    {
+      "id": "app-zygote",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/android/os/AppZygote.java",
+      "sha256": "70ded18e23969820088d7bcb50d21ca37025622021587f77df42135465ec747b",
+      "anchors": [
+        "mAppInfo.processName",
+        "startChildZygote",
+        "preloadApp"
+      ]
+    },
+    {
+      "id": "zygote-native",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/jni/com_android_internal_os_Zygote.cpp",
+      "sha256": "ec8baf78eb5fd12c7196e9b825c284a6d78ced9e3109ff2f9126158dd7e11a69",
+      "anchors": [
+        "SpecializeCommon",
+        "PROCESS_PRIORITY_DEFAULT",
+        "ForkCommon"
+      ]
+    },
+    {
+      "id": "process-native",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/jni/android_util_Process.cpp",
+      "sha256": "766777892bfc062b444f38308de5ac642dc00bd7e96dff445e7fbd39957c73ac",
+      "anchors": [
+        "android_os_Process_setThreadPriority",
+        "androidSetThreadPriority"
+      ]
+    },
+    {
+      "id": "art-hprof",
+      "repository": "https://android.googlesource.com/platform/art",
+      "revision": "ba2c65bbab5a55e204b32d7b1480011a1bcb57f9",
+      "path": "runtime/hprof/hprof.cc",
+      "sha256": "a2f039a5d5ea6c71b46ad11447f4e1d7b41f4a4753d985dacf32704b02256821",
+      "anchors": [
+        "VisitObjectsPaused",
+        "DumpHeapInstanceObject",
+        "HPROF_PRIMITIVE_ARRAY_DUMP"
+      ]
+    },
+    {
+      "id": "ack-priority",
+      "repository": "https://android.googlesource.com/kernel/common",
+      "revision": "e65d894191a4f781c98ca3fe40d147d058483419",
+      "path": "kernel/sys.c",
+      "sha256": "7494b9bf3987a29b510947531db0d7a2e35e916cb1814ad4ff139e5ed2ee8868",
+      "anchors": [
+        "set_one_prio",
+        "security_task_setnice"
+      ]
+    },
+    {
+      "id": "ack-scheduler",
+      "repository": "https://android.googlesource.com/kernel/common",
+      "revision": "e65d894191a4f781c98ca3fe40d147d058483419",
+      "path": "kernel/sched/syscalls.c",
+      "sha256": "53f01a607ced1890a68a11d2993d54a0e2ec8121638f458e4c89a8f7e668d485",
+      "anchors": [
+        "RLIMIT_NICE",
+        "can_nice",
+        "CAP_SYS_NICE"
+      ]
+    },
+    {
+      "id": "ksu-manifest",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "manager/app/src/main/AndroidManifest.xml",
+      "sha256": "5ba5d74b428569668e22df25a6965d2288cfeeebbe594705f503ac3cd8637ea2",
+      "anchors": [
+        ":magica_boot",
+        "android:enabled=\"false\"",
+        "android:useAppZygote=\"true\""
+      ]
+    },
+    {
+      "id": "ksu-build",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "manager/app/build.gradle.kts",
+      "sha256": "03bef26e3d6b75cdb327b542bcc4934d7809135a74b4d73db4674554d7436fca",
+      "anchors": [
+        "namespace =",
+        "KSU_PACKAGE_NAME",
+        "applicationId = managerPackageName"
+      ]
+    },
+    {
+      "id": "ksu-boot",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "manager/app/src/main/java/me/weishu/kernelsu/magica/BootCompletedReceiver.java",
+      "sha256": "ac2d2d0d5879ce9997f114940d1c6d4a0caa2c1fd1244829e5c0cbec22b19587",
+      "anchors": [
+        "rootAvailable()",
+        "startService"
+      ]
+    },
+    {
+      "id": "ksu-service",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "manager/app/src/main/java/me/weishu/kernelsu/magica/MagicaService.java",
+      "sha256": "5e18e9838682cddfa914ac041ffe3552f02d45ca7ec5629f7ed75e3a0d9e086d",
+      "anchors": [
+        "class MagicaService"
+      ]
+    },
+    {
+      "id": "ksu-preload",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "manager/app/src/main/java/me/weishu/kernelsu/magica/AppZygotePreload.java",
+      "sha256": "c0918eb21341b626348da243d961534ea4405c9c4e061912a545cba89e4fa64e",
+      "anchors": [
+        "doPreload",
+        "appInfo.packageName"
+      ]
+    },
+    {
+      "id": "apatch-manifest",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "path": "app/src/main/AndroidManifest.xml",
+      "sha256": "d1d2d5a09bab678dc1ce61e229e0d52258eab462182571a8a2f6f5dbed82b4cf",
+      "anchors": [
+        ":magica_boot",
+        "android:enabled=\"false\"",
+        "android:useAppZygote=\"true\""
+      ]
+    },
+    {
+      "id": "apatch-build",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "path": "app/build.gradle.kts",
+      "sha256": "31bc09d2540ff519097fd3d6ea644652a9ca765bacbd3acfe8cbf656cffbd669",
+      "anchors": [
+        "namespace ="
+      ]
+    },
+    {
+      "id": "apatch-boot",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "path": "app/src/main/java/me/bmax/apatch/magica/BootCompletedReceiver.java",
+      "sha256": "643a89104e2f062133ba7ccb6150a5edd98148ce3816b54ecb94c935f8e1c2d1",
+      "anchors": [
+        "rootAvailable()",
+        "startService"
+      ]
+    },
+    {
+      "id": "apatch-service",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "path": "app/src/main/java/me/bmax/apatch/magica/MagicaService.java",
+      "sha256": "a0770972f967e38fee015c40dcaee42cd3100a89ed570f3dc6cb52d5333cbd03",
+      "anchors": [
+        "class MagicaService"
+      ]
+    },
+    {
+      "id": "apatch-preload",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "path": "app/src/main/java/me/bmax/apatch/magica/AppZygotePreload.java",
+      "sha256": "ccc755a13ddccd3ade90b8be2f5a19d748f9e6b531ac783e1b174ebcb4b3d981",
+      "anchors": [
+        "doPreload",
+        "appInfo.packageName"
+      ]
+    },
+    {
+      "id": "ksu-settings",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "manager/app/src/main/java/me/weishu/kernelsu/data/repository/SettingsRepositoryImpl.kt",
+      "sha256": "a9c307f48e942068a709925b3cc0293b35c47a0dc4a2f38c8b6dc52c662a2673",
+      "anchors": [
+        "autoJailbreak",
+        "setComponentEnabledSetting",
+        "COMPONENT_ENABLED_STATE_ENABLED"
+      ]
+    },
+    {
+      "id": "ksu-home",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "manager/app/src/main/java/me/weishu/kernelsu/ui/screen/home/HomeScreen.kt",
+      "sha256": "f3ef74ce1c848b0b6ee685e0dc18d1ab3e25982800b4905e37904536b7496986",
+      "anchors": [
+        "onJailbreakClick",
+        "context.startService"
+      ]
+    },
+    {
+      "id": "apatch-cli",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "path": "app/src/main/java/me/bmax/apatch/util/APatchCli.kt",
+      "sha256": "cba1f0a2369bfb761581722a6471f5a81d2bf2e9cd846b8f1c74a4d40f8a797d",
+      "anchors": [
+        "installJailbreak",
+        "apApp.startService"
+      ]
+    },
+    {
+      "id": "magisk-manifest",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "path": "app/core/src/main/AndroidManifest.xml",
+      "sha256": "8ee9ec0eb168216df34e50b6fd01eb2c92c87156a7584b18801268448fb1e0f8",
+      "anchors": [
+        ".Service",
+        ".JobService"
+      ]
+    },
+    {
+      "id": "magisk-migration",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "path": "app/core/src/main/java/com/topjohnwu/magisk/core/tasks/AppMigration.kt",
+      "sha256": "2f05bf0b2bdaef1deac0cb10e449210707d64ccef529b6f4f9282ec65b686347",
+      "anchors": [
+        "genPackageName",
+        "classNameGenerator",
+        "xml.patchStrings",
+        "context.assets.open(\"stub.apk\")"
+      ]
+    },
+    {
+      "id": "magisk-stub-build",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "path": "app/build-logic/src/main/java/Stub.kt",
+      "sha256": "f9f7e13a654cfc2d4a1388a9a39ec8c5c721523cc311f61221ecfe309772f986",
+      "anchors": [
+        "ManifestUpdater",
+        "COMPONENT_PLACEHOLDER",
+        "cmpList.shuffle"
+      ]
+    },
+    {
+      "id": "magisk-stub-manifest",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "path": "app/stub/src/main/AndroidManifest.xml",
+      "sha256": "02c31c5e99f9077abc6739c17074f0c40891b6c461a7ce26ff2482c96b7f644c",
+      "anchors": [
+        "<application"
+      ]
+    }
+  ]
+}

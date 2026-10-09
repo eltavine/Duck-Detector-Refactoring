@@ -4,6 +4,11 @@ The implementation is experimental. Source auditing and JVM fixtures do not vali
 runtime transport, historical reach or robustness across OEMs. No device was connected during this
 change (`adb devices -l` returned an empty list). Device results must be recorded before leaving Draft.
 
+For issue #363's proposed process-name extensions, follow the separate
+[experiment gates](research/nice-name/EXPERIMENTS.md) and
+[source audit](research/nice-name/README.md). Binary scanner controls do not
+establish renamed-manager coverage or authenticate a String's producer.
+
 ## Automated checks
 
 Run the repository checks and the focused tests:

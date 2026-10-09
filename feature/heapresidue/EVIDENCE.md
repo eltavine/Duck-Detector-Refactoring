@@ -85,6 +85,12 @@ prefixes. Neither a raw substring search nor a whole-heap text conversion is use
 
 ## Exact-name policy
 
+The [issue #363 process-name source audit](research/nice-name/README.md) records
+optional shared suffixes, AppZygote routing and Magisk's hide transformation.
+Its candidates have no device validation and are not enabled policy rules.
+See its [experiment gates](research/nice-name/EXPERIMENTS.md) before extending
+the current exact-name policy.
+
 Names are policy keys, never authenticated application identities. The initial list follows the
 project's existing root-manager and dangerous-app exact-name policies, without importing their
 implementation. Historical/alternate names deliberately remain keys and may no longer identify
