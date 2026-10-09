@@ -21,6 +21,7 @@ import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueArgument
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueOutcome
+import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRelease
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueReport
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueStage
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueProbeFailure
@@ -35,7 +36,7 @@ class HeapResidueCardModelMapper {
         status = report.toDetectorStatus(), verdict = verdict(report),
         summary = when {
             report.stage == HeapResidueStage.LOADING -> "Capturing a fresh isolated-process heap."
-            report.outcome == HeapResidueOutcome.UNSUPPORTED -> "Only the Android 16 ART baseline is audited. Other versions are unsupported."
+            report.outcome == HeapResidueOutcome.UNSUPPORTED -> "This release predates the audited Android 12 to 17 baselines and is unsupported."
             report.outcome == HeapResidueOutcome.UNAVAILABLE -> "The isolated heap probe was unavailable. No absence conclusion is possible."
             report.outcome == HeapResidueOutcome.INCONCLUSIVE -> "The snapshot could not establish usable startup argument evidence. Coverage is unknown."
             report.outcome == HeapResidueOutcome.OBSERVED -> "Exact target names occurred in startup argument strings. Origin and launch time are unverified; this does not prove current installation or compromise."
@@ -70,6 +71,13 @@ class HeapResidueCardModelMapper {
         return buildList {
             add(HeapResidueDetailRowModel("Coverage", "Unknown", status,
                 "Same-zygote snapshot only; no complete history since boot. Package names can be spoofed. OEM and GC timing require device validation."))
+            when (report.release) {
+                HeapResidueRelease.AUDITED -> add(HeapResidueDetailRowModel("Android release", "Audited baseline", status,
+                    "The HPROF format, dump path and isolated-process pipe policy were source-audited for Android 12 to 17."))
+                HeapResidueRelease.UNAUDITED -> add(HeapResidueDetailRowModel("Android release", "Newer than audited", status,
+                    "Only Android 12 to 17 were source-audited. This release relies on runtime checks alone: a format change that breaks parsing yields inconclusive; a changed dump path or policy yields unavailable."))
+                HeapResidueRelease.UNKNOWN -> Unit
+            }
             add(HeapResidueDetailRowModel("Dump bytes parsed", report.bytesRead.toString(), status))
             add(HeapResidueDetailRowModel("Startup argument strings", report.candidateCount.toString(), status,
                 "Excludes this app's own arguments, which every fresh child carries."))

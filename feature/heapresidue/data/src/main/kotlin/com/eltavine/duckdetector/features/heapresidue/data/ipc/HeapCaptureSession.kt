@@ -17,7 +17,6 @@
 
 package com.eltavine.duckdetector.features.heapresidue.data.ipc
 
-import androidx.annotation.RequiresApi
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -41,7 +40,6 @@ internal class HeapServiceUnavailableException(message: String) : IOException(me
 }
 
 /** Each session names a new isolated instance, with no app-zygote or external entry point. */
-@RequiresApi(36)
 internal class HeapCaptureSession(private val context: Context) {
     val result = CompletableDeferred<HeapDumpResult>()
     // Context.bindService: unbind regardless of the bind result. The IO caller closes in finally.
@@ -51,7 +49,7 @@ internal class HeapCaptureSession(private val context: Context) {
             if (code != HeapDumpProtocol.RESULT) return super.onTransact(code, data, reply, flags)
             data.enforceInterface(HeapDumpProtocol.CALLBACK)
             val value = HeapDumpResult(HeapDumpStatus.fromWire(data.readInt()), data.readLong(), data.readLong(), data.readLong())
-            data.enforceNoDataAvail()
+            data.requireFullyConsumed()
             result.complete(value)
             return true
         }

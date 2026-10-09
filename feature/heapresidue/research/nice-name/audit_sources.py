@@ -218,9 +218,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache-dir", type=Path, required=True)
     parser.add_argument("--fetch", action="store_true", help="download the pinned sources and commits")
+    parser.add_argument("--lock", type=Path, default=LOCK, help="source lock to verify (default: sources.json here)")
     args = parser.parse_args()
     try:
-        lock = json.loads(LOCK.read_text(encoding="utf-8"))
+        lock = json.loads(args.lock.read_text(encoding="utf-8"))
         if not isinstance(lock, dict) or lock.get("schema") != LOCK_SCHEMA:
             raise ValueError("unsupported source lock schema")
         sources, searches = lock.get("sources"), lock.get("searches")
