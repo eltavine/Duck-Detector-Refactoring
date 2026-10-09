@@ -41,18 +41,6 @@ data class SystemPropertiesMethodResult(
     val detail: String? = null,
 )
 
-/** The debug, system and radio property-area modification times, compared once per scan. */
-sealed interface PropertyAreaClocks {
-    /** System is newer than debug and debug is newer than radio; debug minus radio in nanoseconds. */
-    data class Ordered(val debugMinusRadioNanos: Long) : PropertyAreaClocks
-
-    /** All three were read and that order does not hold. */
-    data object NotOrdered : PropertyAreaClocks
-
-    /** At least one of the three files could not be stat'ed, so no order was compared. */
-    data object Unreadable : PropertyAreaClocks
-}
-
 data class SystemPropertiesReport(
     val stage: SystemPropertiesStage,
     /** Signals about individual properties, their sources and how those sources agree. */
@@ -74,8 +62,8 @@ data class SystemPropertiesReport(
     val propAreaHoleCount: Int,
     val methods: List<SystemPropertiesMethodResult>,
     val errorMessage: String? = null,
-    /** Null when the comparison was not run. */
-    val propertyAreaClocks: PropertyAreaClocks? = null,
+    /** Diagnostic only: the status, verdict and review counts never read it. */
+    val propertyAreaMtimes: List<PropertyAreaMtime> = emptyList(),
 ) {
     val signals: List<SystemPropertySignal>
         get() = propertySignals + propAreaSignals
@@ -89,15 +77,8 @@ data class SystemPropertiesReport(
     val hasDangerSignals: Boolean
         get() = dangerSignals.isNotEmpty()
 
-    val hasPropertyAreaAnomaly: Boolean
-        get() = propertyAreaClocks is PropertyAreaClocks.Ordered
-
-    /** Warning signals plus an ordered property-area clock gap, which is not a property signal. */
-    val reviewCount: Int
-        get() = warningSignals.size + if (hasPropertyAreaAnomaly) 1 else 0
-
     val hasWarningSignals: Boolean
-        get() = reviewCount > 0
+        get() = warningSignals.isNotEmpty()
 
     val bootSignalCount: Int
         get() = signals.count {

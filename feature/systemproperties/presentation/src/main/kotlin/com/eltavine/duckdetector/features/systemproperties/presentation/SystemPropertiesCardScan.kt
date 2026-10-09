@@ -182,7 +182,9 @@ internal fun buildMethodRows(report: SystemPropertiesReport): List<SystemPropert
                 detail = result.detail,
                 detailMonospace = true,
             )
-        }
+        } + listOfNotNull(
+            report.propertyAreaMtimes.takeIf { it.isNotEmpty() }?.let(::propertyAreaMtimeRow),
+        )
     }
 }
 
@@ -201,6 +203,7 @@ private fun placeholderMethodRows(
         "Cross-check rules",
         "Prop area layout",
         "Property catalog",
+        PROPERTY_AREA_MTIMES_LABEL,
     ).map { label ->
         SystemPropertiesDetailRowModel(
             label = label,
