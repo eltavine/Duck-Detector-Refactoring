@@ -89,7 +89,9 @@ The [issue #363 process-name source audit](research/nice-name/README.md) records
 optional shared suffixes, AppZygote routing and Magisk's hide transformation.
 Its candidates have no device validation and are not enabled policy rules.
 See its [experiment gates](research/nice-name/EXPERIMENTS.md) before extending
-the current exact-name policy.
+the current exact-name policy. The audit also bounds the existing rule: any app
+may declare a global process name equal to a policy package, so a match carried
+only by `--nice-name` can come from an unrelated app's genuine launch.
 
 Names are policy keys, never authenticated application identities. The initial list follows the
 project's existing root-manager and dangerous-app exact-name policies, without importing their

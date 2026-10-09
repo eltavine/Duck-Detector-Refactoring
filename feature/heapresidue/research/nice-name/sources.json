@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "audited_on": "2026-10-09",
   "sources": [
     {
@@ -11,7 +11,12 @@
       "anchors": [
         "startViaZygote",
         "--nice-name=",
-        "startChildZygote"
+        "startChildZygote",
+        "policySpecifiesUsapPoolLaunch",
+        "\"--start-child-zygote\",",
+        "ZYGOTE_POLICY_FLAG_SYSTEM_PROCESS /* zygotePolicyFlags */",
+        "null /* packageName */",
+        "null /* appDataDir */"
       ]
     },
     {
@@ -33,7 +38,9 @@
       "sha256": "5f4532d2a53b07b6c809f1f06534e3688d7eac6e16b4fa9d68e9397d07a012c4",
       "anchors": [
         "mStartChildZygote",
-        "forkSimpleApps"
+        "forkSimpleApps",
+        "parsedArgs.mInvokeWith != null || parsedArgs.mStartChildZygote",
+        "Zygote.forkSimpleApps(argBuffer"
       ]
     },
     {
@@ -44,7 +51,30 @@
       "sha256": "b7375b57940d719753845991d7e89212a57f64792bb4e4d17d1ca84bab4f15c3",
       "anchors": [
         "ZygoteArguments.getInstance",
-        "validateUsapCommand"
+        "validateUsapCommand",
+        "private static Runnable childMain("
+      ]
+    },
+    {
+      "id": "zygote-server",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/os/ZygoteServer.java",
+      "sha256": "303acb5c65deb98ccd3c7a7ed78097c3068ad3a3bd8cd08ff2e7100c3cc814f7",
+      "anchors": [
+        "boolean multipleForksOK = !isUsapPoolEnabled()"
+      ]
+    },
+    {
+      "id": "zygote-command-buffer",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/jni/com_android_internal_os_ZygoteCommandBuffer.cpp",
+      "sha256": "0491b127724d742a24d0fc1c88964dc362ec6e74e98733a5b3292ec7b1049863",
+      "anchors": [
+        "to avoid dynamic memory allocation",
+        "char mNiceName[NICE_NAME_BYTES];",
+        "CHILD_ZYGOTE = \"--start-child-zygote\""
       ]
     },
     {
@@ -57,7 +87,10 @@
         "getProcessNameForService",
         "name.getClassName()",
         "realComp.getClassName()",
-        "FLAG_USE_APP_ZYGOTE"
+        "FLAG_USE_APP_ZYGOTE",
+        "hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated",
+        "\":ishared:\"",
+        "inPrivateSharedIsolatedProcess && !isDefaultProcessService(sInfo)"
       ]
     },
     {
@@ -69,7 +102,43 @@
       "anchors": [
         "createAppZygoteForProcessIfNeeded",
         "appZygote.startProcess",
-        "Process.start(entryPoint"
+        "Process.start(entryPoint",
+        "mAppZygotes.get(app.info.processName, uid)",
+        "KILL_APP_ZYGOTE_DELAY_MS",
+        "app = getProcessRecordLocked(processName, info.uid);"
+      ]
+    },
+    {
+      "id": "activity-manager",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/ActivityManagerService.java",
+      "sha256": "d320cb52bbb2d761c22f454b3636098b3a67979142cd60da70b48fe085572e9b",
+      "anchors": [
+        "hostingRecord, zygotePolicyFlags, allowWhileBooting, isolated, 0 /* isolatedUid */"
+      ]
+    },
+    {
+      "id": "broadcast-queue",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/BroadcastQueueImpl.java",
+      "sha256": "1c08b7615ccafa6873e16570a2e3e3771e57add78bd354ac2b55a9e0981aa088",
+      "anchors": [
+        "getTemporaryAppAllowlistDuration() > 0",
+        "isActivityCapable ? ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE"
+      ]
+    },
+    {
+      "id": "user-controller",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "services/core/java/com/android/server/am/UserController.java",
+      "sha256": "75529a79f7e0354cf973b7b719d043b80663e58ef024c41022314c5db0708c0b",
+      "anchors": [
+        "getTemporaryAppAllowlistBroadcastOptions(REASON_LOCKED_BOOT_COMPLETED)",
+        "getTemporaryAppAllowlistBroadcastOptions(REASON_BOOT_COMPLETED)",
+        "bOptions.setTemporaryAppAllowlist(duration,"
       ]
     },
     {
@@ -81,7 +150,31 @@
       "anchors": [
         "mAppInfo.processName",
         "startChildZygote",
-        "preloadApp"
+        "preloadApp",
+        "Process.ZYGOTE_PROCESS.startChildZygote(",
+        "mAppInfo.processName + \"_zygote\""
+      ]
+    },
+    {
+      "id": "component-parse-utils",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/com/android/internal/pm/pkg/component/ComponentParseUtils.java",
+      "sha256": "d814be71edb933a9560645a9007cdbe1578b1f5dae638bee1bdeee807f597594",
+      "anchors": [
+        "public static ParseResult<String> buildCompoundName(",
+        "return input.success(pkg + proc);"
+      ]
+    },
+    {
+      "id": "framework-parsing-utils",
+      "repository": "https://android.googlesource.com/platform/frameworks/base",
+      "revision": "e96ce2b091188de3bf9cf6385e50a4559839d921",
+      "path": "core/java/android/content/pm/parsing/FrameworkParsingPackageUtils.java",
+      "sha256": "b4db00cfc47f4a34ae991095622f57ce946f067235861dcb4dee22af2a88f339",
+      "anchors": [
+        "public static String validateName(String name, boolean requireSeparator,",
+        "return \"bad character '\" + c + \"'\";"
       ]
     },
     {
@@ -151,7 +244,10 @@
       "anchors": [
         ":magica_boot",
         "android:enabled=\"false\"",
-        "android:useAppZygote=\"true\""
+        "android:useAppZygote=\"true\"",
+        "android:directBootAware=\"true\"",
+        "android:exported=\"false\"",
+        "me.weishu.kernelsu.magica.LAUNCH"
       ]
     },
     {
@@ -163,7 +259,32 @@
       "anchors": [
         "namespace =",
         "KSU_PACKAGE_NAME",
-        "applicationId = managerPackageName"
+        "applicationId = managerPackageName",
+        "IS_PR_BUILD",
+        "me.weishu.kernelsu.pr"
+      ]
+    },
+    {
+      "id": "ksu-kbuild",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "kernel/Kbuild",
+      "sha256": "0e36a4b5895f0fe3f22575ba51a3fd67127a7f3bc2b735228f6e3cd8b9cbaa28",
+      "anchors": [
+        "KSU_PACKAGE_NAME ?= me.weishu.kernelsu",
+        "KSU_PACKAGE_NAME ?= me.weishu.kernelsu.pr"
+      ]
+    },
+    {
+      "id": "ksu-throne-tracker",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "path": "kernel/manager/throne_tracker.c",
+      "sha256": "9ca193e8770efabe3d1be8ade214a0549546b7e7020d0ab53b3aab042e891953",
+      "anchors": [
+        "static bool maybe_manager_apk_dir",
+        "strncmp(pkg, KSU_PACKAGE_NAME, sizeof(KSU_PACKAGE_NAME)) == 0",
+        "strncmp(np->package, KSU_PACKAGE_NAME, KSU_MAX_PACKAGE_NAME) == 0"
       ]
     },
     {
@@ -174,7 +295,8 @@
       "sha256": "ac2d2d0d5879ce9997f114940d1c6d4a0caa2c1fd1244829e5c0cbec22b19587",
       "anchors": [
         "rootAvailable()",
-        "startService"
+        "startService",
+        "me.weishu.kernelsu.magica.LAUNCH"
       ]
     },
     {
@@ -207,7 +329,10 @@
       "anchors": [
         ":magica_boot",
         "android:enabled=\"false\"",
-        "android:useAppZygote=\"true\""
+        "android:useAppZygote=\"true\"",
+        "android:directBootAware=\"true\"",
+        "android:exported=\"true\"",
+        "me.bmax.apatch.magica.LAUNCH"
       ]
     },
     {
@@ -228,7 +353,8 @@
       "sha256": "643a89104e2f062133ba7ccb6150a5edd98148ce3816b54ecb94c935f8e1c2d1",
       "anchors": [
         "rootAvailable()",
-        "startService"
+        "startService",
+        "me.bmax.apatch.magica.LAUNCH"
       ]
     },
     {
@@ -261,7 +387,8 @@
       "anchors": [
         "autoJailbreak",
         "setComponentEnabledSetting",
-        "COMPONENT_ENABLED_STATE_ENABLED"
+        "COMPONENT_ENABLED_STATE_ENABLED",
+        "prefs.getBoolean(\"auto_jailbreak\", false)"
       ]
     },
     {
@@ -311,6 +438,26 @@
       ]
     },
     {
+      "id": "magisk-home",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "path": "app/apk/src/main/java/com/topjohnwu/magisk/ui/home/HomeScreen.kt",
+      "sha256": "d3e548c99c0224a0e6561a741cee92aff1435af06a6642b6c5bf79fc8d0cf0db",
+      "anchors": [
+        "AppMigration.patchAndHide(context, name)"
+      ]
+    },
+    {
+      "id": "magisk-test-environment",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "path": "app/core/src/main/java/com/topjohnwu/magisk/test/Environment.kt",
+      "sha256": "615a166a678fe03a50126df2939568b0fb89a3d3fd563c4b8b5717208b329504",
+      "anchors": [
+        "pkg = \"repackaged.$APP_PACKAGE_NAME\""
+      ]
+    },
+    {
       "id": "magisk-stub-build",
       "repository": "https://github.com/topjohnwu/Magisk",
       "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
@@ -330,6 +477,61 @@
       "sha256": "02c31c5e99f9077abc6739c17074f0c40891b6c461a7ce26ff2482c96b7f644c",
       "anchors": [
         "<application"
+      ]
+    }
+  ],
+  "searches": [
+    {
+      "id": "ksu-boot-receiver-references",
+      "repository": "https://github.com/tiann/KernelSU",
+      "revision": "df03912f70d92ff2aa9762ef82d607033d37e1da",
+      "claim": "The boot receiver, its process and its custom action appear only in the manifest, the receiver and the settings repository that toggles the receiver.",
+      "pattern": "setComponentEnabledSetting|COMPONENT_ENABLED_STATE|BootCompletedReceiver|magica\\.LAUNCH|magica_boot",
+      "expected": [
+        "manager/app/src/main/AndroidManifest.xml",
+        "manager/app/src/main/java/me/weishu/kernelsu/data/repository/SettingsRepositoryImpl.kt",
+        "manager/app/src/main/java/me/weishu/kernelsu/magica/BootCompletedReceiver.java"
+      ]
+    },
+    {
+      "id": "apatch-boot-receiver-references",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "claim": "The boot receiver, its process and its custom action appear only in the manifest and the receiver; no other tracked file enables the component or names the action.",
+      "pattern": "setComponentEnabledSetting|COMPONENT_ENABLED_STATE|BootCompletedReceiver|magica\\.LAUNCH|magica_boot",
+      "expected": [
+        "app/src/main/AndroidManifest.xml",
+        "app/src/main/java/me/bmax/apatch/magica/BootCompletedReceiver.java"
+      ]
+    },
+    {
+      "id": "apatch-application-id",
+      "repository": "https://github.com/bmax121/APatch",
+      "revision": "526003615ce1783b285cd9340643898325e13dfe",
+      "claim": "No tracked file assigns applicationId; its only occurrence is the manifest placeholder, so the build uses the namespace.",
+      "pattern": "applicationId",
+      "expected": [
+        "app/src/main/AndroidManifest.xml"
+      ]
+    },
+    {
+      "id": "magisk-component-processes",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "claim": "No tracked file declares android:process, so app and stub components run in the package default process.",
+      "pattern": "android:process",
+      "expected": []
+    },
+    {
+      "id": "magisk-hide-callers",
+      "repository": "https://github.com/topjohnwu/Magisk",
+      "revision": "b268b361f0d46318986cf50eac62e90c2dbcd235",
+      "claim": "patchAndHide is called only from the home-screen dialog, AppMigration.hide and the instrumentation test environment.",
+      "pattern": "patchAndHide\\(",
+      "expected": [
+        "app/apk/src/main/java/com/topjohnwu/magisk/ui/home/HomeScreen.kt",
+        "app/core/src/main/java/com/topjohnwu/magisk/core/tasks/AppMigration.kt",
+        "app/core/src/main/java/com/topjohnwu/magisk/test/Environment.kt"
       ]
     }
   ]

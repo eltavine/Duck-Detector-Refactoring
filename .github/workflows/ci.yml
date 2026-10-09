@@ -65,6 +65,19 @@ jobs:
       - name: Test SID-table native parsing and experiment control flow
         run: python3 capability/selinuxpolicy/data/src/test/python/test_sidtab_native.py
 
+      # Research tools pin the upstream inputs behind a detector's evidence record. Their
+      # self-tests are offline; the network audit stays an explicit manual step.
+      - name: Self-test detector research tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for suite in feature/*/research/*/; do
+            # unittest exits non-zero when it finds no tests, so skip suites without any.
+            compgen -G "${suite}test_*.py" > /dev/null || continue
+            python3 -m unittest discover -s "$suite" -p 'test_*.py'
+          done
+
       - name: Verify every detector stays inside its own directory
         run: python3 .github/scripts/check-detector-touch-points.py
 

@@ -31,21 +31,31 @@ class NiceNameResearchBoundaryTest {
     }
 
     @Test fun recognizableServiceClassDoesNotRecoverRenamedPackage() {
-        // ActiveServices puts the class in an isolated child's process name. Its presence
-        // in the main zygote's inherited heap is a separate, unproven question.
+        // ActiveServices puts the class in an isolated child's process name. For an AppZygote
+        // service such as MagicaService the AppZygote parses that request, not the collector's parent.
         val result = scan("--nice-name=$renamedPackage:$defaultPackage.magica.MagicaService")
         assertTrue(result.signals.isEmpty())
         assertEquals(1, result.candidates)
     }
 
     @Test fun appZygoteNameDoesNotProvideRootFamilyIdentity() {
-        // AppZygote uses a generic suffix. Even a known package plus that suffix is
-        // not the exact package key the current matcher accepts.
+        // AppZygote appends a generic "_zygote" without a colon, so the existing normalization
+        // keeps it in the package key: even the unrenamed manager's AppZygote name is missed.
         for (name in listOf(defaultPackage, renamedPackage, "com.example.benign")) {
             val result = scan("--nice-name=${name}_zygote")
             assertTrue(result.signals.isEmpty())
             assertEquals(1, result.candidates)
         }
+    }
+
+    @Test fun benignGlobalProcessNameIsIndistinguishableFromTargetNiceName() {
+        // Any app may declare android:process equal to a policy package; the zygote then parses
+        // that nice name beside the app's own package name, and HPROF does not link the two.
+        val bytes = HprofFixture().string("--package-name=com.example.benign")
+            .string("--nice-name=$defaultPackage").finish()
+        val result = ArtHprofScanner(setOf(defaultPackage)).scan(ByteArrayInputStream(bytes))
+        assertEquals(setOf(HeapResidueArgument.NICE_NAME), result.signals.single().arguments)
+        assertEquals(2, result.candidates)
     }
 
     @Test fun syntheticExactNameStillProducesOnlyUnauthenticatedStringEvidence() {
