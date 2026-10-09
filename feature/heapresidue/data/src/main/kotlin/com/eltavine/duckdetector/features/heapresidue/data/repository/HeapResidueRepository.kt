@@ -54,8 +54,8 @@ class HeapResidueRepository(context: Context) : DetectorScanner<HeapResidueRepor
 
     override suspend fun scan(): HeapResidueReport = scanMutex.withLock {
         withContext(Dispatchers.IO) {
-            val release = HeapResidueReleases.classify(Build.VERSION.SDK_INT)
-            // Lint's API check sees only this comparison, not classify(); both reject the same releases.
+            val release = HeapResidueReleases.current()
+            // Lint's API check sees only this comparison, not current(); both reject the same releases.
             if (release == null || Build.VERSION.SDK_INT < HeapResidueReleases.FIRST_AUDITED_API) {
                 return@withContext HeapResidueReport(stage = HeapResidueStage.READY, outcome = HeapResidueOutcome.UNSUPPORTED)
             }

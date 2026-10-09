@@ -71,11 +71,14 @@ class HeapResidueCardModelMapper {
         return buildList {
             add(HeapResidueDetailRowModel("Coverage", "Unknown", status,
                 "Same-zygote snapshot only; no complete history since boot. Package names can be spoofed. OEM and GC timing require device validation."))
+            val unaudited = "This build relies on runtime checks alone: a format change that breaks parsing yields inconclusive; a changed dump path or policy yields unavailable."
             when (report.release) {
                 HeapResidueRelease.AUDITED -> add(HeapResidueDetailRowModel("Android release", "Audited baseline", status,
-                    "The HPROF format, dump path and isolated-process pipe policy were source-audited for Android 12 to 17."))
-                HeapResidueRelease.UNAUDITED -> add(HeapResidueDetailRowModel("Android release", "Newer than audited", status,
-                    "Only Android 12 to 17 were source-audited. This release relies on runtime checks alone: a format change that breaks parsing yields inconclusive; a changed dump path or policy yields unavailable."))
+                    "Startup argument parsing, the HPROF format, the dump path and the isolated-process pipe policy were source-audited for Android 12 to 17."))
+                HeapResidueRelease.NEWER -> add(HeapResidueDetailRowModel("Android release", "Newer than audited", status,
+                    "Only Android 12 to 17 were source-audited. $unaudited"))
+                HeapResidueRelease.PRERELEASE -> add(HeapResidueDetailRowModel("Android release", "Pre-release build", status,
+                    "A developer preview reports the previous release's API level, but its sources were not audited. $unaudited"))
                 HeapResidueRelease.UNKNOWN -> Unit
             }
             add(HeapResidueDetailRowModel("Dump bytes parsed", report.bytesRead.toString(), status))

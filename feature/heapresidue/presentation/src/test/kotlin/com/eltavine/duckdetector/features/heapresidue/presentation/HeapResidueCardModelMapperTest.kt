@@ -48,7 +48,8 @@ class HeapResidueCardModelMapperTest {
             .map(HeapResidueReport(HeapResidueStage.READY, HeapResidueOutcome.NOT_OBSERVED, release = release))
             .scanRows.firstOrNull { it.label == "Android release" }
         assertEquals("Audited baseline", row(HeapResidueRelease.AUDITED)?.value)
-        assertEquals("Newer than audited", row(HeapResidueRelease.UNAUDITED)?.value)
+        assertEquals("Newer than audited", row(HeapResidueRelease.NEWER)?.value)
+        assertEquals("Pre-release build", row(HeapResidueRelease.PRERELEASE)?.value)
         assertNull(row(HeapResidueRelease.UNKNOWN))
     }
 }
