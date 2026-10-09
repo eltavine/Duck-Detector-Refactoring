@@ -5,6 +5,7 @@
 
 package com.eltavine.duckdetector.features.heapresidue.data.hprof
 
+import com.eltavine.duckdetector.features.heapresidue.data.repository.HeapResidueTargets
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueArgument
 import java.io.ByteArrayInputStream
 import org.junit.Assert.assertEquals
@@ -55,6 +56,16 @@ class NiceNameResearchBoundaryTest {
             .string("--nice-name=$defaultPackage").finish()
         val result = ArtHprofScanner(setOf(defaultPackage)).scan(ByteArrayInputStream(bytes))
         assertEquals(setOf(HeapResidueArgument.NICE_NAME), result.signals.single().arguments)
+        assertEquals(2, result.candidates)
+    }
+
+    @Test fun kernelSuPrBuildDefaultIsAnExactPolicyKey() {
+        // The pinned KernelSU build defaults IS_PR_BUILD managers to this package. It is still only
+        // an exact key, so a custom KSU_PACKAGE_NAME stays unmatched.
+        val bytes = HprofFixture().string("--nice-name=$defaultPackage.pr:magica_boot")
+            .string("--nice-name=$renamedPackage:magica_boot").finish()
+        val result = ArtHprofScanner(HeapResidueTargets.packages).scan(ByteArrayInputStream(bytes))
+        assertEquals("$defaultPackage.pr", result.signals.single().packageName)
         assertEquals(2, result.candidates)
     }
 

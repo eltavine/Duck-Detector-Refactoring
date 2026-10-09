@@ -26,6 +26,9 @@ visibility, renamed-manager coverage, or authentic root-family identity.
   transformation. This is a scoped negative result, not an impossibility proof.
 - Numeric niceness does not recover historical `--nice-name` and has no validated
   family-specific rule here. No scheduling or privilege probe is added.
+- The existing exact-name policy gains one key, `me.weishu.kernelsu.pr`, the
+  KernelSU PR-build default established below. It keeps the existing weak
+  semantics and does not address renaming.
 
 ## Inputs and reproducibility
 
@@ -121,8 +124,8 @@ parsed; it does not establish that the object survives:
   [ActivityManagerService][activity-manager] and [ProcessList][process-list] pass
   unchanged, so they are not USAP-eligible. This includes DuckDetector's own
   collector: at this revision it is forked on request rather than taken from a
-  pool. [EVIDENCE.md](../../EVIDENCE.md) keeps its USAP caveat until ancestry is
-  measured on devices.
+  pool. [EVIDENCE.md](../../EVIDENCE.md) records this, and the device ancestry
+  check stays in [VALIDATION.md](../../VALIDATION.md).
 - Receiver cold starts are latency-sensitive only when the broadcast carries a
   temporary allowlist ([BroadcastQueueImpl][broadcast-queue]).
   [UserController][user-controller] attaches one to `LOCKED_BOOT_COMPLETED` and
@@ -188,8 +191,9 @@ fixed namespace, and PR builds default to `me.weishu.kernelsu.pr`. The kernel
 compiles the same option ([Kbuild][ksu-kbuild]) and only crowns an installed
 manager whose package equals it ([throne_tracker.c][ksu-throne-tracker]). A
 renamed manager therefore pairs with a matching custom kernel or module build; it
-is not a transformation applied to an existing installation. The `.pr` default is
-absent from the current exact-name policy; adding it is a separate policy change.
+is not a transformation applied to an existing installation. The exact-name
+policy now lists the `.pr` default as well, matching the Root Managers coverage
+of dotted build variants; a custom `KSU_PACKAGE_NAME` stays unmatched.
 Preservation of final component names must still be checked in the merged/release
 manifest; this audit did not build a renamed manager APK.
 
@@ -307,19 +311,20 @@ coverage before its data/domain/presentation contracts are added.
 
 The `NiceNameResearchBoundaryTest` runs binary fixtures through the existing
 scanner: original versus renamed names, class suffixes, generic AppZygote names,
-a benign global process name equal to a policy package, synthetic exact-name
-acceptance, and detached-array rejection. Identifier widths and String encodings
+a benign global process name equal to a policy package, the production policy's
+KernelSU PR-build key, synthetic exact-name acceptance, and detached-array
+rejection. Identifier widths and String encodings
 are exercised for the rename comparison. These controls establish scanner
 behavior, not Android execution or exploit effectiveness.
 
 Local results on 2026-10-09: `:feature:heapresidue:data:testDebugUnitTest`
-passed all 28 tests, including six research controls; the source-audit tool's
+passed all 29 tests, including seven research controls; the source-audit tool's
 twelve tests passed. A fresh network fetch and the subsequent offline run
 verified all 40 pinned files and five searches. Repository evidence,
 source-length, detector-touch-point, reflection, text-protocol, JNI and native
-boundary checks passed, as did `git diff --check`. No runtime implementation or
-public API changed; app assembly and real-device smoke tests were not run for
-this research/test-only change.
+boundary checks passed, as did `git diff --check`. The only runtime change is
+the added exact-name key; no public API changed. App assembly was left to CI,
+and real-device smoke tests were not run.
 
 On 2026-10-09, `adb devices -l` returned no connected devices. No manager rename,
 receiver activation, AppZygote route, GC window, OEM coverage, real heap benchmark
