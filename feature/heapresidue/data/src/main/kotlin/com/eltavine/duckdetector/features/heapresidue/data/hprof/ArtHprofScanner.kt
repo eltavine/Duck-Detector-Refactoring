@@ -23,7 +23,9 @@ import java.io.InputStream
 internal data class HprofScan(val signals: List<HeapResidueSignal>, val candidates: Int, val bytesRead: Long)
 
 /**
- * Android 16 ART emits each String's synthetic value array immediately after its instance dump.
+ * ART emits each String's synthetic value array immediately after its instance dump; the audited
+ * Android 12 to 17 writers do so identically. Unknown top-level records, such as Android 17's
+ * monotonic-clock record after the header, are skipped by length.
  *
  * The dump includes boot-image and zygote-space objects, and parsing memory does not grow with
  * it, so the byte budget is generous; the capture deadline bounds the time spent.

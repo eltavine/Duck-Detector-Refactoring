@@ -25,6 +25,7 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.core.evidence.FailureName
+import com.eltavine.duckdetector.features.heapresidue.data.HeapResidueReleases
 import com.eltavine.duckdetector.features.heapresidue.data.hprof.ArtHprofScanner
 import com.eltavine.duckdetector.features.heapresidue.data.hprof.HprofFormatException
 import com.eltavine.duckdetector.features.heapresidue.data.ipc.DeadlinePipeInput
@@ -53,11 +54,12 @@ class HeapResidueRepository(context: Context) : DetectorScanner<HeapResidueRepor
 
     override suspend fun scan(): HeapResidueReport = scanMutex.withLock {
         withContext(Dispatchers.IO) {
-            // Only this ART baseline has been audited. Later releases must receive a separate audit.
-            if (Build.VERSION.SDK_INT != 36) return@withContext HeapResidueReport(
-                stage = HeapResidueStage.READY, outcome = HeapResidueOutcome.UNSUPPORTED,
-            )
-            try {
+            val release = HeapResidueReleases.current()
+            // Lint's API check sees only this comparison, not current(); both reject the same releases.
+            if (release == null || Build.VERSION.SDK_INT < HeapResidueReleases.FIRST_AUDITED_API) {
+                return@withContext HeapResidueReport(stage = HeapResidueStage.READY, outcome = HeapResidueOutcome.UNSUPPORTED)
+            }
+            val report = try {
                 withTimeoutOrNull(30_000) { collect() } ?: HeapResidueReport.failed("Heap capture timed out").copy(probeFailure = HeapResidueProbeFailure.TIMEOUT)
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -67,10 +69,11 @@ class HeapResidueRepository(context: Context) : DetectorScanner<HeapResidueRepor
             } catch (failure: Exception) {
                 HeapResidueReport.failed(FailureName.of(failure))
             }
+            report.copy(release = release)
         }
     }
 
-    @RequiresApi(36)
+    @RequiresApi(HeapResidueReleases.FIRST_AUDITED_API)
     private suspend fun collect(): HeapResidueReport {
         val session = HeapCaptureSession(context)
         val pipes = ParcelFileDescriptor.createReliablePipe()
