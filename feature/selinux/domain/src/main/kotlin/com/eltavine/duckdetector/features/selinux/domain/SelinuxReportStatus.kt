@@ -35,6 +35,7 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 contextValidity?.contextValidity?.verdict == SelinuxContextValidityVerdict.KSU_PRESENT -> DetectorStatus.danger()
                 policyloadSeqno?.isSecure == false -> DetectorStatus.danger()
                 procAttrCurrent?.isSecure == false -> DetectorStatus.danger()
+                methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } -> DetectorStatus.danger()
                 dirtyPolicyHit != null -> DetectorStatus.warning()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
                 // After the trusted oracle and carrier checks; before the info-level coverage state, which would mask it.

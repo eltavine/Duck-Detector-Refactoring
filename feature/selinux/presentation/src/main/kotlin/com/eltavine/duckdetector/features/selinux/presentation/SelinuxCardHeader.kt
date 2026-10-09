@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.features.selinux.domain.AppZygoteCarrierSupport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityState
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyWeakness
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxSidtabVerdict
 import com.eltavine.duckdetector.features.selinux.domain.sidtabReading
@@ -42,6 +43,9 @@ internal fun buildSubtitle(report: SelinuxReport): String {
         SelinuxStage.FAILED -> "local status probe failed"
         SelinuxStage.READY -> buildString {
             append("7 local checks")
+            if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING }) {
+                append(" + attr/current timing")
+            }
             if (report.policyAnalysis != null) {
                 append(" + policy")
             }
@@ -69,6 +73,8 @@ internal fun buildVerdict(report: SelinuxReport): String {
                     "Enforcing with KSU context materialized"
                 policyloadSeqno?.isSecure == false -> "Enforcing with app_zygote seqno split"
                 procAttrCurrent?.isSecure == false -> "Enforcing with app_zygote attr-write anomaly"
+                report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } ->
+                    "Enforcing with SELinux attr/current timing anomaly"
                 dirtyPolicyHit != null -> trustedPolicyRuleVerdict()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
                     "Enforcing with untrusted app_zygote carrier"
@@ -151,6 +157,9 @@ internal fun buildSummary(report: SelinuxReport): String {
                     }
                     if (policyloadSeqno?.isSecure == false) {
                         add("The zygotePreload app_zygote carrier observed a policyload/access seqno split; treat this as KernelSU-specific evidence bounded to the preload carrier.")
+                    }
+                    if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false }) {
+                        add("Repeated ordinary-app attr/current writes revealed a content-dependent timing asymmetry. This is an experimental, device-dependent clue, not conclusive attribution to KernelSU.")
                     }
                     if (dirtyPolicyHit != null) {
                         add(trustedPolicyRuleSummary(dirtyPolicyHit))

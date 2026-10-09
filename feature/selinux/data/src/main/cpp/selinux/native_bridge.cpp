@@ -22,6 +22,7 @@
 
 #include "common/payload_codec.h"
 #include "selinux/audit_probe.h"
+#include "selinux/attr_timing_probe.h"
 
 namespace {
 
@@ -63,4 +64,11 @@ Java_com_eltavine_duckdetector_features_selinux_data_native_SelinuxNativeAuditBr
         jobject
 ) {
     return to_jstring(env, encode_snapshot(duckdetector::selinux::collect_audit_snapshot()));
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_eltavine_duckdetector_features_selinux_data_native_SelinuxHideTimingNativeBridge_nativeCollectTimingSnapshot(
+        JNIEnv *env, jobject
+) {
+    return to_jstring(env, duckdetector::selinux::collect_attr_timing_probe());
 }

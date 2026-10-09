@@ -25,6 +25,8 @@ import com.eltavine.duckdetector.core.platform.PathStat
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValidityCarrierManager
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxAuditRuntimeProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.buildSelinuxHideTimingMethod
+import com.eltavine.duckdetector.features.selinux.data.native.SelinuxHideTimingNativeBridge
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditEvidence
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityAnalysis
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityState
@@ -46,6 +48,8 @@ class SelinuxRepository(
     private val contextValidityCarrierManager: SelinuxContextValidityCarrierManager =
         SelinuxContextValidityCarrierManager(context?.applicationContext),
 ) : DetectorScanner<SelinuxReport> {
+
+    private val hideTimingProbe = SelinuxHideTimingNativeBridge()
 
     override suspend fun scan(): SelinuxReport = withContext(Dispatchers.IO) {
         try {
@@ -88,6 +92,9 @@ class SelinuxRepository(
 
         val procAttrResult = checkViaProcAttr()
         methods += procAttrResult
+        // Independent ordinary-app write timing channel, NOT the dedicated
+        // app_zygote attr/current oracle. It never requires root privileges.
+        methods += buildSelinuxHideTimingMethod(hideTimingProbe.collectSnapshot())
 
         val carrierSnapshot = contextValidityCarrierManager.collectSnapshot(scanStartedAt)
         val carrierResult = contextValidityProbe.interpret(carrierSnapshot)

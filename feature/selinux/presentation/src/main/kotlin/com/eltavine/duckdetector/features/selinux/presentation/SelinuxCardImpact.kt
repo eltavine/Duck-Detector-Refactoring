@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.features.selinux.domain.AppZygoteCarrierSupport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityState
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyWeakness
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxSidtabVerdict
@@ -213,6 +214,12 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
         procAttrCurrent != null -> items += SelinuxImpactItemModel(
             procAttrCurrent.details ?: "The dedicated app_zygote attr/current write probe stayed unavailable.",
             DetectorStatus.info(InfoKind.SUPPORT),
+        )
+    }
+    if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false }) {
+        items += SelinuxImpactItemModel(
+            "Ordinary-app attr/current writes showed a reproducible timing asymmetry consistent with an extra pre-denial parsing path. Device-dependent evidence; not unique proof of KernelSU.",
+            DetectorStatus.danger(),
         )
     }
     if (dirtyPolicyHit != null) {

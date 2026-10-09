@@ -228,6 +228,10 @@ private fun List<SelinuxCheckResult>.ruleEdges(verdict: SelinuxRuleVerdict): Lis
     mapNotNull { it.policyRule }.filter { it.verdict == verdict }.map { it.edge }
 
 private fun methodStatus(result: SelinuxCheckResult): DetectorStatus {
+    if (result.oracle == SelinuxOracle.ATTR_CURRENT_TIMING) {
+        return if (result.isSecure == false) DetectorStatus.danger()
+        else DetectorStatus.info(InfoKind.SUPPORT)
+    }
     if (result.oracle == SelinuxOracle.CONTEXT_VALIDITY) {
         return when (result.contextValidity?.verdict) {
             SelinuxContextValidityVerdict.KSU_PRESENT -> DetectorStatus.danger()

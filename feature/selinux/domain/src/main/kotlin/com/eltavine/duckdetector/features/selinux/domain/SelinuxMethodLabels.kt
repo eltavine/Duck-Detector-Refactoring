@@ -23,6 +23,7 @@ enum class SelinuxOracle(val label: String) {
     PROC_ATTR_CURRENT_WRITE("app_zygote attr/current write"),
     POLICYLOAD_SEQNO("App-zygote seqno oracle"),
     SIDTAB_CONSISTENCY("SID-table query consistency"),
+    ATTR_CURRENT_TIMING("SELinux Hide attr/current timing (experimental)"),
 }
 
 /** The context validity oracle's reading of the two KSU-specific contexts; [label] is the status it is shown with. */
