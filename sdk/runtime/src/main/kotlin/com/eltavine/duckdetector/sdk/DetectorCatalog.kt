@@ -22,6 +22,7 @@ import com.eltavine.duckdetector.features.adbruntime.detector.AdbRuntimeDetector
 import com.eltavine.duckdetector.features.bootloader.detector.BootloaderDetector
 import com.eltavine.duckdetector.features.customrom.detector.CustomRomDetector
 import com.eltavine.duckdetector.features.dangerousapps.detector.DangerousAppsDetector
+import com.eltavine.duckdetector.features.heapresidue.detector.HeapResidueDetector
 import com.eltavine.duckdetector.features.kernelcheck.detector.KernelCheckDetector
 import com.eltavine.duckdetector.features.lsposed.detector.LSPosedDetector
 import com.eltavine.duckdetector.features.memory.detector.MemoryDetector
@@ -51,6 +52,7 @@ public object DetectorCatalog {
         AdbRuntimeDetector,
         CustomRomDetector,
         DangerousAppsDetector,
+        HeapResidueDetector,
         KernelCheckDetector,
         LSPosedDetector,
         MemoryDetector,

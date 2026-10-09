@@ -75,6 +75,13 @@
       "reason": "Reads the hidden framework fields named by custom ROM signatures; the presence of those fields is the evidence."
     },
     {
+      "path": "feature/heapresidue/data/src/main/kotlin/com/eltavine/duckdetector/features/heapresidue/data/ipc/IsolatedHeapDumpService.kt",
+      "uses": [
+        "operations"
+      ],
+      "reason": "Invokes only the hidden Debug.dumpHprofData(String, FileDescriptor) overload in the isolated VM without adding process-wide hidden API exemptions."
+    },
+    {
       "path": "feature/lsposed/data/src/main/kotlin/com/eltavine/duckdetector/features/lsposed/data/probes/LSPosedBridgeFieldProbe.kt",
       "uses": [
         "operations",
