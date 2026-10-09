@@ -20,8 +20,13 @@ package com.eltavine.duckdetector.features.heapresidue.data.hprof
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueArgument
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueSignal
 
-/** Anchored fixed-prefix dispatch followed by exact hash lookup, never a risk-name substring search. */
-internal class StartupArgumentMatcher(private val targets: Set<String>) {
+/**
+ * Anchored fixed-prefix dispatch followed by exact hash lookup, never a risk-name substring search.
+ *
+ * Arguments naming [host] are neither candidates nor matches: every fresh child carries its own
+ * startup arguments, so they show nothing about whether residue of other launches is visible.
+ */
+internal class StartupArgumentMatcher(private val targets: Set<String>, private val host: String? = null) {
     private val matches = linkedMapOf<String, MutableSet<HeapResidueArgument>>()
     var candidates = 0
         private set
@@ -47,7 +52,7 @@ internal class StartupArgumentMatcher(private val targets: Set<String>) {
             }
             else -> return
         }
-        if (!validPackage(packageName)) return
+        if (!validPackage(packageName) || packageName == host) return
         if (candidates == Int.MAX_VALUE) throw HprofFormatException("Too many candidate strings")
         candidates++
         if (packageName in targets) matches.getOrPut(packageName) { linkedSetOf() }.add(argument)

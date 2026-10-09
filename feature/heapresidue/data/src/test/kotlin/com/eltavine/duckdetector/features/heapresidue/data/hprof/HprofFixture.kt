@@ -54,6 +54,23 @@ internal class HprofFixture(private val idSize: Int = 4, private val classFirst:
         }
         return this
     }
+    /** ART-shaped segments of at most 128 objects: a VM-internal root, a 16-byte instance and an int array each. */
+    fun objects(count: Int): HprofFixture {
+        var left = count
+        while (left > 0) {
+            val batch = minOf(left, 128)
+            record(0x1c) {
+                repeat(batch) {
+                    val objectId = nextId++
+                    writeByte(0x8d); id(objectId)
+                    writeByte(0x21); id(objectId); writeInt(0); id(99); writeInt(16); write(ByteArray(16))
+                    writeByte(0x23); id(nextId++); writeInt(0); writeInt(8); writeByte(10); write(ByteArray(32))
+                }
+            }
+            left -= batch
+        }
+        return this
+    }
     fun metadata(value: String): HprofFixture { record(1) { id(123); writeBytes(value) }; return this }
     fun unknownHeapTag(): HprofFixture { record(0x1c) { writeByte(0x66) }; return this }
     fun finish(end: Boolean = true): ByteArray { if (!classFirst) classRecord(); if (end) record(0x2c) {}; return bytes.toByteArray() }

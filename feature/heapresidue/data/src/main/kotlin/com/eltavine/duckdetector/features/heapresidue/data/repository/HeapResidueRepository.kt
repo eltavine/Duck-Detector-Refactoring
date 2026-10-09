@@ -37,7 +37,6 @@ import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueStage
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueProbeFailure
 import com.eltavine.duckdetector.features.heapresidue.domain.heapResidueOutcome
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRetention
-import java.io.BufferedInputStream
 import java.io.File
 import java.net.SocketTimeoutException
 import kotlin.coroutines.cancellation.CancellationException
@@ -87,7 +86,7 @@ class HeapResidueRepository(context: Context) : DetectorScanner<HeapResidueRepor
             session.start(service, pipes[1])
             val coroutine = currentCoroutineContext()
             val raw = DeadlinePipeInput(pipes[0], deadline) { coroutine.ensureActive() }
-            val scan = ArtHprofScanner(HeapResidueTargets.packages - context.packageName).scan(BufferedInputStream(retention.wrap(raw), 64 * 1024))
+            val scan = ArtHprofScanner(HeapResidueTargets.packages, host = context.packageName).scan(retention.wrap(raw))
             val dump = session.result.await()
             complete = dump.status == HeapDumpStatus.COMPLETE
             val retained = retention.finish(complete)

@@ -24,6 +24,7 @@ import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueOutcome
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueReport
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueStage
 import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueProbeFailure
+import com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRetention
 import com.eltavine.duckdetector.features.heapresidue.domain.toDetectorStatus
 import com.eltavine.duckdetector.features.heapresidue.presentation.model.HeapResidueCardModel
 import com.eltavine.duckdetector.features.heapresidue.presentation.model.HeapResidueDetailRowModel
@@ -70,18 +71,19 @@ class HeapResidueCardModelMapper {
             add(HeapResidueDetailRowModel("Coverage", "Unknown", status,
                 "Same-zygote snapshot only; no complete history since boot. Package names can be spoofed. OEM and GC timing require device validation."))
             add(HeapResidueDetailRowModel("Dump bytes parsed", report.bytesRead.toString(), status))
-            add(HeapResidueDetailRowModel("Startup argument strings", report.candidateCount.toString(), status))
+            add(HeapResidueDetailRowModel("Startup argument strings", report.candidateCount.toString(), status,
+                "Excludes this app's own arguments, which every fresh child carries."))
             report.captureAgeMillis?.let { add(HeapResidueDetailRowModel("Age at dump entry", "$it ms", status,
                 "Measured from Process.getStartUptimeMillis, not an exact fork-to-snapshot interval. Hidden API setup follows this measurement.")) }
             report.dumpDurationMillis?.let { add(HeapResidueDetailRowModel("Dump call duration", "$it ms", status)) }
             report.gcCountBefore?.let { add(HeapResidueDetailRowModel("GC count before dump", it.toString(), status,
                 "Diagnostic counter; neither collector generation nor retained historical coverage is established.")) }
             add(HeapResidueDetailRowModel("Local debug retention", when (report.retention) {
-                com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRetention.UNKNOWN -> "Not reported"
-                com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRetention.DISABLED -> "Disabled"
-                com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRetention.SAVED -> "Saved locally"
-                com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRetention.TOO_LARGE -> "Size limit exceeded"
-                com.eltavine.duckdetector.features.heapresidue.domain.HeapResidueRetention.FAILED -> "Retention failed"
+                HeapResidueRetention.UNKNOWN -> "Not reported"
+                HeapResidueRetention.DISABLED -> "Disabled"
+                HeapResidueRetention.SAVED -> "Saved locally"
+                HeapResidueRetention.TOO_LARGE -> "Size limit exceeded"
+                HeapResidueRetention.FAILED -> "Retention failed"
             }, status, "Debuggable builds only; at most two dumps and 64 MiB in no-backup storage. Raw heaps are never included in reports."))
             report.probeFailure?.let { failure -> add(HeapResidueDetailRowModel("Unavailable stage", when (failure) {
                 HeapResidueProbeFailure.BINDING -> "Service binding"

@@ -23,7 +23,8 @@ python3 .github/scripts/check-native-boundaries.py
 Fixtures cover both identifier widths, compressed and UTF-16 values, field linkage, arbitrary-array
 and metadata rejection, package/process/path boundaries, duplicate correlation, every truncation of
 a complete fixture, unknown heap tags, unsigned lengths, trailing bytes, dump-size budget, short
-reads, zero-skip streams and malformed random inputs. Retention tests cover disabled mode, rolling
+reads, random block boundaries with zero-length reads, at most budget + 1 source bytes consumed,
+exclusion of the host's own arguments and malformed random inputs. Retention tests cover disabled mode, rolling
 count, incomplete cleanup, storage failure and oversize pass-through. Domain/presentation tests
 prove that a negative or failed scan never reads as all-clear and that findings do not claim current
 installation or compromise.
@@ -52,7 +53,10 @@ aggregate counts, policy-target matches and diagnostics.
 7. Force binding denial, service death, hidden method failure, reader cancellation, dump over-budget,
    disk-full/permission failures and GC before capture. Verify unavailable/inconclusive results,
    bounded completion, descriptor cleanup, no lingering child or partial retained file, and that
-   retention failure does not erase otherwise valid evidence.
+   retention failure does not erase otherwise valid evidence. Make another process of the package
+   fail to start while this binding is pending; verify one rebind with a new instance, and that a
+   second death yields a binding-unavailable card rather than a stuck or cancelled scan.
+   Record real dump sizes against the 256 MiB parse budget and the 32 MiB retention cap.
 8. Compare debuggable and release hosts, including an SDK host with custom Application/providers.
    Release scans must create no raw files; debug files must stay in no-backup private storage and
    be limited to two/64 MiB. Verify merged manifest has isolatedProcess=true, exported=false and
@@ -84,6 +88,13 @@ a separate 64 KiB buffered scan required 258 underlying reads. This tests block 
 bounded parser work for that fixture, not realistic object-heavy heap throughput, Android ART
 stop-the-world time, Binder transport, disk cost or end-to-end scan performance. There is no
 wall-clock performance threshold in CI.
+
+Follow-up review (2026-10-09, same host): the parser now owns its block buffer instead of reading
+byte by byte through a synchronized BufferedInputStream. A 16,814,327-byte object-heavy fixture in
+ART-shaped 128-object segments (VM-internal root, 16-byte instance and int array per object) went
+from a 27.1 ms to a 5.2 ms median; the large-array fixture went from 0.97 ms to 0.34 ms. Both read
+the source in 258 blocks. Medians use five warmups and nine scans; they are host JVM figures only.
+Focused tests: 28 passed (15 parser, 2 benchmark, 5 retention, 3 domain, 3 presentation).
 
 Runtime device results remain unrecorded: `adb devices -l` was empty. In particular, pipe access,
 hidden method invocation, eventual child exit after timeout, observation window and historic

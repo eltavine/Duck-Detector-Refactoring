@@ -22,11 +22,20 @@ import java.io.InputStream
 
 internal data class HprofScan(val signals: List<HeapResidueSignal>, val candidates: Int, val bytesRead: Long)
 
-/** Android 16 ART emits each String's synthetic value array immediately after its instance dump. */
-internal class ArtHprofScanner(private val targets: Set<String>, private val maxBytes: Long = 64L * 1024 * 1024) {
+/**
+ * Android 16 ART emits each String's synthetic value array immediately after its instance dump.
+ *
+ * The dump includes boot-image and zygote-space objects, and parsing memory does not grow with
+ * it, so the byte budget is generous; the capture deadline bounds the time spent.
+ */
+internal class ArtHprofScanner(
+    private val targets: Set<String>,
+    private val maxBytes: Long = 256L * 1024 * 1024,
+    private val host: String? = null,
+) {
     fun scan(source: InputStream): HprofScan {
         val input = HprofInput(source, maxBytes)
-        val state = State(input, StartupArgumentMatcher(targets))
+        val state = State(input, StartupArgumentMatcher(targets, host))
         val header = StringBuilder()
         while (true) {
             val byte = input.u1()
@@ -136,12 +145,11 @@ internal class ArtHprofScanner(private val targets: Set<String>, private val max
             input.skip(input.idSize + 4L)
             val classId = input.id()
             val size = input.u4()
-            val offset = valueOffset
-            if (classId == stringClassId && offset >= 0) {
-                if (offset + input.idSize > size) throw HprofFormatException("Short String instance")
-                input.skip(offset)
+            if (classId == stringClassId) {
+                if (valueOffset + input.idSize > size) throw HprofFormatException("Short String instance")
+                input.skip(valueOffset)
                 pendingArray = input.id()
-                input.skip(size - offset - input.idSize)
+                input.skip(size - valueOffset - input.idSize)
             } else input.skip(size)
         }
 

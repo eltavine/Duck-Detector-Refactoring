@@ -26,18 +26,26 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
+import com.eltavine.duckdetector.core.evidence.NamedFailure
+import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.suspendCancellableCoroutine
+
+/** A binding failure is a probe result, never a coroutine cancellation. */
+internal class HeapServiceUnavailableException(message: String) : IOException(message), NamedFailure {
+    override val failureName: String = "HeapServiceUnavailableException"
+}
 
 /** Each session names a new isolated instance, with no app-zygote or external entry point. */
 @RequiresApi(36)
 internal class HeapCaptureSession(private val context: Context) {
     val result = CompletableDeferred<HeapDumpResult>()
-    private val bound = AtomicBoolean(false)
-    private var connection: ServiceConnection? = null
+    // Context.bindService: unbind regardless of the bind result. The IO caller closes in finally.
+    private val connections = mutableListOf<ServiceConnection>()
     private val callback = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code != HeapDumpProtocol.RESULT) return super.onTransact(code, data, reply, flags)
@@ -49,28 +57,40 @@ internal class HeapCaptureSession(private val context: Context) {
         }
     }
 
-    suspend fun connect(): IBinder = suspendCancellableCoroutine { continuation ->
-        val handled = AtomicBoolean(false)
-        fun fail() {
-            if (handled.compareAndSet(false, true)) continuation.cancel(IllegalStateException("Isolated heap service unavailable"))
-            result.complete(HeapDumpResult(HeapDumpStatus.DUMP_FAILED))
+    // ActivityManager force-stops every service of this package when any of its processes fails to
+    // start (ProcessList.handleProcessStart -> forceStopPackageLocked, "start failure"), killing a
+    // binding that has not connected. Nothing was sent to that child, so a fresh instance is bound.
+    suspend fun connect(): IBinder {
+        repeat(BIND_ATTEMPTS) { bindOnce()?.let { return it } }
+        throw HeapServiceUnavailableException("Isolated heap service binding died before connecting")
+    }
+
+    // Null when the binding died before the service connected.
+    private suspend fun bindOnce(): IBinder? = suspendCancellableCoroutine { continuation ->
+        val connected = AtomicBoolean(false)
+        val settled = AtomicBoolean(false)
+        fun settle(outcome: Result<IBinder?>) {
+            if (settled.compareAndSet(false, true)) continuation.resumeWith(outcome)
         }
-        val serviceConnection = object : ServiceConnection {
+        fun unavailable(reason: String) = settle(Result.failure(HeapServiceUnavailableException(reason)))
+        // A connected child that dies can no longer report; the reader then sees EOF or truncation.
+        fun lost() { result.complete(HeapDumpResult(HeapDumpStatus.DUMP_FAILED)) }
+        val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                if (service == null) fail()
-                else if (handled.compareAndSet(false, true)) continuation.resume(service)
+                if (service == null) return unavailable("Isolated heap service returned no binder")
+                connected.set(true)
+                settle(Result.success(service))
             }
-            override fun onServiceDisconnected(name: ComponentName?) = fail()
-            override fun onBindingDied(name: ComponentName?) = fail()
-            override fun onNullBinding(name: ComponentName?) = fail()
+            override fun onServiceDisconnected(name: ComponentName?) = lost()
+            override fun onBindingDied(name: ComponentName?) = if (connected.get()) lost() else settle(Result.success(null))
+            override fun onNullBinding(name: ComponentName?) = unavailable("Isolated heap service returned a null binding")
         }
-        connection = serviceConnection
-        // The IO caller owns cleanup in finally, including cancellation during bind registration.
-        bound.set(context.bindIsolatedService(
+        connections += connection
+        val bound = context.bindIsolatedService(
             Intent(context, IsolatedHeapDumpService::class.java), Context.BIND_AUTO_CREATE,
-            "heap_" + UUID.randomUUID().toString().replace("-", ""), context.mainExecutor, serviceConnection,
-        ))
-        if (!bound.get()) fail()
+            "heap_" + UUID.randomUUID().toString().replace("-", ""), CALLBACK_EXECUTOR, connection,
+        )
+        if (!bound) unavailable("Isolated heap service could not be bound")
     }
 
     fun start(service: IBinder, writePipe: ParcelFileDescriptor) {
@@ -88,7 +108,14 @@ internal class HeapCaptureSession(private val context: Context) {
     }
 
     fun close() {
-        if (bound.compareAndSet(true, false)) connection?.let { runCatching { context.unbindService(it) } }
+        connections.forEach { runCatching { context.unbindService(it) } }
+        connections.clear()
         result.cancel()
+    }
+
+    private companion object {
+        const val BIND_ATTEMPTS = 2
+        // Callbacks only settle state; off the main thread they also run while a host blocks it.
+        val CALLBACK_EXECUTOR = Dispatchers.IO.asExecutor()
     }
 }

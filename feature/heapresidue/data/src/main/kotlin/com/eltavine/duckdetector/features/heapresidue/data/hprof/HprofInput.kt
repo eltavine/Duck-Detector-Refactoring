@@ -26,28 +26,50 @@ internal class HprofFormatException(message: String) : IOException(message), Nam
     override val failureName: String = "HprofFormatException"
 }
 
-/** Every read and skip consumes the same byte budget and current record boundary. */
+/**
+ * Every read and skip consumes the same byte budget and current record boundary.
+ *
+ * ART flushes each HPROF record separately and segments the heap every 128 objects, so a dump is
+ * mostly small records: values are decoded straight from an owned block buffer and skips only
+ * advance it. Refills never take more than maxBytes + 1 bytes from the source.
+ */
 internal class HprofInput(private val source: InputStream, private val maxBytes: Long) {
     var position: Long = 0
         private set
     var end: Long = maxBytes
     var idSize: Int = 4
-    private val scratch = ByteArray(8192)
+    private val buffer = ByteArray(64 * 1024)
+    private var index = 0
+    private var limit = 0
 
     fun byteOrEof(): Int {
+        if (index < limit && position < end && position < maxBytes) return take()
         if (position >= maxBytes) {
-            if (source.read() < 0) return -1
+            if (index == limit && !fill()) return -1
             throw HprofFormatException("Dump exceeds byte limit")
         }
         if (position >= end) throw HprofFormatException("Read crosses record boundary")
-        val value = source.read()
-        if (value >= 0) position++
-        return value
+        if (index == limit && !fill()) return -1
+        return take()
     }
 
     fun u1(): Int = byteOrEof().also { if (it < 0) throw EOFException("Truncated HPROF") }
-    fun u2(): Int = (u1() shl 8) or u1()
-    fun u4(): Long = (u2().toLong() shl 16) or u2().toLong()
+
+    fun u2(): Int {
+        if (!buffered(2)) return (u1() shl 8) or u1()
+        val value = (byteAt(0) shl 8) or byteAt(1)
+        consume(2)
+        return value
+    }
+
+    fun u4(): Long {
+        if (!buffered(4)) return (u2().toLong() shl 16) or u2().toLong()
+        val value = (byteAt(0).toLong() shl 24) or (byteAt(1).toLong() shl 16) or
+            (byteAt(2).toLong() shl 8) or byteAt(3).toLong()
+        consume(4)
+        return value
+    }
+
     fun id(): Long = if (idSize == 4) u4() else (u4() shl 32) or u4()
 
     fun skip(count: Long) {
@@ -56,9 +78,10 @@ internal class HprofInput(private val source: InputStream, private val maxBytes:
         }
         var left = count
         while (left > 0) {
-            val n = source.read(scratch, 0, minOf(left, scratch.size.toLong()).toInt())
-            if (n < 0) throw EOFException("Truncated HPROF")
-            if (n == 0) { u1(); left-- } else { position += n; left -= n }
+            if (index == limit && !fill()) throw EOFException("Truncated HPROF")
+            val n = minOf(left, (limit - index).toLong()).toInt()
+            consume(n)
+            left -= n
         }
     }
 
@@ -75,5 +98,33 @@ internal class HprofInput(private val source: InputStream, private val maxBytes:
         6, 10 -> 4
         7, 11 -> 8
         else -> throw HprofFormatException("Unknown HPROF field type")
+    }
+
+    // The fast path applies only where the byte-by-byte path could not fail.
+    private fun buffered(count: Int): Boolean =
+        limit - index >= count && minOf(end, maxBytes) - position >= count
+
+    private fun byteAt(offset: Int): Int = buffer[index + offset].toInt() and 0xff
+
+    private fun take(): Int = byteAt(0).also { consume(1) }
+
+    private fun consume(count: Int) {
+        index += count
+        position += count
+    }
+
+    // Only called with an empty buffer, when the source has supplied exactly position bytes.
+    private fun fill(): Boolean {
+        val room = minOf(buffer.size.toLong(), maxBytes + 1 - position).toInt()
+        var count = source.read(buffer, 0, room)
+        if (count == 0) {
+            // A zero-length block read breaks the InputStream contract; take one byte instead.
+            val single = source.read()
+            if (single >= 0) buffer[0] = single.toByte()
+            count = if (single >= 0) 1 else -1
+        }
+        index = 0
+        limit = maxOf(count, 0)
+        return count > 0
     }
 }
