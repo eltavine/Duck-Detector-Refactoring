@@ -29,6 +29,7 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityReading
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupProfile
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyloadSeqnoLabels
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxProcAttrCurrentVerdict
 import java.io.File
@@ -249,6 +250,12 @@ internal enum class EvidenceSource(
 internal fun buildAppZygoteAvcLookupMethod(snapshot: SelinuxAvcLookupSnapshot): SelinuxCheckResult {
     val state = snapshot.state
     val profile = if (state == SelinuxAvcLookupState.COLLECTED) snapshot.profile else 0
+    val profileReading = if (state == SelinuxAvcLookupState.COLLECTED) when (profile) {
+        1 -> SelinuxAvcLookupProfile.CONDITIONAL_DUPLICATE
+        2 -> SelinuxAvcLookupProfile.BOTH_DUPLICATE
+        3 -> SelinuxAvcLookupProfile.NATIVE_LIKE
+        else -> SelinuxAvcLookupProfile.NOISY
+    } else null
     val status = when {
         profile == 1 -> "A≈1 / B≈2 lookups per write (experimental)"
         profile == 2 -> "A≈2 / B≈2 lookups per write (experimental)"
@@ -286,5 +293,6 @@ internal fun buildAppZygoteAvcLookupMethod(snapshot: SelinuxAvcLookupSnapshot): 
         isSecure = null,
         permissionDenied = state == SelinuxAvcLookupState.PERMISSION_LIMITED,
         details = details,
+        avcLookupProfile = profileReading,
     )
 }

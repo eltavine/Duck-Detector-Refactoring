@@ -47,6 +47,8 @@ data class SelinuxCheckResult(
     val attrCurrentDetections: List<String> = emptyList(),
     /** The controlled attr/current probe's reading; set only on that oracle's result. */
     val attrCurrentVerdict: SelinuxProcAttrCurrentVerdict? = null,
+    /** Typed experimental AVC shape; never promoted to a root verdict without controlled evidence. */
+    val avcLookupProfile: SelinuxAvcLookupProfile? = null,
     /** True when this probe read the enforcing mode directly, from sysfs or getenforce. */
     val readsEnforcing: Boolean = false,
     val sidtab: SelinuxSidtabReading? = null,

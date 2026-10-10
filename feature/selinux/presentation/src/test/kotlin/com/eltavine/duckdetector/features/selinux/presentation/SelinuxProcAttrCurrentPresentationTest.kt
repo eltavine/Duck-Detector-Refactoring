@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.selinux.presentation
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupProfile
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxProcAttrCurrentVerdict
@@ -30,6 +31,34 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SelinuxProcAttrCurrentPresentationTest {
+
+    @Test
+    fun `AVC impact uses typed profile rather than display status`() {
+        val base = report(SelinuxProcAttrCurrentVerdict.UNAVAILABLE)
+        fun mapped(profile: SelinuxAvcLookupProfile?, label: String) = SelinuxCardModelMapper().map(
+            base.copy(methods = listOf(
+                SelinuxCheckResult(
+                    method = SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS.label,
+                    status = label,
+                    isSecure = null,
+                    permissionDenied = false,
+                    oracle = SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS,
+                    avcLookupProfile = profile,
+                ),
+            )),
+        )
+
+        // Intentionally misleading display strings must never drive impact classification.
+        val duplicate = mapped(SelinuxAvcLookupProfile.CONDITIONAL_DUPLICATE, "unavailable")
+        assertEquals(1, duplicate.impactItems.count { it.text.contains("AVC cache statistics") })
+        assertEquals(DetectorStatus.allClear(), duplicate.status)
+
+        for (profile in listOf(SelinuxAvcLookupProfile.NATIVE_LIKE, SelinuxAvcLookupProfile.NOISY, null)) {
+            val model = mapped(profile, "A≈1 / B≈2 lookups per write (experimental)")
+            assertEquals(0, model.impactItems.count { it.text.contains("AVC cache statistics") })
+            assertEquals(DetectorStatus.allClear(), model.status)
+        }
+    }
 
     private val rawRecord = "Controls=CONTROLS_PASSED raw=control0 malformed(open_errno=0, write_errno=22, returned=-1) | " +
         "KernelSU=NORMAL_EINVAL target=u:r:ksu:s0 raw=round0(open_errno=0, write_errno=22, returned=-1)"

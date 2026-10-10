@@ -27,6 +27,14 @@ enum class SelinuxOracle(val label: String) {
     APP_ZYGOTE_AVC_LOOKUPS("App Zygote AVC lookup profile (experimental)"),
 }
 
+/** Descriptive shared-counter shapes, never an attributed hook call or root verdict. */
+enum class SelinuxAvcLookupProfile {
+    CONDITIONAL_DUPLICATE,
+    BOTH_DUPLICATE,
+    NATIVE_LIKE,
+    NOISY,
+}
+
 /** The context validity oracle's reading of the two KSU-specific contexts; [label] is the status it is shown with. */
 enum class SelinuxContextValidityVerdict(val label: String) {
     CLEAN("00"),
