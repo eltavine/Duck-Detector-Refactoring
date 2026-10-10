@@ -218,7 +218,7 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
     }
     if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false }) {
         items += SelinuxImpactItemModel(
-            "Ordinary-app attr/current writes showed a reproducible timing asymmetry consistent with an extra pre-denial parsing path. Device-dependent evidence; not unique proof of KernelSU.",
+            "attr/current timing suggests extra context processing before access denial.",
             DetectorStatus.danger(),
         )
     }

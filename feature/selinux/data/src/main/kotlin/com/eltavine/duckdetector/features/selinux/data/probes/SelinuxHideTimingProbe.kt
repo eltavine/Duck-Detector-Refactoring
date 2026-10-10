@@ -22,9 +22,7 @@ internal fun buildSelinuxHideTimingMethod(result: SelinuxHideTimingSnapshot): Se
         append("paired A-B p10/median/p90=${result.deltaP10Ns}/${result.deltaMedianNs}/${result.deltaP90Ns} ns; ")
         append("half medians=${result.firstHalfNs}/${result.secondHalfNs} ns; ")
         append("A slower=${result.aSlower}/${result.pairs}; context bytes=${result.contextLength}.\n")
-        append("This is a device-dependent timing clue, not proof of KernelSU. ")
-        append("A clean result cannot rule out SELinux Hide, earlier KSU revisions or other root methods. ")
-        append("Observed on Android 14/GKI 5.15 with KernelSU df03912f; not reproduced on Android 17/GKI 6.12.")
+        append("Observed with KernelSU df03912f; not conclusive.")
     }
     return SelinuxCheckResult(
         method = SelinuxOracle.ATTR_CURRENT_TIMING.label,

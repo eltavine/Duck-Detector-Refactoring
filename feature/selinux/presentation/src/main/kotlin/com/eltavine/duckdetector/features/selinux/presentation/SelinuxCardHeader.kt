@@ -159,7 +159,7 @@ internal fun buildSummary(report: SelinuxReport): String {
                         add("The zygotePreload app_zygote carrier observed a policyload/access seqno split; treat this as KernelSU-specific evidence bounded to the preload carrier.")
                     }
                     if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false }) {
-                        add("Repeated ordinary-app attr/current writes revealed a content-dependent timing asymmetry. This is an experimental, device-dependent clue, not conclusive attribution to KernelSU.")
+                        add("Ordinary-app attr/current timing differs by payload; the signal is device-dependent.")
                     }
                     if (dirtyPolicyHit != null) {
                         add(trustedPolicyRuleSummary(dirtyPolicyHit))
