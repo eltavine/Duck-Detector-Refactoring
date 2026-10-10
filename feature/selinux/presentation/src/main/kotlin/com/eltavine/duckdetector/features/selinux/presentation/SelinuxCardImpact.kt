@@ -29,6 +29,7 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxProcAttrCurrentV
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxSidtabVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
+import com.eltavine.duckdetector.features.selinux.domain.avcLookupReading
 import com.eltavine.duckdetector.features.selinux.domain.contextValidityResult
 import com.eltavine.duckdetector.features.selinux.domain.contextValiditySupportState
 import com.eltavine.duckdetector.features.selinux.domain.firstTrustedPolicyRuleHit
@@ -224,14 +225,8 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             DetectorStatus.warning(),
         )
     }
-    val avcProfile = report.methods.firstOrNull { it.oracle == SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS }
-    if (avcProfile != null && avcProfile.status.contains("(experimental)")) {
-        items += SelinuxImpactItemModel(
-            "App Zygote AVC cache statistics show a repeatable lookup-count profile. " +
-                "This is a shared per-CPU counter, not an avc_has_perm call trace; " +
-                "stock/same-kernel Hide OFF controls are required before attributing it to KernelSU.",
-            DetectorStatus.info(InfoKind.SUPPORT),
-        )
+    if (avcLookupReading(report)?.extraLookupObserved == true) {
+        items += SelinuxImpactItemModel(AVC_EXTRA_LOOKUP_IMPACT, DetectorStatus.info(InfoKind.SUPPORT))
     }
     if (dirtyPolicyHit != null) {
         items += SelinuxImpactItemModel(

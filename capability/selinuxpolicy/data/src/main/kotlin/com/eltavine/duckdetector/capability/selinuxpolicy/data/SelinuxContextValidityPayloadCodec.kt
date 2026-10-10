@@ -367,7 +367,7 @@ internal object SelinuxContextValidityPayloadCodec {
                     .append('\n')
             }
             append("APP_ZYGOTE_AVC_LOOKUP=")
-                .append(escapeValue(SelinuxAvcLookupPayload.encode(snapshot.avcLookup)))
+                .append(escapeValue(SelinuxAvcLookupPayloadCodec.encode(snapshot.avcLookup)))
                 .append('\n')
             snapshot.failureReason?.takeIf { it.isNotEmpty() }?.let {
                 append("FAILURE_REASON=").append(escapeValue(it)).append('\n')

@@ -50,6 +50,8 @@ data class SelinuxCheckResult(
     /** True when this probe read the enforcing mode directly, from sysfs or getenforce. */
     val readsEnforcing: Boolean = false,
     val sidtab: SelinuxSidtabReading? = null,
+    /** The app_zygote AVC lookup experiment's reading; set only on that oracle's result. */
+    val avcLookup: SelinuxAvcLookupReading? = null,
 )
 
 /** What a policy analysis note says about the loaded policy. */

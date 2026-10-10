@@ -75,9 +75,7 @@ public class SelinuxContextValidityPreload {
                     trace("selinux: app zygote AVC lookup child")
                     avcLookupProbe.inspect().also {
                         avcLookup = it
-                        trace("selinux: AVC lookup state=${it.state} profile=${it.profile} " +
-                            "A=${it.rateA} B=${it.rateB} pairs=${it.pairs} rounds=${it.rounds} " +
-                            "stats_errno=${it.statsError} error=${it.error}")
+                        trace("selinux: AVC lookup state=${it.state} step=${it.step} errno=${it.errno} rounds=${it.rounds}")
                     }
                 },
                 inspectPolicyloadSeqno = {
@@ -332,8 +330,9 @@ public class SelinuxContextValidityPreload {
             }
 
             val snapshotWithAvc = snapshotWithProcAttr.copy(
-                avcLookup = if (carrierGateFailureReason == null) inspectAvcLookup()
-                    else SelinuxAvcLookupSnapshot(state = SelinuxAvcLookupState.UNSUPPORTED),
+                avcLookup = carrierGateFailureReason?.let {
+                    SelinuxAvcLookupSnapshot(state = SelinuxAvcLookupState.UNSUPPORTED, failureReason = it)
+                } ?: inspectAvcLookup(),
             )
             val snapshotWithPolicyloadSeqno = snapshotWithAvc.applyPolicyloadSeqnoResult(
                 failureReason = carrierGateFailureReason,
