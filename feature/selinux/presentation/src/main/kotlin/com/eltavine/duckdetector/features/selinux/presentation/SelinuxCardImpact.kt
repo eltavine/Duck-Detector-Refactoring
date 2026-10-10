@@ -25,6 +25,7 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityV
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyWeakness
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxProcAttrCurrentVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxSidtabVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
@@ -206,13 +207,14 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             DetectorStatus.warning(),
         )
 
-        procAttrCurrent?.isSecure == true -> items += SelinuxImpactItemModel(
-            "The dedicated app_zygote carrier rejected the tested privileged contexts with normal EINVAL results.",
+        procAttrCurrent?.attrCurrentVerdict == SelinuxProcAttrCurrentVerdict.NOT_RECOGNIZED -> items += SelinuxImpactItemModel(
+            "Controlled app_zygote attr/current writes did not recognize the tested privileged contexts. A hidden backup policy can produce the same EINVAL results.",
             DetectorStatus.info(InfoKind.SUPPORT),
         )
 
+        // Not details: the raw per-write record belongs in the method row, not an impact line.
         procAttrCurrent != null -> items += SelinuxImpactItemModel(
-            procAttrCurrent.details ?: "The dedicated app_zygote attr/current write probe stayed unavailable.",
+            "Controlled app_zygote attr/current writes: ${procAttrCurrent.status}. This is a coverage gap, not a clean result.",
             DetectorStatus.info(InfoKind.SUPPORT),
         )
     }

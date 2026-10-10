@@ -43,8 +43,10 @@ data class SelinuxCheckResult(
     val contextValidity: SelinuxContextValidityReading? = null,
     /** The policy rule this result answers; set only on policy rule queries. */
     val policyRule: SelinuxPolicyRule? = null,
-    /** The targets whose attr/current writes behaved anomalously; set only on that oracle's result. */
+    /** The candidates the controlled attr/current writes recognized; set only on that oracle's result. */
     val attrCurrentDetections: List<String> = emptyList(),
+    /** The controlled attr/current probe's reading; set only on that oracle's result. */
+    val attrCurrentVerdict: SelinuxProcAttrCurrentVerdict? = null,
     /** True when this probe read the enforcing mode directly, from sysfs or getenforce. */
     val readsEnforcing: Boolean = false,
     val sidtab: SelinuxSidtabReading? = null,

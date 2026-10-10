@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
+import com.eltavine.duckdetector.core.native.NativeLibraryHandle
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -50,5 +52,18 @@ class SelinuxProcAttrCurrentNativePayloadTest {
     @Test fun `legacy error-only results do not become findings`() {
         listOf("SUCCESS", "DETECTED_NON_EINVAL", "DETECTED_SECURITY_EXCEPTION", "UNKNOWN")
             .forEach { assertFalse(targets.first().copy(outcomeClass = it).detected()) }
+    }
+
+    @Test fun `an unloaded native library yields one unavailable controls record and no candidates`() {
+        val probe = SelinuxProcAttrCurrentProbe(NativeSnapshotCollector(object : NativeLibraryHandle {
+            override val isLoaded = false
+            override val loadFailureDetail = "dlopen failed"
+        }))
+        val rows = probe.inspect()
+        assertEquals(1, rows.size)
+        assertEquals(SelinuxProcAttrCurrentResult.CONTROL_LABEL, rows.single().label)
+        assertEquals(SelinuxProcAttrCurrentResult.OUTCOME_UNAVAILABLE, rows.single().outcomeClass)
+        assertTrue(rows.single().rawMessage.contains("dlopen failed"))
+        assertEquals(rows, SelinuxProcAttrCurrentNativePayload.decode(payload(rows)))
     }
 }

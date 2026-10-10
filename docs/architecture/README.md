@@ -59,8 +59,9 @@ Arrows point from a module to the modules it may depend on. Feature units never 
 The selinuxpolicy context-write probe owns a dedicated JNI entry, IO adapter and fixed child
 report. It uses the existing disposable-child runner without sharing mutable state with SID-table
 or timing probes. Kotlin validates framing and carries raw results through the retained preload
-snapshot; SELinux data interprets controls and repeated refusals, and presentation assigns warning
-severity. The carrier itself never performs these identity-changing writes.
+snapshot; SELinux data interprets controls and repeated refusals into a typed domain verdict, and
+presentation shows recognition as a warning and every other verdict as information. The carrier
+itself never performs these identity-changing writes.
 
 The selinuxpolicy SID-table experiment uses its existing shared preload/carrier and a narrow JNI
 bridge inside the same native unit. It reports fixed-size child observations and collection outcomes;
