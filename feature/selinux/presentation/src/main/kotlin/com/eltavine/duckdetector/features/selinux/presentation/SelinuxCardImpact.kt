@@ -20,7 +20,6 @@ package com.eltavine.duckdetector.features.selinux.presentation
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.selinux.domain.AppZygoteCarrierSupportState
-import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupProfile
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityState
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxContextValidityVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
@@ -226,10 +225,7 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
         )
     }
     val avcProfile = report.methods.firstOrNull { it.oracle == SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS }
-    if (avcProfile?.avcLookupProfile in setOf(
-            SelinuxAvcLookupProfile.CONDITIONAL_DUPLICATE,
-            SelinuxAvcLookupProfile.BOTH_DUPLICATE,
-        )) {
+    if (avcProfile != null && avcProfile.status.contains("(experimental)")) {
         items += SelinuxImpactItemModel(
             "App Zygote AVC cache statistics show a repeatable lookup-count profile. " +
                 "This is a shared per-CPU counter, not an avc_has_perm call trace; " +
