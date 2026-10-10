@@ -102,6 +102,7 @@ class SelinuxRepository(
         methods += buildContextValidityMethod(contextValidityResult)
         methods += buildPolicyloadSeqnoMethod(contextValidityResult)
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
+        methods += buildAppZygoteAvcLookupMethod(carrierSnapshot.avcLookup)
         methods += buildDirtyPolicyMethods(carrierSnapshot)
         methods += buildSidtabMethod(carrierSnapshot.sidtab)
 

@@ -108,6 +108,7 @@ public data class SelinuxContextValiditySnapshot(
     val procAttrCurrentProbeAttempted: Boolean = false,
     val procAttrCurrentResults: List<SelinuxProcAttrCurrentResult> = emptyList(),
     val procAttrCurrentFailureReason: String? = null,
+    val avcLookup: SelinuxAvcLookupSnapshot = SelinuxAvcLookupSnapshot(),
     val failureReason: String? = null,
     val notes: List<String> = emptyList(),
     /**

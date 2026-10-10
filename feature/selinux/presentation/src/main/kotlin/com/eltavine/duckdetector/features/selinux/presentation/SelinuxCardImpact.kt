@@ -224,6 +224,15 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             DetectorStatus.warning(),
         )
     }
+    val avcProfile = report.methods.firstOrNull { it.oracle == SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS }
+    if (avcProfile != null && avcProfile.status.contains("(experimental)")) {
+        items += SelinuxImpactItemModel(
+            "App Zygote AVC cache statistics show a repeatable lookup-count profile. " +
+                "This is a shared per-CPU counter, not an avc_has_perm call trace; " +
+                "stock/same-kernel Hide OFF controls are required before attributing it to KernelSU.",
+            DetectorStatus.info(InfoKind.SUPPORT),
+        )
+    }
     if (dirtyPolicyHit != null) {
         items += SelinuxImpactItemModel(
             trustedPolicyRuleImpact(dirtyPolicyHit),

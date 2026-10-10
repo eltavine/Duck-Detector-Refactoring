@@ -183,6 +183,7 @@ public open class SelinuxContextValidityBridge(
             "POLICYLOAD_SEQNO_FAILURE_REASON" -> copy(policyloadSeqnoFailureReason = value.decodeValue())
             "PROC_ATTR_CURRENT_PROBE_ATTEMPTED" -> copy(procAttrCurrentProbeAttempted = value.asBool())
             "PROC_ATTR_CURRENT_FAILURE_REASON" -> copy(procAttrCurrentFailureReason = value.decodeValue())
+            "APP_ZYGOTE_AVC_LOOKUP" -> copy(avcLookup = SelinuxAvcLookupPayload.decode(value.decodeValue()))
             "FAILURE_REASON" -> copy(failureReason = value.decodeValue())
             else -> this
         }

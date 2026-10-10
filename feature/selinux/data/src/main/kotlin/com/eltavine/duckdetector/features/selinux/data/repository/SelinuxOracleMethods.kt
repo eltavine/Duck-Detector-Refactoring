@@ -19,6 +19,8 @@ package com.eltavine.duckdetector.features.selinux.data.repository
 
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.DedicatedCarrierState
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxPolicyloadSeqnoState
+import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxAvcLookupSnapshot
+import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxAvcLookupState
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxProcAttrCurrentResult
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbeResult
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityState
@@ -241,4 +243,48 @@ internal enum class EvidenceSource(
     val label: String,
 ) {
     DEDICATED_CARRIER("dedicated app_zygote carrier"),
+}
+
+/** A per-CPU global counter profile, not a direct count of avc_has_perm() calls. */
+internal fun buildAppZygoteAvcLookupMethod(snapshot: SelinuxAvcLookupSnapshot): SelinuxCheckResult {
+    val state = snapshot.state
+    val profile = if (state == SelinuxAvcLookupState.COLLECTED) snapshot.profile else 0
+    val status = when {
+        profile == 1 -> "A≈1 / B≈2 lookups per write (experimental)"
+        profile == 2 -> "A≈2 / B≈2 lookups per write (experimental)"
+        profile == 3 -> "A≈1 / B≈1 lookups per write (native-like)"
+        state == SelinuxAvcLookupState.COLLECTED -> "Count rates inconsistent or noisy"
+        state == SelinuxAvcLookupState.TIMING_ONLY -> "Timing only (AVC counters unavailable)"
+        state == SelinuxAvcLookupState.PERMISSION_LIMITED -> "Permission limited"
+        state == SelinuxAvcLookupState.UNSUPPORTED -> "Unsupported"
+        state == SelinuxAvcLookupState.UNAVAILABLE || state == SelinuxAvcLookupState.NOT_COLLECTED -> "Unavailable"
+        else -> "Inconclusive"
+    }
+    val details = buildString {
+        append("app_zygote disposable child; two invalid contexts (A=invalid type, B=leading newline), both must return EINVAL; ")
+        append("128 AB/BA pairs, 32 warmups; per-CPU global /sys/fs/selinux/avc/cache_stats.\n")
+        append("State=$state; errno=${snapshot.error}; stats errno=${snapshot.statsError}; child end=${snapshot.childEnd}; ")
+        append("CPU=${snapshot.cpu}/${snapshot.cpuRows}; rounds=${snapshot.rounds}; writes/batch=${snapshot.writesPerBatch}; ")
+        append("A lookups=${snapshot.lookupsA}, B lookups=${snapshot.lookupsB}; ")
+        append("rounds A=${snapshot.batchesA.joinToString()}, B=${snapshot.batchesB.joinToString()}; ")
+        append("rate A=${snapshot.rateA?.let { "%.3f".format(java.util.Locale.ROOT, it) } ?: "n/a"}, ")
+        append("rate B=${snapshot.rateB?.let { "%.3f".format(java.util.Locale.ROOT, it) } ?: "n/a"}; ")
+        append("A median=${snapshot.medianANs} ns, B median=${snapshot.medianBNs} ns; ")
+        append("paired A−B median=${snapshot.pairedDeltaNs} ns. ")
+        append("Each rate includes other threads' AVC activity on the sampled CPU. ")
+        append("The timing difference also includes context-parser and original-handler costs. ")
+        append("A:1/B:2 or A:2/B:2 may fit a duplicate-check path but does not prove two calls, ")
+        append("identify KernelSU, or establish the loaded commit; verify with Hide OFF/ON/OFF and call tracing. ")
+        append("A:1/B:1 or inaccessible stats do not rule out hidden policy.")
+    }
+    return SelinuxCheckResult(
+        method = SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS.label,
+        oracle = SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS,
+        status = status,
+        // Unpaired single-state profiles are evidence for follow-up, NOT a
+        // root verdict. Stock + same-kernel Hide OFF controls are not captured.
+        isSecure = null,
+        permissionDenied = state == SelinuxAvcLookupState.PERMISSION_LIMITED,
+        details = details,
+    )
 }

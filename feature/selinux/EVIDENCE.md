@@ -88,6 +88,10 @@ stock/pre-fix/fixed-kernel device measurements have not been obtained. The row a
 state the global-statistics limitation and the retained preload capture time; no sensitivity,
 false-positive rate or coverage of all Android kernels is claimed.
 
+### Experimental App Zygote AVC lookup profile
+
+The dedicated app-zygote preload now carries an independent AVC snapshot from a disposable child. It reports whether `cache_stats` can be read, a fixed-CPU A/B estimate of lookup counts per rejected `attr/current` write, 128 paired timing samples, the number of completed rounds, and failure/coverage status. It does not conflate the shared AVC counter with a per-TID `avc_has_perm()` call trace. Stable `A≈1/B≈2`, `A≈2/B≈2`, and native-like `A≈1/B≈1` patterns are **descriptive** only. No profile is treated as a clean or definitive Root/KernelSU verdict. The method row retains the measurements; a duplicate-looking profile adds only an informational impact entry. See `capability/selinuxpolicy/EVIDENCE.md` for source semantics and validation gaps.
+
 ### Controlled attr/current recognition and ordinary-app timing
 
 - Observable signal: repeated candidate-context refusal classes with preceding/following malformed and stock controls in the app_zygote child, plus the existing ordinary-app paired timing samples.

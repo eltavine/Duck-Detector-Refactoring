@@ -46,6 +46,9 @@ internal fun buildSubtitle(report: SelinuxReport): String {
             if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING }) {
                 append(" + attr/current timing")
             }
+            if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS }) {
+                append(" + app_zygote AVC counters")
+            }
             if (report.policyAnalysis != null) {
                 append(" + policy")
             }

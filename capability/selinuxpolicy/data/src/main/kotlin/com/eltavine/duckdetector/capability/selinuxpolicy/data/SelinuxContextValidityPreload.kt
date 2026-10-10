@@ -28,6 +28,7 @@ public class SelinuxContextValidityPreload {
     private val bridge = SelinuxContextValidityBridge()
     private val statusPageProbe = SelinuxStatusPageProbe()
     private val procAttrCurrentProbe = SelinuxProcAttrCurrentProbe()
+    private val avcLookupProbe = SelinuxAvcLookupProbe()
     private val policyloadSeqnoProbe = SelinuxPolicyloadSeqnoProbe()
 
     /**
@@ -42,6 +43,7 @@ public class SelinuxContextValidityPreload {
         // Kept outside the try: a finished experiment's kernel side effects outlive a later failure.
         var sidtab = SelinuxSidtabSnapshot()
         var procAttrResults: List<SelinuxProcAttrCurrentResult>? = null
+        var avcLookup = SelinuxAvcLookupSnapshot()
         val payload = try {
             beforeCollection()
             val currentUid = Os.getuid()
@@ -69,6 +71,15 @@ public class SelinuxContextValidityPreload {
                     trace("selinux: controlled proc attr current child")
                     procAttrCurrentProbe.inspect().also { procAttrResults = it }
                 },
+                inspectAvcLookup = {
+                    trace("selinux: app zygote AVC lookup child")
+                    avcLookupProbe.inspect().also {
+                        avcLookup = it
+                        trace("selinux: AVC lookup state=${it.state} profile=${it.profile} " +
+                            "A=${it.rateA} B=${it.rateB} pairs=${it.pairs} rounds=${it.rounds} " +
+                            "stats_errno=${it.statsError} error=${it.error}")
+                    }
+                },
                 inspectPolicyloadSeqno = {
                     trace("selinux: policyload seqno")
                     policyloadSeqnoProbe.inspect(statusPage)
@@ -83,7 +94,7 @@ public class SelinuxContextValidityPreload {
             )
             SelinuxContextValidityPayloadCodec.encode(snapshot)
         } catch (throwable: Throwable) {
-            fallbackPayload(throwable.message ?: "SELinux app zygote preload failed.", sidtab, procAttrResults)
+            fallbackPayload(throwable.message ?: "SELinux app zygote preload failed.", sidtab, procAttrResults, avcLookup)
         } finally {
             // The access checks above leave libselinux's AVC netlink socket open. Before Android 12,
             // AppZygoteInit does not exempt what doPreload opened, so the next fork of this app zygote
@@ -237,11 +248,13 @@ public class SelinuxContextValidityPreload {
         reason: String,
         sidtab: SelinuxSidtabSnapshot = SelinuxSidtabSnapshot(),
         procAttrResults: List<SelinuxProcAttrCurrentResult>? = null,
+        avcLookup: SelinuxAvcLookupSnapshot = SelinuxAvcLookupSnapshot(),
     ): String {
         return SelinuxContextValidityPayloadCodec.encode(fallbackSnapshot(reason).copy(
             sidtab = sidtab,
             procAttrCurrentProbeAttempted = procAttrResults != null,
             procAttrCurrentResults = procAttrResults.orEmpty(),
+            avcLookup = avcLookup,
         ))
     }
 
@@ -295,6 +308,7 @@ public class SelinuxContextValidityPreload {
             isUserBuild: Boolean,
             accessCheckBlockReason: String?,
             inspectProcAttrCurrent: () -> List<com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxProcAttrCurrentResult>,
+            inspectAvcLookup: () -> SelinuxAvcLookupSnapshot = { SelinuxAvcLookupSnapshot() },
             inspectPolicyloadSeqno: () -> SelinuxPolicyloadSeqnoResult,
             checkAccess: (String, String, String, String) -> Boolean?,
         ): SelinuxContextValiditySnapshot {
@@ -317,7 +331,11 @@ public class SelinuxContextValidityPreload {
                 )
             }
 
-            val snapshotWithPolicyloadSeqno = snapshotWithProcAttr.applyPolicyloadSeqnoResult(
+            val snapshotWithAvc = snapshotWithProcAttr.copy(
+                avcLookup = if (carrierGateFailureReason == null) inspectAvcLookup()
+                    else SelinuxAvcLookupSnapshot(state = SelinuxAvcLookupState.UNSUPPORTED),
+            )
+            val snapshotWithPolicyloadSeqno = snapshotWithAvc.applyPolicyloadSeqnoResult(
                 failureReason = carrierGateFailureReason,
                 inspectPolicyloadSeqno = inspectPolicyloadSeqno,
             )

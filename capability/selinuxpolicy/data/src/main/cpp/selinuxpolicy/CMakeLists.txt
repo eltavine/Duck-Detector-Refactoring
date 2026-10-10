@@ -11,5 +11,6 @@ duckdetector_native_unit(duckdetector_selinuxpolicy
     proc_attr_probe.cpp
     proc_attr_io.cpp
     proc_attr_native_bridge.cpp
+    avc_lookup_probe.cpp
     selinux_status_page_probe.cpp
 )
