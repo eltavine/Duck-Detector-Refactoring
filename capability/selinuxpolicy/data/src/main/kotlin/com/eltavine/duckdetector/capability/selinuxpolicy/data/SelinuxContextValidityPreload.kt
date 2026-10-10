@@ -41,6 +41,7 @@ public class SelinuxContextValidityPreload {
     ) {
         // Kept outside the try: a finished experiment's kernel side effects outlive a later failure.
         var sidtab = SelinuxSidtabSnapshot()
+        var procAttrResults: List<SelinuxProcAttrCurrentResult>? = null
         val payload = try {
             beforeCollection()
             val currentUid = Os.getuid()
@@ -65,7 +66,8 @@ public class SelinuxContextValidityPreload {
                 isUserBuild = Build.TYPE == "user",
                 accessCheckBlockReason = accessCheckBlockReason,
                 inspectProcAttrCurrent = {
-                    procAttrCurrentProbe.inspect { context -> trace("selinux: proc attr current write $context") }
+                    trace("selinux: controlled proc attr current child")
+                    procAttrCurrentProbe.inspect().also { procAttrResults = it }
                 },
                 inspectPolicyloadSeqno = {
                     trace("selinux: policyload seqno")
@@ -81,7 +83,7 @@ public class SelinuxContextValidityPreload {
             )
             SelinuxContextValidityPayloadCodec.encode(snapshot)
         } catch (throwable: Throwable) {
-            fallbackPayload(throwable.message ?: "SELinux app zygote preload failed.", sidtab)
+            fallbackPayload(throwable.message ?: "SELinux app zygote preload failed.", sidtab, procAttrResults)
         } finally {
             // The access checks above leave libselinux's AVC netlink socket open. Before Android 12,
             // AppZygoteInit does not exempt what doPreload opened, so the next fork of this app zygote
@@ -231,8 +233,16 @@ public class SelinuxContextValidityPreload {
         )
     }
 
-    internal fun fallbackPayload(reason: String, sidtab: SelinuxSidtabSnapshot = SelinuxSidtabSnapshot()): String {
-        return SelinuxContextValidityPayloadCodec.encode(fallbackSnapshot(reason).copy(sidtab = sidtab))
+    internal fun fallbackPayload(
+        reason: String,
+        sidtab: SelinuxSidtabSnapshot = SelinuxSidtabSnapshot(),
+        procAttrResults: List<SelinuxProcAttrCurrentResult>? = null,
+    ): String {
+        return SelinuxContextValidityPayloadCodec.encode(fallbackSnapshot(reason).copy(
+            sidtab = sidtab,
+            procAttrCurrentProbeAttempted = procAttrResults != null,
+            procAttrCurrentResults = procAttrResults.orEmpty(),
+        ))
     }
 
     private fun fallbackSnapshot(reason: String): SelinuxContextValiditySnapshot {

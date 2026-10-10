@@ -8,5 +8,8 @@ duckdetector_native_unit(duckdetector_selinuxpolicy
     sidtab_probe.cpp
     sidtab_probe_io.cpp
     sidtab_native_bridge.cpp
+    proc_attr_probe.cpp
+    proc_attr_io.cpp
+    proc_attr_native_bridge.cpp
     selinux_status_page_probe.cpp
 )

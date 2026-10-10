@@ -62,8 +62,10 @@ jobs:
           python3 .github/scripts/test-text-protocols.py
           python3 scripts/test_new_detector.py
 
-      - name: Test SID-table native parsing and experiment control flow
-        run: python3 capability/selinuxpolicy/data/src/test/python/test_sidtab_native.py
+      - name: Test SELinux native parsing and experiment control flow
+        run: |
+          python3 capability/selinuxpolicy/data/src/test/python/test_sidtab_native.py
+          python3 capability/selinuxpolicy/data/src/test/python/test_proc_attr_native.py
 
       # Research tools pin the upstream inputs behind a detector's evidence record. Their
       # self-tests are offline; the network audit stays an explicit manual step.

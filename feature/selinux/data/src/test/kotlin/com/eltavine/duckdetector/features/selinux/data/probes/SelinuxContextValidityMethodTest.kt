@@ -72,25 +72,61 @@ class SelinuxContextValidityMethodTest {
     }
 
     @Test
-    fun `attr current detections list exactly the targets the status names`() {
-        val result = SelinuxContextValidityProbe(
-            nativeBridge = FakeBridge(
-                trustedSnapshot().copy(
-                    procAttrCurrentProbeAttempted = true,
-                    procAttrCurrentResults = listOf(
-                        attrResult("KernelSU", SelinuxProcAttrCurrentResult.OUTCOME_DETECTED_NON_EINVAL),
-                        attrResult("Magisk", SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL),
-                        attrResult("LSPosed file", SelinuxProcAttrCurrentResult.OUTCOME_SUCCESS),
-                    ),
-                ),
-            ),
-        ).inspectLocal()
-
-        val method = buildProcAttrCurrentMethod(result, EvidenceSource.DEDICATED_CARRIER)
-
+    fun `attr current recognition requires complete controls and names only repeated hits`() {
+        val method = attrMethod(controlledResults())
         assertEquals(listOf("KernelSU", "LSPosed file"), method.attrCurrentDetections)
-        assertEquals("Detected: ${method.attrCurrentDetections.joinToString()}", method.status)
+        assertEquals("Context recognized: KernelSU, LSPosed file", method.status)
+        assertEquals(false, method.isSecure)
     }
+
+    @Test
+    fun `legacy refusals successes and security exceptions cannot establish recognition`() {
+        for (outcome in listOf(SelinuxProcAttrCurrentResult.OUTCOME_DETECTED_NON_EINVAL,
+            SelinuxProcAttrCurrentResult.OUTCOME_SUCCESS,
+            SelinuxProcAttrCurrentResult.OUTCOME_DETECTED_SECURITY_EXCEPTION)) {
+            val method = attrMethod(listOf(attrResult("KernelSU", outcome)))
+            assertTrue(method.attrCurrentDetections.isEmpty())
+            assertEquals(null, method.isSecure)
+        }
+    }
+
+    @Test
+    fun `failed duplicate or incomplete controls suppress recognized results`() {
+        val valid = controlledResults()
+        val failed = valid.first().copy(outcomeClass = "PERMISSION_LIMITED")
+        for (rows in listOf(listOf(failed) + valid.drop(1), valid + valid.first(), valid.dropLast(1))) {
+            val method = attrMethod(rows)
+            assertTrue(method.attrCurrentDetections.isEmpty())
+            assertEquals(null, method.isSecure)
+        }
+        assertTrue(attrMethod(listOf(failed) + valid.drop(1)).permissionDenied)
+        assertEquals("Permission limited", attrMethod(listOf(failed) + valid.drop(1)).status)
+        assertEquals("Unsupported carrier", attrMethod(listOf(failed.copy(outcomeClass = "UNSUPPORTED"))).status)
+        assertEquals("Unavailable", attrMethod(listOf(failed.copy(outcomeClass = "UNAVAILABLE"))).status)
+    }
+
+    @Test
+    fun `all tested contexts rejected is an observation and cannot exclude hiding`() {
+        val rows = controlledResults().mapIndexed { index, row ->
+            if (index == 0) row else row.copy(outcomeClass = SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL)
+        }
+        val method = attrMethod(rows)
+        assertEquals("Tested contexts not recognized", method.status)
+        assertEquals(null, method.isSecure)
+        assertTrue(method.details.orEmpty().contains("cannot exclude a hidden policy"))
+    }
+
+    private fun controlledResults() = listOf(
+        attrResult(SelinuxProcAttrCurrentResult.CONTROL_LABEL, SelinuxProcAttrCurrentResult.OUTCOME_CONTROLS_PASSED),
+    ) + listOf("KernelSU", "Magisk", "LSPosed file", "file1", "file2", "domain1", "domain2", "domain3", "file3")
+        .map { attrResult(it, if (it in listOf("KernelSU", "LSPosed file"))
+            SelinuxProcAttrCurrentResult.OUTCOME_CONTEXT_RECOGNIZED else SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL) }
+
+    private fun attrMethod(rows: List<SelinuxProcAttrCurrentResult>) = buildProcAttrCurrentMethod(
+        SelinuxContextValidityProbe(nativeBridge = FakeBridge(trustedSnapshot().copy(
+            procAttrCurrentProbeAttempted = true, procAttrCurrentResults = rows,
+        ))).inspectLocal(), EvidenceSource.DEDICATED_CARRIER,
+    )
 
     @Test
     fun `a faulted status page is an insecure finding that does not borrow a carrier failure`() {

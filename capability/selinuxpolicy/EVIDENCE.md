@@ -78,3 +78,28 @@ control-flow/parser tests cover failure handling, including the attr/current con
 rejections and a rejected carrier label. No real device was attached for the
 initial implementation. Stock/pre-fix/fixed-kernel paired device validation remains required;
 source review and injected host tests do not establish sensitivity or false-positive rates.
+
+
+### Controlled process-context writes
+
+- Observable signal: one disposable app_zygote child issues two rounds of nine candidate context writes to `/proc/thread-self/attr/current`. Each round has malformed and stock-label controls both before and after the candidates. Every open errno, write errno and byte count survives separately, together with child termination, completed rounds and identity checks.
+- Producing subsystem: procfs's `proc_pid_attr_write`, the SELinux LSM `selinux_setprocattr`, and the loaded policy's context-to-SID conversion.
+- Mechanism: ACK checks `setcurrent` before conversion. A malformed payload rejected by an issued write with EINVAL establishes that this caller reaches conversion; the known current label must then be rejected by an issued write with EACCES. Stock AOSP forbids app_zygote dyntransition to itself or the candidate domains; only isolated_app is allowed. A candidate is recognized only when both issued writes return EACCES and all four control pairs pass. EPERM is not equivalent: procfs can reject the opener/writer relationship before the LSM hook. `proc_pid_attr_write` also returns EACCES before the hook when the target task is not the writer; the thread-self path and malformed control avoid interpreting that refusal as conversion. Open denials, interrupted writes and successful or short writes cannot establish recognition. The latter stop the experiment immediately. UID and current label are checked after each refused candidate and after controls.
+- References: [Android SELinux](https://source.android.com/docs/security/features/selinux), [ZygotePreload API](https://developer.android.com/reference/android/app/ZygotePreload); ACK android15-6.6 [hooks.c](https://android.googlesource.com/kernel/common/+/783025351c5fb3bcb4591d8fc61cbbd709aa4bcf/security/selinux/hooks.c) (`selinux_setprocattr`) and [base.c](https://android.googlesource.com/kernel/common/+/783025351c5fb3bcb4591d8fc61cbbd709aa4bcf/fs/proc/base.c) (`proc_pid_attr_write`); AOSP Android 10, 15 and 16 `private/app_zygote.te` (self setcurrent, dyntransition only to isolated_app). The same permission/conversion ordering was inspected in ACK android12-5.10 `ba7e98f3605e140fe13a76e5068409cfdc68da4f`, android13-5.15 `d2101e7384ec08fe13cc9faf5eccaa6a84048ac9`, android14-6.1 `9ea8d8374e5e5d746011645b845200e53a13dafe`, and android16-6.12 `e65d894191a4f781c98ca3fe40d147d058483419`. KernelSU [selinux.h at df03912](https://github.com/tiann/KernelSU/blob/df03912f70d92ff2aa9762ef82d607033d37e1da/kernel/selinux/selinux.h) defines `ksu` and `ksu_file`; its [rules.c](https://github.com/tiann/KernelSU/blob/df03912f70d92ff2aa9762ef82d607033d37e1da/kernel/selinux/rules.c) creates the policy types. File candidates use `u:object_r:<type>:s0`, not process role `r`.
+- Applicability: API >=29, application UID >=10000 and exactly `u:r:app_zygote:s0`, as in the existing SID-table experiment. Unexpected labels, MLS categories, OEM permissions or controls leave collection unsupported, limited or inconclusive. No CPU instruction, ABI layout or vendor-specific behavior is assumed. The JNI entry belongs exclusively to selinuxpolicy; consumers receive the existing four-column result records with a controls record and schema validation.
+- Visibility limits: context-to-SID hooks can reject a live-valid label against a backup policy, so repeated EINVAL cannot exclude hidden policy extensions. A recognized type can be supplied by another modification or an OEM; names do not establish an installed tool. The additional legacy catalog labels are candidates, not a certified family classifier. Controls bound the interpretation to the checked ACK sequence; an arbitrary modified handler can imitate it. This observation shares SELinux mechanisms with the context-query and SID-table probes.
+- Result states: controlled context recognition, tested context not recognized, unsupported, permission limited, unavailable, inconclusive. Legacy error-only SUCCESS, DETECTED_NON_EINVAL and SecurityException records remain readable but cannot establish a finding.
+- Interpretation: recognized contexts provide warning-level supporting policy evidence only. All-negative and failed collection states provide no clean-integrity verdict. Successful/short writes, identity changes, incomplete records, signals, seccomp traps and timeouts invalidate all candidate classifications.
+
+The child uses fixed buffers and async-signal-safe IO, with the existing 1000 ms run and
+250 ms reap deadlines. A write uses one fresh FD and one syscall; it is never retried or
+appended after EINTR/short output. Parent/carrier identity cannot be changed by child writes.
+Exiting does not undo context registration or AVC denials: at most nine candidate labels
+plus the stock control can be registered in each consulted SID table. The preload snapshot
+is retained rather than resampled at each UI refresh.
+
+Validation covers production native flow and JNI serialization with injected IO/child outcomes,
+transaction error preservation, Kotlin framing and preload round trips, legacy-result rejection,
+consumer interpretation and warning presentation. Injection is not validation of fork safety or
+of an Android kernel. Real stock, unsynchronized-hiding, synchronized-hiding and df03912 device
+measurements remain required; no sensitivity or false-positive rate has been measured.

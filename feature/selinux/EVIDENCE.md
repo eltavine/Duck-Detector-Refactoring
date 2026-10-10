@@ -88,6 +88,31 @@ stock/pre-fix/fixed-kernel device measurements have not been obtained. The row a
 state the global-statistics limitation and the retained preload capture time; no sensitivity,
 false-positive rate or coverage of all Android kernels is claimed.
 
+### Controlled attr/current recognition and ordinary-app timing
+
+- Observable signal: repeated candidate-context refusal classes with preceding/following malformed and stock controls in the app_zygote child, plus the existing ordinary-app paired timing samples.
+- Producing subsystem: procfs and SELinux context conversion/permission checks; the capability owns controlled writes, while this feature owns ordinary-app timing and evidence interpretation.
+- Mechanism: only a complete controlled result with two issued EACCES refusals classifies a candidate as recognized. Repeated EINVAL only says the tested label was not recognized through this path. Timing compares A (the running context) and B (equal length with leading newline), requiring matching EACCES refusals; a payload-sensitive difference may reflect extra processing, scheduling, auditing or a hook. A timing threshold is not an architectural guarantee.
+- References: Android Common Kernel [hooks.c](https://android.googlesource.com/kernel/common/+/783025351c5fb3bcb4591d8fc61cbbd709aa4bcf/security/selinux/hooks.c) (`selinux_setprocattr`); capability/selinuxpolicy/EVIDENCE.md for additional ACK/AOSP controls and version-matched source; KernelSU [df03912](https://github.com/tiann/KernelSU/commit/df03912f70d92ff2aa9762ef82d607033d37e1da), [parent ab23091](https://github.com/tiann/KernelSU/blob/ab23091edfeddc774e1e880b0919b211808a193e/kernel/feature/selinux_hide.c), [3f388ef](https://github.com/tiann/KernelSU/commit/3f388ef137c78e1ca0c92c0ada3b8717cdcc4302) and [a810677](https://github.com/tiann/KernelSU/commit/a810677b847ba564c5f9d3fa0fbabe54794b8eef).
+- Applicability: determined by source mechanisms and runtime controls, not package or KernelSU version strings. SELinux hiding is optional; a hidden backup policy can suppress recognized live types. Source-derived coverage is separated below; it has not been established by paired device measurements.
+- Visibility limits: a failed carrier, SETCURRENT denial, open error or missing control cannot become a positive or negative integrity finding. Legacy uncontrolled records are informational. A stable timing difference does not prove a hook or identify KernelSU; earlier hook implementations can have no A/B difference. Shared SELinux mechanisms are not independent root indicators.
+- Result states: context recognized, tested contexts not recognized, inconclusive/unavailable; experimental timing candidate, no reproducible asymmetry, unavailable.
+- Interpretation: both positive signals are warnings in the overall card, method row and impact text. Existing stronger findings retain precedence. No negative observation implies absence of KernelSU or policy modifications.
+
+| KernelSU source interval / configuration | Source-derived expectation for retained probes |
+| --- | --- |
+| Hiding disabled | Live root contexts may be recognized by existing context queries and controlled writes. A valid context still does not identify the installed tool. |
+| Hiding enabled, before `3f388ef` adds the attr hook | Original attr/current conversion can expose live-valid candidates while selinuxfs queries answer against the backup. Controlled writes can support recognition. |
+| `3f388ef` through the parent of `a810677` | Backup validation hides added root contexts. The existing two-round SID-table registration experiment targets the unsynchronized context-query/attr registration discrepancy. |
+| `a810677` through `ab23091`, hiding enabled | Synchronization removes that SID-table signature and backup validation hides added contexts. Ordinary-app SETCURRENT denial occurs before payload parsing. No reliable coverage is claimed for this gap. |
+| `df03912`, hiding enabled | A stock-valid A reaches backup parsing before original SETCURRENT refusal; leading-newline B skips parsing. Existing timing can seek this difference, but source ordering does not establish a measurable or unique signature. |
+
+The intervals describe the cited source paths, not all releases, forks, backports or future changes.
+Other root probes in the repository retain their own contracts; package visibility, seccomp-blocked
+supercalls and manager inotify behavior do not close this coverage gap. Draft validation must
+record Android/API, kernel revision/configuration, ABI, enforcing state, hiding setting, raw control
+and candidate errors, child outcome and preload capture age on each stock/modified device.
+
 ## Known gaps
 
 - The policy notes pick their severity by matching the note text; see docs/architecture/follow-ups.md.

@@ -312,7 +312,7 @@ class SelinuxCardModelMapperContextValidityTest {
     }
 
     @Test
-    fun `app zygote attr write anomaly maps to danger copy`() {
+    fun `controlled context recognition maps to supporting warning copy`() {
         val model = mapper.map(
             baseReport(
                 SelinuxCheckResult(
@@ -326,22 +326,22 @@ class SelinuxCardModelMapperContextValidityTest {
                 ),
                 SelinuxCheckResult(
                     method = SelinuxOracle.PROC_ATTR_CURRENT_WRITE.label,
-                    status = "Detected: Magisk, LSPosed file",
+                    status = "Context recognized: Magisk, LSPosed file",
                     isSecure = false,
                     permissionDenied = false,
-                    details = "Magisk=DETECTED_NON_EINVAL | LSPosed file=SUCCESS",
+                    details = "Controls=CONTROLS_PASSED | Magisk=CONTEXT_RECOGNIZED | LSPosed file=CONTEXT_RECOGNIZED",
                     oracle = SelinuxOracle.PROC_ATTR_CURRENT_WRITE,
                     attrCurrentDetections = listOf("Magisk", "LSPosed file"),
                 ),
             ),
         )
 
-        assertEquals(DetectorStatus.danger(), model.status)
-        assertEquals("Enforcing with app_zygote attr-write anomaly", model.verdict)
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals("Enforcing with recognized privileged contexts", model.verdict)
         assertTrue(model.summary.contains("Magisk, LSPosed file"))
         assertTrue(
             model.impactItems.any {
-                it.text.contains("anomalous /proc/self/attr/current writes")
+                it.status == DetectorStatus.warning() && it.text.contains("Controlled attr/current writes")
             },
         )
     }

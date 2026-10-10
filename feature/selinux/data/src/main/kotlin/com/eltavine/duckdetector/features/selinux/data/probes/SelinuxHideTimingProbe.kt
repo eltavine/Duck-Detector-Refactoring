@@ -22,7 +22,9 @@ internal fun buildSelinuxHideTimingMethod(result: SelinuxHideTimingSnapshot): Se
         append("paired A-B p10/median/p90=${result.deltaP10Ns}/${result.deltaMedianNs}/${result.deltaP90Ns} ns; ")
         append("half medians=${result.firstHalfNs}/${result.secondHalfNs} ns; ")
         append("A slower=${result.aSlower}/${result.pairs}; context bytes=${result.contextLength}.\n")
-        append("Observed with KernelSU df03912f; not conclusive.")
+        append("KernelSU df03912f processes A through its backup parser before SETCURRENT; ")
+        append("its parent denies ordinary-app SETCURRENT before parsing either payload. ")
+        append("Timing alone is device-dependent, not proof of KernelSU; no asymmetry cannot rule out hidden policy.")
     }
     return SelinuxCheckResult(
         method = SelinuxOracle.ATTR_CURRENT_TIMING.label,

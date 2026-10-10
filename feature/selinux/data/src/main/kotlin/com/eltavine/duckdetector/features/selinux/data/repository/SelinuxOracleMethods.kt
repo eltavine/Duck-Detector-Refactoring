@@ -210,17 +210,27 @@ internal fun buildProcAttrCurrentMethod(
         )
     }
 
-    val detected = outcomes.filter(SelinuxProcAttrCurrentResult::detected)
-    val clean = outcomes.all {
+    val controls = outcomes.filter { it.label == SelinuxProcAttrCurrentResult.CONTROL_LABEL }
+    val targets = outcomes.filter { it.label != SelinuxProcAttrCurrentResult.CONTROL_LABEL }
+    val controlled = controls.size == 1 &&
+        controls.single().outcomeClass == SelinuxProcAttrCurrentResult.OUTCOME_CONTROLS_PASSED &&
+        targets.size == 9 && targets.map { it.label }.distinct().size == 9
+    val detected = if (controlled) targets.filter(SelinuxProcAttrCurrentResult::detected) else emptyList()
+    val clean = controlled && targets.size == 9 && targets.all {
         it.outcomeClass == SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL
     }
     val status = when {
-        detected.isNotEmpty() -> "Detected: ${detected.joinToString { it.label }}"
-        clean -> SelinuxProcAttrCurrentLabels.STATUS_CLEAN
-        else -> SelinuxProcAttrCurrentLabels.STATUS_UNSUPPORTED
+        detected.isNotEmpty() -> "Context recognized: ${detected.joinToString { it.label }}"
+        clean -> "Tested contexts not recognized"
+        controls.singleOrNull()?.outcomeClass == "PERMISSION_LIMITED" -> "Permission limited"
+        controls.singleOrNull()?.outcomeClass == "UNSUPPORTED" -> "Unsupported carrier"
+        controls.singleOrNull()?.outcomeClass == "UNAVAILABLE" -> "Unavailable"
+        else -> "Inconclusive"
     }
     val detail = listOf(
         "Evidence source=${source.label}",
+        "Repeated writes with stock/malformed controls; context recognition is supporting policy evidence, not root-family identification. " +
+            "EINVAL cannot exclude a hidden policy; SID-table and timing observations share SELinux mechanisms.",
         outcomes.joinToString(" | ") { outcome ->
             "${outcome.label}=${outcome.outcomeClass} target=${outcome.targetContext} raw=${outcome.rawMessage}"
         },
@@ -230,12 +240,8 @@ internal fun buildProcAttrCurrentMethod(
         method = SelinuxOracle.PROC_ATTR_CURRENT_WRITE.label,
         oracle = SelinuxOracle.PROC_ATTR_CURRENT_WRITE,
         status = status,
-        isSecure = when {
-            detected.isNotEmpty() -> false
-            clean -> true
-            else -> null
-        },
-        permissionDenied = false,
+        isSecure = if (detected.isNotEmpty()) false else null,
+        permissionDenied = controls.any { it.outcomeClass == "PERMISSION_LIMITED" },
         details = detail,
         attrCurrentDetections = detected.map { it.label },
     )

@@ -17,14 +17,7 @@
 
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
-import android.system.ErrnoException
-import android.system.Os
-import android.system.OsConstants
-import com.eltavine.duckdetector.core.platform.PlatformFailureName
-import java.io.FileOutputStream
-import java.io.IOException
-import java.nio.charset.StandardCharsets
-import java.util.Locale
+import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
 public data class SelinuxProcAttrCurrentResult(
     val label: String,
@@ -32,119 +25,32 @@ public data class SelinuxProcAttrCurrentResult(
     val outcomeClass: String,
     val rawMessage: String,
 ) {
-    public fun detected(): Boolean {
-        return outcomeClass == OUTCOME_SUCCESS ||
-            outcomeClass == OUTCOME_DETECTED_NON_EINVAL ||
-            outcomeClass == OUTCOME_DETECTED_SECURITY_EXCEPTION
-    }
+    /** Legacy error-only results lack conversion controls and cannot establish a finding. */
+    public fun detected(): Boolean = outcomeClass == OUTCOME_CONTEXT_RECOGNIZED
 
     public companion object {
         public const val OUTCOME_SUCCESS: String = "SUCCESS"
         public const val OUTCOME_NORMAL_EINVAL: String = "NORMAL_EINVAL"
         public const val OUTCOME_DETECTED_NON_EINVAL: String = "DETECTED_NON_EINVAL"
         public const val OUTCOME_DETECTED_SECURITY_EXCEPTION: String = "DETECTED_SECURITY_EXCEPTION"
+        public const val OUTCOME_CONTEXT_RECOGNIZED: String = "CONTEXT_RECOGNIZED"
+        public const val OUTCOME_CONTROLS_PASSED: String = "CONTROLS_PASSED"
+        public const val CONTROL_LABEL: String = "Controls"
     }
 }
 
 public class SelinuxProcAttrCurrentProbe {
-
-    /** [beforeWrite] receives each context just before it is written. */
-    public fun inspect(beforeWrite: (context: String) -> Unit = {}): List<SelinuxProcAttrCurrentResult> {
-        return TARGETS.map { target ->
-            beforeWrite(target.context)
-            runProbe(target.label, target.context)
-        }
-    }
-
-    private fun runProbe(
-        label: String,
-        targetContext: String,
-    ): SelinuxProcAttrCurrentResult {
-        return try {
-            val payload = targetContext.toByteArray(StandardCharsets.UTF_8)
-            FileOutputStream(PROC_ATTR_CURRENT_PATH).use { out ->
-                Os.write(out.fd, payload, 0, payload.size)
-            }
-            SelinuxProcAttrCurrentResult(
-                label = label,
-                targetContext = targetContext,
-                outcomeClass = SelinuxProcAttrCurrentResult.OUTCOME_SUCCESS,
-                rawMessage = "write succeeded",
-            )
-        } catch (error: SecurityException) {
-            SelinuxProcAttrCurrentResult(
-                label = label,
-                targetContext = targetContext,
-                outcomeClass = SelinuxProcAttrCurrentResult.OUTCOME_DETECTED_SECURITY_EXCEPTION,
-                rawMessage = "${PlatformFailureName.of(error)}: ${error.message}",
-            )
-        } catch (error: IOException) {
-            classifyIOException(label, targetContext, error)
-        } catch (error: ErrnoException) {
-            classifyErrnoException(label, targetContext, error)
-        }
-    }
-
-    private fun classifyIOException(
-        label: String,
-        targetContext: String,
-        error: IOException,
-    ): SelinuxProcAttrCurrentResult {
-        val detail = "${PlatformFailureName.of(error)}: ${error.message}"
-        val outcome = if (
-            error.message
-                ?.lowercase(Locale.ROOT)
-                ?.contains("invalid argument") == true
-        ) {
-            SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL
-        } else {
-            SelinuxProcAttrCurrentResult.OUTCOME_DETECTED_NON_EINVAL
-        }
-        return SelinuxProcAttrCurrentResult(
-            label = label,
-            targetContext = targetContext,
-            outcomeClass = outcome,
-            rawMessage = detail,
+    /** Collects controls and repeated writes in a bounded child, without changing the carrier identity. */
+    public fun inspect(): List<SelinuxProcAttrCurrentResult> {
+        return NativeSnapshotCollector.Default.collect(
+            readPayload = ::nativeCollectProcAttr,
+            parse = SelinuxProcAttrCurrentNativePayload::decode,
+            unavailable = { failure -> listOf(SelinuxProcAttrCurrentResult(
+                SelinuxProcAttrCurrentResult.CONTROL_LABEL, "", "UNAVAILABLE",
+                failure.explain("Controlled context-write probe unavailable"),
+            )) },
         )
     }
 
-    private fun classifyErrnoException(
-        label: String,
-        targetContext: String,
-        error: ErrnoException,
-    ): SelinuxProcAttrCurrentResult {
-        val detail = "${PlatformFailureName.of(error)}: errno=${error.errno}, ${error.message}"
-        val outcome = if (error.errno == OsConstants.EINVAL) {
-            SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL
-        } else {
-            SelinuxProcAttrCurrentResult.OUTCOME_DETECTED_NON_EINVAL
-        }
-        return SelinuxProcAttrCurrentResult(
-            label = label,
-            targetContext = targetContext,
-            outcomeClass = outcome,
-            rawMessage = detail,
-        )
-    }
-
-    private data class ProbeTarget(
-        val label: String,
-        val context: String,
-    )
-
-    public companion object {
-        private const val PROC_ATTR_CURRENT_PATH = "/proc/self/attr/current"
-
-        private val TARGETS = listOf(
-            ProbeTarget("KernelSU", "u:r:ksu:s0"),
-            ProbeTarget("KernelSU file", "u:r:ksu_file:s0"),
-            ProbeTarget("Magisk", "u:r:magisk:s0"),
-            ProbeTarget("Magisk file", "u:r:magisk_file:s0"),
-            ProbeTarget("LSPosed file", "u:r:lsposed_file:s0"),
-            ProbeTarget("DroidSpaces daemon", "u:r:droidspacesd:s0"),
-            ProbeTarget("MSD app", "u:r:msd_app:s0"),
-            ProbeTarget("MSD daemon", "u:r:msd_daemon:s0"),
-            ProbeTarget("Xposed data", "u:r:xposed_data:s0"),
-        )
-    }
+    private external fun nativeCollectProcAttr(): String
 }

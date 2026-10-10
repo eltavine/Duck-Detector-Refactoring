@@ -53,8 +53,14 @@ Arrows point from a module to the modules it may depend on. Feature units never 
 | `earlypreload` | Mount and virtualization evidence captured by the transparent `NativeActivity` before the activity it launches | mount, virtualization |
 | `helperprocess` | Isolated and helper process services, remote snapshots, dex path and UID identity collectors | mount, nativeroot, virtualization |
 | `packageinventory` | Installed package inventory and visibility checks | customrom, dangerousapps, lsposed, nativeroot, virtualization |
-| `selinuxpolicy` | SELinux context validity carriers, proc attr and policyload seqno probes, dirty policy preload queries, bounded SID-table registration observations | lsposed, selinux |
+| `selinuxpolicy` | SELinux context validity carriers, proc attr and policyload seqno probes, dirty policy preload queries, bounded SID-table registration and controlled context-write observations | lsposed, selinux |
 | `systemproperties` | Multi-source system property reads, native property snapshots, and the native parser of bionic's property areas | adbruntime, bootloader, systemproperties; customrom's native unit uses the property area parser |
+
+The selinuxpolicy context-write probe owns a dedicated JNI entry, IO adapter and fixed child
+report. It uses the existing disposable-child runner without sharing mutable state with SID-table
+or timing probes. Kotlin validates framing and carries raw results through the retained preload
+snapshot; SELinux data interprets controls and repeated refusals, and presentation assigns warning
+severity. The carrier itself never performs these identity-changing writes.
 
 The selinuxpolicy SID-table experiment uses its existing shared preload/carrier and a narrow JNI
 bridge inside the same native unit. It reports fixed-size child observations and collection outcomes;

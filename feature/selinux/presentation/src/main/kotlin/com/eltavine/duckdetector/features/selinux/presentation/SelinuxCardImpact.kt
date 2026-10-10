@@ -202,13 +202,13 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
     }
     when {
         procAttrCurrent?.isSecure == false -> items += SelinuxImpactItemModel(
-            "The dedicated app_zygote carrier observed anomalous /proc/self/attr/current writes for ${procAttrCurrent.attrCurrentDetections.joinToString()}.",
-            DetectorStatus.danger(),
+            "Controlled attr/current writes repeatedly recognized contexts for ${procAttrCurrent.attrCurrentDetections.joinToString()}. This supports a policy observation; it does not identify a root tool.",
+            DetectorStatus.warning(),
         )
 
         procAttrCurrent?.isSecure == true -> items += SelinuxImpactItemModel(
             "The dedicated app_zygote carrier rejected the tested privileged contexts with normal EINVAL results.",
-            DetectorStatus.allClear(),
+            DetectorStatus.info(InfoKind.SUPPORT),
         )
 
         procAttrCurrent != null -> items += SelinuxImpactItemModel(
@@ -218,8 +218,8 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
     }
     if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false }) {
         items += SelinuxImpactItemModel(
-            "attr/current timing suggests extra context processing before access denial.",
-            DetectorStatus.danger(),
+            "attr/current timing suggests extra context processing before access denial. This experimental, device-dependent signal does not identify a root tool.",
+            DetectorStatus.warning(),
         )
     }
     if (dirtyPolicyHit != null) {
