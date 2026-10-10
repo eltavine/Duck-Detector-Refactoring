@@ -30,4 +30,15 @@ limitations under the License.
     <string name="update_later">Пізніше</string>
     <string name="update_view_changes">Переглянути всі зміни на GitHub</string>
     <string name="update_download">Відкрити завантаження</string>
+    <string name="update_dialog_title_stable">Доступне оновлення Stable</string>
+    <string name="update_release_label">Випуск і коміт</string>
+    <string name="update_apk_label">Розмір APK і SHA-256</string>
+    <string name="update_release_notes_title">Примітки до випуску</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="one">Ще %1$d запис є на сторінці випуску</item>
+        <item quantity="few">Ще %1$d записи є на сторінці випуску</item>
+        <item quantity="many">Ще %1$d записів є на сторінці випуску</item>
+        <item quantity="other">Ще %1$d запису є на сторінці випуску</item>
+    </plurals>
+    <string name="update_view_release">Переглянути випуск на GitHub</string>
 </resources>

@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">ความเป็นส่วนตัว / การใช้ข้อมูล</string>
     <string name="about_label_version">เวอร์ชัน</string>
     <string name="about_label_website">เว็บไซต์</string>
-    <string name="about_privacy_summary">การตรวจสอบทำงานภายในอุปกรณ์และไม่อัปโหลดผลลัพธ์ แอปเชื่อมต่อ GitHub หนึ่งครั้งต่อ cold start เพื่อรับข้อมูล Nightly (ผ่าน gh-proxy.com เมื่อเปิดเร่งความเร็ว GitHub) ส่วนการรีเฟรช CRL ออนไลน์ยังเป็นทางเลือก</string>
+    <string name="about_privacy_summary">การตรวจสอบทำงานภายในอุปกรณ์และไม่อัปโหลดผลลัพธ์ แอปเชื่อมต่อ GitHub หนึ่งครั้งต่อ cold start เพื่อรับข้อมูลอัปเดตของช่องทางที่คุณเลือก (ผ่าน gh-proxy.com เมื่อเปิดเร่งความเร็ว GitHub) ส่วนการรีเฟรช CRL ออนไลน์ยังเป็นทางเลือก</string>
     <string name="about_subtitle">ลิงก์โปรเจกต์และข้อมูลเมตาของบิลด์</string>
     <string name="about_title">เกี่ยวกับ</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -44,8 +44,8 @@ limitations under the License.
     <string name="author_summary_eltavine">มีส่วนร่วมด้าน UI, C++, ASM และ Kotlin</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="github_acceleration_footer">gh-proxy.com เป็นบริการของบุคคลที่สาม เมื่อเปิดใช้ การตรวจสอบอัปเดตและการดาวน์โหลด Nightly จะส่งผ่านบริการนี้แทนการเชื่อมต่อ GitHub โดยตรง บริการนี้ส่งต่อการเปรียบเทียบ commit ไม่ได้ หน้าต่างอัปเดตจึงอาจแสดงเฉพาะ commit ล่าสุด</string>
-    <string name="github_acceleration_summary">ตรวจสอบและดาวน์โหลดอัปเดต Nightly ผ่าน gh-proxy.com</string>
+    <string name="github_acceleration_footer">gh-proxy.com เป็นบริการของบุคคลที่สาม เมื่อเปิดใช้ การตรวจสอบอัปเดตและการดาวน์โหลดจะส่งผ่านบริการนี้แทนการเชื่อมต่อ GitHub โดยตรง บริการนี้ส่งต่อการเปรียบเทียบ commit ไม่ได้ เมื่ออัปเดตเป็น Nightly จากรุ่นที่เก่ากว่า Stable ล่าสุด หน้าต่างอัปเดตจึงอาจแสดงเฉพาะการเปลี่ยนแปลงล่าสุด</string>
+    <string name="github_acceleration_summary">ตรวจสอบและดาวน์โหลดอัปเดตผ่าน gh-proxy.com</string>
     <string name="github_acceleration_title">เร่งความเร็ว GitHub</string>
     <string name="licenses_dialog_close">ปิด</string>
     <string name="licenses_dialog_home_page">หน้าแรก</string>
@@ -63,11 +63,15 @@ limitations under the License.
     <string name="settings_section_detection">ตัวเลือกการตรวจจับ</string>
     <string name="settings_section_network">เครือข่าย</string>
     <string name="settings_title">การตั้งค่า</string>
+    <string name="update_channel_label">ช่องทางอัปเดต</string>
+    <string name="update_channel_nightly_summary">ทุกการเปลี่ยนแปลงใน main สร้างทันทีที่รวมเข้า</string>
+    <string name="update_channel_stable_summary">รุ่นที่ผ่านการทดสอบและเผยแพร่พร้อมแท็กเวอร์ชัน</string>
     <string name="update_settings_label">ตรวจสอบอัปเดต</string>
-    <string name="update_status_available">มี Nightly รุ่นใหม่; แตะเพื่อดูรายละเอียด</string>
+    <string name="update_status_ahead">รุ่นนี้ใหม่กว่า %1$s ล่าสุด (%2$s); จะแจ้งเมื่อมีรุ่นที่ใหม่กว่า</string>
+    <string name="update_status_available">มี %1$s รุ่นใหม่; แตะเพื่อดูรายละเอียด</string>
     <string name="update_status_checking">กำลังตรวจสอบ GitHub…</string>
-    <string name="update_status_current">คุณใช้ Nightly รุ่นล่าสุดแล้ว</string>
+    <string name="update_status_current">คุณใช้ %1$s รุ่นล่าสุดแล้ว</string>
     <string name="update_status_failed">ตรวจสอบ GitHub ไม่สำเร็จ; แตะเพื่อลองใหม่</string>
-    <string name="update_status_idle">ตรวจสอบ GitHub Main Nightly หลัง cold start; แตะเพื่อตรวจตอนนี้</string>
+    <string name="update_status_idle">ตรวจสอบ %1$s บน GitHub หลัง cold start; แตะเพื่อตรวจตอนนี้</string>
     <string name="settings_section_appearance">รูปลักษณ์</string>
 </resources>

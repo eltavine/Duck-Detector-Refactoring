@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">개인정보 / 데이터 사용</string>
     <string name="about_label_version">버전</string>
     <string name="about_label_website">웹사이트</string>
-    <string name="about_privacy_summary">검사는 기기에서 실행되며 탐지 결과는 업로드되지 않습니다. 콜드 스타트마다 GitHub에 한 번 연결해 Nightly 업데이트 메타데이터를 가져옵니다(GitHub 가속이 켜져 있으면 gh-proxy.com 경유). 온라인 CRL 새로고침은 선택 사항입니다.</string>
+    <string name="about_privacy_summary">검사는 기기에서 실행되며 탐지 결과는 업로드되지 않습니다. 콜드 스타트마다 GitHub에 한 번 연결해 선택한 업데이트 채널의 메타데이터를 가져옵니다(GitHub 가속이 켜져 있으면 gh-proxy.com 경유). 온라인 CRL 새로고침은 선택 사항입니다.</string>
     <string name="about_subtitle">프로젝트 링크와 빌드 메타데이터입니다.</string>
     <string name="about_title">정보</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -44,8 +44,8 @@ limitations under the License.
     <string name="author_summary_eltavine">UI, C++, ASM 및 Kotlin 기여</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="github_acceleration_footer">gh-proxy.com은 서드파티 서비스입니다. 켜져 있는 동안 업데이트 확인과 Nightly 다운로드는 GitHub에 직접 연결하지 않고 이 서비스를 거칩니다. 커밋 비교는 중계할 수 없어 업데이트 대화상자에 최신 커밋만 표시될 수 있습니다.</string>
-    <string name="github_acceleration_summary">gh-proxy.com을 통해 Nightly 업데이트 확인 및 다운로드</string>
+    <string name="github_acceleration_footer">gh-proxy.com은 서드파티 서비스입니다. 켜져 있는 동안 업데이트 확인과 다운로드는 GitHub에 직접 연결하지 않고 이 서비스를 거칩니다. 커밋 비교는 중계할 수 없어, 최신 Stable보다 오래된 빌드를 Nightly로 업데이트할 때는 업데이트 대화상자에 최근 변경 사항만 표시될 수 있습니다.</string>
+    <string name="github_acceleration_summary">gh-proxy.com을 통해 업데이트 확인 및 다운로드</string>
     <string name="github_acceleration_title">GitHub 가속</string>
     <string name="licenses_dialog_close">닫기</string>
     <string name="licenses_dialog_home_page">홈페이지</string>
@@ -63,11 +63,15 @@ limitations under the License.
     <string name="settings_section_detection">탐지 옵션</string>
     <string name="settings_section_network">네트워크</string>
     <string name="settings_title">설정</string>
+    <string name="update_channel_label">업데이트 채널</string>
+    <string name="update_channel_nightly_summary">main의 모든 변경 사항을 반영 즉시 빌드</string>
+    <string name="update_channel_stable_summary">테스트를 거쳐 버전 태그로 게시된 릴리스</string>
     <string name="update_settings_label">업데이트 확인</string>
-    <string name="update_status_available">새 Nightly 빌드가 있습니다. 자세히 보려면 탭하세요</string>
+    <string name="update_status_ahead">이 빌드는 최신 %1$s(%2$s)보다 새롭습니다. 더 새로운 빌드가 나오면 알려 드립니다</string>
+    <string name="update_status_available">새 %1$s 빌드가 있습니다. 자세히 보려면 탭하세요</string>
     <string name="update_status_checking">GitHub 확인 중…</string>
-    <string name="update_status_current">최신 Nightly 빌드입니다</string>
+    <string name="update_status_current">최신 %1$s 빌드입니다</string>
     <string name="update_status_failed">GitHub를 확인하지 못했습니다. 다시 시도하려면 탭하세요</string>
-    <string name="update_status_idle">콜드 스타트 후 GitHub Main Nightly를 확인합니다. 지금 확인하려면 탭하세요</string>
+    <string name="update_status_idle">콜드 스타트 후 GitHub에서 %1$s 업데이트를 확인합니다. 지금 확인하려면 탭하세요</string>
     <string name="settings_section_appearance">모양</string>
 </resources>

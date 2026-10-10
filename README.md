@@ -8,7 +8,8 @@
 
 <p align="center">
   <strong>
-    <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly">Download Nightly</a> ·
+    <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest">Download</a> ·
+    <a href="https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly">Nightly</a> ·
     <a href="#quick-start">Documentation</a> ·
     <a href="docs/guides/sdk-integration.md">SDK Integration</a>
   </strong>
@@ -38,7 +39,7 @@ The app combines a Jetpack Compose interface, feature-oriented Gradle modules, a
 
 # Quick start
 
-1. **Download** the APK from the [Nightly release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly). Nightly builds are published from `main` and are also posted to the [Telegram channel](https://t.me/duck_detector); there is no stable release yet.
+1. **Download** the APK from the [latest Stable release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest). Stable releases carry calendar versions such as `v26.10.0`; the [Nightly release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly) follows every change on `main`. Both are also posted to the [Telegram channel](https://t.me/duck_detector), and **Settings → About → Update channel** chooses which one the app checks.
 2. **Install** it on a device running Android 10 or later. Root access is not required.
 3. **Scan.** The first launch asks you to accept the user agreement and to settle a few startup choices: notifications, Live Update, the online revocation refresh used by the TEE check, and package visibility. Scanning then starts by itself, and each card fills in when its detector finishes.
 4. **Read the results** as described below. To report a result or ask for help, [open an issue](https://github.com/eltavine/Duck-Detector-Refactoring/issues) and attach the file saved by **Export Report** at the top of the dashboard; a screenshot of the summary alone is not enough.
@@ -86,7 +87,7 @@ Supporting modules provide the dashboard, device information, settings, update c
 | **ABIs** | Native syscall paths are provided for `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`. Some timing and virtualization trap probes are available only on `arm64-v8a`. |
 | **Privileges** | Root access is not required. Android permissions and platform visibility rules still limit what the app can observe. |
 | **Device variance** | OEM changes, kernel configuration, Android version, and sandbox policy may cause a probe to be unsupported, unavailable, or lower-confidence. |
-| **Network use** | Core device scans run locally. TEE revocation checks always include the bundled snapshot; downloading Google's current revocation feed requires user consent. The app also checks GitHub for Nightly updates after a cold start and when requested from Settings. With GitHub acceleration on, which Chinese-language users are asked about and Settings can switch, those checks and the Nightly download go through the third-party [gh-proxy.com](https://gh-proxy.com/docs) service instead. |
+| **Network use** | Core device scans run locally. TEE revocation checks always include the bundled snapshot; downloading Google's current revocation feed requires user consent. The app also checks GitHub for updates on the channel you follow, Stable or Nightly, after a cold start and when requested from Settings. With GitHub acceleration on, which Chinese-language users are asked about and Settings can switch, those checks and the update download go through the third-party [gh-proxy.com](https://gh-proxy.com/docs) service instead. |
 
 # Architecture
 
@@ -171,7 +172,7 @@ The same build also produces the headless SDK as one AAR, without any UI, publis
 ./gradlew :sdk:aar:publish
 ```
 
-The [Nightly release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly) includes the SDK AAR alongside the APK.
+Every [Stable release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest) and the [Nightly release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly) include the SDK AAR alongside the APK.
 
 Before contributing, read [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`CODING_STANDARDS.md`](./CODING_STANDARDS.md).
 
@@ -184,7 +185,17 @@ The build uses the `ciRelease` signing configuration only when all four variable
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-Without the complete set, the local `release` build is signed with the debug key. Do not treat such an artifact as an official release.
+Without the complete set, the local `release` build is signed with the debug key. Do not treat such an artifact as an official release. [`.github/RELEASING.md`](./.github/RELEASING.md) describes how Stable releases are cut.
+
+## Verifying a download
+
+Each Stable release lists the SHA-256 of its APK and SDK AAR in its notes and in `SHA256SUMS`, and GitHub attests that the release workflow built them from the tagged commit:
+
+```bash
+gh attestation verify Duck.Detector-26.10.0.apk --repo eltavine/Duck-Detector-Refactoring
+```
+
+The in-app update dialog shows the size and SHA-256 of the APK it offers, so a download can be checked against it.
 
 # Privacy and limitations
 

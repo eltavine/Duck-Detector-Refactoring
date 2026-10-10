@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">Privacy / Data Use</string>
     <string name="about_label_version">Version</string>
     <string name="about_label_website">Website</string>
-    <string name="about_privacy_summary">Checks run locally on-device and findings are not uploaded. The app contacts GitHub once per cold start for Nightly update metadata, through gh-proxy.com while GitHub acceleration is on. Online CRL refresh remains optional.</string>
+    <string name="about_privacy_summary">Checks run locally on-device and findings are not uploaded. The app contacts GitHub once per cold start for the update metadata of the channel you follow, through gh-proxy.com while GitHub acceleration is on. Online CRL refresh remains optional.</string>
     <string name="about_subtitle">Project links and build metadata.</string>
     <string name="about_title">About</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -60,8 +60,8 @@ limitations under the License.
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
     <string name="author_summary_zg089">Arabic translation</string>
-    <string name="github_acceleration_footer">gh-proxy.com is a third-party service. While this is on, update checks and Nightly downloads go through it instead of connecting to GitHub directly. It cannot relay commit comparisons, so the update dialog may list only the newest commit.</string>
-    <string name="github_acceleration_summary">Use third-party gh-proxy.com for Nightly updates, commit comparisons may be unavailable, so only the latest commit may be shown</string>
+    <string name="github_acceleration_footer">gh-proxy.com is a third-party service. While this is on, update checks and downloads go through it instead of connecting to GitHub directly. It cannot relay commit comparisons, so a Nightly update for a build older than the latest Stable release may list only the most recent changes.</string>
+    <string name="github_acceleration_summary">Use third-party gh-proxy.com for update checks and downloads. It cannot relay commit comparisons, so a Nightly update for a build older than the latest Stable may list only recent changes</string>
     <string name="github_acceleration_title">GitHub acceleration</string>
     <string name="licenses_dialog_close">Close</string>
     <string name="licenses_dialog_home_page">Home page</string>
@@ -84,10 +84,16 @@ limitations under the License.
     <string name="settings_style_miuix">MIUIX</string>
     <string name="settings_style_material">Material 3</string>
     <string name="settings_title">Settings</string>
+    <string name="update_channel_label">Update channel</string>
+    <string name="update_channel_nightly" translatable="false">Nightly</string>
+    <string name="update_channel_nightly_summary">Every change on main, built as soon as it lands</string>
+    <string name="update_channel_stable" translatable="false">Stable</string>
+    <string name="update_channel_stable_summary">Tested releases, published under a version tag</string>
     <string name="update_settings_label">Check for updates</string>
-    <string name="update_status_available">A newer Nightly build is available, tap for details</string>
+    <string name="update_status_ahead">This build is newer than the latest %1$s (%2$s), the next newer one will be offered</string>
+    <string name="update_status_available">A newer %1$s build is available, tap for details</string>
     <string name="update_status_checking">Checking GitHub…</string>
-    <string name="update_status_current">You have the latest Nightly build</string>
+    <string name="update_status_current">You have the latest %1$s build</string>
     <string name="update_status_failed">Could not check GitHub, tap to retry</string>
-    <string name="update_status_idle">Checks Main Nightly on GitHub after a cold start, tap to check now</string>
+    <string name="update_status_idle">Checks %1$s on GitHub after a cold start, tap to check now</string>
 </resources>

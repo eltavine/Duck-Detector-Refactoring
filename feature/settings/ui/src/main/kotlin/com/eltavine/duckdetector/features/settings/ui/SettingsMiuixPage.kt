@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUiState
+import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.ui.components.AboutSection
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorNameWordmark
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorsSection
@@ -48,6 +49,7 @@ internal fun SettingsMiuixPage(
     uiState: SettingsUiState,
     uiMode: UiMode,
     consentToggles: List<ConsentToggle>,
+    onUpdateChannelChange: (SettingsUpdateChannel) -> Unit,
     onCheckForUpdates: () -> Unit,
     onGitHubAccelerationChange: (Boolean) -> Unit,
     onUiModeChange: (UiMode) -> Unit,
@@ -123,6 +125,7 @@ internal fun SettingsMiuixPage(
         item(key = "about") {
             AboutSection(
                 uiState = uiState,
+                onUpdateChannelChange = onUpdateChannelChange,
                 onCheckForUpdates = onCheckForUpdates,
                 onOpenLicenses = onOpenLicenses,
             )

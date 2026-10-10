@@ -30,4 +30,12 @@ limitations under the License.
     <string name="update_later">Để sau</string>
     <string name="update_view_changes">Xem tất cả thay đổi trên GitHub</string>
     <string name="update_download">Mở trang tải xuống</string>
+    <string name="update_dialog_title_stable">Có bản cập nhật Stable</string>
+    <string name="update_release_label">Bản phát hành và commit</string>
+    <string name="update_apk_label">Kích thước APK và SHA-256</string>
+    <string name="update_release_notes_title">Ghi chú phát hành</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="other">Còn %1$d mục trên trang phát hành</item>
+    </plurals>
+    <string name="update_view_release">Xem bản phát hành trên GitHub</string>
 </resources>

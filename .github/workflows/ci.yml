@@ -58,6 +58,7 @@ jobs:
           python3 .github/scripts/test-jni-contracts.py
           python3 .github/scripts/test-native-boundaries.py
           python3 .github/scripts/test-reflection-boundaries.py
+          python3 .github/scripts/test-release-tools.py
           python3 .github/scripts/test-source-file-length.py
           python3 .github/scripts/test-text-protocols.py
           python3 scripts/test_new_detector.py

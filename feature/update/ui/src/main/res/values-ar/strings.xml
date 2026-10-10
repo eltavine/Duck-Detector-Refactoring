@@ -30,4 +30,17 @@ limitations under the License.
     <string name="update_later">لاحقًا</string>
     <string name="update_view_changes">عرض كل التغييرات على GitHub</string>
     <string name="update_download">فتح التنزيل</string>
+    <string name="update_dialog_title_stable">يتوفر تحديث Stable</string>
+    <string name="update_release_label">الإصدار والالتزام</string>
+    <string name="update_apk_label">حجم APK وقيمة SHA-256</string>
+    <string name="update_release_notes_title">ملاحظات الإصدار</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="zero">لا توجد عناصر إضافية في صفحة الإصدار</item>
+        <item quantity="one">يوجد عنصر إضافي واحد في صفحة الإصدار</item>
+        <item quantity="two">يوجد عنصران إضافيان في صفحة الإصدار</item>
+        <item quantity="few">توجد %1$d عناصر إضافية في صفحة الإصدار</item>
+        <item quantity="many">يوجد %1$d عنصرًا إضافيًا في صفحة الإصدار</item>
+        <item quantity="other">يوجد %1$d عنصر إضافي في صفحة الإصدار</item>
+    </plurals>
+    <string name="update_view_release">عرض الإصدار على GitHub</string>
 </resources>

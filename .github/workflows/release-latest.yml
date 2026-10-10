@@ -1,18 +1,35 @@
-name: Publish Latest GitHub Release
+# Copyright (C) 2026 Duck Apps Contributor
+# If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-# This workflow is intentionally additive: nightly build/push logic stays in build.yml,
-# while tagged/manual release publication lives here to keep release risk isolated.
+name: Publish Stable Release
+
+# Stable releases are built from calendar version tags (v26.10.0) on main; build.yml keeps publishing
+# Nightly builds. The release is assembled as a draft and published only after every asset is uploaded
+# and verified, so the latest-release links the app and the README follow never reach a release that
+# is missing its APK or update.json. RELEASING.md describes the process.
 on:
   push:
     tags:
       # Version tags only. A bare '*' also fired on scratch and backup tags, and because this
-      # workflow publishes with make_latest, one stray tag push was enough to promote an
-      # unintended build to the repository's latest release.
+      # workflow publishes the latest release, one stray tag push was enough to promote an
+      # unintended build.
       - 'v*'
   workflow_dispatch:
     inputs:
       tag_name:
-        description: Existing git tag to publish as a GitHub release
+        description: Existing stable tag to publish, such as v26.10.0
         required: true
         type: string
       release_name:
@@ -26,12 +43,13 @@ concurrency:
 
 jobs:
   publish-release:
-    if: github.event_name != 'push' || github.ref_name != 'nightly'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     environment: Telegram
     permissions:
+      attestations: write
       contents: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -47,9 +65,17 @@ jobs:
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_RELEASE_NAME: ${{ inputs.release_name }}
           INPUT_TAG_NAME: ${{ inputs.tag_name }}
         run: |
           set -euo pipefail
+
+          # The release tooling comes from the workflow's revision, like the setup action below, while
+          # the source that is built comes from the tag.
+          tools_dir="$RUNNER_TEMP/release-tools"
+          mkdir -p "$tools_dir"
+          cp .github/scripts/release_changes.py .github/scripts/release_manifest.py "$tools_dir/"
 
           if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
             expected_workflow_ref="refs/heads/${DEFAULT_BRANCH}"
@@ -57,45 +83,28 @@ jobs:
               echo "Manual releases must run from the default branch (${DEFAULT_BRANCH})." >&2
               exit 1
             fi
-
             tag_name="${INPUT_TAG_NAME}"
-            if [ -z "${tag_name}" ]; then
-              echo "tag_name input is required for manual release publishing." >&2
-              exit 1
-            fi
-
-            if ! git check-ref-format "refs/tags/${tag_name}" >/dev/null; then
-              echo "Invalid git tag name: ${tag_name}" >&2
-              exit 1
-            fi
-
-            # Manual publishing syncs an existing git tag to GitHub Releases.
-            # It never manufactures a new tag from the current branch head.
-            if ! git rev-parse -q --verify "refs/tags/${tag_name}" >/dev/null; then
-              echo "Tag ${tag_name} does not exist in this repository." >&2
-              exit 1
-            fi
-
-            git checkout --detach "refs/tags/${tag_name}"
           else
             tag_name="${GITHUB_REF_NAME}"
           fi
 
-          if ! git check-ref-format "refs/tags/${tag_name}" >/dev/null; then
-            echo "Invalid git tag name: ${tag_name}" >&2
+          # Stable tags are calendar versions: a two-digit year, the month and a patch number.
+          if ! [[ "${tag_name}" =~ ^v[0-9]{2}\.([1-9]|1[0-2])\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Stable tags look like v26.10.0; ${tag_name:-<empty>} does not." >&2
             exit 1
           fi
-
+          # Manual publishing syncs an existing git tag to GitHub Releases.
+          # It never manufactures a new tag from the current branch head.
           if ! git rev-parse -q --verify "refs/tags/${tag_name}" >/dev/null; then
             echo "Tag ${tag_name} does not exist in this repository." >&2
             exit 1
           fi
+          git checkout --quiet --detach "refs/tags/${tag_name}"
 
           if ! git check-ref-format "refs/heads/${DEFAULT_BRANCH}" >/dev/null; then
             echo "Repository default branch name is not a valid git ref: ${DEFAULT_BRANCH}" >&2
             exit 1
           fi
-
           git fetch --no-tags origin \
             "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
 
@@ -121,7 +130,50 @@ jobs:
             exit 1
           fi
 
-          echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
+          # The checkout step fetched the submodules at the workflow revision's commits. Build the
+          # ones the tag records, which differ when a manual run publishes an older tag.
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+          # A published stable release is final: users and update.json already refer to its files.
+          # A draft is what an interrupted run leaves behind, and this run rebuilds it.
+          releases=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")
+          if jq -e --arg tag "${tag_name}" '[.[][] | select(.tag_name == $tag and (.draft | not))] | length > 0' \
+            <<<"$releases" >/dev/null; then
+            echo "${tag_name} is already published. Tag a new patch version instead of rebuilding it." >&2
+            exit 1
+          fi
+          while IFS= read -r draft_id; do
+            [ -n "$draft_id" ] || continue
+            echo "Deleting draft release ${draft_id} left for ${tag_name} by an earlier run."
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${draft_id}" >/dev/null
+          done < <(jq -r --arg tag "${tag_name}" '.[][] | select(.tag_name == $tag and .draft) | .id' <<<"$releases")
+
+          # GitHub picks the previous release itself when none is named, and the moving nightly
+          # prerelease could be that release. The first stable release has no previous tag and
+          # lists the whole history.
+          previous_tag=$(python3 - "$tools_dir" "${tag_name}" <<'PY'
+          import sys
+          sys.path.insert(0, sys.argv[1])
+          import release_changes
+          print(release_changes.previous_stable_tag(".", sys.argv[2]) or "", end="")
+          PY
+          )
+
+          release_name="${INPUT_RELEASE_NAME:-}"
+          if [ -z "${release_name}" ]; then
+            release_name="Duck Detector ${tag_name#v}"
+          fi
+
+          {
+            echo "tag_name=${tag_name}"
+            echo "version=${tag_name#v}"
+            echo "tag_commit=${tag_commit}"
+            echo "previous_tag=${previous_tag}"
+            echo "release_name=${release_name}"
+            echo "tools_dir=${tools_dir}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Publishing ${tag_name} (${tag_commit}); previous stable tag: ${previous_tag:-none}."
 
       - name: Set up Android build toolchain
         id: toolchain
@@ -140,6 +192,8 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
 
@@ -148,6 +202,8 @@ jobs:
             ANDROID_KEYSTORE_PASSWORD
             ANDROID_KEY_ALIAS
             ANDROID_KEY_PASSWORD
+            TELEGRAM_BOT_TOKEN
+            TELEGRAM_CHAT_ID
           )
           missing_secrets=()
           for secret_name in "${required_secrets[@]}"; do
@@ -223,7 +279,7 @@ jobs:
           echo "sha256=${expected_sha256}" >> "$GITHUB_OUTPUT"
           echo "signer_name=${signer_name}" >> "$GITHUB_OUTPUT"
 
-      - name: Build release APK
+      - name: Build release APK and SDK AAR
         id: build
         shell: bash
         env:
@@ -231,35 +287,40 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          TAG_NAME: ${{ steps.release_target.outputs.tag_name }}
         run: |
           set -euo pipefail
 
           start_time=$(date +%s)
           build_time_utc=$(date -u +%Y%m%d%H%M%S)
+          build_time_iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          # GITHUB_SHA names the workflow's commit on manual runs; the build hash must name the tag's.
           env -u GITHUB_SHA ./gradlew \
             --stacktrace \
+            -Pduckdetector.releaseTag="${TAG_NAME}" \
             -Pduckdetector.buildTimeUtc="${build_time_utc}" \
             -Pduckdetector.teeCrl.refresh=true \
             -Pduckdetector.githubContributors.refresh=true \
-            :app:assembleRelease
+            :app:assembleRelease \
+            :sdk:aar:assemble
           end_time=$(date +%s)
 
           duration_seconds=$((end_time - start_time))
-          duration_minutes=$((duration_seconds / 60))
-          duration_remainder=$((duration_seconds % 60))
-
-          printf -v duration_human "%dm %02ds" "$duration_minutes" "$duration_remainder"
-
+          printf -v duration_human "%dm %02ds" "$((duration_seconds / 60))" "$((duration_seconds % 60))"
           echo "duration_human=$duration_human" >> "$GITHUB_OUTPUT"
+          echo "build_time_iso=$build_time_iso" >> "$GITHUB_OUTPUT"
 
       - name: Collect release metadata
         id: metadata
         shell: bash
+        env:
+          EXPECTED_VERSION: ${{ steps.release_target.outputs.version }}
         run: |
           set -euo pipefail
 
-          metadata_json=$(python3 - <<'PY'
+          python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           metadata_candidates = [
@@ -269,98 +330,46 @@ jobs:
           metadata_path = next((path for path in metadata_candidates if path.exists()), None)
           if metadata_path is None:
               raise SystemExit("Release output-metadata.json not found in app/release or app/build/outputs/apk/release.")
-
           metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-          elements = metadata.get("elements") or []
-          if not elements:
-              raise SystemExit("No APK entries found in output-metadata.json.")
-
           apk_elements = [
-              element for element in elements
+              element for element in metadata.get("elements") or []
               if element.get("outputFile", "").endswith(".apk")
           ]
-          if not apk_elements:
-              raise SystemExit("No APK files were listed in output-metadata.json.")
-
           universal_elements = [
               element for element in apk_elements
               if (element.get("type") or "").upper() == "UNIVERSAL"
               or element.get("outputFile", "").endswith("-Universal.apk")
           ]
-
           if len(universal_elements) == 1:
-              selected_element = universal_elements[0]
+              selected = universal_elements[0]
           elif len(apk_elements) == 1:
-              selected_element = apk_elements[0]
+              selected = apk_elements[0]
           else:
-              listed_outputs = ", ".join(sorted(element.get("outputFile", "<missing outputFile>") for element in apk_elements))
-              raise SystemExit(f"Expected a single release APK entry, found {len(apk_elements)}: {listed_outputs}")
+              raise SystemExit(f"Expected a single release APK entry, found {len(apk_elements)}.")
 
-          output_file = selected_element.get("outputFile", "")
+          output_file = selected.get("outputFile", "")
           if not output_file or Path(output_file).name != output_file:
               raise SystemExit(f"Unsafe release APK output path: {output_file!r}.")
-
           apk_path = metadata_path.parent / output_file
           if not apk_path.is_file() or apk_path.stat().st_size <= 0:
               raise SystemExit(f"Release APK not found at {apk_path}.")
 
-          version_name = selected_element.get("versionName")
-          version_code = selected_element.get("versionCode")
-          if not isinstance(version_name, str) or not version_name.strip():
-              raise SystemExit("Release APK versionName is missing.")
-          if (
-              not isinstance(version_code, int)
-              or isinstance(version_code, bool)
-              or version_code <= 0
-          ):
+          version_name = selected.get("versionName")
+          version_code = selected.get("versionCode")
+          if version_name != os.environ["EXPECTED_VERSION"]:
               raise SystemExit(
-                  f"Release APK versionCode is invalid: {version_code!r}."
+                  f"The tagged source built versionName {version_name!r}, not "
+                  f"{os.environ['EXPECTED_VERSION']!r}. Stable tags must be on commits whose build "
+                  "logic reads duckdetector.releaseTag."
               )
+          if not isinstance(version_code, int) or isinstance(version_code, bool) or version_code <= 0:
+              raise SystemExit(f"Release APK versionCode is invalid: {version_code!r}.")
 
-          payload = {
-              "apk_path": str(apk_path),
-              "apk_name": apk_path.name,
-              "version_name": version_name.strip(),
-              "version_code": str(version_code),
-          }
-          print(json.dumps(payload))
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"apk_path={apk_path}\n")
+              output.write(f"version_name={version_name}\n")
+              output.write(f"version_code={version_code}\n")
           PY
-          )
-
-          apk_path=$(METADATA_JSON="${metadata_json}" python3 - <<'PY'
-          import json
-          import os
-          print(json.loads(os.environ["METADATA_JSON"])["apk_path"], end="")
-          PY
-          )
-
-          apk_name=$(METADATA_JSON="${metadata_json}" python3 - <<'PY'
-          import json
-          import os
-          print(json.loads(os.environ["METADATA_JSON"])["apk_name"], end="")
-          PY
-          )
-
-          version_name=$(METADATA_JSON="${metadata_json}" python3 - <<'PY'
-          import json
-          import os
-          print(json.loads(os.environ["METADATA_JSON"])["version_name"], end="")
-          PY
-          )
-
-          version_code=$(METADATA_JSON="${metadata_json}" python3 - <<'PY'
-          import json
-          import os
-          print(json.loads(os.environ["METADATA_JSON"])["version_code"], end="")
-          PY
-          )
-
-          {
-            echo "apk_path=$apk_path"
-            echo "apk_name=$apk_name"
-            echo "version_name=$version_name"
-            echo "version_code=$version_code"
-          } >> "$GITHUB_OUTPUT"
 
       - name: Verify APK signature
         shell: bash
@@ -392,79 +401,299 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve release metadata
-        id: release_meta
+      - name: Stage release assets
+        id: assets
         shell: bash
         env:
-          TAG_NAME: ${{ steps.release_target.outputs.tag_name }}
-          VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
-          INPUT_RELEASE_NAME: ${{ inputs.release_name }}
+          APK_PATH: ${{ steps.metadata.outputs.apk_path }}
+          VERSION: ${{ steps.release_target.outputs.version }}
         run: |
           set -euo pipefail
 
-          release_name="${INPUT_RELEASE_NAME}"
-          if [ -z "${release_name}" ]; then
-            release_name="Duck Detector ${VERSION_NAME}"
+          # GitHub renames assets whose names hold spaces or other special characters, so the files
+          # are uploaded under names that stay as written and that update.json can link in advance.
+          apk_name="Duck.Detector-${VERSION}.apk"
+          aar_name="duckdetector-sdk-${VERSION}.aar"
+          aar_source=sdk/aar/build/outputs/aar/aar.aar
+          if [ ! -s "$aar_source" ]; then
+            echo "SDK AAR is missing or empty: $aar_source" >&2
+            exit 1
           fi
+          unzip -tq "$aar_source" >/dev/null
+
+          mkdir -p release-assets
+          cp "${APK_PATH}" "release-assets/${apk_name}"
+          cp "$aar_source" "release-assets/${aar_name}"
+          (cd release-assets && sha256sum "${apk_name}" "${aar_name}" > SHA256SUMS)
 
           {
-            echo "release_name=$release_name"
-            echo "prerelease=false"
-            echo "make_latest=true"
+            echo "apk_name=${apk_name}"
+            echo "aar_name=${aar_name}"
+            echo "apk_sha256=$(sha256sum "release-assets/${apk_name}" | cut -d' ' -f1)"
+            echo "aar_sha256=$(sha256sum "release-assets/${aar_name}" | cut -d' ' -f1)"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Resolve release commit metadata
-        id: release_commit
+      - name: Generate the changelog
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIOUS_TAG: ${{ steps.release_target.outputs.previous_tag }}
+          TAG_NAME: ${{ steps.release_target.outputs.tag_name }}
         run: |
           set -euo pipefail
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "short_sha=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Prepare release note
+          # GitHub's generated notes list the pull requests merged since the previous tag, their
+          # authors and first-time contributors.
+          arguments=(-f "tag_name=${TAG_NAME}")
+          if [ -n "${PREVIOUS_TAG}" ]; then
+            arguments+=(-f "previous_tag_name=${PREVIOUS_TAG}")
+          fi
+          error_file="$RUNNER_TEMP/gh-api-notes-error"
+          for attempt in 1 2 3 4; do
+            if gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" "${arguments[@]}" \
+              --jq '.body' > changelog.md 2>"$error_file"; then
+              break
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              cat "$error_file" >&2
+              exit 1
+            fi
+            echo "Release notes generation failed (attempt ${attempt}/4); retrying..." >&2
+            sleep $((attempt * 2))
+          done
+          if [ ! -s changelog.md ]; then
+            echo "GitHub returned empty release notes." >&2
+            exit 1
+          fi
+
+      - name: Write update.json
         shell: bash
         env:
+          APK_NAME: ${{ steps.assets.outputs.apk_name }}
+          BUILD_TIME_ISO: ${{ steps.build.outputs.build_time_iso }}
           TAG_NAME: ${{ steps.release_target.outputs.tag_name }}
-          RELEASE_NAME: ${{ steps.release_meta.outputs.release_name }}
-          VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
+          TOOLS_DIR: ${{ steps.release_target.outputs.tools_dir }}
           VERSION_CODE: ${{ steps.metadata.outputs.version_code }}
-          APK_NAME: ${{ steps.metadata.outputs.apk_name }}
-          BUILD_DURATION: ${{ steps.build.outputs.duration_human }}
-          SIGNER_NAME: ${{ steps.signing_fingerprint.outputs.signer_name }}
-          RELEASE_SHA: ${{ steps.release_commit.outputs.sha }}
-          RELEASE_SHORT_SHA: ${{ steps.release_commit.outputs.short_sha }}
+          VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
         run: |
-          cat <<EOF > github-release-note.md
-          ${RELEASE_NAME}
+          set -euo pipefail
 
-          Tag: ${TAG_NAME}
-          Version: ${VERSION_NAME} (${VERSION_CODE})
-          APK: ${APK_NAME}
-          Commit: ${RELEASE_SHA} (${RELEASE_SHORT_SHA})
-          Build time: ${BUILD_DURATION}
-          Signature: verified by ${SIGNER_NAME}
-          EOF
+          python3 "${TOOLS_DIR}/release_manifest.py" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --tag "${TAG_NAME}" \
+            --apk "release-assets/${APK_NAME}" \
+            --version-name "${VERSION_NAME}" \
+            --version-code "${VERSION_CODE}" \
+            --built-at "${BUILD_TIME_ISO}" \
+            --notes changelog.md \
+            --output release-assets/update.json
 
-      - name: Upload release artifact
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release-assets/${{ steps.assets.outputs.apk_name }}
+            release-assets/${{ steps.assets.outputs.aar_name }}
+
+      - name: Write the release body
+        shell: bash
+        env:
+          AAR_NAME: ${{ steps.assets.outputs.aar_name }}
+          AAR_SHA256: ${{ steps.assets.outputs.aar_sha256 }}
+          APK_NAME: ${{ steps.assets.outputs.apk_name }}
+          APK_SHA256: ${{ steps.assets.outputs.apk_sha256 }}
+          SIGNER_NAME: ${{ steps.signing_fingerprint.outputs.signer_name }}
+          SIGNER_SHA256: ${{ steps.signing_fingerprint.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+
+          # shellcheck disable=SC2016 # The backticks are Markdown code spans.
+          {
+            cat changelog.md
+            printf '\n\n## Verification\n\n'
+            printf '| Asset | SHA-256 |\n| --- | --- |\n'
+            printf '| `%s` | `%s` |\n' "${APK_NAME}" "${APK_SHA256}" "${AAR_NAME}" "${AAR_SHA256}"
+            printf '\nThe APK is signed by %s, certificate SHA-256 `%s`. ' "${SIGNER_NAME}" "${SIGNER_SHA256}"
+            printf 'GitHub attests that this workflow built both files:\n\n'
+            printf '```\ngh attestation verify %s --repo %s\n```\n' "${APK_NAME}" "${GITHUB_REPOSITORY}"
+          } > release-body.md
+
+      - name: Upload release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ steps.metadata.outputs.apk_name }}
-          path: ${{ steps.metadata.outputs.apk_path }}
+          name: ${{ steps.release_target.outputs.tag_name }}
+          path: release-assets/
           if-no-files-found: error
 
-      - name: Publish latest GitHub release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        with:
-          tag_name: ${{ steps.release_target.outputs.tag_name }}
-          name: ${{ steps.release_meta.outputs.release_name }}
-          body_path: github-release-note.md
-          prerelease: ${{ steps.release_meta.outputs.prerelease }}
-          make_latest: ${{ steps.release_meta.outputs.make_latest }}
-          overwrite_files: true
-          files: |
-            ${{ steps.metadata.outputs.apk_path }}
+      - name: Create the draft release
+        id: draft
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AAR_NAME: ${{ steps.assets.outputs.aar_name }}
+          APK_NAME: ${{ steps.assets.outputs.apk_name }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NAME: ${{ steps.release_target.outputs.release_name }}
+          TAG_NAME: ${{ steps.release_target.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          gh release create "${TAG_NAME}" \
+            --draft \
+            --verify-tag \
+            --title "${RELEASE_NAME}" \
+            --notes-file release-body.md \
+            "release-assets/${APK_NAME}" \
+            "release-assets/${AAR_NAME}" \
+            release-assets/SHA256SUMS \
+            release-assets/update.json
+
+          release_id=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            | jq -r --arg tag "${TAG_NAME}" '[.[][] | select(.tag_name == $tag and .draft)] | if length == 1 then .[0].id else empty end')
+          if ! [[ "${release_id}" =~ ^[0-9]+$ ]]; then
+            echo "Could not find exactly one draft release for ${TAG_NAME}." >&2
+            exit 1
+          fi
+          echo "release_id=${release_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the draft's assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ steps.draft.outputs.release_id }}
+        run: |
+          set -euo pipefail
+
+          assets=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?per_page=100")
+          expected=$(cd release-assets && for file in *; do
+            jq -n --arg name "$file" --argjson size "$(stat -c '%s' "$file")" \
+              --arg digest "sha256:$(sha256sum "$file" | cut -d' ' -f1)" '{name: $name, size: $size, digest: $digest}'
+          done | jq -s 'sort_by(.name)')
+          if ! jq -e --argjson expected "$expected" '
+            [.[][] | {name, size, digest: (.digest // null), state}] | sort_by(.name) as $actual |
+            ($actual | length) == ($expected | length) and
+            ([range(0; $expected | length) as $i |
+              $actual[$i].name == $expected[$i].name and
+              $actual[$i].size == $expected[$i].size and
+              $actual[$i].state == "uploaded" and
+              ($actual[$i].digest == null or ($actual[$i].digest | ascii_downcase) == $expected[$i].digest)
+            ] | all)' <<<"$assets" >/dev/null; then
+            echo "The draft's assets do not match the files built in this run." >&2
+            jq '[.[][] | {name, size, digest, state}]' <<<"$assets" >&2
+            exit 1
+          fi
+
+      - name: Publish the release as latest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ steps.draft.outputs.release_id }}
+        run: |
+          set -euo pipefail
+
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            -F draft=false \
+            -F prerelease=false \
+            -f make_latest=true >/dev/null
+
+      - name: Verify the latest-release links
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.release_target.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          # The app reads releases/latest/download/update.json, which redirects to the newest
+          # published full release once GitHub has propagated it.
+          manifest_url="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/update.json"
+          verified=false
+          for attempt in {1..12}; do
+            latest_tag=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.tag_name' 2>/dev/null || true)
+            if [ "${latest_tag}" = "${TAG_NAME}" ] &&
+              curl --silent --show-error --fail --location --proto '=https' --tlsv1.2 \
+                --output published-update.json "${manifest_url}" &&
+              cmp --silent release-assets/update.json published-update.json; then
+              verified=true
+              break
+            fi
+            echo "Latest release is ${latest_tag:-unknown}, not yet ${TAG_NAME} (attempt ${attempt}/12); waiting..." >&2
+            sleep 5
+          done
+          if [ "${verified}" != true ]; then
+            echo "releases/latest does not serve ${TAG_NAME}'s update.json." >&2
+            exit 1
+          fi
+
+          apk_url=$(jq -r '.apk.downloadUrl' release-assets/update.json)
+          curl --silent --show-error --fail --location --range 0-0 --proto '=https' --tlsv1.2 \
+            --output /dev/null "${apk_url}"
+
+      - name: Push APK to Telegram channel
+        shell: bash
+        env:
+          APK_NAME: ${{ steps.assets.outputs.apk_name }}
+          COMMIT: ${{ steps.release_target.outputs.tag_commit }}
+          SIGNER_NAME: ${{ steps.signing_fingerprint.outputs.signer_name }}
+          TAG_NAME: ${{ steps.release_target.outputs.tag_name }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION_CODE: ${{ steps.metadata.outputs.version_code }}
+          VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
+        run: |
+          set -euo pipefail
+
+          apk_path="release-assets/${APK_NAME}"
+          if [ "$(stat -c '%s' "${apk_path}")" -gt $((50 * 1024 * 1024)) ]; then
+            echo "The APK exceeds Telegram Bot API's 50 MiB upload limit." >&2
+            exit 1
+          fi
+
+          caption=$(python3 - <<'PY'
+          import html
+          import os
+
+          web = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}"
+          tag = os.environ["TAG_NAME"]
+          commit = os.environ["COMMIT"]
+          lines = [
+              f"<b>Duck Detector {html.escape(os.environ['VERSION_NAME'])}</b> · Stable",
+              "",
+              f'Release notes: <a href="{web}/releases/tag/{html.escape(tag, quote=True)}">{html.escape(tag)}</a>',
+              f"Version code: <b>{html.escape(os.environ['VERSION_CODE'])}</b>",
+              f'Commit: <a href="{web}/commit/{commit}">{commit[:8]}</a>',
+              f"Signature: <b>verified by {html.escape(os.environ['SIGNER_NAME'] or 'Unknown signer')}</b>",
+              "Build provenance: <b>attested by GitHub</b>",
+          ]
+          print("\n".join(lines), end="")
+          PY
+          )
+
+          response_file=$(mktemp)
+          trap 'rm -f "${response_file}"' EXIT
+          if ! http_code=$(curl \
+            --silent \
+            --show-error \
+            --connect-timeout 15 \
+            --max-time 300 \
+            --proto '=https' \
+            --tlsv1.2 \
+            --output "${response_file}" \
+            --write-out "%{http_code}" \
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+            -F "chat_id=${TELEGRAM_CHAT_ID}" \
+            -F "document=@${apk_path}" \
+            -F "parse_mode=HTML" \
+            --form-string "caption=${caption}"); then
+            echo "Telegram upload failed due to a network or timeout error." >&2
+            exit 1
+          fi
+          if [ "${http_code}" != "200" ] || ! jq -e '.ok == true and .result.message_id != null' \
+            "${response_file}" >/dev/null; then
+            echo "Telegram API returned HTTP ${http_code}." >&2
+            cat "${response_file}" >&2
+            exit 1
+          fi
 
       - name: Clean up signing material
         if: always()
