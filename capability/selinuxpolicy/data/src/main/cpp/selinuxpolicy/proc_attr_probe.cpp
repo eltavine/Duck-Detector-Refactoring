@@ -10,6 +10,17 @@ namespace duckdetector::selinux::proc_attr {
         bool denied(const WriteResult &result, const int error) {
             return result.open_error == 0 && result.bytes == -1 && result.write_error == error;
         }
+        // AOSP seapp_contexts derives app_zygote MLS categories from the app/user UID.
+        // Accept categories after the fixed context boundary; later identity checks compare
+        // the full captured label, so changing only the categories still invalidates the run.
+        bool is_carrier(const char *context) {
+            constexpr size_t fixed = sizeof(kCarrier) - 1;
+            if (std::strncmp(context, kCarrier, fixed) != 0) return false;
+            return context[fixed] == '\0' ||
+                   (context[fixed] == ':' && context[fixed + 1] == 'c' &&
+                    context[fixed + 2] >= '0' && context[fixed + 2] <= '9');
+        }
+
         bool send_report(const int fd, const Report &report) {
             const auto *data = reinterpret_cast<const unsigned char *>(&report);
             size_t sent = 0;
@@ -21,18 +32,18 @@ namespace duckdetector::selinux::proc_attr {
             }
             return true;
         }
-        bool identity(Report &report, const uid_t uid) {
+        bool identity(Report &report, const uid_t uid, const char *initial) {
             char context[128]{};
             report.error = read_identity(context, sizeof(context));
             if (report.error) { report.state = State::kUnavailable; return false; }
-            if (getuid() != uid || std::strcmp(context, kCarrier)) {
+            if (getuid() != uid || std::strcmp(context, initial)) {
                 report.identity_changed = true;
                 report.state = State::kInconclusive;
                 return false;
             }
             return true;
         }
-        bool control(Report &report, Controls &controls, const uid_t uid, const int fd) {
+        bool control(Report &report, Controls &controls, const uid_t uid, const int fd, const char *initial) {
             controls.malformed = write_current(kMalformed);
             if (!send_report(fd, report)) return false;
             if (!denied(controls.malformed, EINVAL)) {
@@ -50,21 +61,21 @@ namespace duckdetector::selinux::proc_attr {
                 report.state = State::kInconclusive;
                 return false;
             }
-            return identity(report, uid);
+            return identity(report, uid, initial);
         }
         int run_child(const int fd) {
             Report report;
             const uid_t uid = getuid();
             char context[128]{};
             report.error = read_identity(context, sizeof(context));
-            if (report.error || uid < 10000 || std::strcmp(context, kCarrier)) {
+            if (report.error || uid < 10000 || !is_carrier(context)) {
                 report.state = report.error ? State::kUnavailable : State::kUnsupported;
                 return send_report(fd, report) ? 0 : 1;
             }
             for (unsigned round = 0; round < kRounds; ++round) {
                 report.step = Step::kControlsBefore;
                 if (!send_report(fd, report)) return 1;
-                if (!control(report, report.controls[round * 2], uid, fd)) break;
+                if (!control(report, report.controls[round * 2], uid, fd, context)) break;
                 report.step = Step::kTargets;
                 if (!send_report(fd, report)) return 1;
                 bool stopped = false;
@@ -73,7 +84,7 @@ namespace duckdetector::selinux::proc_attr {
                     result = write_current(targets[index].context);
                     // Any successful or short write stops the whole experiment in this disposable child.
                     // Even a success without a visible identity change invalidates the refusal model.
-                    if (result.bytes >= 0 || !identity(report, uid)) {
+                    if (result.bytes >= 0 || !identity(report, uid, context)) {
                         report.state = State::kInconclusive;
                         stopped = true;
                     }
@@ -82,7 +93,7 @@ namespace duckdetector::selinux::proc_attr {
                 }
                 if (stopped) break;
                 report.step = Step::kControlsAfter;
-                if (!control(report, report.controls[round * 2 + 1], uid, fd)) break;
+                if (!control(report, report.controls[round * 2 + 1], uid, fd, context)) break;
                 ++report.completed_rounds;
                 if (!send_report(fd, report)) return 1;
             }

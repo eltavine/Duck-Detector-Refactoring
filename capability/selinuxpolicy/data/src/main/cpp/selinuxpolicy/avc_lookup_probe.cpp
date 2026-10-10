@@ -30,6 +30,17 @@ namespace duckdetector::selinux::avc_lookup {
 
         bool rejected(const WriteOutcome &outcome) { return outcome.bytes == -1 && outcome.error == EINVAL; }
 
+        // AOSP seapp_contexts derives app_zygote MLS categories from the app/user UID.
+        // Accept categories after the fixed context boundary; later identity checks compare
+        // the full captured label, so changing only the categories still invalidates the run.
+        bool is_carrier(const char *context) {
+            constexpr size_t fixed = sizeof(kCarrier) - 1;
+            if (std::strncmp(context, kCarrier, fixed) != 0) return false;
+            return context[fixed] == '\0' ||
+                   (context[fixed] == ':' && context[fixed + 1] == 'c' &&
+                    context[fixed + 2] >= '0' && context[fixed + 2] <= '9');
+        }
+
         struct Session {
             Report report;
             int report_fd = -1;
@@ -180,7 +191,7 @@ namespace duckdetector::selinux::avc_lookup {
             const uid_t uid = getuid();
             char initial[128]{};
             report.error = read_identity(initial, sizeof(initial));
-            if (report.error || uid < 10000 || std::strcmp(initial, kCarrier) != 0) {
+            if (report.error || uid < 10000 || !is_carrier(initial)) {
                 report.state = report.error ? State::kUnavailable : State::kUnsupported;
                 session.publish();
                 return session.lost ? 1 : 0;

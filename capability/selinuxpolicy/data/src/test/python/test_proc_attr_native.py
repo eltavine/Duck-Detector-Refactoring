@@ -34,6 +34,8 @@ FLOW = r"""
 using namespace duckdetector::selinux::proc_attr;
 static std::string mode;
 static int targets_written, malformed_written, stock_written;
+// Android 15 levelFrom=user assigns these categories to the primary user.
+static const char kCarrierLevel[] = "u:r:app_zygote:s0:c512,c768";
 extern "C" uid_t getuid()
 #if defined(__linux__)
 noexcept
@@ -43,8 +45,22 @@ namespace duckdetector::selinux::proc_attr {
 int read_identity(char *buffer, unsigned) {
     if (mode == "unreadable") return EACCES;
     if (mode == "lost_identity" && targets_written) return ENOENT;
-    strcpy(buffer, mode == "wrong_domain" || (mode == "identity_changed" && targets_written)
-        ? "u:r:isolated_app:s0" : kCarrier);
+    const char *value = mode == "carrier_plain" || mode == "identity_added" ? kCarrier : kCarrierLevel;
+    if (mode == "carrier_secondary") value = "u:r:app_zygote:s0:c513,c768";
+    if (mode == "carrier_all") value = "u:r:app_zygote:s0:c123,c256,c512,c768";
+    if (mode == "wrong_domain") value = "u:r:isolated_app:s0";
+    if (mode == "domain_prefix") value = "u:r:app_zygote_extra:s0:c512,c768";
+    if (mode == "wrong_role") value = "u:object_r:app_zygote:s0:c512,c768";
+    if (mode == "level_prefix") value = "u:r:app_zygote:s00:c512,c768";
+    if (mode == "empty_categories") value = "u:r:app_zygote:s0:";
+    if (mode == "bad_categories") value = "u:r:app_zygote:s0:x512,c768";
+    if (targets_written) {
+        if (mode == "identity_changed") value = "u:r:isolated_app:s0";
+        if (mode == "identity_categories") value = "u:r:app_zygote:s0:c513,c768";
+        if (mode == "identity_removed") value = kCarrier;
+        if (mode == "identity_added") value = kCarrierLevel;
+    }
+    strcpy(buffer, value);
     return 0;
 }
 WriteResult write_current(const char *value) {
@@ -101,26 +117,30 @@ static void reset(const char *test) {
     targets_written = malformed_written = stock_written = 0;
 }
 int main() {
-    for (const char *test : {"stock", "recognized", "unstable", "target_open", "target_eperm", "target_eintr",
-        "wrong_uid", "wrong_domain", "unreadable", "open_denied", "no_setcurrent", "malformed_success",
+    for (const char *test : {"stock", "carrier_plain", "carrier_secondary", "carrier_all", "recognized", "unstable", "target_open", "target_eperm", "target_eintr",
+        "wrong_uid", "wrong_domain", "domain_prefix", "wrong_role", "level_prefix", "empty_categories", "bad_categories", "unreadable", "open_denied", "no_setcurrent", "malformed_success",
         "stock_invalid", "stock_success", "late_control", "success", "short_write", "zero_write",
-        "identity_changed", "lost_identity", "not_started", "setup_failed", "timeout", "signal", "seccomp",
+        "identity_changed", "identity_categories", "identity_removed", "identity_added", "lost_identity", "not_started", "setup_failed", "timeout", "signal", "seccomp",
         "unreaped", "failed_exit", "truncated", "partial"}) {
         reset(test);
         const auto result = collect();
-        const bool complete = mode == "stock" || mode == "recognized" || mode == "unstable" ||
-            mode == "target_open" || mode == "target_eperm" || mode == "target_eintr";
+        const bool complete = mode == "stock" || mode == "carrier_plain" || mode == "carrier_secondary" || mode == "carrier_all" || mode == "recognized" ||
+            mode == "unstable" || mode == "target_open" || mode == "target_eperm" || mode == "target_eintr";
         assert((result.report.state == State::kComplete) == complete);
         if (complete) assert(result.report.completed_rounds == 2 && targets_written == 18 &&
             malformed_written == 4 && stock_written == 4);
-        if (mode == "wrong_uid" || mode == "wrong_domain") assert(result.report.state == State::kUnsupported);
+        if (mode == "wrong_uid" || mode == "wrong_domain" || mode == "domain_prefix" || mode == "wrong_role" ||
+            mode == "level_prefix" || mode == "empty_categories" || mode == "bad_categories")
+            assert(result.report.state == State::kUnsupported && targets_written == 0 && !malformed_written && !stock_written);
         if (mode == "unreadable" || mode == "not_started" || mode == "setup_failed")
             assert(result.report.state == State::kUnavailable);
         if (mode == "open_denied" || mode == "no_setcurrent")
             assert(result.report.state == State::kPermissionLimited && targets_written == 0);
-        if (mode == "success" || mode == "short_write" || mode == "zero_write" || mode == "identity_changed" ||
+        if (mode == "success" || mode == "short_write" || mode == "zero_write" || mode == "identity_changed" || mode == "identity_categories" ||
+            mode == "identity_removed" || mode == "identity_added" ||
             mode == "lost_identity") assert(targets_written == 1);
-        if (mode == "identity_changed") assert(result.report.identity_changed);
+        if (mode == "identity_changed" || mode == "identity_categories" || mode == "identity_removed" || mode == "identity_added")
+            assert(result.report.identity_changed);
         if (mode == "target_open") assert(result.report.writes[0][0].open_error == ENOENT &&
             result.report.writes[0][0].bytes == -2);
         reset(test);

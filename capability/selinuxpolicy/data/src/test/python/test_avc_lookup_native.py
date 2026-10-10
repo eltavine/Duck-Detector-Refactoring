@@ -39,6 +39,8 @@ static uint32_t counters[kCpuLimit];
 static int pinned;
 static unsigned writes, identity_reads, stats_reads;
 static uint64_t clock_ns;
+// Android 15 levelFrom=user assigns these categories to the primary user.
+static const char kCarrierLevel[] = "u:r:app_zygote:s0:c512,c768";
 static bool sparse() { return mode == "sparse"; }
 extern "C" uid_t getuid()
 #if defined(__linux__)
@@ -49,8 +51,21 @@ namespace duckdetector::selinux::avc_lookup {
 int read_identity(char *context, unsigned capacity) {
     ++identity_reads;
     if (mode == "identity_unreadable") return EACCES;
-    const char *value = mode == "wrong_domain" || (mode == "identity_changed" && identity_reads > 1)
-        ? "u:r:isolated_app:s0" : kCarrier;
+    const char *value = mode == "carrier_plain" || mode == "identity_added" ? kCarrier : kCarrierLevel;
+    if (mode == "carrier_secondary") value = "u:r:app_zygote:s0:c513,c768";
+    if (mode == "carrier_all") value = "u:r:app_zygote:s0:c123,c256,c512,c768";
+    if (mode == "wrong_domain") value = "u:r:isolated_app:s0";
+    if (mode == "domain_prefix") value = "u:r:app_zygote_extra:s0:c512,c768";
+    if (mode == "wrong_role") value = "u:object_r:app_zygote:s0:c512,c768";
+    if (mode == "level_prefix") value = "u:r:app_zygote:s00:c512,c768";
+    if (mode == "empty_categories") value = "u:r:app_zygote:s0:";
+    if (mode == "bad_categories") value = "u:r:app_zygote:s0:x512,c768";
+    if (identity_reads > 1) {
+        if (mode == "identity_changed") value = "u:r:isolated_app:s0";
+        if (mode == "identity_categories") value = "u:r:app_zygote:s0:c513,c768";
+        if (mode == "identity_removed") value = kCarrier;
+        if (mode == "identity_added") value = kCarrierLevel;
+    }
     assert(strlen(value) < capacity);
     strcpy(context, value);
     return 0;
@@ -187,7 +202,7 @@ static void expect(const char *test, State state, Step step, int error) {
     assert(report.state == state && report.step == step && report.error == error);
     const bool counted = state == State::kCollected;
     const uint32_t a = mode == "two_two" ? 8198 : 4102, b = mode == "one_two" || mode == "two_two" ? 8198 : 4102;
-    if (counted || mode == "identity_changed") {
+    if (counted || report.identity_changed) {
         assert(report.rounds == kRounds && report.pairs == kPairs && writes == 2 + 2 * (kWarmup + kPairs) + 2 * kRounds * kWrites);
         assert(report.cpu == (sparse() ? 4 : 2) && report.cpu_row == 2 && report.cpu_rows == (sparse() ? 4u : 8u));
         assert(report.possible_cpus == report.cpu_rows && stats_reads == 1 + 4 * kRounds);
@@ -199,9 +214,12 @@ static void expect(const char *test, State state, Step step, int error) {
 }
 int main() {
     parsers();
-    for (const char *test : {"stock", "one_two", "two_two", "sparse"}) expect(test, State::kCollected, Step::kFinished, 0);
+    for (const char *test : {"stock", "one_two", "two_two", "sparse", "carrier_plain", "carrier_secondary", "carrier_all"}) expect(test, State::kCollected, Step::kFinished, 0);
     expect("wrong_uid", State::kUnsupported, Step::kCarrier, 0);
-    expect("wrong_domain", State::kUnsupported, Step::kCarrier, 0);
+    for (const char *test : {"wrong_domain", "domain_prefix", "wrong_role", "level_prefix", "empty_categories", "bad_categories"}) {
+        expect(test, State::kUnsupported, Step::kCarrier, 0);
+        assert(writes == 0 && stats_reads == 0 && identity_reads == 1);
+    }
     expect("identity_unreadable", State::kUnavailable, Step::kCarrier, EACCES);
     expect("permissive", State::kUnsupported, Step::kEnforce, 0);
     expect("enforce_unreadable", State::kUnavailable, Step::kEnforce, EACCES);
@@ -229,9 +247,11 @@ int main() {
     expect("bad_sum", State::kTimingOnly, Step::kStats, EPROTO);
     expect("rows_mismatch", State::kTimingOnly, Step::kStats, EPROTO);
     expect("migrated", State::kTimingOnly, Step::kCounting, EXDEV);
-    expect("identity_changed", State::kInconclusive, Step::kIdentity, 0);
-    reset("identity_changed");
-    assert(collect().report.identity_changed);
+    for (const char *test : {"identity_changed", "identity_categories", "identity_removed", "identity_added"}) {
+        expect(test, State::kInconclusive, Step::kIdentity, 0);
+        reset(test);
+        assert(collect().report.identity_changed);
+    }
     expect("not_started", State::kUnavailable, Step::kCarrier, EAGAIN);
     expect("setup_failed", State::kUnavailable, Step::kCarrier, 0);
     // These children ran to completion in the injection, so only the outcome may override the record.
@@ -260,115 +280,7 @@ int main() {
     assert(payload("no_stats").find(no_stats) != std::string::npos);
 }
 """
-IO = r"""
-#include "selinuxpolicy/avc_lookup_probe.h"
-#include <algorithm>
-#include <cassert>
-#include <cerrno>
-#include <cstring>
-#include <fcntl.h>
-#include <string>
-#include <time.h>
-#include <unistd.h>
-#if defined(__linux__)
-#include <sched.h>
-#endif
-static int open_error, open_flags, read_error, read_calls, write_calls, close_calls, write_errno;
-static bool interrupt_once;
-static const char *opened;
-static std::string served;
-static size_t offset;
-static ssize_t write_result;
-int test_open(const char *path, int flags) {
-    opened = path;
-    open_flags = flags;
-    if (open_error) { errno = open_error; return -1; }
-    offset = 0;
-    return 7;
-}
-ssize_t test_read(int fd, void *buffer, size_t size) {
-    assert(fd == 7);
-    ++read_calls;
-    if (interrupt_once) { interrupt_once = false; errno = EINTR; return -1; }
-    if (read_error) { errno = read_error; return -1; }
-    const size_t count = std::min({size, served.size() - offset, size_t{5}});
-    memcpy(buffer, served.data() + offset, count);
-    offset += count;
-    return static_cast<ssize_t>(count);
-}
-ssize_t test_write(int fd, const void *, size_t size) {
-    assert(fd == 7 && size == duckdetector::selinux::avc_lookup::kPayloadLength);
-    ++write_calls;
-    errno = write_errno;
-    return write_result;
-}
-int test_close(int fd) { assert(fd == 7); ++close_calls; errno = EBADF; return -1; }
-#define open test_open
-#define read test_read
-#define write test_write
-#define close test_close
-#include "selinuxpolicy/avc_lookup_io.cpp"
-#undef open
-#undef read
-#undef write
-#undef close
-int main() {
-    using namespace duckdetector::selinux::avc_lookup;
-    char buffer[64]{};
-    size_t length = 0;
-    served = "0-11\n";
-    interrupt_once = true;
-    assert(read_text(kPossibleCpus, buffer, sizeof(buffer), length) == 0 && length == 5);
-    assert(!strcmp(opened, kPossibleCpus) && open_flags == (O_RDONLY | O_CLOEXEC) && close_calls == 1);
-    assert(read_text(kPossibleCpus, buffer, 5, length) == EOVERFLOW && length == 5 && close_calls == 2);
-    read_error = EIO;
-    assert(read_text(kStats, buffer, sizeof(buffer), length) == EIO && close_calls == 3);
-    read_error = 0;
-    open_error = ENOENT;
-    read_calls = 0;
-    assert(read_text(kStats, buffer, sizeof(buffer), length) == ENOENT && read_calls == 0 && close_calls == 3);
-    open_error = 0;
-    served = std::string("u:r:app_zygote:s0\0", 18);
-    assert(read_identity(buffer, sizeof(buffer)) == 0 && !strcmp(buffer, kCarrier));
-    assert(!strcmp(opened, "/proc/thread-self/attr/current") && open_flags == (O_RDONLY | O_CLOEXEC));
-    served = "u:r:app_zygote:s0\n";
-    assert(read_identity(buffer, sizeof(buffer)) == 0 && !strcmp(buffer, kCarrier));
-    served = "u:r:app_zygote:s0";
-    assert(read_identity(buffer, 10) == EOVERFLOW && read_identity(buffer, 1) == EINVAL);
-    served = std::string("\n\0", 2);
-    assert(read_identity(buffer, sizeof(buffer)) == EINVAL);
-    int fd = -1;
-    assert(open_attr(fd) == 0 && fd == 7 && open_flags == (O_WRONLY | O_CLOEXEC));
-    open_error = EACCES;
-    assert(open_attr(fd) == EACCES && fd == -1);
-    open_error = 0;
-    for (int error : {EINVAL, EACCES, EPERM, EINTR}) {
-        write_errno = error;
-        write_result = -1;
-        write_calls = 0;
-        const WriteOutcome outcome = write_payload(7, kPayloadA);
-        // EINTR is not retried: a second write would be a second transaction.
-        assert(outcome.error == error && outcome.bytes == -1 && write_calls == 1);
-    }
-    for (ssize_t count : {ssize_t{0}, ssize_t{3}, static_cast<ssize_t>(kPayloadLength)}) {
-        write_errno = EBADF;
-        write_result = count;
-        const WriteOutcome outcome = write_payload(7, kPayloadB);
-        assert(outcome.error == 0 && outcome.bytes == count);
-    }
-    close_calls = 0;
-    close_attr(7);
-    assert(close_calls == 1);
-    uint64_t first = 0, second = 0;
-    assert(now_ns(first) == 0 && now_ns(second) == 0 && second >= first);
-    int cpu = 99;
-#if defined(__linux__)
-    assert(pin_to_allowed_cpu(cpu) == 0 && cpu >= 0 && verify_pinned(cpu) == 0);
-#else
-    assert(pin_to_allowed_cpu(cpu) == ENOSYS && cpu == -1 && verify_pinned(0) == ENOSYS);
-#endif
-}
-"""
+IO = (Path(__file__).resolve().parents[1] / "cpp/avc_lookup_io_test.cpp").read_text()
 
 
 class AvcLookupNativeTest(unittest.TestCase):
