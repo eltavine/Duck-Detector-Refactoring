@@ -116,6 +116,7 @@ internal fun buildMethodRows(report: SelinuxReport): List<SelinuxDetailRowModel>
 private fun methodRow(result: SelinuxCheckResult): SelinuxDetailRowModel {
     if (result.oracle == SelinuxOracle.SIDTAB_CONSISTENCY && result.sidtab != null) return sidtabRow(result)
     if (result.oracle == SelinuxOracle.APP_ZYGOTE_AVC_LOOKUPS && result.avcLookup != null) return avcLookupRow(result)
+    if (result.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING && result.avcLookup != null) return appZygoteTimingRow(result)
     return SelinuxDetailRowModel(
         label = result.method,
         value = result.status,

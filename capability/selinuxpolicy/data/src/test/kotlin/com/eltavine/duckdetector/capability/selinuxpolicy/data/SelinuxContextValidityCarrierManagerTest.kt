@@ -32,5 +32,7 @@ class SelinuxContextValidityCarrierManagerTest {
         assertEquals("SELinux carrier service unavailable.", snapshot.dirtyPolicyFailureReason)
         assertEquals("SELinux carrier service unavailable.", snapshot.policyloadSeqnoFailureReason)
         assertEquals(SelinuxPolicyloadSeqnoState.UNAVAILABLE.name, snapshot.policyloadSeqnoState)
+        assertEquals(SelinuxAvcLookupState.UNAVAILABLE, snapshot.avcLookup.state)
+        assertEquals("SELinux carrier service unavailable.", snapshot.avcLookup.failureReason)
     }
 }

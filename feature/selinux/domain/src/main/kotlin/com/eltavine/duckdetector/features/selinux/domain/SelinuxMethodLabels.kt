@@ -26,6 +26,7 @@ enum class SelinuxOracle(val label: String) {
     ATTR_CURRENT_TIMING("SELinux Hide attr/current timing (experimental)"),
     APP_ZYGOTE_AVC_LOOKUPS("App Zygote AVC lookup profile (experimental)"),
     STATUS_MMAP_ABI("Status mmap ABI conformance"),
+    APP_ZYGOTE_ATTR_TIMING("App Zygote attr/current timing (experimental)"),
 }
 
 /** The status node mmap/mprotect requests the conformance probe sends; [label] is the report text. */

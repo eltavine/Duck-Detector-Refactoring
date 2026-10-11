@@ -13,8 +13,12 @@ duckdetector_native_unit(duckdetector_selinuxpolicy
     proc_attr_native_bridge.cpp
     avc_lookup_probe.cpp
     avc_lookup_io.cpp
+    app_zygote_timing.cpp
     avc_lookup_native_bridge.cpp
     selinux_status_page_probe.cpp
     selinux_status_abi_probe.cpp
     selinux_status_abi_native_bridge.cpp
 )
+
+# The standalone PoC compiles its timing loop at O2, including in Debug builds.
+set_source_files_properties(app_zygote_timing.cpp PROPERTIES COMPILE_OPTIONS "-O2")

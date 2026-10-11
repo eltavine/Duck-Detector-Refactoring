@@ -23,9 +23,15 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.eltavine.duckdetector.core.detector.Detector
 import com.eltavine.duckdetector.core.report.DetectorHeadline
 import com.eltavine.duckdetector.sdk.DuckDetector
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupCollection
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxAppZygoteTimingVerdict
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -42,13 +48,43 @@ class DetectorRuntimeSmokeTest {
     private suspend fun <R : Any, M : DetectorHeadline> scan(detector: Detector<R, M>) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val scanner = detector.createScanner(context)
-        val model = detector.describe(scanner.scan())
+        val raw = scanner.scan()
+        val model = detector.describe(raw)
         val report = detector.export(model)
         assertTrue(report.title.isNotBlank())
         assertTrue(report.blocks.isNotEmpty())
         Log.i("DetectorRuntimeSmoke", "${detector.id}: ${report.verdict}")
         report.blocks.forEach { block ->
             block.toString().chunked(3000).forEach { Log.i("DetectorRuntimeSmoke", it) }
+        }
+        // Exporting an unavailable row is a valid smoke result, but does not validate acquisition.
+        // Opt in on a controlled device so a dead carrier cannot pass as a successful timing test.
+        val arguments = InstrumentationRegistry.getArguments()
+        if (arguments.getString("requireAppZygoteTiming") == "true") {
+            val selinux = raw as? SelinuxReport
+            assertNotNull("Timing acquisition requires the SELinux detector", selinux)
+            val reading = requireNotNull(selinux).methods
+                .firstOrNull { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING }?.avcLookup
+            assertNotNull("App Zygote timing row missing", reading)
+            val timing = requireNotNull(reading)
+            assertTrue("Timing collection failed: ${timing.details}",
+                timing.collection == SelinuxAvcLookupCollection.COLLECTED ||
+                    timing.collection == SelinuxAvcLookupCollection.TIMING_ONLY)
+            assertEquals("Incomplete child timing", 512, timing.pairs)
+            assertTrue("Child medians missing", timing.timingMediansAvailable)
+            assertEquals("Child migrated", 0, timing.cpuMigrations)
+            assertTrue("Parent timing incomplete: ${timing.parentTiming}", timing.parentTiming.complete)
+            assertEquals("Incomplete parent timing", 512, timing.parentTiming.pairs)
+            assertEquals("Expected PoC-compatible parent timing", 1, timing.parentTiming.protocol)
+            assertEquals("Parent migrated", 0, timing.parentTiming.migrations)
+            if (arguments.getString("expectedAppZygoteTiming") == "negative") {
+                assertEquals("Expected negative parent timing on this modified-kernel control",
+                    SelinuxAppZygoteTimingVerdict.NEGATIVE, timing.timingVerdict)
+            }
+            if (arguments.getString("expectedAppZygoteTiming") == "positive") {
+                assertEquals("Expected positive timing on this controlled Hide-ON run",
+                    SelinuxAppZygoteTimingVerdict.POSITIVE, timing.timingVerdict)
+            }
         }
     }
 }

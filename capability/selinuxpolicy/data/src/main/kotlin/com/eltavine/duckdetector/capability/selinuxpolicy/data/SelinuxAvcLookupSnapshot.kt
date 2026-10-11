@@ -35,6 +35,25 @@ public enum class SelinuxAvcLookupChildEnd {
     EXITED, NOT_STARTED, SETUP_FAILED, SIGNALED, SECCOMP_TRAPPED, TIMED_OUT, NOT_REAPED, WAIT_FAILED,
 }
 
+/** Preload-parent timing; protocol 1 matches the standalone PoC without CPU affinity changes. */
+public data class SelinuxAvcParentTiming(
+    val attempted: Boolean = false,
+    val complete: Boolean = false,
+    val error: Int = 0,
+    val pid: Int = -1,
+    val cpu: Int = -1,
+    val pairs: Int = 0,
+    val migrations: Int = 0,
+    val aSlower: Int = 0,
+    val medianANs: Long? = null,
+    val medianBNs: Long? = null,
+    val medianDeltaNs: Long? = null,
+    val protocol: Int = 0,
+    val positiveBlocks: Int = 0,
+    val negativeBlocks: Int = 0,
+    val zeroBlocks: Int = 0,
+)
+
 /**
  * Per-batch deltas of the pinned CPU's AVC lookup counter and paired write timing, captured during
  * preload. The counter is shared by every task on that CPU; it is not a trace of this child's calls.
@@ -52,6 +71,14 @@ public data class SelinuxAvcLookupSnapshot(
     val cpuRows: Int = 0,
     val possibleCpus: Int = 0,
     val pairs: Int = 0,
+    val pid: Int = -1,
+    val cpuMigrations: Int = 0,
+    val timingMediansAvailable: Boolean = state == SelinuxAvcLookupState.COLLECTED ||
+        state == SelinuxAvcLookupState.TIMING_ONLY,
+    val aSlower: Int = 0,
+    val positiveBlocks: Int = 0,
+    val negativeBlocks: Int = 0,
+    val zeroBlocks: Int = 0,
     val rounds: Int = 0,
     val writesPerBatch: Int = 0,
     val batchesA: List<Long> = emptyList(),
@@ -64,11 +91,12 @@ public data class SelinuxAvcLookupSnapshot(
     val childSignal: Int = 0,
     val childErrno: Int = 0,
     val failureReason: String? = null,
+    val parentTiming: SelinuxAvcParentTiming = SelinuxAvcParentTiming(),
 ) {
     public companion object {
         /** Must match kRounds, kWrites and kPairs in avc_lookup_probe.h. */
         public const val ROUNDS: Int = 4
         public const val WRITES_PER_BATCH: Int = 4096
-        public const val PAIRS: Int = 128
+        public const val PAIRS: Int = 512
     }
 }

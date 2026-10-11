@@ -19,20 +19,57 @@ package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 
-/** Runs the rejected writes in a disposable child of the app_zygote preload, never in the carrier itself. */
+/** Runs an isolated B/A preflight, then the PoC parent timing, before costly AVC collection. */
 internal class SelinuxAvcLookupProbe(
     private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
 ) {
-    fun inspect(): SelinuxAvcLookupSnapshot = collector.collect(
-        readPayload = ::nativeCollectAvcLookup,
-        parse = SelinuxAvcLookupPayloadCodec::decode,
-        unavailable = { failure ->
-            SelinuxAvcLookupSnapshot(
-                state = SelinuxAvcLookupState.UNAVAILABLE,
-                failureReason = failure.explain("App zygote AVC lookup experiment was unavailable"),
-            )
-        },
-    )
+    fun inspect(trace: (String) -> Unit = {}): SelinuxAvcLookupSnapshot {
+        // JNI forks a lightweight safety-check child before touching the live carrier.
+        // Running 33k AVC writes first perturbs the scheduler and invalidates PoC parity.
+        trace("AVC lightweight parent timing preflight begin")
+        val earlyParent = runCatching { nativeCollectParentTiming() }.getOrDefault("")
+        trace("AVC disposable child begin")
+        val child = collector.collect(
+            readPayload = ::nativeCollectAvcLookup,
+            parse = SelinuxAvcLookupPayloadCodec::decode,
+            unavailable = { failure ->
+                SelinuxAvcLookupSnapshot(
+                    state = SelinuxAvcLookupState.UNAVAILABLE,
+                    failureReason = failure.explain("App zygote AVC lookup experiment was unavailable"),
+                )
+            },
+        )
+        trace("AVC child returned state=${child.state} step=${child.step} errno=${child.errno} " +
+            "end=${child.childEnd} exit=${child.childExitStatus} signal=${child.childSignal} " +
+            "pid=${child.pid} cpu=${child.cpu} pairs=${child.pairs} migrations=${child.cpuMigrations} " +
+            "medians=${child.timingMediansAvailable}")
+        val result = withParentTiming(child) {
+            trace("AVC preload parent timing attached from pre-AVC sample")
+            earlyParent
+        }
+        trace("AVC preload parent returned attempted=${result.parentTiming.attempted} " +
+            "complete=${result.parentTiming.complete} errno=${result.parentTiming.error}")
+        return result
+    }
+
+    internal fun withParentTiming(
+        child: SelinuxAvcLookupSnapshot,
+        readParent: () -> String,
+    ): SelinuxAvcLookupSnapshot {
+        // A separate lightweight disposable child checks safety before the parent runs.
+        // A failed full collection still invalidates the retained parent classification.
+        if (child.childEnd != SelinuxAvcLookupChildEnd.EXITED || child.childExitStatus != 0 ||
+            child.childSignal != 0 || child.childErrno != 0 || child.identityChanged ||
+            child.unexpectedPayload != SelinuxAvcLookupPayload.NONE || !child.timingMediansAvailable ||
+            child.pairs != SelinuxAvcLookupSnapshot.PAIRS || child.cpuMigrations != 0 ||
+            (child.state != SelinuxAvcLookupState.COLLECTED && child.state != SelinuxAvcLookupState.TIMING_ONLY)
+        ) return child
+        val parent = runCatching {
+            SelinuxAvcLookupPayloadCodec.decodeParent(readParent())
+        }.getOrDefault(SelinuxAvcParentTiming())
+        return child.copy(parentTiming = parent)
+    }
 
     private external fun nativeCollectAvcLookup(): String
+    private external fun nativeCollectParentTiming(): String
 }

@@ -78,6 +78,8 @@ internal fun buildVerdict(report: SelinuxReport): String {
                 procAttrCurrent?.isSecure == false -> "Enforcing with recognized privileged contexts"
                 report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } ->
                     "Enforcing with SELinux attr/current timing anomaly"
+                report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING && it.isSecure == false } ->
+                    "Enforcing with App Zygote attr/current timing asymmetry"
                 dirtyPolicyHit != null -> trustedPolicyRuleVerdict()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
                     "Enforcing with untrusted app_zygote carrier"
@@ -163,6 +165,10 @@ internal fun buildSummary(report: SelinuxReport): String {
                     }
                     if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false }) {
                         add("A strong, repeatable ordinary-app attr/current timing asymmetry was observed; attribution remains device-dependent.")
+                    }
+                    if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING && it.isSecure == false }) {
+                        add("The App Zygote invalid-context A−B median was positive across consistent sample blocks. " +
+                            "This device-calibrated timing side channel does not independently prove KernelSU or root.")
                     }
                     if (dirtyPolicyHit != null) {
                         add(trustedPolicyRuleSummary(dirtyPolicyHit))

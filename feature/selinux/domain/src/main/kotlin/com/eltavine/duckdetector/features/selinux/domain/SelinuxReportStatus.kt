@@ -43,6 +43,7 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 // 约 1 微秒的 A/B 时序差异，并验证了拒绝前的额外解析路径。
                 // DANGER 表示强异常证据，不代表仅凭侧信道就能在所有设备上确认 KernelSU 或 Root。
                 methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } -> DetectorStatus.danger()
+                methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING && it.isSecure == false } -> DetectorStatus.danger()
                 procAttrCurrent?.isSecure == false -> DetectorStatus.warning()
                 dirtyPolicyHit != null -> DetectorStatus.warning()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()

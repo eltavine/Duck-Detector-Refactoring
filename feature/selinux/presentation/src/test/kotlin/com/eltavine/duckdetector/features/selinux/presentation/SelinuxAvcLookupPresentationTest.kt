@@ -71,7 +71,7 @@ class SelinuxAvcLookupPresentationTest {
         assertTrue(stock.contains("A batches=4102, 4102, 4102, 4102"))
         assertTrue(stock.contains("A rate=1.001"))
         assertTrue(stock.contains("CPU 4 is cache_stats row 2 of 4"))
-        assertTrue(stock.contains("timing is not interpreted"))
+        assertTrue(stock.contains("separate App Zygote timing row"))
     }
 
     @Test fun `only the typed reading decides, never the status text`() {

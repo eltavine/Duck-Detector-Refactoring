@@ -23,8 +23,23 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.system.Os
+import android.util.Log
 
 public class SelinuxContextValidityCarrierService : Service() {
+
+    override fun onCreate() {
+        super.onCreate()
+        trace("onCreate package=$packageName")
+    }
+
+    override fun onDestroy() {
+        trace("onDestroy")
+        super.onDestroy()
+    }
+
+    private fun trace(message: String) {
+        Log.i("DuckSelinuxCarrier", "service pid=${Os.getpid()} uid=${Os.getuid()} $message")
+    }
 
     private val binder = object : Binder() {
         override fun onTransact(
@@ -40,9 +55,12 @@ public class SelinuxContextValidityCarrierService : Service() {
                 }
 
                 SelinuxContextValidityCarrierProtocol.TRANSACTION_COLLECT_SNAPSHOT -> {
+                    trace("transaction callerPid=${Binder.getCallingPid()} callerUid=${Binder.getCallingUid()}")
                     data.enforceInterface(SelinuxContextValidityCarrierProtocol.DESCRIPTOR)
+                    val payload = buildSnapshotPayload()
+                    trace("transaction reply chars=${payload.length}")
                     reply?.writeNoException()
-                    reply?.writeString(buildSnapshotPayload())
+                    reply?.writeString(payload)
                     true
                 }
 
@@ -51,7 +69,10 @@ public class SelinuxContextValidityCarrierService : Service() {
         }
     }
 
-    override fun onBind(intent: Intent?): IBinder = binder
+    override fun onBind(intent: Intent?): IBinder {
+        trace("onBind component=${intent?.component}")
+        return binder
+    }
 
     private fun buildSnapshotPayload(): String {
         return runCatching {

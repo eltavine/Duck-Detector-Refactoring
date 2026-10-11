@@ -58,7 +58,8 @@ namespace duckdetector::selinux::avc_lookup {
 
     int now_ns(uint64_t &value) {
         timespec time{};
-        if (clock_gettime(CLOCK_MONOTONIC, &time) != 0) return errno;
+        // Keep write timings on a raw monotonic clock, without NTP rate adjustments.
+        if (clock_gettime(CLOCK_MONOTONIC_RAW, &time) != 0) return errno;
         value = static_cast<uint64_t>(time.tv_sec) * 1000000000ULL + static_cast<uint64_t>(time.tv_nsec);
         return 0;
     }

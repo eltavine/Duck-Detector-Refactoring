@@ -104,6 +104,7 @@ class SelinuxRepository(
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
         methods += buildAvcLookupMethod(carrierSnapshot.avcLookup)
         methods += buildStatusAbiMethod(carrierSnapshot.statusAbi)
+        methods += buildAppZygoteTimingMethod(carrierSnapshot.avcLookup)
         methods += buildDirtyPolicyMethods(carrierSnapshot)
         methods += buildSidtabMethod(carrierSnapshot.sidtab)
 

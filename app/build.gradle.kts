@@ -18,10 +18,27 @@
 import com.eltavine.duckdetector.buildlogic.installer.registerInstallerCanaryAssets
 import com.eltavine.duckdetector.buildlogic.detectorModules
 import com.eltavine.duckdetector.buildlogic.generateDetectorCards
+import org.gradle.api.attributes.Attribute
 
 plugins {
     id("duckdetector.android.application")
     id("duckdetector.android.apk-artifacts")
+}
+
+// AGP removes dependencies shared with the tested app from the instrumentation APK.
+// That breaks AndroidJUnitRunner against R8-minified targets, where Kotlin stdlib
+// may have been optimized out. Resolve the test runtime as a file dependency so
+// it is packaged in the androidTest APK independently of the target app.
+val instrumentationStdlib = configurations.create("instrumentationStdlib") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
+val instrumentationTracing = configurations.create("instrumentationTracing") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    // Only Trace itself is required; the runner supplies the remaining deps.
+    isTransitive = false
 }
 
 android {
@@ -41,6 +58,8 @@ registerInstallerCanaryAssets(
 generateDetectorCards(packageName = "com.eltavine.duckdetector.ui")
 
 dependencies {
+    add(instrumentationStdlib.name, libs.kotlin.stdlib)
+    add(instrumentationTracing.name, "androidx.tracing:tracing:1.2.0")
     implementation(libs.uihelper)
     implementation(libs.miuix.ui)
     implementation(libs.miuix.nav)
@@ -80,9 +99,16 @@ dependencies {
     testImplementation(libs.bundles.test.unit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(project(":core:report"))
+    androidTestImplementation(project(":feature:selinux:domain"))
     androidTestImplementation(project(":feature:rootmanagers:data"))
     androidTestImplementation(project(":feature:rootmanagers:domain"))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(files(instrumentationStdlib))
+    // AndroidJUnitRunner itself calls androidx.tracing.Trace. R8 is allowed to
+    // remove it from the release app, so retain a test-owned DEX definition.
+    androidTestImplementation(files(instrumentationTracing.incoming.artifactView {
+        attributes.attribute(Attribute.of("artifactType", String::class.java), "android-classes-jar")
+    }.files))
     debugImplementation(libs.androidx.ui.tooling)
 }

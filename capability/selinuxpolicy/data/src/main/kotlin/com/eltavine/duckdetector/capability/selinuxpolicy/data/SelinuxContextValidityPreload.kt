@@ -79,9 +79,16 @@ public class SelinuxContextValidityPreload {
                 },
                 inspectAvcLookup = {
                     trace("selinux: app zygote AVC lookup child")
-                    avcLookupProbe.inspect().also {
+                    avcLookupProbe.inspect(trace).also {
                         avcLookup = it
                         trace("selinux: AVC lookup state=${it.state} step=${it.step} errno=${it.errno} rounds=${it.rounds}")
+                        val parent = it.parentTiming
+                        trace("selinux: attr timing child pid=${it.pid} cpu=${it.cpu} " +
+                            "pairs=${it.pairs} migrated=${it.cpuMigrations} " +
+                            "delta=${it.medianDeltaNs.takeIf { _ -> it.timingMediansAvailable } ?: "N/A"}; " +
+                            "parent pid=${parent.pid} cpu=${parent.cpu} pairs=${parent.pairs} " +
+                            "migrated=${parent.migrations} delta=${parent.medianDeltaNs ?: "N/A"} " +
+                            "complete=${parent.complete} errno=${parent.error}")
                     }
                 },
                 inspectPolicyloadSeqno = {

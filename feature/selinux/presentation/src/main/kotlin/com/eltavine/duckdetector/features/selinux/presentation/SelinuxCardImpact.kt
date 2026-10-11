@@ -225,6 +225,14 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             DetectorStatus.danger(),
         )
     }
+    if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING && it.isSecure == false }) {
+        items += SelinuxImpactItemModel(
+            "The App Zygote invalid-context A−B median was positive with consistent 32-pair blocks. " +
+                "This matches the tested dual-policy parsing overhead but is device-calibrated timing evidence, " +
+                "not proof of KernelSU or root. The AVC counts share the same measurement carrier.",
+            DetectorStatus.danger(),
+        )
+    }
     if (avcLookupReading(report)?.extraLookupObserved == true) {
         items += SelinuxImpactItemModel(AVC_EXTRA_LOOKUP_IMPACT, DetectorStatus.info(InfoKind.SUPPORT))
     }

@@ -38,6 +38,32 @@ enum class SelinuxAvcLookupCollection(val label: String) {
     INCONCLUSIVE("Inconclusive"),
 }
 
+enum class SelinuxAppZygoteTimingVerdict(val label: String) {
+    POSITIVE("Positive A−B timing asymmetry"),
+    NEGATIVE("Negative A−B timing asymmetry"),
+    INCONCLUSIVE("Timing direction inconclusive"),
+    UNAVAILABLE("Timing unavailable"),
+}
+
+/** Preload-parent timing; protocol 1 matches the standalone PoC without CPU affinity changes. */
+data class SelinuxParentTimingReading(
+    val attempted: Boolean = false,
+    val complete: Boolean = false,
+    val error: Int = 0,
+    val pid: Int = -1,
+    val cpu: Int = -1,
+    val pairs: Int = 0,
+    val migrations: Int = 0,
+    val aSlower: Int = 0,
+    val medianANs: Long? = null,
+    val medianBNs: Long? = null,
+    val medianDeltaNs: Long? = null,
+    val protocol: Int = 0,
+    val positiveBlocks: Int = 0,
+    val negativeBlocks: Int = 0,
+    val zeroBlocks: Int = 0,
+)
+
 data class SelinuxAvcLookupCollectionDetails(
     val step: String?,
     val errno: Int,
@@ -53,6 +79,7 @@ data class SelinuxAvcLookupCollectionDetails(
     val cpuRows: Int,
     val possibleCpus: Int,
     val failureReason: String?,
+    val childPid: Int = -1,
 )
 
 data class SelinuxAvcLookupReading(
@@ -66,7 +93,45 @@ data class SelinuxAvcLookupReading(
     val medianBNs: Long,
     val medianDeltaNs: Long,
     val details: SelinuxAvcLookupCollectionDetails,
+    val cpuMigrations: Int = 0,
+    val aSlower: Int = 0,
+    val positiveBlocks: Int = 0,
+    val negativeBlocks: Int = 0,
+    val zeroBlocks: Int = 0,
+    val timingMediansAvailable: Boolean = true,
+    val parentTiming: SelinuxParentTimingReading = SelinuxParentTimingReading(),
 ) {
+    /** Only the PoC-compatible parent sample drives timing; the pinned child is diagnostic. */
+    val timingVerdict: SelinuxAppZygoteTimingVerdict
+        get() {
+            val sample = parentTiming
+            if (!sample.attempted || sample.protocol != 1)
+                return SelinuxAppZygoteTimingVerdict.UNAVAILABLE
+            // A valid preload-parent record is attached only after a safe, complete child
+            // preflight. Never classify a stale or malformed record from a failed carrier.
+            if (collection != SelinuxAvcLookupCollection.COLLECTED &&
+                collection != SelinuxAvcLookupCollection.TIMING_ONLY)
+                return SelinuxAppZygoteTimingVerdict.UNAVAILABLE
+            if (details.childEnd != "EXITED" || details.childExitStatus != 0 ||
+                details.childSignal != 0 || details.childErrno != 0 || details.identityChanged ||
+                details.unexpectedWrite != null || pairs != 512 || cpuMigrations != 0 ||
+                !timingMediansAvailable)
+                return SelinuxAppZygoteTimingVerdict.INCONCLUSIVE
+            if (!sample.complete || sample.error != 0 || sample.pid <= 0 || sample.cpu < 0 ||
+                sample.pairs != 512 || sample.migrations != 0 || sample.aSlower !in 0..sample.pairs ||
+                sample.medianANs == null || sample.medianBNs == null || sample.medianDeltaNs == null ||
+                sample.medianANs < 0 || sample.medianBNs < 0 ||
+                sample.positiveBlocks !in 0..16 || sample.negativeBlocks !in 0..16 || sample.zeroBlocks !in 0..16 ||
+                sample.positiveBlocks + sample.negativeBlocks + sample.zeroBlocks != 16)
+                return SelinuxAppZygoteTimingVerdict.INCONCLUSIVE
+            // Match the PoC's paired lower median and the user's zero-ns boundary.
+            // Blocks and A-slower counts remain visible diagnostics, not a different classifier.
+            return when {
+                sample.medianDeltaNs > 0 -> SelinuxAppZygoteTimingVerdict.POSITIVE
+                sample.medianDeltaNs < 0 -> SelinuxAppZygoteTimingVerdict.NEGATIVE
+                else -> SelinuxAppZygoteTimingVerdict.INCONCLUSIVE
+            }
+        }
     /** Only collected counts are classified; timing is shown but never classified. */
     val profile: SelinuxAvcLookupProfile?
         get() {

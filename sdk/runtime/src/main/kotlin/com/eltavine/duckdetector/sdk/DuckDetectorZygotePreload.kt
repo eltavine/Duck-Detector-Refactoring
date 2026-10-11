@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.sdk
 import android.app.ZygotePreload
 import android.content.pm.ApplicationInfo
 import android.util.Log
+import android.system.Os
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValidityPreload
 
 /**
@@ -32,9 +33,11 @@ import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextVal
  * both carriers report their app zygote evidence as unavailable.
  */
 public class DuckDetectorZygotePreload : ZygotePreload {
-    private val selinuxContextValidity = SelinuxContextValidityPreload()
-
     override fun doPreload(appInfo: ApplicationInfo) {
+        trace("preload entry pid=${Os.getpid()} uid=${Os.getuid()} appUid=${appInfo.uid} " +
+            "package=${appInfo.packageName} process=${appInfo.processName} apk=${appInfo.sourceDir}")
+        val selinuxContextValidity = SelinuxContextValidityPreload()
+        trace("SELinux preload collector constructed")
         selinuxContextValidity.preload(appInfo, trace = ::trace) {
             DetectorCatalog.all.forEach { detector ->
                 trace("detector: ${detector.id}")
