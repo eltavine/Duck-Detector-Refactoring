@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.core.designsystem.theme
 
 import androidx.compose.ui.text.font.FontListFontFamily
+import androidx.compose.ui.text.font.ResourceFont
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -28,7 +29,7 @@ class GoogleSansFlexFamilyTest {
 
         assertEquals((400..900 step 100).toList(), fonts.map { it.weight.weight })
         fonts.forEach { font ->
-            val settings = font.variationSettings.settings
+            val settings = (font as ResourceFont).variationSettings.settings
             assertEquals("${font.weight}", listOf("wght"), settings.map { it.axisName })
             assertEquals(
                 "${font.weight}",
