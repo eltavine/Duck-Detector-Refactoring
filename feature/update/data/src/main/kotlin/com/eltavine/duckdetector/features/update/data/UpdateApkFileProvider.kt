@@ -20,4 +20,4 @@ package com.eltavine.duckdetector.features.update.data
 import androidx.core.content.FileProvider
 
 /** A dedicated provider keeps update sharing scoped to the feature's cache path. */
-class UpdateApkFileProvider : FileProvider()
+internal class UpdateApkFileProvider : FileProvider()
