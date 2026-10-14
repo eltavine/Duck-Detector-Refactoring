@@ -100,4 +100,8 @@ limitations under the License.
     <string name="startup_package_ready_detail">Поточна кількість видимих пакетів: %1$d. Детектор небезпечних програм може використовувати стандартний шлях інвентаризації пакетів.</string>
     <string name="navigation_home">Головна</string>
     <string name="navigation_settings">Налаштування</string>
+    <string name="update_download_failed">Не вдалося завантажити або перевірити оновлення</string>
+    <string name="update_install_permission_required">Дозвольте встановлення з Duck Detector, а потім знову натисніть «Встановити»</string>
+    <string name="update_install_failed">Не вдалося відкрити інсталятор</string>
+    <string name="update_apk_unavailable">Завантажений файл оновлення недоступний. Завантажте його знову</string>
 </resources>

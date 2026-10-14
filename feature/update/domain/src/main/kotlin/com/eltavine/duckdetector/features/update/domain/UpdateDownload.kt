@@ -17,6 +17,9 @@
 
 package com.eltavine.duckdetector.features.update.domain
 
+/** Maximum accepted Nightly APK size, independent of remote metadata. */
+const val MAX_UPDATE_APK_BYTES: Long = 256L * 1024 * 1024
+
 /** Bytes transferred so far and the total the manifest advertised. */
 data class UpdateDownloadProgress(
     val bytesRead: Long,
@@ -41,12 +44,15 @@ sealed interface UpdateInstallResult {
     /** The user must first allow this app to install unknown apps; settings were opened. */
     data object PermissionRequired : UpdateInstallResult
 
+    /** The cached APK has disappeared, changed size, or is no longer readable. Download it again. */
+    data object ApkUnavailable : UpdateInstallResult
+
     data object Failed : UpdateInstallResult
 }
 
 /**
- * Streams the update APK to local storage and verifies it against the manifest's size and SHA-256
- * before the file is reported as [UpdateDownloadResult.Ready].
+ * Streams the update APK to local storage and verifies its size and SHA-256 against metadata
+ * obtained independently from the official release before reporting [UpdateDownloadResult.Ready].
  */
 fun interface UpdateApkDownloader {
     suspend fun download(
@@ -58,5 +64,5 @@ fun interface UpdateApkDownloader {
 
 /** Hands a downloaded APK to Android's package installer through a content URI. */
 fun interface UpdateApkInstaller {
-    fun install(apkPath: String): UpdateInstallResult
+    fun install(apkPath: String, expectedApk: NightlyUpdateApk): UpdateInstallResult
 }

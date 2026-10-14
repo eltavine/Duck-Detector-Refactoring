@@ -92,4 +92,8 @@ limitations under the License.
     <string name="startup_package_ready_detail">عدد الحزم المرئية الحالي: %1$d. يمكن لـ التطبيقات الخطرة استخدام مسار فهرس الحزم القياسي.</string>
     <string name="navigation_home">الرئيسية</string>
     <string name="navigation_settings">الإعدادات</string>
+    <string name="update_download_failed">تعذّر تنزيل التحديث أو التحقق منه</string>
+    <string name="update_install_permission_required">اسمح بالتثبيت من Duck Detector، ثم اضغط على تثبيت مرة أخرى</string>
+    <string name="update_install_failed">تعذّر فتح برنامج التثبيت</string>
+    <string name="update_apk_unavailable">ملف التحديث الذي تم تنزيله غير متاح. أعد تنزيله</string>
 </resources>

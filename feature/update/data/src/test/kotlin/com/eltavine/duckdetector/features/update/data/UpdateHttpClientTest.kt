@@ -20,6 +20,8 @@ package com.eltavine.duckdetector.features.update.data
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import java.net.HttpURLConnection
+import java.net.URL
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
@@ -41,7 +43,7 @@ class UpdateHttpClientTest {
                 }
             },
         ) { url ->
-            val body = HttpUrlConnectionUpdateClient().get(url, "application/json")
+            val body = HttpUrlConnectionUpdateClient(openConnection = { URL(url).openConnection() as HttpURLConnection }).get("https://github.com/update.json", "application/json")
 
             assertEquals("{\"ok\":true}", body)
             assertEquals(2, attempts.get())
@@ -58,7 +60,7 @@ class UpdateHttpClientTest {
             },
         ) { url ->
             assertThrows(UpdateHttpException::class.java) {
-                HttpUrlConnectionUpdateClient().get(url, "application/json")
+                HttpUrlConnectionUpdateClient(openConnection = { URL(url).openConnection() as HttpURLConnection }).get("https://github.com/update.json", "application/json")
             }
             assertEquals(1, attempts.get())
         }

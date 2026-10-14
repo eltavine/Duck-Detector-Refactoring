@@ -26,6 +26,13 @@ class UpdateManifestParserTest {
     private val parser = UpdateManifestParser()
 
     @Test
+    fun `rejects APK sizes above the independent download cap`() {
+        val json = JSONObject(validUpdateManifestJson())
+        json.getJSONObject("apk").put("sizeBytes", com.eltavine.duckdetector.features.update.domain.MAX_UPDATE_APK_BYTES + 1)
+        assertThrows(UpdateManifestValidationException::class.java) { parser.parse(json.toString()) }
+    }
+
+    @Test
     fun `parses a valid legacy master Nightly manifest`() {
         val manifest = parser.parse(validUpdateManifestJson())
 

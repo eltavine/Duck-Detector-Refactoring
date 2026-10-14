@@ -29,5 +29,8 @@ limitations under the License.
     <string name="update_remaining_commits_unknown">Có thể còn commit cũ hơn chưa hiển thị</string>
     <string name="update_later">Để sau</string>
     <string name="update_view_changes">Xem tất cả thay đổi trên GitHub</string>
-    <string name="update_download">Mở trang tải xuống</string>
+    <string name="update_download">Tải xuống</string>
+    <string name="update_download_progress">Đang tải xuống %1$d%%</string>
+    <string name="update_download_retry">Thử lại</string>
+    <string name="update_install">Cài đặt</string>
 </resources>

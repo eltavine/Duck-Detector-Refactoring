@@ -92,4 +92,8 @@ limitations under the License.
     <string name="startup_package_ready_detail">現在表示されているパッケージ数: %1$d 件。Dangerous Apps は標準のパッケージ一覧経路を使えます。</string>
     <string name="navigation_home">ホーム</string>
     <string name="navigation_settings">設定</string>
+    <string name="update_download_failed">更新をダウンロードまたは検証できませんでした</string>
+    <string name="update_install_permission_required">Duck Detector からのインストールを許可して、もう一度「インストール」をタップしてください</string>
+    <string name="update_install_failed">インストーラーを開けませんでした</string>
+    <string name="update_apk_unavailable">ダウンロードした更新ファイルを利用できません。再ダウンロードしてください</string>
 </resources>

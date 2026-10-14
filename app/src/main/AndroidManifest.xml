@@ -29,12 +29,6 @@ limitations under the License.
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!--
-    Nightly updates are distributed as APKs from GitHub releases, so the app offers to install a
-    downloaded build itself. The OS still asks the user to allow installs from this app the first
-    time; this permission only lets the app offer that install prompt.
-    -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <!--
     Android 17 allows silent NsdManager discovery only with ACCESS_LOCAL_NETWORK, which ADB Runtime
     needs to find this device's own ADB services. The app never requests it; a user who grants it
     in system settings lets the detector evaluate network ADB.
@@ -70,20 +64,6 @@ limitations under the License.
         <activity
             android:name=".MainActivity"
             android:exported="true" />
-
-        <!--
-        Shares the downloaded update APK, which lives in the app cache, with the package installer
-        as a content URI instead of a file: URI the OS would refuse.
-        -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/update_file_paths" />
-        </provider>
 
     </application>
 

@@ -92,4 +92,8 @@ limitations under the License.
     <string name="startup_package_ready_detail">目前可見套件數量：%1$d。Dangerous Apps 可以使用標準的套件清單路徑。</string>
     <string name="navigation_home">首頁</string>
     <string name="navigation_settings">設定</string>
+    <string name="update_download_failed">無法下載或驗證更新</string>
+    <string name="update_install_permission_required">請允許 Duck Detector 安裝應用程式，然後再次點選「安裝」</string>
+    <string name="update_install_failed">無法開啟安裝程式</string>
+    <string name="update_apk_unavailable">下載的更新檔案已失效，請重新下載</string>
 </resources>

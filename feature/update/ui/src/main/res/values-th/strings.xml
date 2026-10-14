@@ -29,5 +29,8 @@ limitations under the License.
     <string name="update_remaining_commits_unknown">อาจยังไม่แสดง commit ก่อนหน้า</string>
     <string name="update_later">ภายหลัง</string>
     <string name="update_view_changes">ดูการเปลี่ยนแปลงทั้งหมดบน GitHub</string>
-    <string name="update_download">เปิดหน้าดาวน์โหลด</string>
+    <string name="update_download">ดาวน์โหลด</string>
+    <string name="update_download_progress">กำลังดาวน์โหลด %1$d%%</string>
+    <string name="update_download_retry">ลองอีกครั้ง</string>
+    <string name="update_install">ติดตั้ง</string>
 </resources>

@@ -29,5 +29,8 @@ limitations under the License.
     <string name="update_remaining_commits_unknown">それ以前のコミットは省略されている場合があります</string>
     <string name="update_later">後で</string>
     <string name="update_view_changes">GitHub ですべての変更を表示</string>
-    <string name="update_download">ダウンロードを開く</string>
+    <string name="update_download">ダウンロード</string>
+    <string name="update_download_progress">ダウンロード中 %1$d%%</string>
+    <string name="update_download_retry">再試行</string>
+    <string name="update_install">インストール</string>
 </resources>

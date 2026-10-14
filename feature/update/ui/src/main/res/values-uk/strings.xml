@@ -29,5 +29,8 @@ limitations under the License.
     <string name="update_remaining_commits_unknown">Попередні коміти можуть бути не показані</string>
     <string name="update_later">Пізніше</string>
     <string name="update_view_changes">Переглянути всі зміни на GitHub</string>
-    <string name="update_download">Відкрити завантаження</string>
+    <string name="update_download">Завантажити</string>
+    <string name="update_download_progress">Завантаження %1$d%%</string>
+    <string name="update_download_retry">Повторити</string>
+    <string name="update_install">Встановити</string>
 </resources>

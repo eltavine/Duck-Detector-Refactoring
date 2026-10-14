@@ -17,13 +17,13 @@
 
 package com.eltavine.duckdetector.features.update.data
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
+import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
 import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
@@ -41,17 +41,22 @@ internal class AndroidUpdateApkInstaller(
     private val fileProviderAuthority: String,
 ) : UpdateApkInstaller {
 
-    override fun install(apkPath: String): UpdateInstallResult {
+    override fun install(apkPath: String, expectedApk: NightlyUpdateApk): UpdateInstallResult {
         val apk = File(apkPath)
-        if (!apk.isFile) {
-            return UpdateInstallResult.Failed
+        if (!apk.isFile || !apk.canRead() || apk.length() != expectedApk.sizeBytes) {
+            return UpdateInstallResult.ApkUnavailable
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            !context.packageManager.canRequestPackageInstalls()
-        ) {
-            return openUnknownAppSourcesSettings()
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                !context.packageManager.canRequestPackageInstalls()
+            ) {
+                openUnknownAppSourcesSettings()
+            } else {
+                launchInstaller(apk)
+            }
+        } catch (_: Exception) {
+            UpdateInstallResult.Failed
         }
-        return launchInstaller(apk)
     }
 
     private fun openUnknownAppSourcesSettings(): UpdateInstallResult {
@@ -62,7 +67,7 @@ internal class AndroidUpdateApkInstaller(
         return try {
             context.startActivity(intent)
             UpdateInstallResult.PermissionRequired
-        } catch (_: ActivityNotFoundException) {
+        } catch (_: Exception) {
             UpdateInstallResult.Failed
         }
     }
@@ -94,7 +99,7 @@ fun createUpdateApkDownloader(appContext: Context): UpdateApkDownloader =
 fun createUpdateApkInstaller(appContext: Context): UpdateApkInstaller =
     AndroidUpdateApkInstaller(
         context = appContext,
-        fileProviderAuthority = "${appContext.packageName}.fileprovider",
+        fileProviderAuthority = "${appContext.packageName}.update.fileprovider",
     )
 
 private const val UPDATE_DOWNLOAD_DIRECTORY = "updates"

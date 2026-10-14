@@ -31,7 +31,9 @@ internal fun interface UpdateHttpClient {
     fun get(url: String, accept: String): String
 }
 
-internal class HttpUrlConnectionUpdateClient : UpdateHttpClient {
+internal class HttpUrlConnectionUpdateClient(
+    private val openConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection },
+) : UpdateHttpClient {
 
     override fun get(url: String, accept: String): String {
         var lastFailure: IOException? = null
@@ -50,21 +52,14 @@ internal class HttpUrlConnectionUpdateClient : UpdateHttpClient {
     }
 
     private fun executeGet(url: String, accept: String): String {
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = openUpdateConnection(
+            initialUrl = URL(url),
+            accept = accept,
+            connectTimeoutMillis = CONNECT_TIMEOUT_MILLIS,
+            readTimeoutMillis = READ_TIMEOUT_MILLIS,
+            openConnection = openConnection,
+        )
         return try {
-            connection.requestMethod = "GET"
-            connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
-            connection.readTimeout = READ_TIMEOUT_MILLIS
-            connection.instanceFollowRedirects = true
-            connection.useCaches = false
-            connection.setRequestProperty("Accept", accept)
-            connection.setRequestProperty("Cache-Control", "no-cache, no-store")
-            connection.setRequestProperty("Pragma", "no-cache")
-            connection.setRequestProperty("User-Agent", USER_AGENT)
-            if (connection.url.host.equals(GITHUB_API_HOST, ignoreCase = true)) {
-                connection.setRequestProperty(GITHUB_API_VERSION_HEADER, GITHUB_API_VERSION)
-            }
-
             val statusCode = connection.responseCode
             val stream = if (statusCode in 200..299) {
                 connection.inputStream
@@ -100,10 +95,6 @@ internal class HttpUrlConnectionUpdateClient : UpdateHttpClient {
         private const val READ_TIMEOUT_MILLIS = 10_000
         private const val MAX_ATTEMPTS = 3
         private const val MAX_RESPONSE_BYTES = 4 * 1024 * 1024
-        private const val GITHUB_API_HOST = "api.github.com"
-        private const val GITHUB_API_VERSION_HEADER = "X-GitHub-Api-Version"
-        private const val GITHUB_API_VERSION = "2022-11-28"
-        private const val USER_AGENT = "Duck-Detector-Android"
         private val RETRY_DELAYS_MILLIS = longArrayOf(250L, 750L)
         private val RETRYABLE_STATUS_CODES = setOf(404, 408, 425, 429)
     }

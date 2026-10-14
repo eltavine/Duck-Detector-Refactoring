@@ -92,4 +92,8 @@ limitations under the License.
     <string name="startup_package_ready_detail">Số gói hiện đang hiển thị: %1$d. Dangerous Apps có thể dùng đường danh mục gói tiêu chuẩn.</string>
     <string name="navigation_home">Trang chủ</string>
     <string name="navigation_settings">Cài đặt</string>
+    <string name="update_download_failed">Không thể tải xuống hoặc xác minh bản cập nhật</string>
+    <string name="update_install_permission_required">Cho phép cài đặt từ Duck Detector, rồi nhấn Cài đặt lần nữa</string>
+    <string name="update_install_failed">Không thể mở trình cài đặt</string>
+    <string name="update_apk_unavailable">Tệp cập nhật đã tải xuống không còn hợp lệ. Hãy tải xuống lại</string>
 </resources>

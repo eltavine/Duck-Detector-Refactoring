@@ -17,13 +17,13 @@
 
 package com.eltavine.duckdetector.features.update.data
 
+import com.eltavine.duckdetector.features.update.domain.MAX_UPDATE_APK_BYTES
 import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
@@ -35,15 +35,21 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
- * Streams the Nightly APK to [downloadDirectory] over the same route the check used, then verifies
- * the manifest's size and SHA-256 before reporting it as [UpdateDownloadResult.Ready].
- *
- * The file is written to a `.part` sibling and only renamed once both checks pass, so a partial or
- * tampered download is never left where the installer could pick it up.
+ * APK transport may use acceleration, but its digest and size must match an independent HTTPS
+ * fetch of the official manifest. Failure to obtain that baseline never falls back to proxy trust.
  */
 internal class HttpUpdateApkDownloader(
     private val downloadDirectory: File,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val trustedApk: () -> NightlyUpdateApk = {
+        UpdateManifestParser().parse(
+            HttpUrlConnectionUpdateClient().get(UpdateRepository.MANIFEST_URL, "application/json"),
+        ).apk
+    },
+    private val openConnection: (URL) -> HttpURLConnection = {
+        it.openConnection() as HttpURLConnection
+    },
+    private val nanoTime: () -> Long = System::nanoTime,
 ) : UpdateApkDownloader {
 
     override suspend fun download(
@@ -51,106 +57,97 @@ internal class HttpUpdateApkDownloader(
         downloadUrl: String,
         onProgress: (UpdateDownloadProgress) -> Unit,
     ): UpdateDownloadResult = withContext(ioDispatcher) {
-        val directory = downloadDirectory.apply { mkdirs() }
-        val partial = File(directory, "${apk.name}.part")
-        partial.delete()
+        var partial: File? = null
         try {
-            streamToFile(downloadUrl, partial, apk.sizeBytes, onProgress)
-            val verified = partial.length() == apk.sizeBytes &&
-                sha256(partial) == apk.sha256.lowercase()
-            if (!verified) {
-                partial.delete()
+            require(apk.sizeBytes in 1..MAX_UPDATE_APK_BYTES)
+            require(Regex("[0-9a-fA-F]{64}").matches(apk.sha256))
+            coroutineContext.ensureActive()
+            if (trustedApk() != apk) {
                 return@withContext UpdateDownloadResult.Failed
             }
-            val target = File(directory, apk.name)
-            target.delete()
-            if (!partial.renameTo(target)) {
+            coroutineContext.ensureActive()
+            check(downloadDirectory.isDirectory || downloadDirectory.mkdirs())
+            val pending = File.createTempFile("update-", ".part", downloadDirectory)
+            partial = pending
+            streamToFile(downloadUrl, pending, apk, onProgress)
+            coroutineContext.ensureActive()
+            // Content addressing prevents different releases with the same asset name colliding.
+            val target = File(downloadDirectory, "${apk.sha256.lowercase()}.apk")
+            if (!pending.renameTo(target)) {
                 return@withContext UpdateDownloadResult.Failed
             }
+            onProgress(UpdateDownloadProgress(apk.sizeBytes, apk.sizeBytes))
             UpdateDownloadResult.Ready(target.absolutePath)
         } catch (cancellation: CancellationException) {
-            partial.delete()
             throw cancellation
         } catch (_: Exception) {
-            partial.delete()
             UpdateDownloadResult.Failed
+        } finally {
+            partial?.delete()
         }
     }
 
     private suspend fun streamToFile(
         url: String,
         file: File,
-        expectedSize: Long,
+        apk: NightlyUpdateApk,
         onProgress: (UpdateDownloadProgress) -> Unit,
     ) {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = CONNECT_TIMEOUT_MILLIS
-            readTimeout = READ_TIMEOUT_MILLIS
-            instanceFollowRedirects = true
-            useCaches = false
-            setRequestProperty("Accept", "application/octet-stream")
-            setRequestProperty("User-Agent", USER_AGENT)
-        }
+        val context = coroutineContext
+        val connection = openUpdateConnection(
+            initialUrl = URL(url),
+            accept = "application/octet-stream",
+            connectTimeoutMillis = CONNECT_TIMEOUT_MILLIS,
+            readTimeoutMillis = READ_TIMEOUT_MILLIS,
+            openConnection = openConnection,
+            checkActive = { context.ensureActive() },
+        )
         try {
-            val statusCode = connection.responseCode
-            if (statusCode !in 200..299) {
-                throw UpdateDownloadHttpException(statusCode)
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                throw IOException("APK download failed with HTTP ${connection.responseCode}")
             }
-            val totalBytes = connection.contentLengthLong.takeIf { it > 0L } ?: expectedSize
+            val length = connection.contentLengthLong
+            if (length >= 0L && length != apk.sizeBytes) {
+                throw IOException("APK Content-Length differs from the manifest.")
+            }
+            val digest = MessageDigest.getInstance("SHA-256")
+            var bytesRead = 0L
+            var lastProgressTime = nanoTime()
+            onProgress(UpdateDownloadProgress(0L, apk.sizeBytes))
             connection.inputStream.use { input ->
                 file.outputStream().use { output ->
-                    copyWithProgress(input, output, totalBytes, onProgress)
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        coroutineContext.ensureActive()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        // Check before writing, even for chunked bodies and dishonest headers.
+                        if (count.toLong() > apk.sizeBytes - bytesRead) {
+                            throw IOException("APK exceeds the manifest size.")
+                        }
+                        output.write(buffer, 0, count)
+                        digest.update(buffer, 0, count)
+                        bytesRead += count
+                        val now = nanoTime()
+                        if (bytesRead < apk.sizeBytes && now - lastProgressTime >= PROGRESS_INTERVAL_NANOS) {
+                            onProgress(UpdateDownloadProgress(bytesRead, apk.sizeBytes))
+                            lastProgressTime = now
+                        }
+                    }
                 }
+            }
+            val actualHash = digest.digest().joinToString("") { "%02x".format(it) }
+            if (bytesRead != apk.sizeBytes || !actualHash.equals(apk.sha256, ignoreCase = true)) {
+                throw IOException("APK size or SHA-256 verification failed.")
             }
         } finally {
             connection.disconnect()
         }
     }
 
-    private suspend fun copyWithProgress(
-        input: InputStream,
-        output: java.io.OutputStream,
-        totalBytes: Long,
-        onProgress: (UpdateDownloadProgress) -> Unit,
-    ) {
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        var bytesRead = 0L
-        while (true) {
-            coroutineContext.ensureActive()
-            val count = input.read(buffer)
-            if (count < 0) {
-                break
-            }
-            output.write(buffer, 0, count)
-            bytesRead += count
-            onProgress(UpdateDownloadProgress(bytesRead = bytesRead, totalBytes = totalBytes))
-        }
-        output.flush()
-    }
-
-    private fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-            while (true) {
-                val count = input.read(buffer)
-                if (count < 0) {
-                    break
-                }
-                digest.update(buffer, 0, count)
-            }
-        }
-        return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
-    }
-
-    /** A non-2xx response for the APK itself, kept apart from the metadata client's failures. */
-    private class UpdateDownloadHttpException(statusCode: Int) :
-        IOException("APK download failed with HTTP $statusCode")
-
     private companion object {
         private const val CONNECT_TIMEOUT_MILLIS = 10_000
         private const val READ_TIMEOUT_MILLIS = 30_000
-        private const val USER_AGENT = "Duck-Detector-Android"
+        private const val PROGRESS_INTERVAL_NANOS = 250_000_000L
     }
 }

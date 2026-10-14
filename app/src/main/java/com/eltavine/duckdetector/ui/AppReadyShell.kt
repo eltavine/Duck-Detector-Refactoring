@@ -124,6 +124,7 @@ internal fun AppReadyShell(
     val updateOpenFailedMessage = stringResource(R.string.update_open_failed)
     val updateDownloadFailedMessage = stringResource(R.string.update_download_failed)
     val updateInstallPermissionMessage = stringResource(R.string.update_install_permission_required)
+    val updateApkUnavailableMessage = stringResource(R.string.update_apk_unavailable)
     val updateInstallFailedMessage = stringResource(R.string.update_install_failed)
     val scope = rememberCoroutineScope()
     val notifier = remember(appContext) { ScanProgressNotifier(appContext) }
@@ -328,6 +329,12 @@ internal fun AppReadyShell(
                                     context,
                                     updateInstallPermissionMessage,
                                     Toast.LENGTH_LONG,
+                                ).show()
+
+                                UpdateInstallResult.ApkUnavailable -> Toast.makeText(
+                                    context,
+                                    updateApkUnavailableMessage,
+                                    Toast.LENGTH_SHORT,
                                 ).show()
 
                                 UpdateInstallResult.Failed -> Toast.makeText(

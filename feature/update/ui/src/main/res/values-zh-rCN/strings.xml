@@ -29,7 +29,10 @@ limitations under the License.
     <string name="update_remaining_commits_unknown">可能还有更早的提交未展示</string>
     <string name="update_later">稍后</string>
     <string name="update_view_changes">在 GitHub 查看全部更改</string>
-    <string name="update_download">前往下载</string>
+    <string name="update_download">下载</string>
+    <string name="update_download_progress">正在下载 %1$d%%</string>
+    <string name="update_download_retry">重试</string>
+    <string name="update_install">安装</string>
     <string name="github_acceleration_dialog_title">开启 GitHub 加速？</string>
     <string name="github_acceleration_dialog_message">您当前所在地区访问 GitHub 可能较为困难。开启后，Duck Detector 将通过第三方加速服务 gh-proxy.com 检查和下载 Nightly 更新。之后可随时在设置中更改。</string>
     <string name="github_acceleration_dialog_enable">开启加速</string>
