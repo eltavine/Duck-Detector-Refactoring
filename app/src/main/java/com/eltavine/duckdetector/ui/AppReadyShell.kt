@@ -91,8 +91,9 @@ import com.eltavine.duckdetector.features.settings.ui.SettingsScreen
 import com.eltavine.duckdetector.features.settings.ui.licenses.OpenSourceLicensesScreen
 import com.eltavine.duckdetector.features.update.data.GitHubAccelerationStore
 import com.eltavine.duckdetector.features.update.domain.GitHubAcceleration
-import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadResolution
 import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
+import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
+import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadState
 import com.eltavine.duckdetector.features.update.presentation.shouldOfferGitHubAcceleration
 import com.eltavine.duckdetector.features.update.ui.GitHubAccelerationDialog
 import com.eltavine.duckdetector.features.update.ui.NightlyUpdateDialog
@@ -121,8 +122,10 @@ internal fun AppReadyShell(
     val context = LocalContext.current
     val appContext = context.applicationContext
     val updateOpenFailedMessage = stringResource(R.string.update_open_failed)
+    val updateDownloadFailedMessage = stringResource(R.string.update_download_failed)
+    val updateInstallPermissionMessage = stringResource(R.string.update_install_permission_required)
+    val updateInstallFailedMessage = stringResource(R.string.update_install_failed)
     val scope = rememberCoroutineScope()
-    var isResolvingUpdateDownload by remember { mutableStateOf(false) }
     val notifier = remember(appContext) { ScanProgressNotifier(appContext) }
     val updateFactory = remember(context) { updateViewModelFactory(context) }
     val updateViewModel: UpdateViewModel = viewModel(factory = updateFactory)
@@ -146,6 +149,11 @@ internal fun AppReadyShell(
     LaunchedEffect(updateViewModel, automaticUpdateCheckReady) {
         if (automaticUpdateCheckReady) {
             updateViewModel.checkAutomatically()
+        }
+    }
+    LaunchedEffect(updateUiState.download) {
+        if (updateUiState.download is UpdateDownloadState.Failed) {
+            Toast.makeText(context, updateDownloadFailedMessage, Toast.LENGTH_SHORT).show()
         }
     }
     val scanViewModel: DetectorScanViewModel = viewModel(
@@ -300,7 +308,7 @@ internal fun AppReadyShell(
                 show = visibleUpdate != null,
                 currentVersionName = BuildConfig.VERSION_NAME,
                 update = availableUpdate,
-                downloadEnabled = !isResolvingUpdateDownload,
+                downloadState = updateUiState.download,
                 onDismiss = updateViewModel::dismissUpdate,
                 onDismissFinished = updateDialogPayload.onDismissFinished,
                 onViewChanges = {
@@ -312,39 +320,27 @@ internal fun AppReadyShell(
                         ).show()
                     }
                 },
-                onDownload = {
-                    if (!isResolvingUpdateDownload) {
-                        isResolvingUpdateDownload = true
-                        scope.launch {
-                            try {
-                                when (val resolution = updateViewModel.resolveDownload()) {
-                                    is UpdateDownloadResolution.Ready -> {
-                                        if (openExternalUri(context, resolution.url)) {
-                                            updateViewModel.dismissUpdate()
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                updateOpenFailedMessage,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                        }
-                                    }
+                onConfirm = {
+                    when (updateUiState.download) {
+                        is UpdateDownloadState.Ready -> {
+                            when (updateViewModel.installDownloaded()) {
+                                UpdateInstallResult.PermissionRequired -> Toast.makeText(
+                                    context,
+                                    updateInstallPermissionMessage,
+                                    Toast.LENGTH_LONG,
+                                ).show()
 
-                                    UpdateDownloadResolution.Failed -> {
-                                        Toast.makeText(
-                                            context,
-                                            updateOpenFailedMessage,
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                    }
+                                UpdateInstallResult.Failed -> Toast.makeText(
+                                    context,
+                                    updateInstallFailedMessage,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
 
-                                    UpdateDownloadResolution.Current,
-                                    UpdateDownloadResolution.Refreshed -> Unit
-                                }
-                            } finally {
-                                isResolvingUpdateDownload = false
+                                UpdateInstallResult.Launched -> Unit
                             }
                         }
+
+                        else -> updateViewModel.downloadUpdate()
                     }
                 },
             )

@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.features.update.presentation
 
 import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
+import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
 
 enum class UpdateCheckStatus {
     IDLE,
@@ -37,8 +38,20 @@ sealed interface UpdateDownloadResolution {
     data object Failed : UpdateDownloadResolution
 }
 
+sealed interface UpdateDownloadState {
+    data object Idle : UpdateDownloadState
+
+    data class Downloading(val progress: UpdateDownloadProgress) : UpdateDownloadState
+
+    /** The verified APK on local storage, waiting for the user to confirm the install. */
+    data class Ready(val apkPath: String) : UpdateDownloadState
+
+    data object Failed : UpdateDownloadState
+}
+
 data class UpdateUiState(
     val status: UpdateCheckStatus = UpdateCheckStatus.IDLE,
     val availableUpdate: AvailableNightlyUpdate? = null,
     val isDialogVisible: Boolean = false,
+    val download: UpdateDownloadState = UpdateDownloadState.Idle,
 )

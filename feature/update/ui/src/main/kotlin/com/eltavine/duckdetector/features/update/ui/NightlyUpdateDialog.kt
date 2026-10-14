@@ -25,21 +25,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
+import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadState
 import io.github.xiaotong6666.uihelper.dialog.UpdatePromptChange
 import io.github.xiaotong6666.uihelper.dialog.UpdatePromptDialog
 import io.github.xiaotong6666.uihelper.dialog.UpdatePromptMetadata
+import kotlin.math.roundToInt
 
 @Composable
 fun NightlyUpdateDialog(
     show: Boolean,
     currentVersionName: String,
     update: AvailableNightlyUpdate,
-    downloadEnabled: Boolean,
+    downloadState: UpdateDownloadState,
     onDismiss: () -> Unit,
     onViewChanges: () -> Unit,
-    onDownload: () -> Unit,
+    onConfirm: () -> Unit,
     onDismissFinished: () -> Unit = {},
 ) {
+    val downloading = downloadState as? UpdateDownloadState.Downloading
+    val confirmLabel = when {
+        downloading != null -> stringResource(
+            R.string.update_download_progress,
+            (downloading.progress.fraction * 100f).roundToInt(),
+        )
+        downloadState is UpdateDownloadState.Ready -> stringResource(R.string.update_install)
+        downloadState is UpdateDownloadState.Failed -> stringResource(R.string.update_download_retry)
+        else -> stringResource(R.string.update_download)
+    }
     UpdatePromptDialog(
         show = show,
         title = stringResource(R.string.update_dialog_title),
@@ -81,10 +93,10 @@ fun NightlyUpdateDialog(
         viewAllLabel = stringResource(R.string.update_view_changes),
         onViewAll = onViewChanges,
         dismissLabel = stringResource(R.string.update_later),
-        confirmLabel = stringResource(R.string.update_download),
-        confirmEnabled = downloadEnabled,
+        confirmLabel = confirmLabel,
+        confirmEnabled = downloading == null,
         onDismiss = onDismiss,
-        onConfirm = onDownload,
+        onConfirm = onConfirm,
         onDismissFinished = onDismissFinished,
     )
 }

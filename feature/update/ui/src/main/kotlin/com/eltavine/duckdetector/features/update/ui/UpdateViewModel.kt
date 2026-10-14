@@ -21,9 +21,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
+import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
+import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
 import com.eltavine.duckdetector.features.update.domain.UpdateCheckResult
+import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
+import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
+import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
 import com.eltavine.duckdetector.features.update.presentation.UpdateCheckStatus
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadResolution
+import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadState
 import com.eltavine.duckdetector.features.update.presentation.UpdateUiState
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
@@ -49,12 +55,15 @@ class UpdateViewModel internal constructor(
     private val repository: NightlyUpdateChecker,
     private val currentVersionCode: Int,
     private val currentCommitSha: String,
+    private val downloader: UpdateApkDownloader,
+    private val installer: UpdateApkInstaller,
     private val automaticCheckGate: UpdateCheckGate = ProcessUpdateCheckGate,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UpdateUiState())
     val uiState: StateFlow<UpdateUiState> = _uiState.asStateFlow()
     private var checkJob: Job? = null
+    private var downloadJob: Job? = null
 
     fun checkAutomatically() {
         if (!automaticCheckGate.tryAcquire()) {
@@ -91,12 +100,15 @@ class UpdateViewModel internal constructor(
                 }
 
                 is UpdateCheckResult.Available -> {
-                    _uiState.value = UpdateUiState(
+                    val unchanged = result.update.manifest == displayedManifest
+                    _uiState.value = _uiState.value.copy(
                         status = UpdateCheckStatus.AVAILABLE,
                         availableUpdate = result.update,
                         isDialogVisible = true,
+                        // A still-current APK that was already fetched stays ready to install.
+                        download = if (unchanged) _uiState.value.download else UpdateDownloadState.Idle,
                     )
-                    if (result.update.manifest == displayedManifest) {
+                    if (unchanged) {
                         UpdateDownloadResolution.Ready(result.update.downloadUrl)
                     } else {
                         UpdateDownloadResolution.Refreshed
@@ -108,6 +120,53 @@ class UpdateViewModel internal constructor(
         } catch (_: Exception) {
             UpdateDownloadResolution.Failed
         }
+    }
+
+    /** Rechecks the manifest, then downloads and verifies the APK in the ViewModel's scope. */
+    fun downloadUpdate() {
+        if (downloadJob?.isActive == true) {
+            return
+        }
+        downloadJob = viewModelScope.launch {
+            when (val resolution = resolveDownload()) {
+                is UpdateDownloadResolution.Ready -> downloadApk(resolution.url)
+                UpdateDownloadResolution.Failed -> {
+                    _uiState.value = _uiState.value.copy(download = UpdateDownloadState.Failed)
+                }
+
+                UpdateDownloadResolution.Current,
+                UpdateDownloadResolution.Refreshed -> Unit
+            }
+        }
+    }
+
+    /** Opens the package installer for the downloaded APK, closing the dialog once it is shown. */
+    fun installDownloaded(): UpdateInstallResult {
+        val download = _uiState.value.download
+        if (download !is UpdateDownloadState.Ready) {
+            return UpdateInstallResult.Failed
+        }
+        val result = installer.install(download.apkPath)
+        if (result == UpdateInstallResult.Launched) {
+            _uiState.value = _uiState.value.copy(isDialogVisible = false)
+        }
+        return result
+    }
+
+    private suspend fun downloadApk(downloadUrl: String) {
+        val apk = _uiState.value.availableUpdate?.manifest?.apk ?: return
+        _uiState.value = _uiState.value.copy(
+            download = UpdateDownloadState.Downloading(UpdateDownloadProgress(0L, apk.sizeBytes)),
+        )
+        val result = downloader.download(apk, downloadUrl) { progress ->
+            _uiState.value = _uiState.value.copy(download = UpdateDownloadState.Downloading(progress))
+        }
+        _uiState.value = _uiState.value.copy(
+            download = when (result) {
+                is UpdateDownloadResult.Ready -> UpdateDownloadState.Ready(result.apkPath)
+                UpdateDownloadResult.Failed -> UpdateDownloadState.Failed
+            },
+        )
     }
 
     private fun check(manual: Boolean) {
@@ -154,6 +213,8 @@ class UpdateViewModel internal constructor(
             createChecker: () -> NightlyUpdateChecker,
             currentVersionCode: Int,
             currentCommitSha: String,
+            downloader: UpdateApkDownloader,
+            installer: UpdateApkInstaller,
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -162,6 +223,8 @@ class UpdateViewModel internal constructor(
                         repository = createChecker(),
                         currentVersionCode = currentVersionCode,
                         currentCommitSha = currentCommitSha,
+                        downloader = downloader,
+                        installer = installer,
                     ) as T
                 }
             }

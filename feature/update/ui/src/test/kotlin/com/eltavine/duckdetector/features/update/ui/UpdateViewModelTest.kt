@@ -20,12 +20,18 @@ package com.eltavine.duckdetector.features.update.ui
 import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
 import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
 import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
+import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
+import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
 import com.eltavine.duckdetector.features.update.domain.NightlyUpdateCommit
 import com.eltavine.duckdetector.features.update.domain.NightlyUpdateManifest
 import com.eltavine.duckdetector.features.update.domain.UpdateChangelogEntry
 import com.eltavine.duckdetector.features.update.domain.UpdateCheckResult
+import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
+import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
+import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
 import com.eltavine.duckdetector.features.update.presentation.UpdateCheckStatus
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadResolution
+import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -219,11 +225,82 @@ class UpdateViewModelTest {
             assertTrue(viewModel.uiState.value.isDialogVisible)
         }
 
-    private fun viewModel(checker: NightlyUpdateChecker): UpdateViewModel {
+    @Test
+    fun `download verifies the resolved url and exposes a ready apk for install`() = runTest(dispatcher) {
+        val available = availableUpdate()
+        var downloadedUrl: String? = null
+        var installedPath: String? = null
+        val viewModel = viewModel(
+            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
+            downloader = UpdateApkDownloader { apk, url, onProgress ->
+                downloadedUrl = url
+                onProgress(UpdateDownloadProgress(bytesRead = apk.sizeBytes, totalBytes = apk.sizeBytes))
+                UpdateDownloadResult.Ready(apkPath = "/tmp/${apk.name}")
+            },
+            installer = UpdateApkInstaller { path ->
+                installedPath = path
+                UpdateInstallResult.Launched
+            },
+        )
+        viewModel.checkAutomatically()
+        advanceUntilIdle()
+
+        viewModel.downloadUpdate()
+        advanceUntilIdle()
+
+        assertEquals(manifest.apk.downloadUrl, downloadedUrl)
+        assertEquals(
+            UpdateDownloadState.Ready("/tmp/${manifest.apk.name}"),
+            viewModel.uiState.value.download,
+        )
+        assertTrue(viewModel.uiState.value.isDialogVisible)
+
+        assertEquals(UpdateInstallResult.Launched, viewModel.installDownloaded())
+        assertEquals("/tmp/${manifest.apk.name}", installedPath)
+        assertFalse(viewModel.uiState.value.isDialogVisible)
+    }
+
+    @Test
+    fun `a failed download surfaces a retryable state`() = runTest(dispatcher) {
+        val available = availableUpdate()
+        val viewModel = viewModel(
+            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
+            downloader = UpdateApkDownloader { _, _, _ -> UpdateDownloadResult.Failed },
+        )
+        viewModel.checkAutomatically()
+        advanceUntilIdle()
+
+        viewModel.downloadUpdate()
+        advanceUntilIdle()
+
+        assertEquals(UpdateDownloadState.Failed, viewModel.uiState.value.download)
+        assertTrue(viewModel.uiState.value.isDialogVisible)
+    }
+
+    @Test
+    fun `installing without a downloaded apk does nothing`() = runTest(dispatcher) {
+        val available = availableUpdate()
+        val viewModel = viewModel(
+            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
+        )
+        viewModel.checkAutomatically()
+        advanceUntilIdle()
+
+        assertEquals(UpdateInstallResult.Failed, viewModel.installDownloaded())
+        assertTrue(viewModel.uiState.value.isDialogVisible)
+    }
+
+    private fun viewModel(
+        checker: NightlyUpdateChecker,
+        downloader: UpdateApkDownloader = UpdateApkDownloader { _, _, _ -> UpdateDownloadResult.Failed },
+        installer: UpdateApkInstaller = UpdateApkInstaller { UpdateInstallResult.Failed },
+    ): UpdateViewModel {
         return UpdateViewModel(
             repository = checker,
             currentVersionCode = 400,
             currentCommitSha = TEST_BASE_SHA,
+            downloader = downloader,
+            installer = installer,
             automaticCheckGate = SingleRunUpdateCheckGate(),
         )
     }
