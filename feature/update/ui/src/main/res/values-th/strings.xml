@@ -30,4 +30,12 @@ limitations under the License.
     <string name="update_later">ภายหลัง</string>
     <string name="update_view_changes">ดูการเปลี่ยนแปลงทั้งหมดบน GitHub</string>
     <string name="update_download">เปิดหน้าดาวน์โหลด</string>
+    <string name="update_dialog_title_stable">มีอัปเดต Stable</string>
+    <string name="update_release_label">รุ่นและ commit</string>
+    <string name="update_apk_label">ขนาด APK และ SHA-256</string>
+    <string name="update_release_notes_title">บันทึกประจำรุ่น</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="other">ยังมีอีก %1$d รายการในหน้ารุ่น</item>
+    </plurals>
+    <string name="update_view_release">ดูรุ่นนี้บน GitHub</string>
 </resources>

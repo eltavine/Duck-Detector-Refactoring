@@ -30,8 +30,16 @@ limitations under the License.
     <string name="update_later">稍后</string>
     <string name="update_view_changes">在 GitHub 查看全部更改</string>
     <string name="update_download">前往下载</string>
+    <string name="update_dialog_title_stable">发现 Stable 更新</string>
+    <string name="update_release_label">版本与提交</string>
+    <string name="update_apk_label">APK 大小与 SHA-256</string>
+    <string name="update_release_notes_title">更新说明</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="other">另有 %1$d 项更新说明见发布页</item>
+    </plurals>
+    <string name="update_view_release">在 GitHub 查看此版本</string>
     <string name="github_acceleration_dialog_title">开启 GitHub 加速？</string>
-    <string name="github_acceleration_dialog_message">您当前所在地区访问 GitHub 可能较为困难。开启后，Duck Detector 将通过第三方加速服务 gh-proxy.com 检查和下载 Nightly 更新。之后可随时在设置中更改。</string>
+    <string name="github_acceleration_dialog_message">您当前所在地区访问 GitHub 可能较为困难。开启后，Duck Detector 将通过第三方加速服务 gh-proxy.com 检查和下载更新。之后可随时在设置中更改。</string>
     <string name="github_acceleration_dialog_enable">开启加速</string>
     <string name="github_acceleration_dialog_decline">暂不开启</string>
 </resources>

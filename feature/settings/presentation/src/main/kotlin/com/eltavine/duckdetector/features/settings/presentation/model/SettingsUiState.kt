@@ -22,14 +22,23 @@ data class SettingsUiState(
     val versionCode: Int,
     val buildTimeUtc: String,
     val buildHash: String,
+    val updateChannel: SettingsUpdateChannel,
     val updateStatus: SettingsUpdateStatus,
+    /** The channel's latest version while this build is current or ahead of it. */
+    val latestChannelVersion: String?,
     val gitHubAccelerationEnabled: Boolean,
 )
+
+enum class SettingsUpdateChannel {
+    STABLE,
+    NIGHTLY,
+}
 
 enum class SettingsUpdateStatus {
     IDLE,
     CHECKING,
     CURRENT,
+    AHEAD,
     AVAILABLE,
     FAILED,
 }

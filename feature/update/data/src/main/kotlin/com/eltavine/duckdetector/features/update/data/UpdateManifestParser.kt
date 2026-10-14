@@ -17,18 +17,24 @@
 
 package com.eltavine.duckdetector.features.update.data
 
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateCommit
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateManifest
+import com.eltavine.duckdetector.features.update.domain.UpdateApk
+import com.eltavine.duckdetector.features.update.domain.UpdateChangelogEntry
+import com.eltavine.duckdetector.features.update.domain.UpdateChanges
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
+import com.eltavine.duckdetector.features.update.domain.UpdateCommit
+import com.eltavine.duckdetector.features.update.domain.UpdateManifest
+import com.eltavine.duckdetector.features.update.domain.UpdateRelease
 import java.net.URI
-import java.time.Instant
 import org.json.JSONObject
 
-class UpdateManifestValidationException(message: String) : IllegalArgumentException(message)
-
+/**
+ * Reads update.json as .github/scripts/release_manifest.py writes it. A Stable manifest must name
+ * its release, and its APK must be an asset of that release; a Nightly APK must be an asset of the
+ * Nightly release.
+ */
 class UpdateManifestParser {
 
-    fun parse(rawJson: String): NightlyUpdateManifest {
+    fun parse(rawJson: String, expectedChannel: UpdateChannel): UpdateManifest {
         val root = runCatching { JSONObject(rawJson) }
             .getOrElse { throw UpdateManifestValidationException("Update manifest is not valid JSON.") }
         val schemaVersion = root.requirePositiveInt("schemaVersion")
@@ -36,63 +42,83 @@ class UpdateManifestParser {
             throw UpdateManifestValidationException("Unsupported update manifest schema: $schemaVersion")
         }
 
-        val channel = root.requireNonBlankString("channel")
-        if (channel != EXPECTED_CHANNEL) {
-            throw UpdateManifestValidationException("Unexpected update channel: $channel")
+        val channelId = root.requireNonBlankString("channel")
+        if (UpdateChannel.fromId(channelId) != expectedChannel) {
+            throw UpdateManifestValidationException("Unexpected update channel: $channelId")
         }
         val branch = root.requireNonBlankString("branch")
         if (branch !in EXPECTED_BRANCHES) {
             throw UpdateManifestValidationException("Unexpected update branch: $branch")
         }
 
-        val commitJson = root.requireObject("commit")
-        val commitSha = commitJson.requireNonBlankString("sha").lowercase()
-        if (!FULL_SHA_REGEX.matches(commitSha)) {
-            throw UpdateManifestValidationException("Update commit SHA must contain 40 hexadecimal characters.")
+        val versionName = root.requireNonBlankString("versionName")
+        val release = when (expectedChannel) {
+            UpdateChannel.STABLE -> parseRelease(root.requireObject("release"), versionName)
+            UpdateChannel.NIGHTLY -> null
         }
-        val authoredAt = commitJson.requireIsoInstant("authoredAt")
-        val commit = NightlyUpdateCommit(
-            sha = commitSha,
-            subject = commitJson.requireNonBlankString("subject"),
-            body = commitJson.optionalString("body"),
-            authorName = commitJson.requireNonBlankString("authorName"),
-            authoredAt = authoredAt,
-        )
-
-        val apkJson = root.requireObject("apk")
-        val apkName = apkJson.requireNonBlankString("name")
-        if (apkName.length > MAX_ASSET_NAME_LENGTH ||
-            !apkName.endsWith(".apk", ignoreCase = true) ||
-            apkName.any { it == '/' || it == '\\' || it.isISOControl() }
-        ) {
-            throw UpdateManifestValidationException("Nightly update asset name is invalid.")
-        }
-        val downloadUrl = apkJson.requireNonBlankString("downloadUrl")
-        validateDownloadUrl(downloadUrl, apkName)
-        val sizeBytes = apkJson.requirePositiveLong("sizeBytes")
-        val sha256 = apkJson.requireNonBlankString("sha256").lowercase()
-        if (!SHA256_REGEX.matches(sha256)) {
-            throw UpdateManifestValidationException("APK SHA-256 is invalid.")
-        }
-
-        return NightlyUpdateManifest(
+        return UpdateManifest(
             schemaVersion = schemaVersion,
-            channel = channel,
+            channel = expectedChannel,
             branch = branch,
-            versionName = root.requireNonBlankString("versionName"),
+            versionName = versionName,
             versionCode = root.requirePositiveInt("versionCode"),
-            commit = commit,
+            commit = parseCommit(root.requireObject("commit")),
             builtAtUtc = root.requireIsoInstant("builtAtUtc"),
-            apk = NightlyUpdateApk(
-                name = apkName,
-                downloadUrl = downloadUrl,
-                sizeBytes = sizeBytes,
-                sha256 = sha256,
-            ),
+            apk = parseApk(root.requireObject("apk"), releaseTag = release?.tag ?: UpdateEndpoints.NIGHTLY_TAG),
+            release = release,
+            changes = if (expectedChannel == UpdateChannel.NIGHTLY) parseOptionalChanges(root) else null,
         )
     }
 
-    private fun validateDownloadUrl(rawUrl: String, apkName: String) {
+    private fun parseCommit(json: JSONObject): UpdateCommit {
+        val sha = json.requireNonBlankString("sha").lowercase()
+        if (!FULL_SHA_REGEX.matches(sha)) {
+            throw UpdateManifestValidationException("Update commit SHA must contain 40 hexadecimal characters.")
+        }
+        return UpdateCommit(
+            sha = sha,
+            subject = json.requireNonBlankString("subject"),
+            body = json.optionalString("body"),
+            authorName = json.requireNonBlankString("authorName"),
+            authoredAt = json.requireIsoInstant("authoredAt"),
+        )
+    }
+
+    private fun parseRelease(json: JSONObject, versionName: String): UpdateRelease {
+        val tag = json.requireNonBlankString("tag")
+        if (!STABLE_TAG_REGEX.matches(tag) || versionName != tag.removePrefix("v")) {
+            throw UpdateManifestValidationException("Stable release $tag does not name version $versionName.")
+        }
+        val url = json.requireNonBlankString("url")
+        if (url != "${UpdateEndpoints.WEB_REPOSITORY}/releases/tag/$tag") {
+            throw UpdateManifestValidationException("Release URL is outside the repository's releases.")
+        }
+        return UpdateRelease(tag = tag, url = url, notes = json.optionalString("notes"))
+    }
+
+    private fun parseApk(json: JSONObject, releaseTag: String): UpdateApk {
+        val name = json.requireNonBlankString("name")
+        if (name.length > MAX_ASSET_NAME_LENGTH ||
+            !name.endsWith(".apk", ignoreCase = true) ||
+            name.any { it == '/' || it == '\\' || it.isISOControl() }
+        ) {
+            throw UpdateManifestValidationException("Update asset name is invalid.")
+        }
+        val downloadUrl = json.requireNonBlankString("downloadUrl")
+        validateDownloadUrl(downloadUrl, name, releaseTag)
+        val sha256 = json.requireNonBlankString("sha256").lowercase()
+        if (!SHA256_REGEX.matches(sha256)) {
+            throw UpdateManifestValidationException("APK SHA-256 is invalid.")
+        }
+        return UpdateApk(
+            name = name,
+            downloadUrl = downloadUrl,
+            sizeBytes = json.requirePositiveLong("sizeBytes"),
+            sha256 = sha256,
+        )
+    }
+
+    private fun validateDownloadUrl(rawUrl: String, apkName: String, releaseTag: String) {
         val uri = runCatching { URI(rawUrl) }
             .getOrElse { throw UpdateManifestValidationException("APK download URL is invalid.") }
         if (uri.scheme != "https" ||
@@ -102,82 +128,61 @@ class UpdateManifestParser {
         ) {
             throw UpdateManifestValidationException("APK download URL must use the official GitHub host.")
         }
-        if (uri.path != "$EXPECTED_DOWNLOAD_PATH_PREFIX$apkName") {
-            throw UpdateManifestValidationException("APK download URL is outside the Nightly release.")
+        if (uri.path != "${UpdateEndpoints.REPOSITORY_PATH}/releases/download/$releaseTag/$apkName") {
+            throw UpdateManifestValidationException("APK download URL is outside the $releaseTag release.")
         }
+    }
+
+    // The changes only list what an update adds. A list that fails validation is dropped rather than
+    // failing the check, and the repository compares the builds through GitHub instead.
+    private fun parseOptionalChanges(root: JSONObject): UpdateChanges? {
+        val json = root.optJSONObject("changes") ?: return null
+        return try {
+            parseChanges(json)
+        } catch (_: UpdateManifestValidationException) {
+            null
+        }
+    }
+
+    private fun parseChanges(json: JSONObject): UpdateChanges {
+        val baseTag = json.nullableString("baseTag")
+        val baseSha = json.nullableString("baseSha")?.lowercase()
+        if ((baseTag == null) != (baseSha == null) ||
+            (baseTag != null && !STABLE_TAG_REGEX.matches(baseTag)) ||
+            (baseSha != null && !FULL_SHA_REGEX.matches(baseSha))
+        ) {
+            throw UpdateManifestValidationException("Changes name an invalid base release.")
+        }
+        val entriesJson = json.optJSONArray("entries")
+            ?: throw UpdateManifestValidationException("Changes have no entries.")
+        val entries = (0 until entriesJson.length()).map { index ->
+            val entry = entriesJson.optJSONObject(index)
+                ?: throw UpdateManifestValidationException("Change entry $index is not an object.")
+            val sha = entry.requireNonBlankString("sha").lowercase()
+            if (!FULL_SHA_REGEX.matches(sha)) {
+                throw UpdateManifestValidationException("Change entry $index has an invalid SHA.")
+            }
+            UpdateChangelogEntry(
+                sha = sha,
+                subject = entry.requireNonBlankString("subject"),
+                authorName = entry.optionalString("authorName").trim(),
+                pullRequest = if (entry.isNull("pullRequest")) null else entry.requirePositiveInt("pullRequest"),
+            )
+        }
+        val totalCount = json.requireNonNegativeInt("totalCount")
+        if (totalCount < entries.size) {
+            throw UpdateManifestValidationException("Changes count fewer changes than they list.")
+        }
+        return UpdateChanges(baseTag = baseTag, baseSha = baseSha, totalCount = totalCount, entries = entries)
     }
 
     private companion object {
         private const val SUPPORTED_SCHEMA_VERSION = 1
-        private const val EXPECTED_CHANNEL = "nightly"
         private val EXPECTED_BRANCHES = setOf("main", "master")
         private const val EXPECTED_DOWNLOAD_HOST = "github.com"
-        private const val EXPECTED_DOWNLOAD_PATH_PREFIX =
-            "/eltavine/Duck-Detector-Refactoring/releases/download/nightly/"
         private const val MAX_ASSET_NAME_LENGTH = 255
         private val FULL_SHA_REGEX = Regex("^[0-9a-f]{40}$")
         private val SHA256_REGEX = Regex("^[0-9a-f]{64}$")
+        private val STABLE_TAG_REGEX = Regex("""^v\d{2}\.(?:[1-9]|1[0-2])\.(?:0|[1-9]\d*)$""")
     }
-}
-
-private fun JSONObject.requireObject(name: String): JSONObject {
-    return optJSONObject(name)
-        ?: throw UpdateManifestValidationException("Missing update manifest object: $name")
-}
-
-private fun JSONObject.requireNonBlankString(name: String): String {
-    val rawValue = opt(name)
-    if (rawValue !is String) {
-        throw UpdateManifestValidationException("Update manifest value must be a string: $name")
-    }
-    val value = rawValue.trim()
-    if (value.isBlank()) {
-        throw UpdateManifestValidationException("Missing update manifest string: $name")
-    }
-    return value
-}
-
-private fun JSONObject.optionalString(name: String): String {
-    if (!has(name) || isNull(name)) {
-        return ""
-    }
-    return opt(name) as? String
-        ?: throw UpdateManifestValidationException("Update manifest value must be a string: $name")
-}
-
-private fun JSONObject.requirePositiveInt(name: String): Int {
-    val rawValue = opt(name)
-    val value = if (rawValue is Int) {
-        rawValue
-    } else if (rawValue is Long) {
-        rawValue.takeIf { it in 1..Int.MAX_VALUE }?.toInt() ?: -1
-    } else {
-        -1
-    }
-    if (value <= 0) {
-        throw UpdateManifestValidationException("Update manifest value must be positive: $name")
-    }
-    return value
-}
-
-private fun JSONObject.requirePositiveLong(name: String): Long {
-    val rawValue = opt(name)
-    val value = if (rawValue is Int) {
-        rawValue.toLong()
-    } else if (rawValue is Long) {
-        rawValue
-    } else {
-        -1L
-    }
-    if (value <= 0L) {
-        throw UpdateManifestValidationException("Update manifest value must be positive: $name")
-    }
-    return value
-}
-
-private fun JSONObject.requireIsoInstant(name: String): String {
-    val value = requireNonBlankString(name)
-    runCatching { Instant.parse(value) }
-        .getOrElse { throw UpdateManifestValidationException("Update manifest timestamp is invalid: $name") }
-    return value
 }

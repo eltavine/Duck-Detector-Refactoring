@@ -17,12 +17,16 @@
 
 package com.eltavine.duckdetector.features.update.presentation
 
-import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
+import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 
 enum class UpdateCheckStatus {
     IDLE,
     CHECKING,
     CURRENT,
+
+    /** The running build is newer than the channel's latest; the next newer one will be offered. */
+    AHEAD,
     AVAILABLE,
     FAILED,
 }
@@ -38,7 +42,10 @@ sealed interface UpdateDownloadResolution {
 }
 
 data class UpdateUiState(
+    val channel: UpdateChannel,
     val status: UpdateCheckStatus = UpdateCheckStatus.IDLE,
-    val availableUpdate: AvailableNightlyUpdate? = null,
+    /** The channel's latest version while the running build is current or ahead of it. */
+    val latestVersionName: String? = null,
+    val availableUpdate: AvailableUpdate? = null,
     val isDialogVisible: Boolean = false,
 )

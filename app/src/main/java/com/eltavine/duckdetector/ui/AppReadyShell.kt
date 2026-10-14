@@ -92,10 +92,9 @@ import com.eltavine.duckdetector.features.settings.ui.licenses.OpenSourceLicense
 import com.eltavine.duckdetector.features.update.data.GitHubAccelerationStore
 import com.eltavine.duckdetector.features.update.domain.GitHubAcceleration
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadResolution
-import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
 import com.eltavine.duckdetector.features.update.presentation.shouldOfferGitHubAcceleration
 import com.eltavine.duckdetector.features.update.ui.GitHubAccelerationDialog
-import com.eltavine.duckdetector.features.update.ui.NightlyUpdateDialog
+import com.eltavine.duckdetector.features.update.ui.UpdateDialog
 import com.eltavine.duckdetector.features.update.ui.UpdateViewModel
 import com.eltavine.duckdetector.notifications.ScanProgressNotificationSnapshot
 import com.eltavine.duckdetector.notifications.ScanProgressNotifier
@@ -174,13 +173,20 @@ internal fun AppReadyShell(
             isLoading = isDashboardLoading,
         )
     }
-    val settingsState = remember(updateUiState.status, gitHubAcceleration) {
+    val settingsState = remember(
+        updateUiState.channel,
+        updateUiState.status,
+        updateUiState.latestVersionName,
+        gitHubAcceleration,
+    ) {
         SettingsUiState(
             versionName = BuildConfig.VERSION_NAME,
             versionCode = BuildConfig.VERSION_CODE,
             buildTimeUtc = BuildConfig.BUILD_TIME_UTC,
             buildHash = BuildConfig.BUILD_HASH,
+            updateChannel = updateUiState.channel.toSettingsUpdateChannel(),
             updateStatus = updateUiState.status.toSettingsUpdateStatus(),
+            latestChannelVersion = updateUiState.latestVersionName,
             gitHubAccelerationEnabled = gitHubAcceleration == GitHubAcceleration.ENABLED,
         )
     }
@@ -278,6 +284,9 @@ internal fun AppReadyShell(
                             uiState = settingsState,
                             consentToggles = consentToggles,
                             onUiModeChange = onUiModeChange,
+                            onUpdateChannelChange = { channel ->
+                                updateViewModel.selectChannel(channel.toUpdateChannel())
+                            },
                             onCheckForUpdates = updateViewModel::onSettingsUpdateAction,
                             onGitHubAccelerationChange = { enabled ->
                                 scope.launch { accelerationStore.setEnabled(enabled) }
@@ -296,7 +305,7 @@ internal fun AppReadyShell(
         )
 
         updateDialogPayload.value?.let { availableUpdate ->
-            NightlyUpdateDialog(
+            UpdateDialog(
                 show = visibleUpdate != null,
                 currentVersionName = BuildConfig.VERSION_NAME,
                 update = availableUpdate,
@@ -304,7 +313,7 @@ internal fun AppReadyShell(
                 onDismiss = updateViewModel::dismissUpdate,
                 onDismissFinished = updateDialogPayload.onDismissFinished,
                 onViewChanges = {
-                    if (!openExternalUri(context, availableUpdate.compareUrl)) {
+                    if (!openExternalUri(context, availableUpdate.changesUrl)) {
                         Toast.makeText(
                             context,
                             updateOpenFailedMessage,

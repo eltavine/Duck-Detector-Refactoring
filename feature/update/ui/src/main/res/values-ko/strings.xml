@@ -30,4 +30,12 @@ limitations under the License.
     <string name="update_later">나중에</string>
     <string name="update_view_changes">GitHub에서 모든 변경 사항 보기</string>
     <string name="update_download">다운로드 열기</string>
+    <string name="update_dialog_title_stable">Stable 업데이트 사용 가능</string>
+    <string name="update_release_label">릴리스 및 커밋</string>
+    <string name="update_apk_label">APK 크기 및 SHA-256</string>
+    <string name="update_release_notes_title">릴리스 노트</string>
+    <plurals name="update_release_notes_more">
+        <item quantity="other">나머지 %1$d개 항목은 릴리스 페이지에 있음</item>
+    </plurals>
+    <string name="update_view_release">GitHub에서 릴리스 보기</string>
 </resources>

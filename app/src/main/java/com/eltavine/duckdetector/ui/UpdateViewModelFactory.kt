@@ -20,13 +20,19 @@ package com.eltavine.duckdetector.ui
 import android.content.Context
 import androidx.lifecycle.ViewModelProvider
 import com.eltavine.duckdetector.BuildConfig
-import com.eltavine.duckdetector.features.update.data.createNightlyUpdateChecker
+import com.eltavine.duckdetector.features.update.data.createUpdateChannelPreference
+import com.eltavine.duckdetector.features.update.data.createUpdateChecker
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import com.eltavine.duckdetector.features.update.ui.UpdateViewModel
 
 internal fun updateViewModelFactory(context: Context): ViewModelProvider.Factory {
     val appContext = context.applicationContext
+    // Only release workflow builds name a channel; anything else follows Nightly, as it always has.
+    val buildChannel = UpdateChannel.fromId(BuildConfig.BUILD_CHANNEL) ?: UpdateChannel.NIGHTLY
     return UpdateViewModel.factory(
-        createChecker = { createNightlyUpdateChecker(appContext) },
+        createChecker = { createUpdateChecker(appContext) },
+        createChannelPreference = { createUpdateChannelPreference(appContext, buildChannel) },
+        buildChannel = buildChannel,
         currentVersionCode = BuildConfig.VERSION_CODE,
         currentCommitSha = BuildConfig.BUILD_HASH,
     )

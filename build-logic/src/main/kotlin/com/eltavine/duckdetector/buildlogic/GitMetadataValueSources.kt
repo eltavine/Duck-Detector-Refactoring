@@ -34,7 +34,7 @@ import javax.inject.Inject
 private const val UNKNOWN = "unknown"
 private val BUILD_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
     .withZone(ZoneOffset.UTC)
-// Use the Singapore calendar date as the stable versionName prefix.
+// The Singapore calendar date names Nightly builds that no stable tag precedes.
 private val VERSION_NAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
 interface GitRepositoryParameters : ValueSourceParameters {
@@ -43,6 +43,10 @@ interface GitRepositoryParameters : ValueSourceParameters {
 
 interface VersionNameDateParameters : ValueSourceParameters {
     val zoneId: Property<String>
+}
+
+interface GitRevisionParameters : GitRepositoryParameters {
+    val revision: Property<String>
 }
 
 abstract class GitShortHashValueSource @Inject constructor(
@@ -91,6 +95,37 @@ abstract class GitCommitCountValueSource @Inject constructor(
                     "Ensure this build runs from a git checkout with full history.",
             )
     }
+}
+
+/** `git describe` of HEAD against the stable tags, or [UNKNOWN] when no stable tag precedes it. */
+abstract class GitStableDescribeValueSource @Inject constructor(
+    private val execOperations: ExecOperations,
+) : ValueSource<String, GitRepositoryParameters> {
+    override fun obtain(): String = runGitCommand(
+        execOperations = execOperations,
+        repositoryRoot = parameters.repositoryRoot.get(),
+        "describe",
+        "--tags",
+        "--long",
+        "--abbrev=8",
+        "--match",
+        STABLE_TAG_GLOB,
+        "HEAD",
+    )
+}
+
+/** The full commit SHA a revision resolves to, or [UNKNOWN] when it does not resolve. */
+abstract class GitRevisionCommitValueSource @Inject constructor(
+    private val execOperations: ExecOperations,
+) : ValueSource<String, GitRevisionParameters> {
+    override fun obtain(): String = runGitCommand(
+        execOperations = execOperations,
+        repositoryRoot = parameters.repositoryRoot.get(),
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        "${parameters.revision.get()}^{commit}",
+    )
 }
 
 abstract class CurrentDateVersionNameValueSource : ValueSource<String, VersionNameDateParameters> {

@@ -17,11 +17,16 @@
 
 package com.eltavine.duckdetector.features.update.data
 
-import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateManifest
+import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
+import com.eltavine.duckdetector.features.update.domain.BuildStanding
+import com.eltavine.duckdetector.features.update.domain.UpdateChangelog
 import com.eltavine.duckdetector.features.update.domain.UpdateChangelogEntry
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import com.eltavine.duckdetector.features.update.domain.UpdateCheckResult
+import com.eltavine.duckdetector.features.update.domain.UpdateChecker
+import com.eltavine.duckdetector.features.update.domain.UpdateManifest
+import com.eltavine.duckdetector.features.update.domain.newerThan
+import com.eltavine.duckdetector.features.update.domain.standingOf
 import kotlin.math.ceil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,43 +39,79 @@ class UpdateRepository internal constructor(
     private val currentRoute: suspend () -> GitHubRoute,
     private val manifestParser: UpdateManifestParser = UpdateManifestParser(),
     private val compareParser: GitHubCompareParser = GitHubCompareParser(),
+    private val releaseNotesParser: ReleaseNotesParser = ReleaseNotesParser(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : NightlyUpdateChecker {
+) : UpdateChecker {
 
     override suspend fun check(
+        channel: UpdateChannel,
         currentVersionCode: Int,
         currentCommitSha: String,
     ): UpdateCheckResult = withContext(ioDispatcher) {
         val route = currentRoute()
-        val manifestJson = httpClient.get(route.url(MANIFEST_URL), JSON_ACCEPT)
-        val manifest = manifestParser.parse(manifestJson)
-        if (!isNightlyUpdateAvailable(manifest, currentVersionCode, currentCommitSha)) {
-            return@withContext UpdateCheckResult.Current(manifest)
+        val manifestJson = httpClient.get(route.url(UpdateEndpoints.manifestUrl(channel)), JSON_ACCEPT)
+        val manifest = manifestParser.parse(manifestJson, channel)
+        when (standingOf(manifest, currentVersionCode, currentCommitSha)) {
+            BuildStanding.CURRENT -> UpdateCheckResult.Current(manifest)
+            BuildStanding.AHEAD -> UpdateCheckResult.Ahead(manifest)
+            BuildStanding.BEHIND -> UpdateCheckResult.Available(
+                update = buildAvailableUpdate(manifest, currentCommitSha, route),
+            )
         }
-
-        UpdateCheckResult.Available(
-            update = buildAvailableUpdate(
-                manifest = manifest,
-                currentCommitSha = currentCommitSha,
-                route = route,
-            ),
-        )
     }
 
     private suspend fun buildAvailableUpdate(
-        manifest: NightlyUpdateManifest,
+        manifest: UpdateManifest,
         currentCommitSha: String,
         route: GitHubRoute,
-    ): AvailableNightlyUpdate {
-        val compareUrl = buildCompareWebUrl(currentCommitSha, manifest.commit.sha)
-        val comparePage = runCatching {
+    ): AvailableUpdate {
+        val release = manifest.release
+        return AvailableUpdate(
+            manifest = manifest,
+            changelog = if (release != null) {
+                UpdateChangelog.ReleaseNotes(releaseNotesParser.parse(release.notes))
+            } else {
+                nightlyChangelog(manifest, currentCommitSha, route)
+            },
+            downloadUrl = route.url(manifest.apk.downloadUrl),
+            changesUrl = release?.url ?: buildCompareWebUrl(currentCommitSha, manifest.commit.sha),
+        )
+    }
+
+    /**
+     * The manifest's own list answers for any build since the last stable release without another
+     * request, gh-proxy.com included. Older or unrelated builds fall back to GitHub's comparison,
+     * and then to the newest listed changes, flagged as possibly incomplete.
+     */
+    private suspend fun nightlyChangelog(
+        manifest: UpdateManifest,
+        currentCommitSha: String,
+        route: GitHubRoute,
+    ): UpdateChangelog.Commits {
+        manifest.changes?.newerThan(currentCommitSha)?.let { listed ->
+            val visible = listed.entries.take(MAX_VISIBLE_COMMITS)
+            return UpdateChangelog.Commits(
+                entries = visible,
+                remainingCount = listed.remainingCount?.let { it + listed.entries.size - visible.size },
+            )
+        }
+
+        val comparePage = try {
             loadComparePage(currentCommitSha, manifest.commit.sha, route)
-        }.getOrNull()
-        val visibleCommits = comparePage?.commits
-            .orEmpty()
-            .asReversed()
-            .take(MAX_VISIBLE_COMMITS)
-            .ifEmpty {
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            null
+        }
+        val compared = comparePage?.commits.orEmpty().asReversed().take(MAX_VISIBLE_COMMITS)
+        if (comparePage != null && compared.isNotEmpty()) {
+            val totalCommits = comparePage.totalCommits.coerceAtLeast(compared.size)
+            return UpdateChangelog.Commits(entries = compared, remainingCount = totalCommits - compared.size)
+        }
+
+        val listed = manifest.changes?.entries.orEmpty().take(MAX_VISIBLE_COMMITS)
+        return UpdateChangelog.Commits(
+            entries = listed.ifEmpty {
                 listOf(
                     UpdateChangelogEntry(
                         sha = manifest.commit.sha,
@@ -78,14 +119,8 @@ class UpdateRepository internal constructor(
                         authorName = manifest.commit.authorName,
                     ),
                 )
-            }
-        val totalCommits = comparePage?.totalCommits?.coerceAtLeast(visibleCommits.size)
-        return AvailableNightlyUpdate(
-            manifest = manifest,
-            changelog = visibleCommits,
-            remainingCommitCount = totalCommits?.let { (it - visibleCommits.size).coerceAtLeast(0) },
-            downloadUrl = route.url(manifest.apk.downloadUrl),
-            compareUrl = compareUrl,
+            },
+            remainingCount = null,
         )
     }
 
@@ -146,35 +181,19 @@ class UpdateRepository internal constructor(
     }
 
     private fun buildCompareApiUrl(baseSha: String, headSha: String, page: Int): String {
-        return "$GITHUB_API_REPOSITORY/compare/$baseSha...$headSha" +
+        return "${UpdateEndpoints.API_REPOSITORY}/compare/$baseSha...$headSha" +
             "?per_page=$COMPARE_PAGE_SIZE&page=$page"
     }
 
     private fun buildCompareWebUrl(baseSha: String, headSha: String): String {
-        return "$GITHUB_WEB_REPOSITORY/compare/$baseSha...$headSha"
+        return "${UpdateEndpoints.WEB_REPOSITORY}/compare/$baseSha...$headSha"
     }
 
-    companion object {
-        const val MANIFEST_URL =
-            "https://github.com/eltavine/Duck-Detector-Refactoring/releases/download/nightly/update.json"
-
-        private const val GITHUB_API_REPOSITORY =
-            "https://api.github.com/repos/eltavine/Duck-Detector-Refactoring"
-        private const val GITHUB_WEB_REPOSITORY =
-            "https://github.com/eltavine/Duck-Detector-Refactoring"
+    private companion object {
         private const val JSON_ACCEPT = "application/json"
         private const val GITHUB_JSON_ACCEPT = "application/vnd.github+json"
         private const val COMPARE_PAGE_SIZE = 100
         private const val MAX_VISIBLE_COMMITS = 10
         private val COMPARABLE_SHA_REGEX = Regex("^[0-9a-fA-F]{7,40}$")
     }
-}
-
-fun isNightlyUpdateAvailable(
-    manifest: NightlyUpdateManifest,
-    currentVersionCode: Int,
-    currentCommitSha: String,
-): Boolean {
-    return manifest.versionCode > currentVersionCode &&
-        !manifest.commit.sha.equals(currentCommitSha, ignoreCase = true)
 }
