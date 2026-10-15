@@ -209,6 +209,27 @@ internal fun NativeRootMethodEvidence.kernelInterfaceMethods(): List<NativeRootM
         },
     ),
     NativeRootMethodResult(
+        method = NativeRootMethod.SUSFS_OPATH_CONSISTENCY,
+        summary = when {
+            snapshot.susfsOpathConsistencyDetected -> "Inconsistent"
+            snapshot.susfsOpathConsistencyAvailable -> "Consistent"
+            else -> "Unavailable"
+        },
+        outcome = when {
+            snapshot.susfsOpathConsistencyDetected -> NativeRootMethodOutcome.DETECTED
+            snapshot.susfsOpathConsistencyAvailable -> NativeRootMethodOutcome.CLEAN
+            else -> NativeRootMethodOutcome.SUPPORT
+        },
+        detail = buildString {
+            append("Check the /proc/susfs_* control nodes through stat(), open(O_PATH) and fstat(). ")
+            append("A genuine proc entry cannot answer ENOENT on one interface after resolving on another - that mismatch is the susfs4ksu-lkm interception signature.")
+            if (snapshot.susfsOpathConsistencyDetail.isNotBlank()) {
+                append("\nTest Result: ")
+                append(snapshot.susfsOpathConsistencyDetail)
+            }
+        },
+    ),
+    NativeRootMethodResult(
         method = NativeRootMethod.SELF_PROCESS_IOC,
         summary = when {
             snapshot.selfSuDomain -> "su domain"

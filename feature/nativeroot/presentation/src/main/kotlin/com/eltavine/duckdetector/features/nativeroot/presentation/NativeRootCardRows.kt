@@ -202,6 +202,7 @@ private fun placeholderMethodRows(
         "prctlProbe",
         "susfsSideChannel",
         "susfsGetdentsRace",
+        "susfsOpathConsistency",
         "selfProcessIoc",
         "isolatedMountDrift",
         "ksuThroneHunt",

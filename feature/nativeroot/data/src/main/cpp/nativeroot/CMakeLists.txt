@@ -17,6 +17,7 @@ duckdetector_native_unit(duckdetector_nativeroot
     probes/ksu_supercall_probe.cpp
     probes/susfs_probe.cpp
     probes/susfs_getdents_race_probe.cpp
+    probes/susfs_opath_consistency_probe.cpp
     probes/self_process_ioc_probe.cpp
     probes/throne_hunt_watch_probe.cpp
     probes/cgroup_process_probe.cpp

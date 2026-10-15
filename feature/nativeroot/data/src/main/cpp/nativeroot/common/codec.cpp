@@ -99,6 +99,14 @@ namespace duckdetector::nativeroot {
                << (snapshot.susfs_getdents_race_available ? '1' : '0') << '\n';
         output << "SUSFS_GETDENTS_RACE_DETAIL="
                << escape_value(snapshot.susfs_getdents_race_detail) << '\n';
+        output << "SUSFS_OPATH_CONSISTENCY_HIT="
+               << (snapshot.susfs_opath_consistency_detected ? '1' : '0') << '\n';
+        output << "SUSFS_OPATH_CONSISTENCY_AVAILABLE="
+               << (snapshot.susfs_opath_consistency_available ? '1' : '0') << '\n';
+        output << "SUSFS_OPATH_CONSISTENCY_CHECKED="
+               << snapshot.susfs_opath_consistency_checked_count << '\n';
+        output << "SUSFS_OPATH_CONSISTENCY_DETAIL="
+               << escape_value(snapshot.susfs_opath_consistency_detail) << '\n';
         output << "SELF_SU_DOMAIN=" << (snapshot.self_su_domain ? '1' : '0') << '\n';
         output << "SELF_CONTEXT=" << escape_value(snapshot.self_context) << '\n';
         output << "SELF_KSU_DRIVER_FDS=" << snapshot.self_ksu_driver_fd_count << '\n';

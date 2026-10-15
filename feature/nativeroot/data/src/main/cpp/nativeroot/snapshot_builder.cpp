@@ -34,6 +34,7 @@
 #include "nativeroot/probes/self_process_ioc_probe.h"
 #include "nativeroot/probes/susfs_probe.h"
 #include "nativeroot/probes/susfs_getdents_race_probe.h"
+#include "nativeroot/probes/susfs_opath_consistency_probe.h"
 
 namespace duckdetector::nativeroot {
     namespace {
@@ -62,6 +63,7 @@ namespace duckdetector::nativeroot {
         const ProbeResult prctl_probe = run_prctl_probe();
         const ProbeResult susfs_probe = run_susfs_probe();
         const ProbeResult susfs_getdents_race_probe = run_susfs_getdents_race_probe();
+        const ProbeResult susfs_opath_consistency_probe = run_susfs_opath_consistency_probe();
         const ProbeResult self_process_ioc_probe = run_self_process_ioc_probe();
         const ProbeResult ksu_supercall_probe = run_ksu_supercall_probe();
         const ProbeResult kernelpatch_supercall_latency_probe = run_kernelpatch_supercall_latency_check();
@@ -122,6 +124,13 @@ namespace duckdetector::nativeroot {
                         static_cast<long>(SusfsGetdentsRaceOutcome::kRanClean) ||
                 snapshot.susfs_getdents_race_detected;
         snapshot.susfs_getdents_race_detail = susfs_getdents_race_probe.extra_text;
+        snapshot.susfs_opath_consistency_detected =
+                susfs_opath_consistency_probe.numeric_value ==
+                static_cast<long>(SusfsOpathOutcome::kInconsistent);
+        snapshot.susfs_opath_consistency_available =
+                susfs_opath_consistency_probe.checked_count > 0;
+        snapshot.susfs_opath_consistency_checked_count = susfs_opath_consistency_probe.checked_count;
+        snapshot.susfs_opath_consistency_detail = susfs_opath_consistency_probe.extra_text;
         snapshot.self_context = self_process_ioc_probe.extra_text;
         snapshot.self_su_domain = self_process_ioc_probe.aux_flags != 0;
         snapshot.self_ksu_driver_fd_count = static_cast<int>(self_process_ioc_probe.numeric_value);
@@ -143,6 +152,7 @@ namespace duckdetector::nativeroot {
         append_probe_findings(snapshot, prctl_probe, dedupe);
         append_probe_findings(snapshot, susfs_probe, dedupe);
         append_probe_findings(snapshot, susfs_getdents_race_probe, dedupe);
+        append_probe_findings(snapshot, susfs_opath_consistency_probe, dedupe);
         append_probe_findings(snapshot, self_process_ioc_probe, dedupe);
         append_probe_findings(snapshot, ksu_supercall_probe, dedupe);
         append_probe_findings(snapshot, kernelpatch_supercall_latency_probe, dedupe);

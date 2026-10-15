@@ -92,6 +92,10 @@ namespace duckdetector::nativeroot {
         bool susfs_getdents_race_detected = false;
         bool susfs_getdents_race_available = false;
         std::string susfs_getdents_race_detail;
+        bool susfs_opath_consistency_detected = false;
+        bool susfs_opath_consistency_available = false;
+        int susfs_opath_consistency_checked_count = 0;
+        std::string susfs_opath_consistency_detail;
         bool self_su_domain = false;
         std::string self_context;
         int self_ksu_driver_fd_count = 0;

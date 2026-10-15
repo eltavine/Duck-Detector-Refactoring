@@ -83,8 +83,82 @@ class NativeRootMethodRowsTest {
         assertEquals(NativeRootMethodOutcome.DETECTED, row(SusfsProbeOutcome.CHANGED_UID).outcome)
     }
 
+    @Test
+    fun `getdents race row reports the leak when the probe recovered hidden names`() {
+        val row = methodRow(
+            NativeRootNativeSnapshot(
+                available = true,
+                susfsGetdentsRaceDetected = true,
+                susfsGetdentsRaceAvailable = true,
+            ),
+            GETDENTS_RACE_ROW,
+        )
+
+        assertEquals("Leaked", row.summary)
+        assertEquals(NativeRootMethodOutcome.DETECTED, row.outcome)
+    }
+
+    @Test
+    fun `getdents race row is clean when the probe ran without recovering hidden names`() {
+        val row = methodRow(
+            NativeRootNativeSnapshot(
+                available = true,
+                susfsGetdentsRaceDetected = false,
+                susfsGetdentsRaceAvailable = true,
+            ),
+            GETDENTS_RACE_ROW,
+        )
+
+        assertEquals("Clean", row.summary)
+        assertEquals(NativeRootMethodOutcome.CLEAN, row.outcome)
+    }
+
+    @Test
+    fun `getdents race row is unavailable when the probe did not finish`() {
+        val row = methodRow(NativeRootNativeSnapshot(available = true), GETDENTS_RACE_ROW)
+
+        assertEquals("Unavailable", row.summary)
+        assertEquals(NativeRootMethodOutcome.SUPPORT, row.outcome)
+    }
+
+    @Test
+    fun `opath consistency row reports inconsistent node interfaces`() {
+        val row = methodRow(
+            NativeRootNativeSnapshot(
+                available = true,
+                susfsOpathConsistencyDetected = true,
+                susfsOpathConsistencyAvailable = true,
+            ),
+            OPATH_ROW,
+        )
+
+        assertEquals("Inconsistent", row.summary)
+        assertEquals(NativeRootMethodOutcome.DETECTED, row.outcome)
+    }
+
+    @Test
+    fun `opath consistency row is clean when every interface agrees`() {
+        val row = methodRow(
+            NativeRootNativeSnapshot(available = true, susfsOpathConsistencyAvailable = true),
+            OPATH_ROW,
+        )
+
+        assertEquals("Consistent", row.summary)
+        assertEquals(NativeRootMethodOutcome.CLEAN, row.outcome)
+    }
+
+    @Test
+    fun `opath consistency row is unavailable when nothing was checked`() {
+        val row = methodRow(NativeRootNativeSnapshot(available = true), OPATH_ROW)
+
+        assertEquals("Unavailable", row.summary)
+        assertEquals(NativeRootMethodOutcome.SUPPORT, row.outcome)
+    }
+
     private companion object {
         const val LATENCY_ROW = "__NR_supercall probe"
         const val SUSFS_ROW = "susfsSideChannel"
+        const val GETDENTS_RACE_ROW = "susfsGetdentsRace"
+        const val OPATH_ROW = "susfsOpathConsistency"
     }
 }

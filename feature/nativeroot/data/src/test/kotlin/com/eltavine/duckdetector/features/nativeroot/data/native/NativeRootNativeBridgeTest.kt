@@ -65,6 +65,13 @@ class NativeRootNativeBridgeTest {
                 SUSFS_HIT=0
                 SUSFS_OUTCOME=1
                 SUSFS_DETAIL=Current UID 10123, attempted setresuid(10000).
+                SUSFS_GETDENTS_RACE_HIT=1
+                SUSFS_GETDENTS_RACE_AVAILABLE=1
+                SUSFS_GETDENTS_RACE_DETAIL=Raced getdents64(/proc) against an mprotect toggler for 5s. LEAK=1 attempts=2100 faults=14
+                SUSFS_OPATH_CONSISTENCY_HIT=1
+                SUSFS_OPATH_CONSISTENCY_AVAILABLE=1
+                SUSFS_OPATH_CONSISTENCY_CHECKED=12
+                SUSFS_OPATH_CONSISTENCY_DETAIL=12 /proc/susfs_* nodes checked. open(O_PATH) succeeded but fstat returned ENOENT on: susfs_path.
                 SELF_SU_DOMAIN=1
                 SELF_CONTEXT=u:r:su:s0
                 SELF_KSU_DRIVER_FDS=1
@@ -96,6 +103,13 @@ class NativeRootNativeBridgeTest {
         assertEquals(11, snapshot.pathDeniedCount)
         assertEquals(SusfsProbeOutcome.DENIED, snapshot.susfsProbeOutcome)
         assertTrue(snapshot.susfsProbeDetail.startsWith("Current UID"))
+        assertTrue(snapshot.susfsGetdentsRaceDetected)
+        assertTrue(snapshot.susfsGetdentsRaceAvailable)
+        assertTrue(snapshot.susfsGetdentsRaceDetail.startsWith("Raced getdents64"))
+        assertTrue(snapshot.susfsOpathConsistencyDetected)
+        assertTrue(snapshot.susfsOpathConsistencyAvailable)
+        assertEquals(12, snapshot.susfsOpathConsistencyCheckedCount)
+        assertTrue(snapshot.susfsOpathConsistencyDetail.startsWith("12 /proc/susfs_*"))
         assertTrue(snapshot.kernelPatchSuperkey)
         assertTrue(snapshot.kernelPatchSuperkeyAvailable)
         assertEquals(4, snapshot.kernelPatchSuperkeyCheckedCount)

@@ -70,6 +70,7 @@ enum class NativeRootMethod(val label: String) {
     PRCTL_PROBE("prctlProbe"),
     SUSFS_SIDE_CHANNEL("susfsSideChannel"),
     SUSFS_GETDENTS_RACE("susfsGetdentsRace"),
+    SUSFS_OPATH_CONSISTENCY("susfsOpathConsistency"),
     SELF_PROCESS_IOC("selfProcessIoc"),
     ISOLATED_MOUNT_DRIFT("isolatedMountDrift"),
     KSU_MANAGER_FINGERPRINT("ksuManagerFingerprint"),

@@ -127,6 +127,13 @@ class NativeRootNativeBridge(
             "SUSFS_GETDENTS_RACE_HIT" -> copy(susfsGetdentsRaceDetected = value.asBool())
             "SUSFS_GETDENTS_RACE_AVAILABLE" -> copy(susfsGetdentsRaceAvailable = value.asBool())
             "SUSFS_GETDENTS_RACE_DETAIL" -> copy(susfsGetdentsRaceDetail = value.decodeValue())
+            "SUSFS_OPATH_CONSISTENCY_HIT" -> copy(susfsOpathConsistencyDetected = value.asBool())
+            "SUSFS_OPATH_CONSISTENCY_AVAILABLE" -> copy(susfsOpathConsistencyAvailable = value.asBool())
+            "SUSFS_OPATH_CONSISTENCY_CHECKED" -> copy(
+                susfsOpathConsistencyCheckedCount = value.toIntOrNull() ?: susfsOpathConsistencyCheckedCount
+            )
+
+            "SUSFS_OPATH_CONSISTENCY_DETAIL" -> copy(susfsOpathConsistencyDetail = value.decodeValue())
             "SELF_SU_DOMAIN" -> copy(selfSuDomain = value.asBool())
             "SELF_CONTEXT" -> copy(selfContext = value.decodeValue())
             "SELF_KSU_DRIVER_FDS" -> copy(
