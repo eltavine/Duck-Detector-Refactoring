@@ -188,6 +188,27 @@ internal fun NativeRootMethodEvidence.kernelInterfaceMethods(): List<NativeRootM
         },
     ),
     NativeRootMethodResult(
+        method = NativeRootMethod.SUSFS_GETDENTS_RACE,
+        summary = when {
+            snapshot.susfsGetdentsRaceDetected -> "Leaked"
+            snapshot.susfsGetdentsRaceAvailable -> "Clean"
+            else -> "Unavailable"
+        },
+        outcome = when {
+            snapshot.susfsGetdentsRaceDetected -> NativeRootMethodOutcome.DETECTED
+            snapshot.susfsGetdentsRaceAvailable -> NativeRootMethodOutcome.CLEAN
+            else -> NativeRootMethodOutcome.SUPPORT
+        },
+        detail = buildString {
+            append("Race getdents64(/proc) against a toggler thread that flips the buffer to PROT_NONE mid-syscall. ")
+            append("The susfs4ksu-lkm filter bails out on the fault and returns the ORIGINAL unfiltered buffer, so hidden names survive.")
+            if (snapshot.susfsGetdentsRaceDetail.isNotBlank()) {
+                append("\nTest Result: ")
+                append(snapshot.susfsGetdentsRaceDetail)
+            }
+        },
+    ),
+    NativeRootMethodResult(
         method = NativeRootMethod.SELF_PROCESS_IOC,
         summary = when {
             snapshot.selfSuDomain -> "su domain"

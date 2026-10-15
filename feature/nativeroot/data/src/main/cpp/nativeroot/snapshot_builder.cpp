@@ -33,6 +33,7 @@
 #include "nativeroot/probes/prctl_probe.h"
 #include "nativeroot/probes/self_process_ioc_probe.h"
 #include "nativeroot/probes/susfs_probe.h"
+#include "nativeroot/probes/susfs_getdents_race_probe.h"
 
 namespace duckdetector::nativeroot {
     namespace {
@@ -60,6 +61,7 @@ namespace duckdetector::nativeroot {
 
         const ProbeResult prctl_probe = run_prctl_probe();
         const ProbeResult susfs_probe = run_susfs_probe();
+        const ProbeResult susfs_getdents_race_probe = run_susfs_getdents_race_probe();
         const ProbeResult self_process_ioc_probe = run_self_process_ioc_probe();
         const ProbeResult ksu_supercall_probe = run_ksu_supercall_probe();
         const ProbeResult kernelpatch_supercall_latency_probe = run_kernelpatch_supercall_latency_check();
@@ -112,6 +114,14 @@ namespace duckdetector::nativeroot {
         snapshot.susfs_probe_hit = susfs_probe.flags.susfs;
         snapshot.susfs_probe_outcome = susfs_probe.numeric_value;
         snapshot.susfs_probe_detail = susfs_probe.extra_text;
+        snapshot.susfs_getdents_race_detected =
+                susfs_getdents_race_probe.numeric_value ==
+                static_cast<long>(SusfsGetdentsRaceOutcome::kLeaked);
+        snapshot.susfs_getdents_race_available =
+                susfs_getdents_race_probe.numeric_value ==
+                        static_cast<long>(SusfsGetdentsRaceOutcome::kRanClean) ||
+                snapshot.susfs_getdents_race_detected;
+        snapshot.susfs_getdents_race_detail = susfs_getdents_race_probe.extra_text;
         snapshot.self_context = self_process_ioc_probe.extra_text;
         snapshot.self_su_domain = self_process_ioc_probe.aux_flags != 0;
         snapshot.self_ksu_driver_fd_count = static_cast<int>(self_process_ioc_probe.numeric_value);
@@ -132,6 +142,7 @@ namespace duckdetector::nativeroot {
         std::set<std::string> dedupe;
         append_probe_findings(snapshot, prctl_probe, dedupe);
         append_probe_findings(snapshot, susfs_probe, dedupe);
+        append_probe_findings(snapshot, susfs_getdents_race_probe, dedupe);
         append_probe_findings(snapshot, self_process_ioc_probe, dedupe);
         append_probe_findings(snapshot, ksu_supercall_probe, dedupe);
         append_probe_findings(snapshot, kernelpatch_supercall_latency_probe, dedupe);

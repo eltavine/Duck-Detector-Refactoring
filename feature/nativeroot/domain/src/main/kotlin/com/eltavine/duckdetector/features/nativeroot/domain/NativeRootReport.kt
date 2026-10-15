@@ -69,6 +69,7 @@ enum class NativeRootMethod(val label: String) {
     PERMISSION_BOUNDARY_CHECK("permission boundary check"),
     PRCTL_PROBE("prctlProbe"),
     SUSFS_SIDE_CHANNEL("susfsSideChannel"),
+    SUSFS_GETDENTS_RACE("susfsGetdentsRace"),
     SELF_PROCESS_IOC("selfProcessIoc"),
     ISOLATED_MOUNT_DRIFT("isolatedMountDrift"),
     KSU_MANAGER_FINGERPRINT("ksuManagerFingerprint"),

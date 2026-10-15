@@ -124,6 +124,9 @@ class NativeRootNativeBridge(
             "SUSFS_HIT" -> copy(susfsProbeHit = value.asBool())
             "SUSFS_OUTCOME" -> copy(susfsProbeOutcome = SusfsProbeOutcome.fromCode(value.toLongOrNull()))
             "SUSFS_DETAIL" -> copy(susfsProbeDetail = value.decodeValue())
+            "SUSFS_GETDENTS_RACE_HIT" -> copy(susfsGetdentsRaceDetected = value.asBool())
+            "SUSFS_GETDENTS_RACE_AVAILABLE" -> copy(susfsGetdentsRaceAvailable = value.asBool())
+            "SUSFS_GETDENTS_RACE_DETAIL" -> copy(susfsGetdentsRaceDetail = value.decodeValue())
             "SELF_SU_DOMAIN" -> copy(selfSuDomain = value.asBool())
             "SELF_CONTEXT" -> copy(selfContext = value.decodeValue())
             "SELF_KSU_DRIVER_FDS" -> copy(
