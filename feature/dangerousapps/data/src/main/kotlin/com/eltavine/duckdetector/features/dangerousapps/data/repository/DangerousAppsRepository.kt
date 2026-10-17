@@ -26,6 +26,7 @@ import com.eltavine.duckdetector.features.dangerousapps.data.probes.CreatePackag
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.OpenApkFdPackageProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.SceneDebugfsContextProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.SceneLoopbackProbe
+import com.eltavine.duckdetector.features.dangerousapps.data.probes.hma.HmaBehaviorProbe
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppFinding
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppTarget
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppsCatalog
@@ -36,6 +37,7 @@ import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousDetectio
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousPackageVisibility
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 class DangerousAppsRepository(
     internal val context: Context,
@@ -47,10 +49,12 @@ class DangerousAppsRepository(
     private val openApkFdPackageProbe: OpenApkFdPackageProbe = OpenApkFdPackageProbe(),
     private val sceneDebugfsContextProbe: SceneDebugfsContextProbe = SceneDebugfsContextProbe(),
     private val sceneLoopbackProbe: SceneLoopbackProbe = SceneLoopbackProbe(),
+    private val hmaBehaviorProbe: HmaBehaviorProbe = HmaBehaviorProbe(context),
 ) : DetectorScanner<DangerousAppsReport> {
     override suspend fun scan(): DangerousAppsReport = withContext(Dispatchers.IO) {
         runCatching { scanInternal() }
             .getOrElse { throwable ->
+                if (throwable is CancellationException) throw throwable
                 DangerousAppsReport.failed(
                     targets = DangerousAppsCatalog.targets,
                     message = throwable.message ?: "Dangerous app scan failed.",
@@ -58,7 +62,7 @@ class DangerousAppsRepository(
             }
     }
 
-    private fun scanInternal(): DangerousAppsReport {
+    private suspend fun scanInternal(): DangerousAppsReport {
         val targets = DangerousAppsCatalog.targets
         val detectedApps = linkedMapOf<String, MutableFinding>()
         val issues = mutableListOf<String>()
@@ -248,6 +252,12 @@ class DangerousAppsRepository(
             emptyList()
         }
 
+        val behaviorChecks = hmaBehaviorProbe.run(
+            packages = targets.map { it.packageName }.filter { it !in installedPackages },
+            visibility = packageVisibility,
+            corroboratedPackages = hiddenFromPackageManager.mapTo(linkedSetOf()) { it.target.packageName },
+        )
+
         return DangerousAppsReport(
             stage = DangerousAppsStage.READY,
             packageVisibility = packageVisibility,
@@ -259,6 +269,7 @@ class DangerousAppsRepository(
             hiddenFromPackageManager = hiddenFromPackageManager,
             probesRan = buildProbeList(packageVisibility, nativeDataStatRan = nativeDataDirectories != null),
             issues = issues,
+            behaviorChecks = behaviorChecks,
         )
     }
 

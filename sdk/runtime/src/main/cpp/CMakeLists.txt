@@ -14,6 +14,7 @@ set(DUCKDETECTOR_NATIVE_UNITS
     common           core/native
     tee              feature/tee/data
     packageinventory capability/packageinventory/data
+    dangerousapps    feature/dangerousapps/data
     su               feature/su/data
     selinuxpolicy    capability/selinuxpolicy/data
     selinux          feature/selinux/data

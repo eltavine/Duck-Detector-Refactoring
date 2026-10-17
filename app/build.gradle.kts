@@ -73,6 +73,8 @@ dependencies {
     testImplementation(project(":feature:deviceinfo:presentation"))
     testImplementation(libs.bundles.test.unit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(project(":core:report"))
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     debugImplementation(libs.androidx.ui.tooling)
 }

@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppFindi
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppsReport
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppsStage
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousPackageVisibility
+import com.eltavine.duckdetector.features.dangerousapps.domain.HmaCheckState
 import com.eltavine.duckdetector.features.dangerousapps.domain.toDetectorStatus
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsCardModel
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsContextItemModel
@@ -83,11 +84,14 @@ class DangerousAppsCardModelMapper {
             DangerousAppsStage.FAILED -> "Inventory scan failed"
             DangerousAppsStage.READY -> when {
                 report.hiddenCount > 0 -> "HMA-style concealment detected"
+                report.behaviorChecks.any { it.state == HmaCheckState.INCONSISTENT } -> "Platform behavior mismatch observed"
+                report.behaviorChecks.any { it.state == HmaCheckState.TIMING_ANOMALY } -> "Repeated callback timeout asymmetry"
                 report.detectedCount > 0 -> "${report.detectedCount} risky package(s) surfaced"
                 report.suspiciousSharedStorageDenied -> "Shared storage baseline denied"
                 report.suspiciousLowPmInventory -> "Package inventory unusually small"
                 report.packageVisibility == DangerousPackageVisibility.RESTRICTED -> "Inventory visibility limited"
                 report.packageVisibility == DangerousPackageVisibility.UNKNOWN -> "Package inventory unavailable"
+                report.behaviorChecks.any { it.state != HmaCheckState.CONSISTENT } -> "Behavior checks incomplete"
                 else -> "No known risky packages"
             }
         }
@@ -105,6 +109,12 @@ class DangerousAppsCardModelMapper {
             DangerousAppsStage.READY -> when {
                 report.hiddenCount > 0 ->
                     "${report.hiddenCount} package(s) were visible to direct corroboration probes but absent from PackageManager inventory."
+
+                report.behaviorChecks.any { it.state == HmaCheckState.INCONSISTENT } ->
+                    "Controlled interface checks observed inconsistent exception, broadcast callback or UID visibility behavior. These signals do not identify a specific hiding module."
+
+                report.behaviorChecks.any { it.state == HmaCheckState.TIMING_ANOMALY } ->
+                    "Target callbacks repeatedly missed their deadlines while interleaved caller controls succeeded. This is lower-confidence timing evidence; scheduling and OEM behavior can also delay delivery."
 
                 report.detectedCount > 0 ->
                     buildString {
@@ -133,6 +143,9 @@ class DangerousAppsCardModelMapper {
                 report.packageVisibility == DangerousPackageVisibility.UNKNOWN ->
                     report.issues.firstOrNull()
                         ?: "PackageManager inventory was unavailable or anomalous, so package absence is inconclusive."
+
+                report.behaviorChecks.any { it.state != HmaCheckState.CONSISTENT } ->
+                    "No behavior mismatch was established, but some checks were partial, unavailable or inconclusive. Review each check's scope and controls."
 
                 else ->
                     "PackageManager, createPackageContext + ZipFile, open APK descriptors, storage, loopback, IPC, accessibility, and native package-path probes did not surface known high-risk tools."
@@ -243,7 +256,13 @@ class DangerousAppsCardModelMapper {
             ),
             DangerousAppsContextItemModel("Categories", categories),
             DangerousAppsContextItemModel("Probe families", probeSummary),
-        )
+        ) + report.behaviorChecks.map { check ->
+            DangerousAppsContextItemModel(check.kind.label, buildString {
+                append("${check.state.label}. ${check.detail}")
+                if (check.packages.isNotEmpty()) append(" Packages: ${check.packages.joinToString()}.")
+                if (check.uids.isNotEmpty()) append(" UIDs: ${check.uids.joinToString()}.")
+            })
+        }
     }
 
     private fun visibilityFactValue(report: DangerousAppsReport): String {

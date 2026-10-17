@@ -253,6 +253,13 @@
         "operations"
       ],
       "reason": "Calls the hidden Keystore2 supplementary attestation info method through HiddenApiBypass."
+    },
+    {
+      "path": "feature/dangerousapps/data/src/main/kotlin/com/eltavine/duckdetector/features/dangerousapps/data/probes/hma/HmaPlatformCalls.kt",
+      "uses": [
+        "operations"
+      ],
+      "reason": "Invokes the hidden Context.sendBroadcastAsUser overload for a controlled permission-exception comparison; HiddenApiBypass.invoke adds no process-wide exemption."
     }
   ]
 }

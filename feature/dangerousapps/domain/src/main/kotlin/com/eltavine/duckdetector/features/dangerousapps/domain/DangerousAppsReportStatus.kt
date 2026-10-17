@@ -26,6 +26,8 @@ fun DangerousAppsReport.toDetectorStatus(): DetectorStatus {
         DangerousAppsStage.FAILED -> DetectorStatus.info(InfoKind.ERROR)
         DangerousAppsStage.READY -> when {
             hiddenCount > 0 -> DetectorStatus.danger()
+            behaviorChecks.any { it.state == HmaCheckState.INCONSISTENT } -> DetectorStatus.warning()
+            behaviorChecks.any { it.state == HmaCheckState.TIMING_ANOMALY } -> DetectorStatus.warning()
             detectedCount > 0 -> DetectorStatus.warning()
             suspiciousSharedStorageDenied -> DetectorStatus.warning()
             suspiciousLowPmInventory -> DetectorStatus.warning()
@@ -36,6 +38,8 @@ fun DangerousAppsReport.toDetectorStatus(): DetectorStatus {
             packageVisibility == DangerousPackageVisibility.UNKNOWN -> DetectorStatus.info(
                 InfoKind.SUPPORT
             )
+
+            behaviorChecks.any { it.state != HmaCheckState.CONSISTENT } -> DetectorStatus.info(InfoKind.SUPPORT)
 
             else -> DetectorStatus.allClear()
         }

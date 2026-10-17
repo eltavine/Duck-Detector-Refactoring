@@ -154,6 +154,14 @@
       "may_include": [
         "common"
       ]
+    },
+    "dangerousapps": {
+      "path": "dangerousapps",
+      "owner": ":feature:dangerousapps:data",
+      "target": "duckdetector_dangerousapps",
+      "may_include": [
+        "common"
+      ]
     }
   },
   "include_exceptions": [

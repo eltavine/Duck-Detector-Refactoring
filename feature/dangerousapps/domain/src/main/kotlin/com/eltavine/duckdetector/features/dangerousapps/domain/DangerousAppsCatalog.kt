@@ -37,6 +37,7 @@ object DangerousAppsCatalog {
         addCategory(
             DangerousAppCategory.APP_HIDE_TOOL,
             pkg("com.tsng.hidemyapplist", "Hide My Applist"),
+            pkg("org.frknkrc44.hma_oss", "HMA-OSS"),
             pkg("com.tsng.pzyhrx.hma", "HMA"),
             pkg("com.topmiaohan.hidebllist", "Hide Blacklist"),
             pkg("zako.zako.zako", "Zako Hide"),

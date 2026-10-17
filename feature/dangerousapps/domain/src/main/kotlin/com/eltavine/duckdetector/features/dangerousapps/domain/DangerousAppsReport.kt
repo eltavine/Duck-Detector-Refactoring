@@ -79,6 +79,7 @@ data class DangerousAppsReport(
     val hiddenFromPackageManager: List<DangerousAppFinding>,
     val probesRan: List<DangerousDetectionMethodKind>,
     val issues: List<String> = emptyList(),
+    val behaviorChecks: List<HmaBehaviorCheck> = emptyList(),
 ) {
     val detectedCount: Int
         get() = findings.size
