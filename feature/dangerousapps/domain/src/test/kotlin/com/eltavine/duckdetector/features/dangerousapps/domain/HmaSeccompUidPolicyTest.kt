@@ -71,12 +71,12 @@ class HmaSeccompUidPolicyTest {
         assertTrue(result.detail.contains("seccomp interference"))
     }
 
-    @Test fun `query and install traps are seccomp interference evidence`() {
+    @Test fun `only syscall-attributed query traps are positive while setup traps are limited`() {
         assertEquals(HmaCheckState.INCONSISTENT, HmaSeccompUidPolicy.evaluate(
             observation(HmaSeccompUidEvidence.TRAPPED_QUERY, queried = 0, notified = 7,
                 firstSuppressed = -1, lastSuppressed = -1)
         ).state)
-        assertEquals(HmaCheckState.INCONSISTENT, HmaSeccompUidPolicy.evaluate(
+        assertEquals(HmaCheckState.PERMISSION_LIMITED, HmaSeccompUidPolicy.evaluate(
             observation(HmaSeccompUidEvidence.TRAPPED_INSTALL, queried = 0, notified = 0,
                 firstSuppressed = -1, lastSuppressed = -1, selfNotified = false)
         ).state)
@@ -109,5 +109,12 @@ class HmaSeccompUidPolicyTest {
         assertEquals(HmaCheckState.INCONCLUSIVE, HmaSeccompUidPolicy.evaluate(
             observation(HmaSeccompUidEvidence.NONE, queried = 0, notified = 0, selfNotified = false)
         ).state)
+    }
+
+    @Test fun `clean classification requires all notifications and the caller control`() {
+        for (sample in listOf(observation(HmaSeccompUidEvidence.NONE, notified = 9999),
+            observation(HmaSeccompUidEvidence.NONE, selfNotified = false))) {
+            assertEquals(HmaCheckState.INCONCLUSIVE, HmaSeccompUidPolicy.evaluate(sample).state)
+        }
     }
 }

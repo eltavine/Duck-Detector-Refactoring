@@ -38,7 +38,7 @@ enum class HmaSeccompUidEvidence {
     /** A getpriority(PRIO_USER) query was terminated by a seccomp trap. */
     TRAPPED_QUERY,
 
-    /** The probe child was terminated by a seccomp trap before it reported a listener result. */
+    /** The coordinator ended by SIGSYS without a complete report or syscall attribution. */
     TRAPPED_INSTALL,
 
     /** The kernel lacks the documented NEW_LISTENER behavior or rejected the probe program. */
@@ -70,8 +70,8 @@ data class HmaSeccompUidObservation(
  * Turns the probe's raw observation into a warning-level behavior check.
  *
  * EBUSY is interpreted only when the kernel is at least 5.0: Linux v5.0 introduced
- * SECCOMP_RET_USER_NOTIF and the NEW_LISTENER flag, and its seccomp.c returns EBUSY only when the
- * new filter carries a listener while an existing filter in the stack already has one. Older
+ * SECCOMP_RET_USER_NOTIF and the NEW_LISTENER flag. Its duplicate-listener path returns EBUSY
+ * when both the new filter and an ancestor carry listeners; another filter may also synthesize errno. Older
  * kernels reject the flag with EINVAL, so an EBUSY there cannot be attributed to a listener.
  */
 object HmaSeccompUidPolicy {
@@ -79,29 +79,36 @@ object HmaSeccompUidPolicy {
         val kernel = "Kernel ${observation.kernelMajor}.${observation.kernelMinor}."
         val state = when (observation.evidence) {
             HmaSeccompUidEvidence.NONE ->
-                if (observation.queried > 0) HmaCheckState.CONSISTENT else HmaCheckState.INCONCLUSIVE
+                if (observation.queried > 0 && observation.notified == observation.queried && observation.selfNotified)
+                    HmaCheckState.CONSISTENT else HmaCheckState.INCONCLUSIVE
             HmaSeccompUidEvidence.FOREIGN_LISTENER ->
                 if (observation.kernelMajor >= 5) HmaCheckState.INCONSISTENT else HmaCheckState.INCONCLUSIVE
-            HmaSeccompUidEvidence.SUPPRESSED_QUERIES,
-            HmaSeccompUidEvidence.TRAPPED_QUERY,
-            HmaSeccompUidEvidence.TRAPPED_INSTALL -> HmaCheckState.INCONSISTENT
+            HmaSeccompUidEvidence.SUPPRESSED_QUERIES ->
+                if (observation.notified >= 0 && observation.queried > observation.notified &&
+                    observation.firstSuppressed >= 0 && observation.lastSuppressed >= observation.firstSuppressed)
+                    HmaCheckState.INCONSISTENT else HmaCheckState.INCONCLUSIVE
+            HmaSeccompUidEvidence.TRAPPED_QUERY -> HmaCheckState.INCONSISTENT
+            HmaSeccompUidEvidence.TRAPPED_INSTALL -> HmaCheckState.PERMISSION_LIMITED
             HmaSeccompUidEvidence.UNSUPPORTED -> HmaCheckState.UNSUPPORTED
             HmaSeccompUidEvidence.RESTRICTED -> HmaCheckState.PERMISSION_LIMITED
             HmaSeccompUidEvidence.FAILED -> HmaCheckState.UNAVAILABLE
             HmaSeccompUidEvidence.INCOMPLETE -> HmaCheckState.INCONCLUSIVE
         }
         val detail = when (observation.evidence) {
-            HmaSeccompUidEvidence.NONE ->
+            HmaSeccompUidEvidence.NONE -> if (state != HmaCheckState.CONSISTENT) {
+                "The completed notification claim lacks matching counts or a caller control " +
+                    "(queried=${observation.queried}, notified=${observation.notified}, self=${observation.selfNotified}). $kernel"
+            } else
                 "A NEW_LISTENER filter was installed and all ${observation.queried} " +
                     "getpriority(PRIO_USER) queries for the caller's app UID range produced notifications; " +
-                    "no foreign seccomp filter answered them. $kernel " +
+                    "no higher-priority suppression was observed. $kernel " +
                     "The probe covers seccomp filters in this process."
 
             HmaSeccompUidEvidence.FOREIGN_LISTENER ->
                 if (observation.kernelMajor >= 5) {
                     "seccomp(SECCOMP_SET_MODE_FILTER, NEW_LISTENER) returned EBUSY. " +
-                        "Linux seccomp.c returns EBUSY only when an existing filter in this task " +
-                        "already carries a user-notification listener. $kernel " +
+                        "The ACK duplicate-listener path returns EBUSY when an existing filter " +
+                        "already carries a listener; an inherited policy can also synthesize errno. $kernel " +
                         "This is seccomp interference evidence; it does not identify the module."
                 } else {
                     "seccomp(SECCOMP_SET_MODE_FILTER, NEW_LISTENER) returned EBUSY, but $kernel " +
@@ -125,10 +132,8 @@ object HmaSeccompUidPolicy {
                     "the call. $kernel This is seccomp interference evidence; it does not identify the module."
 
             HmaSeccompUidEvidence.TRAPPED_INSTALL ->
-                "The probe child was terminated by a seccomp trap before it could report a listener " +
-                    "result. The stock bionic app allowlist includes the prober's syscalls, so either " +
-                    "an OEM policy or a non-platform filter refused one. $kernel This is seccomp " +
-                    "interference evidence; it does not identify the module."
+                "The disposable probe was refused by SIGSYS before reporting its result. The faulting " +
+                    "syscall is unknown, so this is permission-limited coverage. $kernel"
 
             HmaSeccompUidEvidence.UNSUPPORTED ->
                 "The listener probe did not install: ${observation.detail} $kernel " +

@@ -69,4 +69,13 @@ class HmaBehaviorPresentationTest {
         assertTrue(model.context.any { it.value.contains("lower confidence") })
         assertTrue(model.summary.contains("lower-confidence"))
     }
+
+    @Test fun `unattributed seccomp setup trap remains informational and incomplete`() {
+        val check = HmaSeccompUidPolicy.evaluate(HmaSeccompUidObservation(
+            HmaSeccompUidEvidence.TRAPPED_INSTALL, 6, 6, 0, 0, -1, -1, false))
+        val model = DangerousAppsCardModelMapper().map(report(check))
+        assertEquals(DetectionSeverity.INFO, model.status.severity)
+        assertEquals("Behavior checks incomplete", model.verdict)
+        assertEquals(null, model.hmaAlert)
+    }
 }

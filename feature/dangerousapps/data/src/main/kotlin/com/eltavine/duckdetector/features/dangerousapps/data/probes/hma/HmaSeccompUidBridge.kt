@@ -90,16 +90,24 @@ internal class HmaSeccompUidBridge(
             require(queried in 0..span && notified in 0..span)
             require(queryOutcome in QUERY_COMPLETE..QUERY_NOT_RUN)
             require(selfNotified == 0 || selfNotified == 1)
+            if (installStatus == FOREIGN_LISTENER) require(installError == 16)
+            if (installStatus == INSTALL_TRAPPED) require(installError == 31)
+            if (queryOutcome == QUERY_TRAPPED) require(queryError == 31)
             if (installStatus == INSTALLED) {
+                require(installError == 0)
                 when (queryOutcome) {
                     QUERY_COMPLETE -> {
-                        require(queried == span && notified <= queried)
+                        require(queried == span && notified <= queried && queryError == 0)
                         if (notified == queried) {
                             require(firstSuppressed == -1 && lastSuppressed == -1)
                             require(selfNotified == 1)
                         } else {
                             require(firstSuppressed in firstUid..lastUid)
                             require(lastSuppressed in firstSuppressed..lastUid)
+                            val missing = queried - notified
+                            require(missing <= lastSuppressed - firstSuppressed + 1)
+                            if (missing == 1) require(firstSuppressed == lastSuppressed)
+                            if (notified == 0) require(firstSuppressed == firstUid && lastSuppressed == lastUid)
                         }
                     }
 

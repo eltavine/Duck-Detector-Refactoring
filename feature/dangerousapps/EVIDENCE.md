@@ -189,63 +189,59 @@ states; their absence cannot establish that no app is hidden.
 
 ### Seccomp getpriority interference
 
-- Observable signal: the errno of a seccomp(SECCOMP_SET_MODE_FILTER,
-  SECCOMP_FILTER_FLAG_NEW_LISTENER) install for a filter that returns USER_NOTIF for
-  getpriority(PRIO_USER, *), and whether each query in the caller's app UID range produces a
-  notification.
-- Producing subsystem: the calling task's kernel seccomp filter stack and the
-  [action-precedence loop](https://android.googlesource.com/kernel/common/+/refs/heads/android14-6.1/kernel/seccomp.c)
-  in kernel/seccomp.c.
-- Mechanism: a disposable child installs the listener filter, then forks a query child and services
-  its notifications with
-  [SECCOMP_USER_NOTIF_FLAG_CONTINUE](https://man7.org/linux/man-pages/man2/seccomp_unotify.2.html).
-  The kernel evaluates every filter and runs the lowest action
-  ([ACTION_ONLY](https://android.googlesource.com/kernel/common/+/refs/heads/android14-6.1/kernel/seccomp.c));
-  [TRAP](https://man7.org/linux/man-pages/man2/seccomp.2.html) (0x00030000) and
-  [ERRNO](https://man7.org/linux/man-pages/man2/seccomp.2.html) (0x00050000) outrank USER_NOTIF
-  (0x7fc00000), so a foreign filter can answer a query without a notification. An existing listener
-  makes the NEW_LISTENER install fail with EBUSY before any query runs
-  ([Linux v5.0 init_listener](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/seccomp.c?h=v5.0),
-  [ACK has_duplicate_listener](https://android.googlesource.com/kernel/common/+/refs/heads/android14-6.1/kernel/seccomp.c)).
-  The listener and filter live only in the
-  [disposable child](./data/src/main/cpp/dangerousapps/seccomp_uid_bridge.cpp); the app process's
-  seccomp stack is not modified.
-- Primary references: Linux v5.0 [kernel/seccomp.c init_listener](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/seccomp.c?h=v5.0)
-  (EBUSY when an ancestor already has a listener), and the same duplicate-listener rule in ACK
-  [android13-5.15](https://android.googlesource.com/kernel/common/+/refs/heads/android13-5.15/kernel/seccomp.c),
-  [android14-6.1](https://android.googlesource.com/kernel/common/+/refs/heads/android14-6.1/kernel/seccomp.c),
-  [android15-6.6](https://android.googlesource.com/kernel/common/+/refs/heads/android15-6.6/kernel/seccomp.c)
-  and [android16-6.12](https://android.googlesource.com/kernel/common/+/refs/heads/android16-6.12/kernel/seccomp.c);
-  the [ACK action loop's signed ACTION_ONLY comparison](https://android.googlesource.com/kernel/common/+/refs/heads/android14-6.1/kernel/seccomp.c),
-  which makes the lowest action win; [seccomp(2) return actions](https://man7.org/linux/man-pages/man2/seccomp.2.html)
-  and [seccomp_unotify(2)](https://man7.org/linux/man-pages/man2/seccomp_unotify.2.html); Linux v4.19
-  [kernel/seccomp.c](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/seccomp.c?h=v4.19)
-  for the flag mask that rejects NEW_LISTENER before Linux 5.0; AOSP bionic
-  [SECCOMP_ALLOWLIST_COMMON.TXT](https://android.googlesource.com/platform/bionic/+/android-16.0.0_r1/libc/SECCOMP_ALLOWLIST_COMMON.TXT)
-  (seccomp and clone are allowed for apps; Android 10 and 11 use the equivalent
-  [SECCOMP_WHITELIST_COMMON.TXT](https://android.googlesource.com/platform/bionic/+/android-11.0.0_r1/libc/SECCOMP_WHITELIST_COMMON.TXT)) and
-  [SYSCALLS.TXT](https://android.googlesource.com/platform/bionic/+/android-16.0.0_r1/libc/SYSCALLS.TXT)
-  (getpriority, ppoll, ioctl, wait4, kill, uname and setitimer; bionic's poll wrapper uses ppoll).
-- Applicability: Android 10–17 (API 29–37) probe; EBUSY is interpreted only when the kernel is at
-  least 5.0, the release that introduced
-  [SECCOMP_RET_USER_NOTIF and NEW_LISTENER](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/seccomp.c?h=v5.0).
-  Android apps carry
-  [no_new_privs](https://man7.org/linux/man-pages/man2/PR_SET_NO_NEW_PRIVS.2const.html) and the
-  [bionic allowlist](https://android.googlesource.com/platform/bionic/+/android-16.0.0_r1/libc/SECCOMP_ALLOWLIST_COMMON.TXT)
-  includes the seccomp syscall. The probe runs in a disposable child and leaves no listener in the
-  app process.
-- Visibility limits: the probe observes only filters installed in this process; a module that does
-  not target this package leaves no signal here. A non-seccomp mechanism is outside this check. A
-  foreign listener from another module produces the same EBUSY evidence, and a foreign TRAP or
-  ERRNO filter produces the same suppression evidence; the check never identifies a module. OEM
-  seccomp policies can differ from
-  [bionic](https://android.googlesource.com/platform/bionic/+/android-16.0.0_r1/libc/SECCOMP_BLOCKLIST_APP.TXT).
-  An incomplete query phase is reported as such and never converted into a suppression claim.
-- Result states: consistent, inconsistent, inconclusive, permission limited, unavailable, unsupported.
-- Interpretation: EBUSY with a valid NEW_LISTENER program on Linux >= 5.0, a suppressed
-  getpriority notification, or a seccomp trap on the install/query path is warning-level seccomp
-  interference evidence. A clean result covers the caller's app UID range at sampling time only and
-  does not establish that no app is hidden.
+The seccomp extension was introduced by KodateMitsuru in PR #390. The broader detection-vector
+report remains attributed to frknkrc44 above; this extension is a separate observation of the
+filter stack, not an implementation of the concealment countermeasures named in that report.
+
+- Observable signals: an actual NEW_LISTENER install returning EBUSY; missing notifications after
+  the entire query range completes; or a query TRAP whose siginfo identifies getpriority on the
+  compiled ABI. None of these identifies HMA or a specific filtering module.
+- Producing subsystem: the inherited kernel seccomp stack. ACK's action-precedence loop selects
+  the highest-priority action, and its duplicate-listener check can reject another listener.
+- Mechanism: a disposable coordinator checks GET_NOTIF_SIZES against its bounded notification
+  structures, prepares no_new_privs and installs an ABI-checked filter. Its query child probes the
+  current user's ordinary app UID range. Accepted notifications receive a synthetic zero result
+  with flags=0: the underlying priority syscall need not execute to observe filter precedence.
+  This avoids CONTINUE, which Linux 5.0's seccomp_notify_send rejects. The separate UID-visibility
+  probe still performs real priority queries.
+- Primary references: ACK android14-6.1 at
+  [48e3cd973485465613da6d71fa17139773546573:kernel/seccomp.c](https://android.googlesource.com/kernel/common/+/48e3cd973485465613da6d71fa17139773546573/kernel/seccomp.c)
+  (`has_duplicate_listener`, `seccomp_set_mode_filter`, `seccomp_notify_recv/send`, action loop);
+  matching ACK android15-6.6 at
+  [150617c4d667a241e52441e855befac0c5d6702b:kernel/seccomp.c](https://android.googlesource.com/kernel/common/+/150617c4d667a241e52441e855befac0c5d6702b/kernel/seccomp.c)
+  for the emulator kernel family;
+  [Linux v5.0 seccomp.c](https://github.com/torvalds/linux/blob/v5.0/kernel/seccomp.c)
+  (`init_listener` and the requirement that notification response flags be zero);
+  [kernel seccomp documentation](https://docs.kernel.org/userspace-api/seccomp_filter.html)
+  (architecture checks, runtime notification sizes and action precedence);
+  [ACK signal delivery](https://android.googlesource.com/kernel/common/+/48e3cd973485465613da6d71fa17139773546573/kernel/seccomp.c)
+  (`seccomp_send_sigsys` includes syscall and architecture);
+  [PR_SET_PDEATHSIG](https://man7.org/linux/man-pages/man2/PR_SET_PDEATHSIG.2const.html).
+  Framework API 37 contracts were independently checked in the Android 17 ComputerEngine,
+  ApplicationPackageManager, UserController and BroadcastQueueImpl sources linked below.
+- Lifetime and bounds: filters remain in disposable descendants. The query child sets a parent-death
+  SIGKILL, checks the parent PID to close the setup race, and requires a working 3 s alarm. It closes
+  its copy of the report descriptor. The coordinator uses a 1.8 s query budget and bounded nonblocking
+  reaping after cancellation. It owns SIGCHLD handling only in the disposable coordinator and avoids
+  signaling a PID when waitpid reports lost child ownership. The common runner has 2.5 s run / 250 ms reap deadlines. Kernel tasks
+  temporarily stuck in an uninterruptible state can still delay final destruction. Poll/send EINTR
+  handling retains deadlines; a blocked notification ioctl is bounded by coordinator termination.
+- Applicability: Android 10–17/API 29–37, four supported ABIs. The runtime size handshake, rather
+  than a release-number assumption, checks notification ABI compatibility. EBUSY is interpreted
+  conservatively only on kernel major >= 5. Older kernels/backports and unknown versions may be
+  unsupported or inconclusive. Linux 5.0 compatibility is source-verified, not device-tested.
+- Visibility limits: an unrelated listener has the same collision signal. An inherited filter can
+  synthesize EBUSY, and an intercepted syscall wrapper can also affect observations. Successful
+  notifications exclude only higher-priority suppression of these calls; they do not exclude
+  all filters or kernel-based hiding. OEM policy may differ. Query suppression is interpreted only
+  after successful completion, with consistent counts and suppression endpoints.
+- Failure states: an unqualified coordinator SIGSYS is permission limited. A query SIGSYS without
+  syscall/ABI attribution, other signals, timeout or service failure remains inconclusive/unavailable.
+  No setup trap is promoted to a getpriority finding. Errors in the capability/privilege setup are
+  not listener-collision evidence. Contradictory native payload errors/counts are rejected.
+- Interpretation: warning-level evidence requires an observed listener collision, complete-range
+  suppression, or a specifically attributed getpriority TRAP. A completed clean label also requires
+  the caller notification control. Incomplete or refused checks prevent an all-clear conclusion.
 
 ### Validation coverage
 
@@ -258,8 +254,9 @@ timeout asymmetry, call correlation, batch interruption and external cancellatio
 validates child counts before indexing fixed buffers; Kotlin also rejects unsorted hits, UIDs beyond
 the visited prefix and success states carrying collection errors. Native builds cover all four
 supported ABIs. Device results for the original behavior checks are recorded after executing the
-runtime checks; the seccomp probe also has a controlled positive and negative on an API 37
-device below, plus JVM and build coverage. No HMA version or configuration is assumed from package presence
+runtime checks; the original PR author supplied API 37 positive/negative observations below.
+Those observations have not been independently reproduced. Review validation adds Android 16
+emulator kernel cases and scanner/export coverage. No HMA version or configuration is assumed from package presence
 alone.
 
 The monitored catalog includes `org.frknkrc44.hma_oss`, as declared by the upstream HMA-OSS
@@ -302,20 +299,23 @@ scope, interleaved controls and intent-token check still need a fresh PJX110 run
 was attached during the revision. The unit tests exercise missing-resultTo and wrong-resultTo paths
 with structured observations, not an actual oss-164/173 installation.
 
-#### Seccomp probe control run (2026-10-18)
+#### Contributor-reported seccomp control run (2026-10-18, before review fixes)
 
-Android 17/API 37, arm64, Linux 6.1. A controlled run with a pre-existing seccomp
+The PR author reported Android 17/API 37, arm64, Linux 6.1. A controlled run with a pre-existing seccomp
 user-notification listener for getpriority(PRIO_USER, *) produced
 `Behavior mismatch observed`; the captured detail began
 `seccomp(SECCOMP_SET_MODE_FILTER` (the EBUSY branch). A second run with the unmodified process
 filter stack produced `Consistent in evaluated scope` with all 10000 queries notified. Both runs
-used the same app build and package catalog. Scan duration is not used as evidence.
+used the same app build and package catalog. The repository does not include the raw logs or a
+complete device fingerprint for this claim; it is retained as contributor-reported coverage, not an
+independent review result. Scan duration is not used as evidence.
 
 The nine queried names are behavior fingerprints, not proof that nine corresponding apps are
 installed. The eight UIDs do not identify hidden packages. These observations do not validate
 HMA-OSS 173's manual-resultTo positive case, a newer fixed test release, or an HMA-disabled/stock
-baseline. No enforced seccomp-denial profile was installed; the seccomp probe installs an
-ALLOW/USER_NOTIF listener only in a disposable child. Older Android releases and other ABIs have
+baseline. The physical-device observations used no enforced seccomp-denial profile. Review experiments
+install temporary refusal filters only in disposable emulator test processes; the application probe
+installs its ALLOW/USER_NOTIF listener only in a disposable child. Older Android releases and other ABIs have
 source/build coverage, not device coverage.
 
 Reproduce the runtime smoke check after building and installing the debug and androidTest APKs:
@@ -395,3 +395,27 @@ failed before the fixes and passed afterward. Validation for these refinements u
 ./gradlew -p samples/sdk-consumer assembleDebug
 for s in .github/scripts/check-*.py; do python3 "$s" || exit 1; done
 ```
+
+#### Seccomp review validation (Android 16 emulator)
+
+The production native collector was compiled directly with NDK 30 for arm64 API 29 and tested in
+an API 36 / kernel 6.6 read-only emulator session. Eight disposable-filter cases cover a complete
+baseline, one-UID ERRNO suppression, an inherited listener, attributed query TRAP, unrelated setup
+TRAP, unqualified SIGSYS kill, repeated EINTR deadline exhaustion, and coordinator death while a
+query remains blocked on a listener held by the test supervisor. All eight passed. The supervisor
+uses subreaper ownership to verify query cleanup; no test filter is installed in the app process.
+
+```sh
+python3 feature/dangerousapps/data/src/test/python/test_seccomp_uid_native.py \
+  --ndk "$ANDROID_NDK_HOME" --serial emulator-5580 --adb "$ANDROID_HOME/platform-tools/adb"
+```
+
+The revised app's generic DetectorRuntimeSmokeTest completed two scanner/export runs (`OK (1 test)`,
+9.887 s). Both seccomp checks received all 10,000 notifications with a caller control and produced a
+consistent result. The emulator fingerprint/kernel match the Android 16 comparison above. No
+physical device was attached, and the contributor's API 37 positive run was not reproduced.
+
+Review verification passed: 58 HMA JVM regressions, the full unit/app/lint/SDK AAR command shown
+above, the standalone SDK consumer and all repository guards. Debug and Release native builds
+cover arm64-v8a, armeabi-v7a, x86 and x86_64. Native status claims require their supporting errno or
+signal, and complete payloads cannot carry collection errors or impossible suppression endpoints.

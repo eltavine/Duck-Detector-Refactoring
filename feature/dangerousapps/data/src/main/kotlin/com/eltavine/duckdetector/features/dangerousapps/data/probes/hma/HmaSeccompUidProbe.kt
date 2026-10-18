@@ -34,7 +34,7 @@ import kotlin.coroutines.coroutineContext
  * forks a query child that asks for every UID in the caller's app range. EBUSY means an existing
  * filter in this task already owns a listener. When the
  * listener installs, every query whose notification arrives was not answered by another filter;
- * a missing notification means a foreign ERRNO or TRAP filter won the action comparison. The
+ * missing notifications after a completed range indicate higher-priority suppression. The
  * filter never leaves the disposable child, so the app process keeps its original seccomp stack.
  */
 internal class HmaSeccompUidProbe(
@@ -70,7 +70,8 @@ internal fun UidSeccompSnapshot.toObservation(): HmaSeccompUidObservation {
         installStatus == HmaSeccompUidBridge.INSTALL_TRAPPED -> HmaSeccompUidEvidence.TRAPPED_INSTALL
         installStatus == HmaSeccompUidBridge.UNSUPPORTED -> HmaSeccompUidEvidence.UNSUPPORTED
         installStatus == HmaSeccompUidBridge.RESTRICTED -> HmaSeccompUidEvidence.RESTRICTED
-        installStatus != HmaSeccompUidBridge.INSTALLED -> HmaSeccompUidEvidence.FAILED
+        installStatus != HmaSeccompUidBridge.INSTALLED ->
+            if (installError == 110) HmaSeccompUidEvidence.INCOMPLETE else HmaSeccompUidEvidence.FAILED
         queryOutcome == HmaSeccompUidBridge.QUERY_TRAPPED -> HmaSeccompUidEvidence.TRAPPED_QUERY
         queryOutcome != HmaSeccompUidBridge.QUERY_COMPLETE -> HmaSeccompUidEvidence.INCOMPLETE
         notified < queried -> HmaSeccompUidEvidence.SUPPRESSED_QUERIES
@@ -89,10 +90,10 @@ internal fun UidSeccompSnapshot.toObservation(): HmaSeccompUidObservation {
         HmaSeccompUidEvidence.FAILED ->
             "the native child ended without a listener result (errno/signal $installError)."
         HmaSeccompUidEvidence.TRAPPED_QUERY ->
-            "a getpriority(PRIO_USER) query was trapped (signal $queryError); " +
+            "SIGSYS identified getpriority(PRIO_USER) on the query ABI (signal $queryError); " +
                 "$notified notification(s) arrived before it."
         HmaSeccompUidEvidence.INCOMPLETE ->
-            "query outcome=${queryOutcomeLabel(queryOutcome)}, error=$queryError, notifications=$notified."
+            "query outcome=${queryOutcomeLabel(queryOutcome)}, error=$queryError, notifications=$notified, coordinator error=$installError."
         HmaSeccompUidEvidence.SUPPRESSED_QUERIES ->
             "${queried - notified} of $queried queries produced no notification."
         HmaSeccompUidEvidence.NONE ->

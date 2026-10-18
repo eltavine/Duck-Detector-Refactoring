@@ -52,8 +52,8 @@ class HmaSeccompUidBridgeTest {
 
     @Test fun `suppressed and trapped queries retain the observation`() {
         val suppressed = HmaSeccompUidBridge.parse(
-            intArrayOf(1, 0, 0, 6, 1, 3, 1, 10001, 10001, 0, 0, 1), 10000, 10002)
-        assertEquals(1, suppressed.notified)
+            intArrayOf(1, 0, 0, 6, 1, 3, 2, 10001, 10001, 0, 0, 1), 10000, 10002)
+        assertEquals(2, suppressed.notified)
         assertEquals(10001, suppressed.firstSuppressed)
         assertEquals(10001, suppressed.lastSuppressed)
 
@@ -107,7 +107,7 @@ class HmaSeccompUidBridgeTest {
                 queryOutcome = HmaSeccompUidBridge.QUERY_COMPLETE).toObservation().evidence)
         assertEquals(HmaSeccompUidEvidence.SUPPRESSED_QUERIES,
             UidSeccompSnapshot(installStatus = HmaSeccompUidBridge.INSTALLED,
-                queried = 3, notified = 1, firstSuppressed = 10001, lastSuppressed = 10001,
+                queried = 3, notified = 2, firstSuppressed = 10001, lastSuppressed = 10001,
                 selfNotified = true, queryOutcome = HmaSeccompUidBridge.QUERY_COMPLETE)
                 .toObservation().evidence)
         assertEquals(HmaSeccompUidEvidence.TRAPPED_QUERY,
@@ -118,5 +118,24 @@ class HmaSeccompUidBridgeTest {
             UidSeccompSnapshot(installStatus = HmaSeccompUidBridge.INSTALLED,
                 notified = 2, queryOutcome = HmaSeccompUidBridge.QUERY_TIMEOUT,
                 selfNotified = true).toObservation().evidence)
+    }
+
+    @Test fun `complete observations cannot carry syscall errors or impossible suppression bounds`() {
+        val contradictory = listOf(clean().apply { this[2] = 13 }, clean().apply { this[10] = 5 },
+            intArrayOf(1, 0, 0, 6, 1, 3, 0, 10001, 10001, 0, 0, 0),
+            intArrayOf(1, 0, 0, 6, 1, 3, 2, 10000, 10002, 0, 0, 1))
+        for (payload in contradictory) assertThrows(IllegalArgumentException::class.java) {
+            HmaSeccompUidBridge.parse(payload, 10000, 10002)
+        }
+    }
+
+    @Test fun `listener and trap findings require their supporting errno or signal`() {
+        for (payload in listOf(intArrayOf(1, 1, 0, 6, 1, 0, 0, -1, -1, 5, 0, 0),
+            intArrayOf(1, 5, 0, 6, 1, 0, 0, -1, -1, 5, 0, 0),
+            intArrayOf(1, 0, 0, 6, 1, 0, 0, -1, -1, 1, 0, 0))) {
+            assertThrows(IllegalArgumentException::class.java) {
+                HmaSeccompUidBridge.parse(payload, 10000, 10002)
+            }
+        }
     }
 }
