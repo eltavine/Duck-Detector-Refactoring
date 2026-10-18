@@ -111,7 +111,7 @@ class DangerousAppsCardModelMapper {
                     "${report.hiddenCount} package(s) were visible to direct corroboration probes but absent from PackageManager inventory."
 
                 report.behaviorChecks.any { it.state == HmaCheckState.INCONSISTENT } ->
-                    "Controlled interface checks observed inconsistent exception, broadcast callback or UID visibility behavior. These signals do not identify a specific hiding module."
+                    "Controlled interface checks observed inconsistent exception, broadcast callback, UID visibility or seccomp getpriority behavior. These signals do not identify a specific hiding module."
 
                 report.behaviorChecks.any { it.state == HmaCheckState.TIMING_ANOMALY } ->
                     "Target callbacks repeatedly missed their deadlines while interleaved caller controls succeeded. This is lower-confidence timing evidence; scheduling and OEM behavior can also delay delivery."

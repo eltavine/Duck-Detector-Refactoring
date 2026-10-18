@@ -38,6 +38,19 @@ class HmaBehaviorPresentationTest {
         assertEquals("Platform behavior mismatch observed", model.verdict)
     }
 
+    @Test fun `seccomp getpriority evidence stays warning and exports its own check`() {
+        val model = DangerousAppsCardModelMapper().map(report(HmaBehaviorCheck(
+            HmaCheckKind.SECCOMP_UID_FILTER, HmaCheckState.INCONSISTENT,
+            "seccomp(SECCOMP_SET_MODE_FILTER, NEW_LISTENER) returned EBUSY. Kernel 6.1.")))
+        assertEquals(DetectionSeverity.WARNING, model.status.severity)
+        assertEquals(null, model.hmaAlert)
+        assertEquals("Platform behavior mismatch observed", model.verdict)
+        assertTrue(model.summary.contains("seccomp getpriority"))
+        assertTrue(model.context.any {
+            it.label == HmaCheckKind.SECCOMP_UID_FILTER.label && it.value.contains("EBUSY")
+        })
+    }
+
     @Test fun `unavailable checks remain visible without raising a mismatch warning`() {
         val model = DangerousAppsCardModelMapper().map(report(HmaBehaviorCheck(
             HmaCheckKind.BROADCAST_RESULT_TO, HmaCheckState.UNAVAILABLE, "Service unavailable.")))

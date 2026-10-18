@@ -33,8 +33,8 @@ class HmaBehaviorProbe(context: Context) {
         visibility: DangerousPackageVisibility,
         corroboratedPackages: Set<String> = emptySet(),
     ): List<HmaBehaviorCheck> {
-        // Hidden flag and final-receiver semantics were checked against AOSP 10, 14 and 16.
-        if (Build.VERSION.SDK_INT !in 29..36) return HmaCheckKind.entries.map {
+        // Hidden flag and final-receiver semantics were checked against AOSP 10, 14, 16 and 17.
+        if (Build.VERSION.SDK_INT !in 29..37) return HmaCheckKind.entries.map {
             HmaBehaviorCheck(it, HmaCheckState.UNSUPPORTED, "Platform semantics have not been verified for API ${Build.VERSION.SDK_INT}.")
         }
         val ordered = HmaBehaviorPolicy.targetOrder(packages, corroboratedPackages)
@@ -50,13 +50,14 @@ class HmaBehaviorProbe(context: Context) {
         val callbackTargets = HmaBehaviorPolicy.targetOrder(ordered,
             corroboratedPackages + exceptionResults.flatMap { it.packages }).take(MAX_CALLBACK_TARGETS)
         val results = exceptionResults + HmaBroadcastResultProbe(context, platform).run(callbackTargets) +
-            HmaUidVisibilityProbe(context).run(visibility)
+            HmaUidVisibilityProbe(context).run(visibility) + HmaSeccompUidProbe().run()
         return results.map { result ->
             val evaluated = when (result.kind) {
                 HmaCheckKind.BROADCAST_RESULT_TO, HmaCheckKind.BROADCAST_RESULT_COMPLETION -> callbackTargets.size
                 else -> selected.size
             }
-            if (result.kind == HmaCheckKind.UID_TASK_VISIBILITY) result else result.copy(
+            if (result.kind == HmaCheckKind.UID_TASK_VISIBILITY ||
+                result.kind == HmaCheckKind.SECCOMP_UID_FILTER) result else result.copy(
                 state = if (ordered.size > evaluated && result.state == HmaCheckState.CONSISTENT)
                     HmaCheckState.PARTIAL else result.state,
                 detail = "${result.detail} Target scope: $evaluated/${ordered.size}; API ${Build.VERSION.SDK_INT}.",

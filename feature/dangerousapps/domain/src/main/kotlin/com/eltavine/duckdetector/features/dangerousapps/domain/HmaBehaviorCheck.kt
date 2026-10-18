@@ -24,6 +24,7 @@ enum class HmaCheckKind(val label: String) {
     PACKAGE_INFO_EXCEPTION("getPackageInfo exception"),
     APPLICATION_INFO_EXCEPTION("getApplicationInfo exception"),
     UID_TASK_VISIBILITY("getpriority UID visibility"),
+    SECCOMP_UID_FILTER("Seccomp getpriority interference"),
 }
 
 enum class HmaCheckState(val label: String) {

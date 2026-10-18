@@ -62,7 +62,7 @@ DuckDetector 在 Android 设备上采集并关联与安全相关的证据，用�
 
 [`ADB Runtime`](./feature/adbruntime/EVIDENCE.md) · [`Bootloader`](./feature/bootloader/EVIDENCE.md) · [`Custom ROM`](./feature/customrom/EVIDENCE.md) · [`Dangerous Apps`](./feature/dangerousapps/EVIDENCE.md) · [`Kernel Check`](./feature/kernelcheck/EVIDENCE.md) · [`LSPosed`](./feature/lsposed/EVIDENCE.md) · [`Memory`](./feature/memory/EVIDENCE.md) · [`Mount`](./feature/mount/EVIDENCE.md) · [`Native Root`](./feature/nativeroot/EVIDENCE.md) · [`Play Integrity Fix`](./feature/playintegrityfix/EVIDENCE.md) · [`Root Managers`](./feature/rootmanagers/EVIDENCE.md) · [`SELinux`](./feature/selinux/EVIDENCE.md) · [`SU`](./feature/su/EVIDENCE.md) · [`System Properties`](./feature/systemproperties/EVIDENCE.md) · [`TEE`](./feature/tee/EVIDENCE.md) · [`Virtualization`](./feature/virtualization/EVIDENCE.md) · [`Zygisk`](./feature/zygisk/EVIDENCE.md)
 
-Dangerous Apps 还根据 frknkrc44 提供的报告，检查广播与包查询的对照行为，以及内核 UID 任务可见性。异常与回调语义差异只作为辅助警告。重复回调超时须通过穿插的自身包名对照，仅作为低置信度时间异常；可见性受限与扫描不完整分别保留覆盖状态。版本限制与来源说明见 [HMA 行为检测证据](./feature/dangerousapps/EVIDENCE.md#hma-behavior-checks)。
+Dangerous Apps 还根据 frknkrc44 提供的报告，检查广播与包查询的对照行为、内核 UID 任务可见性，以及 seccomp 用户通知过滤器对 getpriority 查询的拦截。异常与回调语义差异只作为辅助警告。重复回调超时须通过穿插的自身包名对照，仅作为低置信度时间异常；可见性受限与扫描不完整分别保留覆盖状态。版本限制与来源说明见 [HMA 行为检测证据](./feature/dangerousapps/EVIDENCE.md#hma-behavior-checks)。
 
 其中，`Play Integrity Fix` 检测的是与完整性伪装修改相关的本地迹象，并不会返回 Google Play Integrity API 的官方判定。TEE 模块检查 Android KeyStore 与设备证明证据，包括证书链、安全级别、吊销数据，以及设备支持时的部分 KeyMint、StrongBox 和 Soter 行为。
 
