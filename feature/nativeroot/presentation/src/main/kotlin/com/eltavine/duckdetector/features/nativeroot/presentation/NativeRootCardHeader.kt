@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFindingSev
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootReport
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootStage
 import com.eltavine.duckdetector.features.nativeroot.domain.SrcuTimingVerdict
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.hasReducedCoverage
 import com.eltavine.duckdetector.features.nativeroot.domain.hasRuntimeReducedCoverage
 import com.eltavine.duckdetector.features.nativeroot.presentation.model.NativeRootHeaderFact
@@ -69,6 +70,7 @@ internal fun buildVerdict(report: NativeRootReport): String {
             report.ksuManagerPackagePresent -> "KernelSU manager package detected"
             report.hasFindingWarnings -> "${report.warningFindingCount} native signal(s) need review"
             report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY -> "Experimental fsnotify/SRCU timing anomaly"
+            report.kernelSuTiming.verdict == KernelSuTimingVerdict.REPEATED_PATTERN -> "Repeated prctl timing pattern"
             !report.nativeAvailable -> "Native detector unavailable"
             report.hasReducedCoverage() -> "Native root scan has reduced coverage"
             else -> "No native root indicators"
@@ -93,6 +95,9 @@ internal fun buildSummary(report: NativeRootReport): String {
 
             report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY ->
                 "The optional experiment observed a repeatable fsnotify/SRCU timing delay relative to both controls. This is supporting contention evidence; it does not identify a root solution. Other indicators retain their own meaning."
+
+            report.kernelSuTiming.verdict == KernelSuTimingVerdict.REPEATED_PATTERN ->
+                "Three consecutive rounds on one CPU matched both prctl timing classifiers. This is supporting evidence, not proof of KernelSU or root; scheduling, virtualization and security hooks remain confounders."
 
             !report.nativeAvailable ->
                 "This detector relies mostly on JNI-backed native probes. Native coverage was unavailable on this build, and the remaining runtime checks stayed clean."

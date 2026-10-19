@@ -28,6 +28,19 @@ The Native Root detector asks whether kernel-level root solutions (KernelSU and 
 - Result states: enforced, not enforced, not applicable, not evaluated.
 - Interpretation: an answered request that exposes hardware addresses is a DANGER finding about the boundary, without attributing it to a particular root solution.
 
+### KernelSU prctl timing
+
+- Observable signal: one CPU produces three consecutive rounds matching both distance and cosine timing classifiers. This is warning-level supporting evidence, never a root or KernelSU family flag.
+- Producing subsystem: the AArch64 virtual counter around raw prctl calls, affected by kernel/security hooks, scheduling, virtualization, and counter configuration.
+- Mechanism: one environment preflight, then sequential per-CPU sampling with two adjacent invalid options controlling a candidate option. Exact histograms and joint features are classified in domain. See [the complete profile and validation limits](KERNELSU_TIMING.md).
+- References: [KernelSU v0.9.5 commands](https://github.com/tiann/KernelSU/blob/v0.9.5/kernel/ksu.h), [handler](https://github.com/tiann/KernelSU/blob/v0.9.5/kernel/core_hook.c), [KernelSU v0.6.9 manager gate](https://github.com/tiann/KernelSU/blob/v0.6.9/kernel/core_hook.c), [KernelSU-Next v1.0.2 handler](https://github.com/KernelSU-Next/KernelSU-Next/blob/v1.0.2/kernel/core_hook.c), [Bionic syscall definitions](https://android.googlesource.com/platform/bionic/+/refs/heads/main/libc/SYSCALLS.TXT), [PowerManager.isInteractive](https://developer.android.com/reference/android/os/PowerManager#isInteractive()). Reviewed sources establish interface assumptions, not measured detection accuracy or compatibility with every fork.
+- Applicability: a 64-bit AArch64 ordinary app UID with equal real/effective UID, readable counter, bindable CPU, foreground-interactive system, accepted preflight and verified affinity cleanup. A non-exported same-UID process contains counter faults and other fatal failures.
+- Visibility limits: unsupported architectures/UIDs, missing context/library, rejected preflight, failed affinity, incomplete CPU coverage, noninteractive transitions, deadlines, cancellation and worker death cannot mean absence. A complete non-match still cannot exclude root.
+- Confounders: counter frequency, hypervisors, syscall/security hooks unrelated to KernelSU, CPU hotplug/cpusets, thermal/load/interrupt noise and instrumentation. Baseline counter distributions and false-positive/false-negative rates have not been measured on devices.
+- Result states: not evaluated, inconclusive, pattern not observed in complete coverage, repeated supporting pattern. Collection preserves unavailable/unsupported/partial/noninteractive/cancelled/deadline/worker-death/protocol errors separately, including actual CPU, preflight, frequency, per-round metrics and cleanup status.
+- Interpretation: a repeated pattern is supporting warning evidence only; neither a non-match nor an incomplete run proves that KernelSU or root is absent.
+- Validation: JVM mathematical boundary, per-core orchestration, strict JNI parsing, binary payload and presentation tests; the production native translation unit is host-tested with fake counters/syscalls and affinity failures. These are software checks, not real-device calibration.
+
 ### KernelSU interfaces
 
 - Observable signal: the KernelSU prctl magic, the read-only supercall through a sacrificial child, [ksu_driver] and [ksu_fdwrapper] descriptors, the su SELinux domain, and devpts labels.

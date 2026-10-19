@@ -25,6 +25,7 @@ import com.eltavine.duckdetector.features.nativeroot.data.native.NativeRootNativ
 import com.eltavine.duckdetector.features.nativeroot.data.probes.CgroupProcessLeakProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.InitRcTimingProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuManagerFingerprintProbe
+import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuTimingProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntProbe
 import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntRound
 import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceDriftProbe
@@ -59,6 +60,7 @@ class NativeRootRepository(
     private val throneHuntProbe: KernelSuThroneHuntProbe = KernelSuThroneHuntProbe(),
     private val srcuTimingProbe: SrcuTimingProbe = SrcuTimingProbe(context?.applicationContext),
     private val initRcTimingProbe: InitRcTimingProbe = InitRcTimingProbe(context?.applicationContext),
+    private val kernelSuTimingProbe: KernelSuTimingProbe = KernelSuTimingProbe(context?.applicationContext),
 ) : DetectorScanner<NativeRootReport> {
 
     override suspend fun scan(): NativeRootReport = withContext(Dispatchers.IO) {
@@ -67,6 +69,7 @@ class NativeRootRepository(
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (throwable: Throwable) {
+            if (throwable is kotlinx.coroutines.CancellationException) throw throwable
             NativeRootReport.failed(throwable.message ?: "Native Root scan failed.")
         }
     }
@@ -84,9 +87,10 @@ class NativeRootRepository(
         val managerFingerprintResult = kernelSuManagerFingerprintProbe.run()
         val tempRootArtifactResult = tempRootArtifactProbe.run()
         val initRcTiming = initRcTimingProbe.collect()
-        // Both stimuli run last, serially. The timing experiment precedes the asynchronous MIME
+        // Stimuli run last, serially. The timing experiments precede the asynchronous MIME
         // rewrite so this detector cannot introduce its own delayed write into the idle controls.
         val srcuTiming = srcuTimingProbe.collect()
+        val kernelSuTiming = kernelSuTimingProbe.collect()
         val throneHuntRoundResult = throneHuntRound.run(scanStartedAt)
         val throneHuntResult = throneHuntProbe.run(throneHuntRoundResult)
         val findings =
@@ -103,6 +107,7 @@ class NativeRootRepository(
             stage = NativeRootStage.READY,
             initRcTiming = initRcTiming,
             srcuTiming = srcuTiming,
+            kernelSuTiming = kernelSuTiming,
             findings = findings,
             rootDetected = snapshot.rootDetected,
             kernelSuDetected = snapshot.kernelSuDetected,
