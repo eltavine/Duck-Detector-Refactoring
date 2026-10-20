@@ -47,7 +47,7 @@ internal fun initRcTimingRow(observation: InitRcTimingObservation): NativeRootDe
             appendLine("Experimental supporting evidence; does not identify or exclude KernelSU.")
             appendLine("Tests the interaction of comm init and a private init.rc filename using raw arm64 fstat.")
             appendLine("The reviewed pre-3924 hook must still be installed; successful boot removes it and late-load skips it.")
-            appendLine("Same-inode control, balanced order and single-CPU checks reduce confounding but do not establish causality.")
+            appendLine("Same-metadata control, balanced order and single-CPU checks reduce confounding but do not establish causality.")
             appendLine("Repeatability rules are provisional; physical-device detection accuracy is uncalibrated.")
             appendLine("Collection: ${observation.collection}; errno=${observation.errorNumber}; CPU=${observation.cpu}")
             appendLine("Cleanup: ${observation.cleanupCompleted}; cleanup errno=${observation.cleanupErrorNumber}")
