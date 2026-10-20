@@ -24,6 +24,9 @@ import java.io.File
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.register
 
+private val aapt2ExecutableName: String =
+    if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) "aapt2.exe" else "aapt2"
+
 /** Keeps the host's application ID, version and selected signing configuration together. */
 fun Project.registerInstallerCanaryAssets(template: File, asset: String) {
     val components = extensions.getByType<ApplicationAndroidComponentsExtension>()
@@ -40,7 +43,9 @@ fun Project.registerInstallerCanaryAssets(template: File, asset: String) {
             assetPath.set(asset)
             versionCode.set(variant.outputs.single().versionCode)
             targetSdk.set(requireNotNull(android.defaultConfig.targetSdk))
-            aapt2.set(components.sdkComponents.sdkDirectory.map { it.file("build-tools/${buildTools}/aapt2") })
+            aapt2.set(components.sdkComponents.sdkDirectory.map {
+                it.file("build-tools/${buildTools}/$aapt2ExecutableName")
+            })
             androidJar.set(components.sdkComponents.bootClasspath.map { files -> files.first { it.asFile.name == "android.jar" } })
             keyStoreFile.set(requireNotNull(signing.storeFile))
             keyAlias.set(requireNotNull(signing.keyAlias))
