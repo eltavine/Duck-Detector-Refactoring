@@ -85,16 +85,29 @@ void fail(InitRcTimingResult &result, InitRcTimingStage stage, int error) {
         result.error = error;
     }
 }
+// Re-observing one descriptor: every field, including the inode, must stay stable.
 bool same_file(const struct stat &a, const struct stat &b) {
-    return S_ISREG(a.st_mode) && a.st_dev == b.st_dev && a.st_ino == b.st_ino &&
-           a.st_mode == b.st_mode && a.st_size == b.st_size && a.st_nlink == b.st_nlink &&
-           a.st_uid == b.st_uid && a.st_gid == b.st_gid;
+    return S_ISREG(a.st_mode) && S_ISREG(b.st_mode) && a.st_dev == b.st_dev &&
+           a.st_ino == b.st_ino && a.st_mode == b.st_mode && a.st_size == b.st_size &&
+           a.st_nlink == 1 && b.st_nlink == 1 && a.st_uid == b.st_uid && a.st_gid == b.st_gid;
+}
+
+// Android's SELinux policy never allows an untrusted app to create a hard link, so the
+// control is a second independent file with identical metadata. The reviewed hook compares
+// comm, file type, dentry name and d_path only; it never reads st_ino.
+bool same_metadata(const struct stat &control, const struct stat &target) {
+    return S_ISREG(control.st_mode) && S_ISREG(target.st_mode) &&
+           control.st_dev == target.st_dev && control.st_ino != target.st_ino &&
+           control.st_mode == target.st_mode && control.st_size == target.st_size &&
+           control.st_nlink == 1 && target.st_nlink == 1 &&
+           control.st_uid == target.st_uid && control.st_gid == target.st_gid;
 }
 struct Worker {
     const InitRcTimingIo &io;
     int control_fd;
     int target_fd;
-    struct stat expected;
+    struct stat expected_control;
+    struct stat expected_target;
     InitRcTimingResult &result;
 };
 
@@ -131,7 +144,9 @@ bool batch(Worker &worker, int condition, std::int64_t &duration) {
         return false;
     }
     if (!check_name(worker, name) || !check_cpu(worker)) return false;
-    const int fd = condition % 2 ? worker.target_fd : worker.control_fd;
+    const bool target = condition % 2 != 0;
+    const int fd = target ? worker.target_fd : worker.control_fd;
+    const struct stat &expected = target ? worker.expected_target : worker.expected_control;
     struct stat attributes{};
     const std::int64_t begin = io.now();
     if (begin <= 0) {
@@ -145,7 +160,7 @@ bool batch(Worker &worker, int condition, std::int64_t &duration) {
             return false;
         }
         // Validate each result: a transient mismatch can disappear before the batch's final call.
-        if (!same_file(worker.expected, attributes)) {
+        if (!same_file(expected, attributes)) {
             fail(out, InitRcTimingStage::SYSCALL_FAILED, ESTALE);
             return false;
         }
@@ -232,24 +247,27 @@ InitRcTimingResult run(const char *base, const InitRcTimingIo &io) {
         return out;
     }
     const std::string control = directory + "/data.rc", target = directory + "/init.rc";
+    // Android never allows an untrusted app to create a hard link, so the control is a
+    // second independent file rather than another name for the same inode.
     int control_fd = open(control.c_str(), O_CREAT | O_EXCL | O_RDONLY | O_CLOEXEC | O_NOFOLLOW, 0600);
     int target_fd = -1;
-    bool linked = false;
-    if (control_fd < 0) fail(out, InitRcTimingStage::FILE_FAILED, errno);
-    else if (link(control.c_str(), target.c_str()) != 0) fail(out, InitRcTimingStage::FILE_FAILED, errno);
-    else {
-        linked = true;
-        target_fd = open(target.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    bool target_created = false;
+    if (control_fd < 0) {
+        fail(out, InitRcTimingStage::FILE_FAILED, errno);
+    } else {
+        target_fd = open(target.c_str(), O_CREAT | O_EXCL | O_RDONLY | O_CLOEXEC | O_NOFOLLOW, 0600);
         if (target_fd < 0) fail(out, InitRcTimingStage::FILE_FAILED, errno);
+        else target_created = true;
     }
-    struct stat expected{}, other{};
+    struct stat expected_control{}, expected_target{};
     if (out.stage == InitRcTimingStage::COLLECTED) {
-        if (fstat(control_fd, &expected) != 0 || fstat(target_fd, &other) != 0)
+        if (fstat(control_fd, &expected_control) != 0 || fstat(target_fd, &expected_target) != 0)
             fail(out, InitRcTimingStage::FILE_FAILED, errno);
-        else if (!same_file(expected, other)) fail(out, InitRcTimingStage::FILE_FAILED, ESTALE);
+        else if (!same_metadata(expected_control, expected_target))
+            fail(out, InitRcTimingStage::FILE_FAILED, ESTALE);
     }
     if (out.stage == InitRcTimingStage::COLLECTED) {
-        Worker worker{io, control_fd, target_fd, expected, out};
+        Worker worker{io, control_fd, target_fd, expected_control, expected_target, out};
         try {
             // Explicit async forbids deferred execution on the caller. The standard's
             // futures.async completion guarantee also protects worker/FD lifetimes on exceptions.
@@ -269,7 +287,7 @@ InitRcTimingResult run(const char *base, const InitRcTimingIo &io) {
     };
     if (target_fd >= 0) cleanup(close(target_fd));
     if (control_fd >= 0) cleanup(close(control_fd));
-    if (linked) cleanup(unlink(target.c_str()));
+    if (target_created) cleanup(unlink(target.c_str()));
     if (control_fd >= 0) cleanup(unlink(control.c_str()));
     cleanup(rmdir(directory.c_str()));
     out.cleanup_complete = out.cleanup_error == 0;

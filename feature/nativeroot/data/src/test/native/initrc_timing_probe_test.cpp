@@ -105,8 +105,7 @@ std::int64_t now() {
 int stat_fd(int fd, struct stat *attributes) {
     assert(!pthread_equal(fixture->caller, pthread_self()));
     const auto path = fd_path(fd);
-    // Darwin F_GETPATH can return either hard-link alias for one vnode. Warm-up starts with
-    // the control descriptor; retain fd identity instead of treating that path as authoritative.
+    // Warm-up starts with the control descriptor; retain fd identity to label conditions.
     if (fixture->control_fd < 0) fixture->control_fd = fd;
     const bool target = fd != fixture->control_fd;
     const int condition = (fixture->name == "init" ? 2 : 0) + (target ? 1 : 0);
@@ -118,11 +117,11 @@ int stat_fd(int fd, struct stat *attributes) {
     if (fixture->fault == Fault::UNKNOWN_THROW) throw 1;
     if (fixture->fault == Fault::STAT) { errno = EACCES; return -1; }
     const int result = fstat(fd, attributes);
-    assert(result == 0 && S_ISREG(attributes->st_mode) && attributes->st_nlink == 2);
+    assert(result == 0 && S_ISREG(attributes->st_mode) && attributes->st_nlink == 1);
     if (fixture->fault == Fault::ATTRIBUTES) ++attributes->st_ino;
     if (fixture->fault == Fault::TRANSIENT_ATTRIBUTES && fixture->calls == 1) ++attributes->st_ino;
     if (fixture->fault == Fault::TRANSIENT_OWNER && fixture->calls == 1) ++attributes->st_uid;
-    if (fixture->fault == Fault::TRANSIENT_LINK_COUNT && fixture->calls == 1) --attributes->st_nlink;
+    if (fixture->fault == Fault::TRANSIENT_LINK_COUNT && fixture->calls == 1) ++attributes->st_nlink;
     fixture->clock += 100 + (target ? 5 : 0) + (fixture->name == "init" ? 10 : 0) +
         (condition == 3 ? 50 : 0);
     if (fixture->fault == Fault::BUDGET && fixture->calls > kInitRcIterations * 8)
