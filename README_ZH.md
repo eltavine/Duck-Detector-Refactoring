@@ -82,7 +82,7 @@ SELinux 检测还保留了 app-zygote 阶段的 SID 表查询与注册对照实�
 
 Native Root 另有默认关闭的 [fsnotify SRCU 时序实验](feature/nativeroot/SRCU_TIMING.md)。用户明确启用后，它在支持的 Android 12–14 环境中临时修改私有动态权限，比较 inotify 实例关闭的延迟。重复延迟只作为竞争的辅助证据，不判定 KernelSU；阈值仍待真机校准，独立进程超时也无法恢复阻塞的内核。
 
-在 arm64 进程中，Native Root 还会通过私有目录中的同 inode 文件和独立线程采集实验性的 [init.rc 钩子时序差分](feature/nativeroot/INIT_RC_TIMING.md)。结果保留原始样本与失败原因，只作为辅助证据，不能据此确认或排除 KernelSU；真机校准尚未完成。
+在 arm64 进程中，Native Root 还会通过私有目录中元数据一致的两个独立文件和独立线程采集实验性的 [init.rc 钩子时序差分](feature/nativeroot/INIT_RC_TIMING.md)。结果保留原始样本与失败原因，只作为辅助证据，不能据此确认或排除 KernelSU；真机校准尚未完成。
 
 # 兼容性
 
