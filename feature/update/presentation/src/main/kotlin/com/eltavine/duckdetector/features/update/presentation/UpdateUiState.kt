@@ -17,20 +17,24 @@
 
 package com.eltavine.duckdetector.features.update.presentation
 
-import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
+import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateManifest
+import com.eltavine.duckdetector.features.update.domain.UpdateManifest
 
 enum class UpdateCheckStatus {
     IDLE,
     CHECKING,
     CURRENT,
+
+    /** The running build is newer than the channel's latest; the next newer one will be offered. */
+    AHEAD,
     AVAILABLE,
     FAILED,
 }
 
 sealed interface UpdateDownloadResolution {
-    data class Ready(val update: AvailableNightlyUpdate) : UpdateDownloadResolution
+    data class Ready(val update: AvailableUpdate) : UpdateDownloadResolution
 
     data object Refreshed : UpdateDownloadResolution
 
@@ -42,17 +46,20 @@ sealed interface UpdateDownloadResolution {
 sealed interface UpdateDownloadState {
     data object Idle : UpdateDownloadState
 
-    data class Downloading(val manifest: NightlyUpdateManifest, val progress: UpdateDownloadProgress) : UpdateDownloadState
+    data class Downloading(val manifest: UpdateManifest, val progress: UpdateDownloadProgress) : UpdateDownloadState
 
     /** The verified APK on local storage, waiting for the user to confirm the install. */
-    data class Ready(val manifest: NightlyUpdateManifest, val apkPath: String) : UpdateDownloadState
+    data class Ready(val manifest: UpdateManifest, val apkPath: String) : UpdateDownloadState
 
-    data class Failed(val manifest: NightlyUpdateManifest) : UpdateDownloadState
+    data class Failed(val manifest: UpdateManifest) : UpdateDownloadState
 }
 
 data class UpdateUiState(
+    val channel: UpdateChannel,
     val status: UpdateCheckStatus = UpdateCheckStatus.IDLE,
-    val availableUpdate: AvailableNightlyUpdate? = null,
+    /** The channel's latest version while the running build is current or ahead of it. */
+    val latestVersionName: String? = null,
+    val availableUpdate: AvailableUpdate? = null,
     val isDialogVisible: Boolean = false,
     val download: UpdateDownloadState = UpdateDownloadState.Idle,
 )

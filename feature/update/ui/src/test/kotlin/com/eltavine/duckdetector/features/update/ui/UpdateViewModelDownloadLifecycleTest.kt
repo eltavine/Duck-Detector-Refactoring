@@ -17,10 +17,10 @@
 
 package com.eltavine.duckdetector.features.update.ui
 
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
 import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
 import com.eltavine.duckdetector.features.update.domain.UpdateCheckResult
+import com.eltavine.duckdetector.features.update.domain.UpdateChecker
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
@@ -33,17 +33,17 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.withContext
 import org.junit.After
-import org.junit.Before
-import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UpdateViewModelDownloadLifecycleTest {
@@ -59,8 +59,8 @@ class UpdateViewModelDownloadLifecycleTest {
     fun `unavailable cached apk offers a download retry`() = runTest(dispatcher) {
         var downloads = 0
         val vm = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(availableUpdate()) },
-            downloader = UpdateApkDownloader { _, _, _ ->
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(availableUpdate()) },
+            downloader = UpdateApkDownloader { _, _, _, _ ->
                 downloads++
                 UpdateDownloadResult.Ready("/cache/update.apk")
             },
@@ -81,8 +81,8 @@ class UpdateViewModelDownloadLifecycleTest {
     @Test
     fun `permission settings preserve the verified download`() = runTest(dispatcher) {
         val vm = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(availableUpdate()) },
-            downloader = UpdateApkDownloader { _, _, _ -> UpdateDownloadResult.Ready("/cache/update.apk") },
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(availableUpdate()) },
+            downloader = UpdateApkDownloader { _, _, _, _ -> UpdateDownloadResult.Ready("/cache/update.apk") },
             installer = UpdateApkInstaller { _, _ -> UpdateInstallResult.PermissionRequired },
         )
         vm.checkAutomatically()
@@ -100,8 +100,8 @@ class UpdateViewModelDownloadLifecycleTest {
     fun `download exceptions and cancellation leave a retryable state`() = runTest(dispatcher) {
         var calls = 0
         val vm = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(availableUpdate()) },
-            downloader = UpdateApkDownloader { _, _, _ ->
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(availableUpdate()) },
+            downloader = UpdateApkDownloader { _, _, _, _ ->
                 when (++calls) {
                     1 -> error("storage failure")
                     2 -> throw CancellationException("cancelled")
@@ -128,8 +128,8 @@ class UpdateViewModelDownloadLifecycleTest {
         val release = CompletableDeferred<Unit>()
         lateinit var vm: UpdateViewModel
         vm = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(availableUpdate()) },
-            downloader = UpdateApkDownloader { apk, _, progress ->
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(availableUpdate()) },
+            downloader = UpdateApkDownloader { apk, _, _, progress ->
                 calls++
                 vm.dismissUpdate()
                 progress(UpdateDownloadProgress(1L, apk.sizeBytes))
@@ -155,10 +155,10 @@ class UpdateViewModelDownloadLifecycleTest {
         val recheck = CompletableDeferred<UpdateCheckResult>()
         var checks = 0
         val vm = viewModel(
-            checker = NightlyUpdateChecker { _, _ ->
+            checker = UpdateChecker { _, _, _ ->
                 if (++checks == 1) UpdateCheckResult.Available(availableUpdate()) else recheck.await()
             },
-            downloader = UpdateApkDownloader { _, _, _ -> UpdateDownloadResult.Ready("/cache/update.apk") },
+            downloader = UpdateApkDownloader { _, _, _, _ -> UpdateDownloadResult.Ready("/cache/update.apk") },
         )
         vm.checkAutomatically()
         advanceUntilIdle()
@@ -175,8 +175,8 @@ class UpdateViewModelDownloadLifecycleTest {
     fun `late progress after completion cannot replace a ready apk`() = runTest(dispatcher) {
         lateinit var progress: (UpdateDownloadProgress) -> Unit
         val vm = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(availableUpdate()) },
-            downloader = UpdateApkDownloader { _, _, callback ->
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(availableUpdate()) },
+            downloader = UpdateApkDownloader { _, _, _, callback ->
                 progress = callback
                 UpdateDownloadResult.Ready("/cache/update.apk")
             },
@@ -196,8 +196,8 @@ class UpdateViewModelDownloadLifecycleTest {
         val release = CompletableDeferred<Unit>()
         val entered = CompletableDeferred<Unit>()
         val vm = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(update) },
-            downloader = UpdateApkDownloader { apk, _, progress ->
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(update) },
+            downloader = UpdateApkDownloader { apk, _, _, progress ->
                 withContext(NonCancellable) {
                     entered.complete(Unit)
                     release.await()
@@ -225,7 +225,7 @@ class UpdateViewModelDownloadLifecycleTest {
         val delayed = CompletableDeferred<UpdateCheckResult>()
         val newer = availableUpdate(testManifest.copy(versionCode = 501))
         var calls = 0
-        val vm = viewModel(NightlyUpdateChecker { _, _ ->
+        val vm = viewModel(UpdateChecker { _, _, _ ->
             when (++calls) {
                 1 -> UpdateCheckResult.Available(availableUpdate())
                 2 -> delayed.await()

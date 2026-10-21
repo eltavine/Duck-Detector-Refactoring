@@ -5,6 +5,7 @@
  */
 package com.eltavine.duckdetector.features.update.data
 
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -13,7 +14,7 @@ import org.junit.Test
 class NightlyArchiveManifestTest {
     private val tag = "nightly-2026-08-08-${TEST_HEAD_SHA.take(8)}"
     private val archiveUrl = TEST_DOWNLOAD_URL.replace("/nightly/", "/$tag/")
-    private val parser = UpdateManifestParser()
+    private fun parse(rawJson: String) = UpdateManifestParser().parse(rawJson, UpdateChannel.NIGHTLY)
 
     private fun channel(): JSONObject = JSONObject(validUpdateManifestJson()).apply {
         put("releaseTag", "nightly")
@@ -25,25 +26,25 @@ class NightlyArchiveManifestTest {
     fun `fixed channel retains legacy fields while the new parser selects its archive`() {
         val json = channel()
         assertEquals(TEST_DOWNLOAD_URL, json.getJSONObject("apk").getString("downloadUrl"))
-        val parsed = parser.parse(json.toString())
+        val parsed = parse(json.toString())
         assertEquals(archiveUrl, parsed.apk.downloadUrl)
-        assertEquals(parser.parse(validUpdateManifestJson()).apk.copy(downloadUrl = archiveUrl), parsed.apk)
+        assertEquals(parse(validUpdateManifestJson()).apk.copy(downloadUrl = archiveUrl), parsed.apk)
     }
 
     @Test
     fun `manifests without archive metadata remain supported`() {
-        assertEquals(TEST_DOWNLOAD_URL, parser.parse(validUpdateManifestJson()).apk.downloadUrl)
+        assertEquals(TEST_DOWNLOAD_URL, parse(validUpdateManifestJson()).apk.downloadUrl)
     }
 
     @Test
     fun `standalone archive validates the full commit and UTC build date`() {
         val json = JSONObject(validUpdateManifestJson(downloadUrl = archiveUrl)).put("releaseTag", tag)
-        assertEquals(archiveUrl, parser.parse(json.toString()).apk.downloadUrl)
+        assertEquals(archiveUrl, parse(json.toString()).apk.downloadUrl)
         for (badTag in listOf("nightly-2026-02-30-aaaaaaaa", "nightly-2026-08-09-aaaaaaaa",
                              "nightly-2026-08-08-bbbbbbbb")) {
             json.getJSONObject("apk").put("downloadUrl", archiveUrl.replace(tag, badTag))
             json.put("releaseTag", badTag)
-            assertThrows(UpdateManifestValidationException::class.java) { parser.parse(json.toString()) }
+            assertThrows(UpdateManifestValidationException::class.java) { parse(json.toString()) }
         }
     }
 
@@ -59,14 +60,14 @@ class NightlyArchiveManifestTest {
         )
         for (mutate in mutations) {
             val json = channel().also(mutate)
-            assertThrows(UpdateManifestValidationException::class.java) { parser.parse(json.toString()) }
+            assertThrows(UpdateManifestValidationException::class.java) { parse(json.toString()) }
         }
     }
 
     @Test
     fun `independent verification reads the selected archive instead of the rolling channel`() {
         val requests = mutableListOf<String>()
-        val expected = parser.parse(channel().toString()).apk
+        val expected = parse(channel().toString()).apk
         val source = NightlyManifestSource(UpdateHttpClient { url, _ ->
             requests += url
             JSONObject(validUpdateManifestJson(downloadUrl = archiveUrl)).put("releaseTag", tag).toString()
@@ -79,7 +80,7 @@ class NightlyArchiveManifestTest {
     fun `untrusted asset URLs fail before requesting metadata`() {
         var requests = 0
         val source = NightlyManifestSource(UpdateHttpClient { _, _ -> requests++; error("unexpected request") })
-        val apk = parser.parse(validUpdateManifestJson()).apk.copy(downloadUrl = "https://evil.example/build.apk")
+        val apk = parse(validUpdateManifestJson()).apk.copy(downloadUrl = "https://evil.example/build.apk")
         assertThrows(IllegalArgumentException::class.java) { source.forApk(apk) }
         assertEquals(0, requests)
     }
@@ -92,7 +93,7 @@ class NightlyArchiveManifestTest {
             TEST_DOWNLOAD_URL.replace("github.com", "github.com:443"),
         )) {
             assertThrows(UpdateManifestValidationException::class.java) {
-                parser.parse(validUpdateManifestJson(downloadUrl = url))
+                parse(validUpdateManifestJson(downloadUrl = url))
             }
         }
     }

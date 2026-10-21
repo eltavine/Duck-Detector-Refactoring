@@ -35,7 +35,7 @@ limitations under the License.
     <string name="about_label_privacy">プライバシー / データ利用</string>
     <string name="about_label_version">バージョン</string>
     <string name="about_label_website">ウェブサイト</string>
-    <string name="about_privacy_summary">チェックは端末上で実行され、検出結果はアップロードされません。コールドスタートごとに GitHub へ一度接続して Nightly 更新メタデータを取得します（GitHub 高速化がオンの間は gh-proxy.com 経由）。オンライン CRL 更新は任意です。</string>
+    <string name="about_privacy_summary">チェックは端末上で実行され、検出結果はアップロードされません。コールドスタートごとに GitHub へ一度接続し、選択中の更新チャネルのメタデータを取得します（GitHub 高速化がオンの間は gh-proxy.com 経由）。オンライン CRL 更新は任意です。</string>
     <string name="about_subtitle">プロジェクトリンクとビルドメタデータです。</string>
     <string name="about_title">このアプリについて</string>
     <string name="about_value_build_time">%1$s UTC</string>
@@ -44,8 +44,8 @@ limitations under the License.
     <string name="author_summary_eltavine">UI、C++、ASM、Kotlin を担当</string>
     <string name="author_summary_wxx">CI (Kotlin)</string>
     <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
-    <string name="github_acceleration_footer">gh-proxy.com はサードパーティのサービスです。オンの間、更新の確認と Nightly のダウンロードは GitHub に直接接続せず、このサービスを経由します。コミットの比較は中継できないため、更新ダイアログには最新のコミットのみ表示される場合があります。</string>
-    <string name="github_acceleration_summary">gh-proxy.com 経由で Nightly 更新を確認・ダウンロード</string>
+    <string name="github_acceleration_footer">gh-proxy.com はサードパーティのサービスです。オンの間、更新の確認とダウンロードは GitHub に直接接続せず、このサービスを経由します。コミットの比較は中継できないため、最新の Stable より古いビルドを Nightly に更新するときは、更新ダイアログに最近の変更のみ表示される場合があります。</string>
+    <string name="github_acceleration_summary">gh-proxy.com 経由で更新を確認・ダウンロード</string>
     <string name="github_acceleration_title">GitHub 高速化</string>
     <string name="licenses_dialog_close">閉じる</string>
     <string name="licenses_dialog_home_page">ホームページ</string>
@@ -63,11 +63,15 @@ limitations under the License.
     <string name="settings_section_detection">検出オプション</string>
     <string name="settings_section_network">ネットワーク</string>
     <string name="settings_title">設定</string>
+    <string name="update_channel_label">更新チャネル</string>
+    <string name="update_channel_nightly_summary">main へのすべての変更を、取り込み次第ビルド</string>
+    <string name="update_channel_stable_summary">テスト済みの、バージョンタグ付きリリース</string>
     <string name="update_settings_label">更新を確認</string>
-    <string name="update_status_available">新しい Nightly ビルドがあります。タップして詳細を表示</string>
+    <string name="update_status_ahead">このビルドは最新の %1$s（%2$s）より新しいため、さらに新しいビルドが出たときに案内します</string>
+    <string name="update_status_available">新しい %1$s ビルドがあります。タップして詳細を表示</string>
     <string name="update_status_checking">GitHub を確認しています…</string>
-    <string name="update_status_current">最新の Nightly ビルドです</string>
+    <string name="update_status_current">最新の %1$s ビルドです</string>
     <string name="update_status_failed">GitHub を確認できませんでした。タップして再試行</string>
-    <string name="update_status_idle">コールドスタート後に GitHub Main Nightly を確認します。タップして今すぐ確認</string>
+    <string name="update_status_idle">コールドスタート後に GitHub の %1$s を確認します。タップして今すぐ確認</string>
     <string name="settings_section_appearance">外観</string>
 </resources>

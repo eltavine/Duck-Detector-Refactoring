@@ -18,8 +18,9 @@
 package com.eltavine.duckdetector.features.update.data
 
 import com.eltavine.duckdetector.features.update.domain.MAX_UPDATE_APK_BYTES
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
+import com.eltavine.duckdetector.features.update.domain.UpdateApk
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
 import java.io.File
@@ -41,8 +42,12 @@ import kotlinx.coroutines.withContext
 internal class HttpUpdateApkDownloader(
     private val downloadDirectory: File,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val trustedApk: (NightlyUpdateApk) -> NightlyUpdateApk = { apk ->
-        NightlyManifestSource(HttpUrlConnectionUpdateClient()).forApk(apk)
+    private val trustedApk: (UpdateApk, UpdateChannel) -> UpdateApk = { apk, channel ->
+        if (channel == UpdateChannel.NIGHTLY) NightlyManifestSource(HttpUrlConnectionUpdateClient()).forApk(apk)
+        else UpdateManifestParser().parse(
+            HttpUrlConnectionUpdateClient().get(UpdateEndpoints.manifestUrl(channel), "application/json"),
+            channel,
+        ).apk
     },
     private val openConnection: (URL) -> HttpURLConnection = {
         it.openConnection() as HttpURLConnection
@@ -51,8 +56,9 @@ internal class HttpUpdateApkDownloader(
 ) : UpdateApkDownloader {
 
     override suspend fun download(
-        apk: NightlyUpdateApk,
+        apk: UpdateApk,
         downloadUrl: String,
+        channel: UpdateChannel,
         onProgress: (UpdateDownloadProgress) -> Unit,
     ): UpdateDownloadResult = withContext(ioDispatcher) {
         var partial: File? = null
@@ -60,7 +66,7 @@ internal class HttpUpdateApkDownloader(
             require(apk.sizeBytes in 1..MAX_UPDATE_APK_BYTES)
             require(Regex("[0-9a-fA-F]{64}").matches(apk.sha256))
             coroutineContext.ensureActive()
-            if (trustedApk(apk) != apk) {
+            if (trustedApk(apk, channel) != apk) {
                 return@withContext UpdateDownloadResult.Failed
             }
             coroutineContext.ensureActive()
@@ -88,7 +94,7 @@ internal class HttpUpdateApkDownloader(
     private suspend fun streamToFile(
         url: String,
         file: File,
-        apk: NightlyUpdateApk,
+        apk: UpdateApk,
         onProgress: (UpdateDownloadProgress) -> Unit,
     ) {
         val context = coroutineContext

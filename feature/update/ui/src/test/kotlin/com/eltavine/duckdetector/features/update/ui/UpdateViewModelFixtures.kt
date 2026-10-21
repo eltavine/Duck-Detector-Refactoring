@@ -17,24 +17,27 @@
 
 package com.eltavine.duckdetector.features.update.ui
 
-import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateCommit
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateManifest
+import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
+import com.eltavine.duckdetector.features.update.domain.UpdateApk
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
 import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
+import com.eltavine.duckdetector.features.update.domain.UpdateChangelog
 import com.eltavine.duckdetector.features.update.domain.UpdateChangelogEntry
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
+import com.eltavine.duckdetector.features.update.domain.UpdateChannelPreference
+import com.eltavine.duckdetector.features.update.domain.UpdateChecker
+import com.eltavine.duckdetector.features.update.domain.UpdateCommit
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
+import com.eltavine.duckdetector.features.update.domain.UpdateManifest
 
-internal val testManifest = NightlyUpdateManifest(
+internal val testManifest = UpdateManifest(
     schemaVersion = 1,
-    channel = "nightly",
+    channel = UpdateChannel.NIGHTLY,
     branch = "master",
     versionName = "2026.08.08-${TEST_HEAD_SHA.take(12)}",
     versionCode = 500,
-    commit = NightlyUpdateCommit(
+    commit = UpdateCommit(
         sha = TEST_HEAD_SHA,
         subject = "feat(update): publish Nightly metadata",
         body = "Publish metadata after the APK is available.",
@@ -42,7 +45,7 @@ internal val testManifest = NightlyUpdateManifest(
         authoredAt = "2026-08-08T12:20:00Z",
     ),
     builtAtUtc = "2026-08-08T12:30:00Z",
-    apk = NightlyUpdateApk(
+    apk = UpdateApk(
         name = "Duck.Detector-test.apk",
         downloadUrl = "https://github.com/eltavine/Duck-Detector-Refactoring/releases/download/nightly/Duck.Detector-test.apk",
         sizeBytes = 12_345_678L,
@@ -51,12 +54,16 @@ internal val testManifest = NightlyUpdateManifest(
 )
 
 internal fun viewModel(
-    checker: NightlyUpdateChecker,
-    downloader: UpdateApkDownloader = UpdateApkDownloader { _, _, _ -> UpdateDownloadResult.Failed },
+    checker: UpdateChecker,
+    preference: UpdateChannelPreference = FakeChannelPreference(UpdateChannel.NIGHTLY),
+    buildChannel: UpdateChannel = UpdateChannel.NIGHTLY,
+    downloader: UpdateApkDownloader = UpdateApkDownloader { _, _, _, _ -> UpdateDownloadResult.Failed },
     installer: UpdateApkInstaller = UpdateApkInstaller { _, _ -> UpdateInstallResult.Failed },
 ): UpdateViewModel {
     return UpdateViewModel(
         repository = checker,
+        channelPreference = preference,
+        buildChannel = buildChannel,
         currentVersionCode = 400,
         currentCommitSha = TEST_BASE_SHA,
         downloader = downloader,
@@ -66,24 +73,33 @@ internal fun viewModel(
 }
 
 internal fun availableUpdate(
-    updateManifest: NightlyUpdateManifest = testManifest,
+    updateManifest: UpdateManifest = testManifest,
     downloadUrl: String = updateManifest.apk.downloadUrl,
-): AvailableNightlyUpdate {
-    return AvailableNightlyUpdate(
+): AvailableUpdate {
+    return AvailableUpdate(
         manifest = updateManifest,
-        changelog = listOf(
-            UpdateChangelogEntry(
-                sha = updateManifest.commit.sha,
-                subject = updateManifest.commit.subject,
-                authorName = updateManifest.commit.authorName,
+        changelog = UpdateChangelog.Commits(
+            entries = listOf(
+                UpdateChangelogEntry(
+                    sha = updateManifest.commit.sha,
+                    subject = updateManifest.commit.subject,
+                    authorName = updateManifest.commit.authorName,
+                ),
             ),
+            remainingCount = 0,
         ),
-        remainingCommitCount = 0,
         downloadUrl = downloadUrl,
-        compareUrl =
+        changesUrl =
             "https://github.com/eltavine/Duck-Detector-Refactoring/compare/$TEST_BASE_SHA...${updateManifest.commit.sha}",
     )
 }
 
 private const val TEST_HEAD_SHA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 private const val TEST_BASE_SHA = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+internal class FakeChannelPreference(var stored: UpdateChannel) : UpdateChannelPreference {
+    override suspend fun read() = stored
+    override suspend fun write(channel: UpdateChannel) {
+        stored = channel
+    }
+}

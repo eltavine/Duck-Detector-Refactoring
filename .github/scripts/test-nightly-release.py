@@ -175,6 +175,7 @@ class ReleaseTest(unittest.TestCase):
                 'commit', '--allow-empty', '-qm', 'Release fixture')
             sha = git('rev-parse', 'HEAD')
             tag = release.nightly_tag('2026-10-18T00:00:00Z', sha)
+            (directory / 'nightly-changes.json').write_text(json.dumps({'baseTag': None, 'baseSha': None, 'totalCount': 0, 'entries': []}))
             assets = []
             paths = []
             for number, name in enumerate(['build.apk', 'sdk.aar'], 1):

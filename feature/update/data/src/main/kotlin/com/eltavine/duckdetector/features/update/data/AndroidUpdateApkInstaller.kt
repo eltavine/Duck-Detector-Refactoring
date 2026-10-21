@@ -23,7 +23,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
+import com.eltavine.duckdetector.features.update.domain.UpdateApk
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
 import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
@@ -41,7 +41,7 @@ internal class AndroidUpdateApkInstaller(
     private val fileProviderAuthority: String,
 ) : UpdateApkInstaller {
 
-    override fun install(apkPath: String, expectedApk: NightlyUpdateApk): UpdateInstallResult {
+    override fun install(apkPath: String, expectedApk: UpdateApk): UpdateInstallResult {
         val apk = File(apkPath)
         if (!apk.isFile || !apk.canRead() || apk.length() != expectedApk.sizeBytes) {
             return UpdateInstallResult.ApkUnavailable

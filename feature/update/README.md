@@ -1,16 +1,17 @@
-# Nightly 更新的下载与安装边界
+# Stable / Nightly 更新的下载与安装边界
 
-更新发现和变更列表可使用用户选择的 GitHub 代理。发现入口为
-`https://github.com/eltavine/Duck-Detector-Refactoring/releases/download/update/update.json`。
+更新发现和变更列表可使用用户选择的 GitHub 代理。Stable 发现入口为
+`https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest/download/update.json`；
+Nightly 固定入口为 `https://github.com/eltavine/Duck-Detector-Refactoring/releases/download/update/update.json`。
 固定 `update` Release 仅保存这一份清单，其内容与选中的不可变归档清单逐字节一致。
-APK、SDK AAR 和归档清单存放在各自的 `nightly-yyyy-MM-dd-gitshortHash` 标签下；
-清单中的下载地址直接指向归档，标签日期和短哈希必须匹配 UTC 构建日期及完整提交。
+Nightly 的 APK、SDK AAR 和归档清单各自存放在 `nightly-yyyy-MM-dd-gitshortHash` 标签下；
+清单下载地址直接指向归档，标签日期和短哈希必须匹配 UTC 构建日期及完整提交。
 旧版应用使用的 `nightly` 入口已删除，需要从归档手动安装新版；Android 版本支持范围不变。
 
-下载前必须独立获取所选 APK 所属标签的官方 `update.json`，核对名称、官方 URL、大小及 SHA-256。
-该复核请求不经过代理，也不会在下载过程中改为信任已经滚动的入口。
-解析器保留旧清单格式的读取能力，但发现入口不回退到已删除的标签。
-
+下载前，Nightly 必须直连所选 APK 所属标签的官方 `update.json`；Stable 独立获取官方
+Stable 通道清单，并要求 APK 属于清单声明的版本标签。解析器要求通道一致，下载器核对
+APK 的名称、官方 URL、大小及 SHA-256。复核请求不使用代理，也不会在下载过程中改为
+信任已经滚动的 Nightly 入口。解析器保留旧清单格式的读取能力，发现入口不回退到已删除的标签。
 官方请求失败、清单格式无效或元数据不一致时，下载失败；不会仅凭代理提供的摘要继续。
 这仍依赖系统 TLS 信任、GitHub 及发布账户的安全，不提供对发布账户失陷的保证。
 官方地址无法直连时，应用内下载也无法完成，即使代理本身可达。
@@ -22,7 +23,7 @@ APK、SDK AAR 和归档清单存放在各自的 `nightly-yyyy-MM-dd-gitshortHash
 和读取循环间检查，正在进行的阻塞网络读取仍受读取超时限制。
 
 进度的分母始终为清单大小，中间回调间隔至少 250 ms；成功验证并重命名后报告最终进度。
-下载请求、进度和就绪路径绑定完整清单快照。更新清单改变时取消旧请求，并通过请求代次
+下载请求、进度和就绪路径绑定完整清单快照及通道。切换通道或更新清单改变时取消旧请求，并通过请求代次
 丢弃迟到回调；StateFlow 原子更新保留并发发生的对话框关闭操作。
 
 安装使用应用私有缓存子目录的 FileProvider，只授予临时读取权限。Android 8 / API 26
@@ -47,5 +48,5 @@ APK、SDK AAR 和归档清单存放在各自的 `nightly-yyyy-MM-dd-gitshortHash
 下载测试使用本地 HTTP 服务模拟响应，注入连接适配函数；生产入口仍要求 HTTPS。
 测试覆盖固定入口与归档元数据一致性、旧清单兼容、标签日期/提交验证、归档独立复核、摘要与长度不匹配、官方元数据不一致或不可用、固定大小上限、分块响应超量、
 HTTPS 重定向与降级拒绝、进度节流、取消清理及重命名失败。
-状态测试覆盖缓存失效后的重试、授权设置后保留下载、迟到回调、乱序清单检查、
+状态测试覆盖通道切换后的迟到进度/下载结果、Stable 清单独立复核、缓存失效后的重试、授权设置后保留下载、迟到回调、乱序清单检查、
 关闭对话框、重复点击及下载异常恢复。系统设置与安装器交互仍需要设备验证。

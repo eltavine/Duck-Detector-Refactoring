@@ -18,18 +18,19 @@
 package com.eltavine.duckdetector.features.update.data
 
 import com.eltavine.duckdetector.features.update.domain.MAX_UPDATE_APK_BYTES
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateApk
+import com.eltavine.duckdetector.features.update.domain.UpdateApk
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
 import com.sun.net.httpserver.HttpServer
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.HttpURLConnection
-import java.net.URL
 import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.URL
+import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
-import java.security.MessageDigest
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -71,7 +72,7 @@ class HttpUpdateApkDownloaderTest {
         val apk = apk(size = payload.size.toLong(), sha256 = sha256(payload))
         var lastProgress: UpdateDownloadProgress? = null
 
-        val result = downloader(apk).download(apk, url()) { lastProgress = it }
+        val result = downloader(apk).download(apk, url(), UpdateChannel.NIGHTLY) { lastProgress = it }
 
         val ready = result as UpdateDownloadResult.Ready
         assertEquals(File(downloadDirectory, "${apk.sha256}.apk").absolutePath, ready.apkPath)
@@ -83,7 +84,7 @@ class HttpUpdateApkDownloaderTest {
     fun `a mismatched sha256 is rejected and nothing is kept`() = runTest {
         val apk = apk(size = payload.size.toLong(), sha256 = "0".repeat(64))
 
-        val result = downloader(apk).download(apk, url()) {}
+        val result = downloader(apk).download(apk, url(), UpdateChannel.NIGHTLY) {}
 
         assertEquals(UpdateDownloadResult.Failed, result)
         assertTrue(downloadDirectory.listFiles().orEmpty().isEmpty())
@@ -93,7 +94,7 @@ class HttpUpdateApkDownloaderTest {
     fun `a mismatched size is rejected`() = runTest {
         val apk = apk(size = payload.size + 1L, sha256 = sha256(payload))
 
-        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url()) {})
+        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url(), UpdateChannel.NIGHTLY) {})
     }
 
     @Test
@@ -104,7 +105,7 @@ class HttpUpdateApkDownloaderTest {
         }
         val apk = apk(size = 8L, sha256 = sha256(payload))
         val progress = mutableListOf<UpdateDownloadProgress>()
-        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/chunked")) { progress += it })
+        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/chunked"), UpdateChannel.NIGHTLY) { progress += it })
         assertTrue(progress.all { it.bytesRead <= apk.sizeBytes && it.totalBytes == apk.sizeBytes })
         assertTrue(downloadDirectory.listFiles().orEmpty().isEmpty())
     }
@@ -113,8 +114,8 @@ class HttpUpdateApkDownloaderTest {
     fun `untrusted digest and unavailable official metadata fail before the apk request`() = runTest {
         val apk = apk(size = payload.size.toLong(), sha256 = sha256(payload))
         val forged = apk.copy(sha256 = "f".repeat(64))
-        assertEquals(UpdateDownloadResult.Failed, downloader(forged, trustedApk = { apk }).download(forged, url()) {})
-        assertEquals(UpdateDownloadResult.Failed, downloader(apk, trustedApk = { throw IOException("offline") }).download(apk, url()) {})
+        assertEquals(UpdateDownloadResult.Failed, downloader(forged, trustedApk = { _, _ -> apk }).download(forged, url(), UpdateChannel.NIGHTLY) {})
+        assertEquals(UpdateDownloadResult.Failed, downloader(apk, trustedApk = { _, _ -> throw IOException("offline") }).download(apk, url(), UpdateChannel.NIGHTLY) {})
         assertEquals(0, apkRequests.get())
         assertTrue(downloadDirectory.listFiles().orEmpty().isEmpty())
     }
@@ -123,8 +124,8 @@ class HttpUpdateApkDownloaderTest {
     fun `manifest sizes above the fixed cap never fetch metadata or create files`() = runTest {
         val apk = apk(size = MAX_UPDATE_APK_BYTES + 1, sha256 = sha256(payload))
         var metadataFetched = false
-        val downloader = downloader(apk, trustedApk = { metadataFetched = true; apk })
-        assertEquals(UpdateDownloadResult.Failed, downloader.download(apk, url()) {})
+        val downloader = downloader(apk, trustedApk = { _, _ -> metadataFetched = true; apk })
+        assertEquals(UpdateDownloadResult.Failed, downloader.download(apk, url(), UpdateChannel.NIGHTLY) {})
         assertTrue(!metadataFetched)
         assertTrue(downloadDirectory.listFiles().orEmpty().isEmpty())
     }
@@ -138,7 +139,7 @@ class HttpUpdateApkDownloaderTest {
         }
         val apk = apk(bytes.size.toLong(), sha256(bytes))
         val progress = mutableListOf<UpdateDownloadProgress>()
-        val result = downloader(apk, nanoTime = { 0L }).download(apk, url("/large")) { progress += it }
+        val result = downloader(apk, nanoTime = { 0L }).download(apk, url("/large"), UpdateChannel.NIGHTLY) { progress += it }
         assertTrue(result is UpdateDownloadResult.Ready)
         assertEquals(listOf(0L, bytes.size.toLong()), progress.map { it.bytesRead })
     }
@@ -153,7 +154,7 @@ class HttpUpdateApkDownloaderTest {
         val apk = apk(bytes.size.toLong(), sha256(bytes))
         var clock = 0L
         val intermediateTimes = mutableListOf<Long>()
-        val result = downloader(apk, nanoTime = { clock += 100_000_000L; clock }).download(apk, url("/paced")) {
+        val result = downloader(apk, nanoTime = { clock += 100_000_000L; clock }).download(apk, url("/paced"), UpdateChannel.NIGHTLY) {
             if (it.bytesRead in 1 until apk.sizeBytes) intermediateTimes += clock
         }
         assertTrue(result is UpdateDownloadResult.Ready)
@@ -173,8 +174,8 @@ class HttpUpdateApkDownloaderTest {
             exchange.close()
         }
         val apk = apk(payload.size.toLong(), sha256(payload))
-        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/partial")) {})
-        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/loop")) {})
+        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/partial"), UpdateChannel.NIGHTLY) {})
+        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/loop"), UpdateChannel.NIGHTLY) {})
         assertTrue(downloadDirectory.listFiles().orEmpty().isEmpty())
     }
 
@@ -182,7 +183,7 @@ class HttpUpdateApkDownloaderTest {
     fun `cancellation cleans the partial file and propagates`() = runTest {
         val apk = apk(payload.size.toLong(), sha256(payload))
         try {
-            downloader(apk).download(apk, url()) { throw CancellationException("cancelled") }
+            downloader(apk).download(apk, url(), UpdateChannel.NIGHTLY) { throw CancellationException("cancelled") }
             throw AssertionError("Expected cancellation")
         } catch (_: CancellationException) {
             assertTrue(downloadDirectory.listFiles().orEmpty().isEmpty())
@@ -194,7 +195,7 @@ class HttpUpdateApkDownloaderTest {
         val apk = apk(payload.size.toLong(), sha256(payload))
         val target = File(downloadDirectory, "${apk.sha256}.apk").apply { mkdirs() }
         File(target, "occupied").writeText("keep")
-        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url()) {})
+        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url(), UpdateChannel.NIGHTLY) {})
         assertEquals(listOf(target.name), downloadDirectory.listFiles().orEmpty().map { it.name })
     }
 
@@ -211,15 +212,25 @@ class HttpUpdateApkDownloaderTest {
             exchange.close()
         }
         val apk = apk(payload.size.toLong(), sha256(payload))
-        assertTrue(downloader(apk).download(apk, url("/redirect")) {} is UpdateDownloadResult.Ready)
-        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/downgrade")) {})
+        assertTrue(downloader(apk).download(apk, url("/redirect"), UpdateChannel.NIGHTLY) {} is UpdateDownloadResult.Ready)
+        assertEquals(UpdateDownloadResult.Failed, downloader(apk).download(apk, url("/downgrade"), UpdateChannel.NIGHTLY) {})
+    }
+
+    @Test
+    fun `stable downloads independently verify the stable metadata`() = runTest {
+        val apk = apk(payload.size.toLong(), sha256(payload))
+        var requestedChannel: UpdateChannel? = null
+        val result = downloader(apk, trustedApk = { _, channel -> requestedChannel = channel; apk })
+            .download(apk, url(), UpdateChannel.STABLE) {}
+        assertTrue(result is UpdateDownloadResult.Ready)
+        assertEquals(UpdateChannel.STABLE, requestedChannel)
     }
 
     private fun url(path: String = "/apk"): String = "https://github.com$path"
 
     private fun downloader(
-        apk: NightlyUpdateApk,
-        trustedApk: (NightlyUpdateApk) -> NightlyUpdateApk = { apk },
+        apk: UpdateApk,
+        trustedApk: (UpdateApk, UpdateChannel) -> UpdateApk = { _, _ -> apk },
         nanoTime: () -> Long = System::nanoTime,
     ) = HttpUpdateApkDownloader(
         downloadDirectory,
@@ -228,7 +239,7 @@ class HttpUpdateApkDownloaderTest {
         nanoTime = nanoTime,
     )
 
-    private fun apk(size: Long, sha256: String) = NightlyUpdateApk(
+    private fun apk(size: Long, sha256: String) = UpdateApk(
         name = "Duck.Detector-test.apk",
         downloadUrl = url(),
         sizeBytes = size,

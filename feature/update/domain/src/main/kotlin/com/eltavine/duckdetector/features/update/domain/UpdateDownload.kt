@@ -17,7 +17,7 @@
 
 package com.eltavine.duckdetector.features.update.domain
 
-/** Maximum accepted Nightly APK size, independent of remote metadata. */
+/** Maximum accepted update APK size, independent of remote metadata. */
 const val MAX_UPDATE_APK_BYTES: Long = 256L * 1024 * 1024
 
 /** Bytes transferred so far and the total the manifest advertised. */
@@ -56,13 +56,14 @@ sealed interface UpdateInstallResult {
  */
 fun interface UpdateApkDownloader {
     suspend fun download(
-        apk: NightlyUpdateApk,
+        apk: UpdateApk,
         downloadUrl: String,
+        channel: UpdateChannel,
         onProgress: (UpdateDownloadProgress) -> Unit,
     ): UpdateDownloadResult
 }
 
 /** Hands a downloaded APK to Android's package installer through a content URI. */
 fun interface UpdateApkInstaller {
-    fun install(apkPath: String, expectedApk: NightlyUpdateApk): UpdateInstallResult
+    fun install(apkPath: String, expectedApk: UpdateApk): UpdateInstallResult
 }

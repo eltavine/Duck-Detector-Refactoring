@@ -20,15 +20,17 @@ package com.eltavine.duckdetector.features.update.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateManifest
+import com.eltavine.duckdetector.features.update.domain.AvailableUpdate
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
 import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
+import com.eltavine.duckdetector.features.update.domain.UpdateChannelPreference
 import com.eltavine.duckdetector.features.update.domain.UpdateCheckResult
+import com.eltavine.duckdetector.features.update.domain.UpdateChecker
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
+import com.eltavine.duckdetector.features.update.domain.UpdateManifest
 import com.eltavine.duckdetector.features.update.presentation.UpdateCheckStatus
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadResolution
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadState
@@ -56,7 +58,9 @@ internal class SingleRunUpdateCheckGate : UpdateCheckGate {
 private object ProcessUpdateCheckGate : UpdateCheckGate by SingleRunUpdateCheckGate()
 
 class UpdateViewModel internal constructor(
-    private val repository: NightlyUpdateChecker,
+    private val repository: UpdateChecker,
+    private val channelPreference: UpdateChannelPreference,
+    buildChannel: UpdateChannel,
     private val currentVersionCode: Int,
     private val currentCommitSha: String,
     private val downloader: UpdateApkDownloader,
@@ -64,12 +68,37 @@ class UpdateViewModel internal constructor(
     private val automaticCheckGate: UpdateCheckGate = ProcessUpdateCheckGate,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(UpdateUiState())
+    private val _uiState = MutableStateFlow(UpdateUiState(channel = buildChannel))
     val uiState: StateFlow<UpdateUiState> = _uiState.asStateFlow()
     private var checkJob: Job? = null
     private var downloadJob: Job? = null
     private val downloadGeneration = AtomicLong()
     private var checkGeneration = 0L
+    private var channelChosenHere = false
+
+    init {
+        viewModelScope.launch {
+            val stored = channelPreference.read()
+            // A choice made while the stored channel loaded supersedes the stored value.
+            if (!channelChosenHere) {
+                _uiState.update { it.copy(channel = stored) }
+            }
+        }
+    }
+
+    /** Starts following [channel] and invalidates work owned by the previous channel. */
+    fun selectChannel(channel: UpdateChannel) {
+        if (channel == _uiState.value.channel) return
+        channelChosenHere = true
+        checkJob?.cancel()
+        val generation = ++checkGeneration
+        invalidateDownload()
+        _uiState.value = UpdateUiState(channel = channel, status = UpdateCheckStatus.CHECKING)
+        checkJob = viewModelScope.launch {
+            channelPreference.write(channel)
+            runCheck(channel, manual = true, generation = generation)
+        }
+    }
 
     fun checkAutomatically() {
         if (!automaticCheckGate.tryAcquire()) {
@@ -94,14 +123,16 @@ class UpdateViewModel internal constructor(
     suspend fun resolveDownload(): UpdateDownloadResolution {
         checkJob?.cancel()
         val generation = ++checkGeneration
+        val channel = _uiState.value.channel
         val displayedManifest = _uiState.value.availableUpdate?.manifest
         return try {
-            val result = repository.check(currentVersionCode, currentCommitSha)
+            val result = repository.check(channel, currentVersionCode, currentCommitSha)
             if (generation != checkGeneration) return UpdateDownloadResolution.Failed
             when (result) {
-                is UpdateCheckResult.Current -> {
+                is UpdateCheckResult.Current,
+                is UpdateCheckResult.Ahead -> {
                     invalidateDownload()
-                    _uiState.value = UpdateUiState(status = UpdateCheckStatus.CURRENT)
+                    acceptResult(channel, result)
                     UpdateDownloadResolution.Current
                 }
                 is UpdateCheckResult.Available -> {
@@ -178,9 +209,9 @@ class UpdateViewModel internal constructor(
         return result
     }
 
-    private suspend fun downloadApk(update: AvailableNightlyUpdate, generation: Long) {
+    private suspend fun downloadApk(update: AvailableUpdate, generation: Long) {
         val manifest = update.manifest
-        val result = downloader.download(manifest.apk, update.downloadUrl) { progress ->
+        val result = downloader.download(manifest.apk, update.downloadUrl, manifest.channel) { progress ->
             updateDownload(generation, manifest) {
                 if (it.download is UpdateDownloadState.Downloading) {
                     it.copy(download = UpdateDownloadState.Downloading(manifest, progress))
@@ -201,7 +232,7 @@ class UpdateViewModel internal constructor(
 
     private inline fun updateDownload(
         generation: Long,
-        manifest: NightlyUpdateManifest,
+        manifest: UpdateManifest,
         transform: (UpdateUiState) -> UpdateUiState,
     ) {
         _uiState.update {
@@ -219,7 +250,7 @@ class UpdateViewModel internal constructor(
         downloadJob = null
     }
 
-    private fun acceptUpdate(update: AvailableNightlyUpdate, preserveDismissal: Boolean = false) {
+    private fun acceptUpdate(update: AvailableUpdate, preserveDismissal: Boolean = false) {
         val unchanged = _uiState.value.availableUpdate?.manifest == update.manifest
         if (!unchanged) invalidateDownload()
         _uiState.update {
@@ -240,26 +271,50 @@ class UpdateViewModel internal constructor(
             it.copy(status = UpdateCheckStatus.CHECKING, isDialogVisible = false, download = UpdateDownloadState.Idle)
         }
         checkJob = viewModelScope.launch {
-            try {
-                val result = repository.check(currentVersionCode, currentCommitSha)
-                if (generation != checkGeneration) return@launch
-                when (result) {
-                    is UpdateCheckResult.Current -> _uiState.value = UpdateUiState(status = UpdateCheckStatus.CURRENT)
-                    is UpdateCheckResult.Available -> acceptUpdate(result.update)
-                }
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                if (generation == checkGeneration) {
-                    _uiState.value = UpdateUiState(status = if (manual) UpdateCheckStatus.FAILED else UpdateCheckStatus.IDLE)
-                }
+            val channel = if (channelChosenHere) _uiState.value.channel else channelPreference.read()
+            if (generation != checkGeneration) return@launch
+            _uiState.update { it.copy(channel = channel) }
+            runCheck(channel, manual, generation)
+        }
+    }
+
+    private suspend fun runCheck(channel: UpdateChannel, manual: Boolean, generation: Long) {
+        try {
+            val result = repository.check(channel, currentVersionCode, currentCommitSha)
+            if (generation == checkGeneration) acceptResult(channel, result)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            if (generation == checkGeneration) {
+                _uiState.value = UpdateUiState(
+                    channel = channel,
+                    status = if (manual) UpdateCheckStatus.FAILED else UpdateCheckStatus.IDLE,
+                )
             }
+        }
+    }
+
+    private fun acceptResult(channel: UpdateChannel, result: UpdateCheckResult) {
+        when (result) {
+            is UpdateCheckResult.Current -> _uiState.value = UpdateUiState(
+                channel = channel,
+                status = UpdateCheckStatus.CURRENT,
+                latestVersionName = result.manifest.versionName,
+            )
+            is UpdateCheckResult.Ahead -> _uiState.value = UpdateUiState(
+                channel = channel,
+                status = UpdateCheckStatus.AHEAD,
+                latestVersionName = result.manifest.versionName,
+            )
+            is UpdateCheckResult.Available -> acceptUpdate(result.update)
         }
     }
 
     companion object {
         fun factory(
-            createChecker: () -> NightlyUpdateChecker,
+            createChecker: () -> UpdateChecker,
+            createChannelPreference: () -> UpdateChannelPreference,
+            buildChannel: UpdateChannel,
             currentVersionCode: Int,
             currentCommitSha: String,
             downloader: UpdateApkDownloader,
@@ -270,6 +325,8 @@ class UpdateViewModel internal constructor(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return UpdateViewModel(
                         repository = createChecker(),
+                        channelPreference = createChannelPreference(),
+                        buildChannel = buildChannel,
                         currentVersionCode = currentVersionCode,
                         currentCommitSha = currentCommitSha,
                         downloader = downloader,
