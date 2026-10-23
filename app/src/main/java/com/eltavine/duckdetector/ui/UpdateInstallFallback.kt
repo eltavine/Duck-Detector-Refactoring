@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.ui
 
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
+import com.eltavine.duckdetector.features.update.domain.httpsUpdateDownloadUrlOrNull
 
 internal data class UpdateInstallFallbackResult(
     val copied: Boolean,
@@ -37,7 +38,7 @@ internal fun fallbackFromFailedLocalInstall(
     open: (String) -> Boolean,
 ): UpdateInstallFallbackResult? {
     if (result != UpdateInstallResult.Failed && result != UpdateInstallResult.ApkUnavailable) return null
-    val url = downloadUrl?.takeIf { it.startsWith("https://") && it.length > "https://".length }
+    val url = httpsUpdateDownloadUrlOrNull(downloadUrl)
         ?: return UpdateInstallFallbackResult(copied = false, browserOpened = false)
     val copied = runCatching { copy(url) }.getOrDefault(false)
     val opened = runCatching { open(url) }.getOrDefault(false)
