@@ -95,5 +95,9 @@ limitations under the License.
     <string name="update_download_failed">تعذّر تنزيل التحديث أو التحقق منه</string>
     <string name="update_install_permission_required">اسمح بالتثبيت من Duck Detector، ثم اضغط على تثبيت مرة أخرى</string>
     <string name="update_install_failed">تعذّر فتح برنامج التثبيت</string>
+    <string name="update_install_fallback_copied_opened">فشل التثبيت المحلي. تم نسخ رابط APK وفتحه في المتصفح.</string>
+    <string name="update_install_fallback_copied_only">فشل التثبيت المحلي. تم نسخ رابط APK، لكن تعذّر فتح المتصفح.</string>
+    <string name="update_install_fallback_opened_only">فشل التثبيت المحلي. فُتح رابط APK في المتصفح، لكن تعذّر نسخه.</string>
+    <string name="update_install_link_copied">تم نسخ رابط تنزيل APK</string>
     <string name="update_apk_unavailable">ملف التحديث الذي تم تنزيله غير متاح. أعد تنزيله</string>
 </resources>
