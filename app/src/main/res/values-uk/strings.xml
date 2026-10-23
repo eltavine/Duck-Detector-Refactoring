@@ -103,5 +103,9 @@ limitations under the License.
     <string name="update_download_failed">Не вдалося завантажити або перевірити оновлення</string>
     <string name="update_install_permission_required">Дозвольте встановлення з Duck Detector, а потім знову натисніть «Встановити»</string>
     <string name="update_install_failed">Не вдалося відкрити інсталятор</string>
+    <string name="update_install_fallback_copied_opened">Не вдалося встановити локально. URL APK скопійовано й відкрито у браузері.</string>
+    <string name="update_install_fallback_copied_only">Не вдалося встановити локально. URL APK скопійовано, але браузер не відкрився.</string>
+    <string name="update_install_fallback_opened_only">Не вдалося встановити локально. URL APK відкрито у браузері, але скопіювати його не вдалося.</string>
+    <string name="update_install_link_copied">Посилання на APK скопійовано</string>
     <string name="update_apk_unavailable">Завантажений файл оновлення недоступний. Завантажте його знову</string>
 </resources>
