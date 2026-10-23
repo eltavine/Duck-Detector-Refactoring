@@ -42,6 +42,10 @@ limitations under the License.
     <string name="update_download_failed">The update could not be downloaded or verified</string>
     <string name="update_install_permission_required">Allow installs from Duck Detector, then tap Install again</string>
     <string name="update_install_failed">Could not open the package installer</string>
+    <string name="update_install_fallback_copied_opened">Local installation failed. The APK URL was copied and opened in the browser.</string>
+    <string name="update_install_fallback_copied_only">Local installation failed. The APK URL was copied, but no browser could open it.</string>
+    <string name="update_install_fallback_opened_only">Local installation failed. The browser opened the APK URL, but copying failed.</string>
+    <string name="update_install_link_copied">APK download link copied</string>
     <string name="startup_review_label">Startup policy review</string>
     <string name="startup_preparing_title">Preparing startup</string>
     <string name="startup_preparing_detail">Loading agreement state before startup policy review.</string>
