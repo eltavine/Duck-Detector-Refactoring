@@ -95,5 +95,9 @@ limitations under the License.
     <string name="update_download_failed">無法下載或驗證更新</string>
     <string name="update_install_permission_required">請允許 Duck Detector 安裝應用程式，然後再次點選「安裝」</string>
     <string name="update_install_failed">無法開啟安裝程式</string>
+    <string name="update_install_fallback_copied_opened">本機安裝失敗，已複製 APK 下載連結並在瀏覽器中開啟。</string>
+    <string name="update_install_fallback_copied_only">本機安裝失敗，已複製 APK 下載連結，但無法開啟瀏覽器。</string>
+    <string name="update_install_fallback_opened_only">本機安裝失敗，已在瀏覽器中開啟 APK 下載連結，但複製失敗。</string>
+    <string name="update_install_link_copied">已複製 APK 下載連結</string>
     <string name="update_apk_unavailable">下載的更新檔案已失效，請重新下載</string>
 </resources>
