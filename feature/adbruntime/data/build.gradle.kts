@@ -26,6 +26,7 @@ android {
 dependencies {
     api(project(":core:detector"))
     implementation(project(":core:evidence"))
+    implementation(project(":core:native"))
     implementation(project(":capability:systemproperties:data"))
     implementation(project(":capability:systemproperties:domain"))
     api(project(":feature:adbruntime:domain"))

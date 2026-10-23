@@ -31,7 +31,10 @@ import com.eltavine.duckdetector.features.adbruntime.domain.AdbSocketPresence
 internal object AdbStatErrno {
     const val EPERM = 1
     const val ENOENT = 2
+    const val EINTR = 4
+    const val EAGAIN = 11
     const val EACCES = 13
+    const val EINPROGRESS = 115
     const val ECONNREFUSED = 111
 }
 
@@ -62,10 +65,18 @@ internal fun classifyInitSocketStat(
 ): AdbInitSocketObservation = when {
     directoryErrno == null || targetErrno == null || controlErrno == null ->
         AdbInitSocketObservation.UNKNOWN
-    directoryErrno != 0 -> AdbInitSocketObservation.DIRECTORY_DENIED
+    directoryErrno != 0 -> if (directoryErrno == AdbStatErrno.EACCES || directoryErrno == AdbStatErrno.EPERM) {
+        AdbInitSocketObservation.DIRECTORY_DENIED
+    } else {
+        AdbInitSocketObservation.UNKNOWN
+    }
     targetErrno == 0 -> AdbInitSocketObservation.PRESENT
-    // The control must fail with ENOENT for the target result to mean anything.
-    controlErrno != AdbStatErrno.ENOENT -> AdbInitSocketObservation.DIRECTORY_DENIED
+    // Before inferring a denied inode, the control path must fail with ENOENT.
+    controlErrno != AdbStatErrno.ENOENT -> if (controlErrno == AdbStatErrno.EACCES || controlErrno == AdbStatErrno.EPERM) {
+        AdbInitSocketObservation.DIRECTORY_DENIED
+    } else {
+        AdbInitSocketObservation.UNKNOWN
+    }
     targetErrno == AdbStatErrno.ENOENT -> AdbInitSocketObservation.ABSENT
     targetErrno == AdbStatErrno.EACCES || targetErrno == AdbStatErrno.EPERM ->
         AdbInitSocketObservation.PRESENT_DENIED
@@ -73,17 +84,23 @@ internal fun classifyInitSocketStat(
 }
 
 /**
- * Directory listing resolves presence without any attribute access, so it takes precedence when the
- * kernel allows readdir. The stat classification stays as the fallback for a policy that hides the
- * directory contents but not the search permission.
+ * A successful listing is a separate, earlier observation, not proof that a subsequent stat()
+ * failure was caused by the inode's SELinux label. Conflicting evidence may be a service restart:
+ * never turn such a transition into a stable present/absent or label-denied result.
  */
 internal fun resolveInitSocketPresence(
     listedNames: Set<String>?,
     statObservation: AdbInitSocketObservation,
 ): AdbInitSocketObservation = when {
     listedNames == null -> statObservation
-    "adbd" in listedNames -> AdbInitSocketObservation.PRESENT
-    else -> AdbInitSocketObservation.ABSENT
+    "adbd" in listedNames -> when (statObservation) {
+        AdbInitSocketObservation.PRESENT, AdbInitSocketObservation.PRESENT_DENIED -> statObservation
+        else -> AdbInitSocketObservation.UNKNOWN
+    }
+    else -> when (statObservation) {
+        AdbInitSocketObservation.ABSENT -> AdbInitSocketObservation.ABSENT
+        else -> AdbInitSocketObservation.UNKNOWN
+    }
 }
 
 internal object AdbInitSocketProbe {
@@ -100,21 +117,13 @@ internal object AdbInitSocketProbe {
         val controlErrno = statErrno(control)
         val statObservation = classifyInitSocketStat(directoryErrno, targetErrno, controlErrno)
         val observation = resolveInitSocketPresence(listed, statObservation)
-        val attributesVisible = targetErrno == 0
-        val detail = "listing=${if (listed == null) "denied" else "readable"}" +
+        val detail = "listing=${if (listed == null) "unavailable" else "readable"}" +
             ", directory=${errnoLabel(directoryErrno)}, socket=${errnoLabel(targetErrno)}" +
             ", control=${errnoLabel(controlErrno)}"
         return when (observation) {
             AdbInitSocketObservation.PRESENT -> AdbInitSocketSnapshot(
-                AdbProbeState.OBSERVED,
-                if (attributesVisible) AdbSocketPresence.PRESENT else AdbSocketPresence.PRESENT_DENIED,
-                (if (attributesVisible) {
-                    "The socket name is listed and stat($ADBD_PATH) succeeded, so this process can read " +
-                        "its attributes. "
-                } else {
-                    "The socket name is listed and stat($ADBD_PATH) was refused, so the inode exists " +
-                        "and its label hides the attributes. "
-                }) + detail,
+                AdbProbeState.OBSERVED, AdbSocketPresence.PRESENT,
+                "stat($ADBD_PATH) succeeded, confirming the socket path was resolvable. " + detail,
             )
 
             AdbInitSocketObservation.PRESENT_DENIED -> AdbInitSocketSnapshot(

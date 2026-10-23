@@ -48,6 +48,9 @@ internal fun classifyAbstractConnect(errno: Int?): AdbProbeState = when (errno) 
     // The LSM check runs after the name and type matched, so a denial proves the listener exists.
     AdbStatErrno.EACCES, AdbStatErrno.EPERM -> AdbProbeState.OBSERVED
     AdbStatErrno.ECONNREFUSED, AdbStatErrno.ENOENT -> AdbProbeState.NOT_OBSERVED
+    // Nonblocking connect can return EAGAIN when the listen backlog is full; it is not absence.
+    AdbStatErrno.EAGAIN, AdbStatErrno.EINPROGRESS, AdbStatErrno.EINTR ->
+        AdbProbeState.UNAVAILABLE
     else -> AdbProbeState.UNAVAILABLE
 }
 

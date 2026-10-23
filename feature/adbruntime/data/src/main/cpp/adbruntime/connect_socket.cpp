@@ -54,23 +54,22 @@ bool build_address(const char *name, const size_t length, const bool abstract_na
     return true;
 }
 
-// One connect() and one close(). No bytes are written, so no protocol handshake starts. A listener
-// that matches answers EACCES from SELinux before adbd ever accepts, and a missing one answers
-// ECONNREFUSED, which is the whole presence oracle (jni 0 means the connect succeeded).
+// One nonblocking connect() and one close(); no protocol bytes are sent. A matching listener can
+// return EACCES from SELinux; a missing listener returns ECONNREFUSED. A full listen backlog can
+// return EAGAIN rather than blocking the scan, and callers classify it as unavailable.
 jint connect_error(const char *name, const size_t length, const bool abstract_name) {
     sockaddr_un address{};
     socklen_t address_length = 0;
     if (!build_address(name, length, abstract_name, address, address_length)) {
         return EINVAL;
     }
-    const int fd = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+    const int fd = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
     if (fd < 0) {
         return errno;
     }
-    int result;
-    do {
-        result = connect(fd, reinterpret_cast<const sockaddr *>(&address), address_length);
-    } while (result != 0 && errno == EINTR);
+    // Do not retry EINTR: the connection may have started, and repeated retries can
+    // defeat the scan's cancellation boundary. Unknown errno values stay unavailable.
+    const int result = connect(fd, reinterpret_cast<const sockaddr *>(&address), address_length);
     const int error = result == 0 ? 0 : errno;
     close(fd);
     return error;

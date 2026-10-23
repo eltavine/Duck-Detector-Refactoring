@@ -82,7 +82,7 @@ class AdbRuntimeRepository(
             mdnsSamples = mdnsSamples,
             probed = probed,
             unavailableReason = if (probed) null else {
-                "Settings, USB state, properties and mDNS were all unavailable from this app process."
+                "Settings, USB state, properties, socket probes and mDNS were all unavailable from this app process."
             },
         )
     }
@@ -96,6 +96,8 @@ class AdbRuntimeRepository(
             usb.state == AdbProbeState.NOT_OBSERVED ||
             initSocket.state == AdbProbeState.OBSERVED ||
             initSocket.state == AdbProbeState.NOT_OBSERVED ||
+            jdwpSocket.abstract == AdbProbeState.OBSERVED ||
+            jdwpSocket.abstract == AdbProbeState.NOT_OBSERVED ||
             usbDebuggingEnabled != null ||
             wirelessDebuggingEnabled != null
 

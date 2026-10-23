@@ -42,6 +42,13 @@ class AdbJdwpSocketProbeTest {
     }
 
     @Test
+    fun nonblockingConnectIsIndeterminateWhenTheBacklogIsFullOrInterrupted() {
+        for (errno in listOf(AdbStatErrno.EAGAIN, AdbStatErrno.EINPROGRESS, AdbStatErrno.EINTR)) {
+            assertEquals(AdbProbeState.UNAVAILABLE, classifyAbstractConnect(errno))
+        }
+    }
+
+    @Test
     fun unexpectedResultsStayUnknown() {
         assertEquals(AdbProbeState.UNAVAILABLE, classifyAbstractConnect(null))
         assertEquals(AdbProbeState.UNAVAILABLE, classifyAbstractConnect(95))

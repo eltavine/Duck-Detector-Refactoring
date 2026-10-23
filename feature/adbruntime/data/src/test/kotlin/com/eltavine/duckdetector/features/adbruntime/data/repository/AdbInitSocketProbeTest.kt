@@ -58,7 +58,7 @@ class AdbInitSocketProbeTest {
     @Test
     fun unexpectedResultsAreUnknownRatherThanAbsent() {
         assertEquals(
-            AdbInitSocketObservation.DIRECTORY_DENIED,
+            AdbInitSocketObservation.UNKNOWN,
             classifyInitSocketStat(0, AdbStatErrno.ENOENT, 0),
         )
         assertEquals(
@@ -77,14 +77,32 @@ class AdbInitSocketProbeTest {
     }
 
     @Test
-    fun listingTakesPrecedenceOverTheStatFallback() {
+    fun listingAndStatMustAgreeToAvoidFalsePresenceAndFalseAbsence() {
         assertEquals(
             AdbInitSocketObservation.PRESENT,
-            resolveInitSocketPresence(setOf("adbd", "logd"), AdbInitSocketObservation.UNKNOWN),
+            resolveInitSocketPresence(setOf("adbd", "logd"), AdbInitSocketObservation.PRESENT),
+        )
+        assertEquals(
+            AdbInitSocketObservation.PRESENT_DENIED,
+            resolveInitSocketPresence(setOf("adbd"), AdbInitSocketObservation.PRESENT_DENIED),
+        )
+        // The service can disappear between readdir and stat.
+        assertEquals(
+            AdbInitSocketObservation.UNKNOWN,
+            resolveInitSocketPresence(setOf("adbd", "logd"), AdbInitSocketObservation.ABSENT),
+        )
+        assertEquals(
+            AdbInitSocketObservation.UNKNOWN,
+            resolveInitSocketPresence(setOf("adbd"), AdbInitSocketObservation.UNKNOWN),
+        )
+        // A new socket can appear after a listing where it was absent.
+        assertEquals(
+            AdbInitSocketObservation.UNKNOWN,
+            resolveInitSocketPresence(setOf("logd", "mdns"), AdbInitSocketObservation.PRESENT_DENIED),
         )
         assertEquals(
             AdbInitSocketObservation.ABSENT,
-            resolveInitSocketPresence(setOf("logd", "mdns"), AdbInitSocketObservation.PRESENT_DENIED),
+            resolveInitSocketPresence(setOf("logd", "mdns"), AdbInitSocketObservation.ABSENT),
         )
         assertEquals(
             AdbInitSocketObservation.PRESENT_DENIED,
@@ -93,6 +111,18 @@ class AdbInitSocketProbeTest {
         assertEquals(
             AdbInitSocketObservation.ABSENT,
             resolveInitSocketPresence(null, AdbInitSocketObservation.ABSENT),
+        )
+    }
+
+    @Test
+    fun unexpectedDirectoryErrorsAreNotPermissionDenials() {
+        assertEquals(
+            AdbInitSocketObservation.UNKNOWN,
+            classifyInitSocketStat(5, AdbStatErrno.ENOENT, AdbStatErrno.ENOENT),
+        )
+        assertEquals(
+            AdbInitSocketObservation.UNKNOWN,
+            classifyInitSocketStat(0, AdbStatErrno.EACCES, 5),
         )
     }
 

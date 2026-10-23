@@ -184,6 +184,9 @@ class AdbRuntimeCardModelMapper {
         }
         val sample = report.samples.lastOrNull()
         val protocol = report.latestMdns.protocol
+        val protocolContradiction = report.findings().any {
+            it.kind == AdbFindingKind.INIT_STOPPED_WITH_ADB_PROTOCOL
+        }
         return listOf(
             infoRow("Settings and policy", if (sample == null) "Unavailable" else "Context collected",
                 "Debugging restrictions and Test Harness Mode qualify settings; settings and USB gadget state are not hard contradictions against init."),
@@ -192,11 +195,11 @@ class AdbRuntimeCardModelMapper {
             sample?.let(::usbRuntimeRow) ?: infoRow("USB runtime", "Unavailable"),
             mdnsRow(report.latestMdns),
             AdbRuntimeDetailRowModel("ADB protocol vs init", when {
-                report.findings().isNotEmpty() -> "Persistent contradiction"
+                protocolContradiction -> "Persistent contradiction"
                 protocol.confirmed -> "No contradiction established"
                 else -> "Not established"
             }, when {
-                report.findings().isNotEmpty() -> DetectorStatus.danger()
+                protocolContradiction -> DetectorStatus.danger()
                 protocol.state == AdbProbeState.UNAVAILABLE -> DetectorStatus.info(InfoKind.ERROR)
                 else -> DetectorStatus.info(InfoKind.SUPPORT)
             },

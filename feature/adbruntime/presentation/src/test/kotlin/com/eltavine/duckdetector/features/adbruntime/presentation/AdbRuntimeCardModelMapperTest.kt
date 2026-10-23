@@ -132,6 +132,10 @@ class AdbRuntimeCardModelMapperTest {
         assertEquals("ADB init socket vs init", finding.label)
         assertEquals(DetectorStatus.danger(), finding.status)
         assertTrue(finding.detail.orEmpty().contains("init.svc.adbd"))
+        // Socket-only contradictions must not escalate the protocol-specific method.
+        val protocolMethod = model.methodRows.single { it.label == "ADB protocol vs init" }
+        assertEquals("Not established", protocolMethod.value)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), protocolMethod.status)
     }
 
     @Test
