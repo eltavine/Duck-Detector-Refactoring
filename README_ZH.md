@@ -1,3 +1,14 @@
+> [!IMPORTANT]
+> **为什么需要 Duck Detector？**
+>
+> Duck Detector 是一款类似 Momo 的 Android 设备环境检测工具。
+>
+> 虽然过度关注设备环境是否「正常」可能有些魔怔，但不可否认，部分应用与服务确实会依据设备完整性、系统环境及其他风险信号区别对待用户。
+>
+> 这些差异可能表现为额外的身份验证、功能限制、服务拒绝，甚至不透明的风险控制。您未必会收到明确通知，也不一定知道自己的设备为何受到区别对待。
+>
+> **Duck Detector 希望让这些原本不透明的设备环境信号变得可见。** 我们提供检测结果与相关证据，而非替第三方应用判断您的设备是否值得信任。
+
 <p align="center">
   <img src="app/src/main/ic_launcher-playstore.png" alt="DuckDetector 标志" width="128">
 </p>
