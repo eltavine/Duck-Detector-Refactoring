@@ -358,7 +358,7 @@ internal fun AppReadyShell(
                                         open = { url -> openExternalUri(context, url) },
                                     )
                                     val message = when {
-                                        fallback?.copied == true && fallback.browserOpened -> fallbackCopiedOpenedMessage
+                                        fallback?.let { it.copied && it.browserOpened } == true -> fallbackCopiedOpenedMessage
                                         fallback?.copied == true -> fallbackCopiedOnlyMessage
                                         fallback?.browserOpened == true -> fallbackOpenedOnlyMessage
                                         installResult == UpdateInstallResult.ApkUnavailable -> updateApkUnavailableMessage
