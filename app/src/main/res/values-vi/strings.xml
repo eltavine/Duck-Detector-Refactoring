@@ -95,5 +95,9 @@ limitations under the License.
     <string name="update_download_failed">Không thể tải xuống hoặc xác minh bản cập nhật</string>
     <string name="update_install_permission_required">Cho phép cài đặt từ Duck Detector, rồi nhấn Cài đặt lần nữa</string>
     <string name="update_install_failed">Không thể mở trình cài đặt</string>
+    <string name="update_install_fallback_copied_opened">Cài đặt cục bộ thất bại. Đã sao chép URL APK và mở bằng trình duyệt.</string>
+    <string name="update_install_fallback_copied_only">Cài đặt cục bộ thất bại. Đã sao chép URL APK nhưng không thể mở trình duyệt.</string>
+    <string name="update_install_fallback_opened_only">Cài đặt cục bộ thất bại. Đã mở URL APK bằng trình duyệt nhưng không sao chép được.</string>
+    <string name="update_install_link_copied">Đã sao chép liên kết tải APK</string>
     <string name="update_apk_unavailable">Tệp cập nhật đã tải xuống không còn hợp lệ. Hãy tải xuống lại</string>
 </resources>
