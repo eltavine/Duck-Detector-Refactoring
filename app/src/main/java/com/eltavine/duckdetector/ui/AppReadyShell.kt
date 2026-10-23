@@ -77,6 +77,7 @@ import com.eltavine.duckdetector.core.navigation.DuckNavHost
 import com.eltavine.duckdetector.core.navigation.DuckRoute
 import com.eltavine.duckdetector.core.navigation.rememberDuckRoutes
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
+import com.eltavine.duckdetector.core.ui.copyPlainTextToClipboard
 import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardUiState
 import com.eltavine.duckdetector.features.dashboard.presentation.model.buildDashboardFindings
@@ -126,6 +127,10 @@ internal fun AppReadyShell(
     val updateInstallPermissionMessage = stringResource(R.string.update_install_permission_required)
     val updateApkUnavailableMessage = stringResource(R.string.update_apk_unavailable)
     val updateInstallFailedMessage = stringResource(R.string.update_install_failed)
+    val fallbackCopiedOpenedMessage = stringResource(R.string.update_install_fallback_copied_opened)
+    val fallbackCopiedOnlyMessage = stringResource(R.string.update_install_fallback_copied_only)
+    val fallbackOpenedOnlyMessage = stringResource(R.string.update_install_fallback_opened_only)
+    val fallbackCopiedConfirmation = stringResource(R.string.update_install_link_copied)
     val scope = rememberCoroutineScope()
     val notifier = remember(appContext) { ScanProgressNotifier(appContext) }
     val updateFactory = remember(context) { updateViewModelFactory(context) }
@@ -330,24 +335,37 @@ internal fun AppReadyShell(
                 onConfirm = {
                     when (updateUiState.download) {
                         is UpdateDownloadState.Ready -> {
-                            when (updateViewModel.installDownloaded()) {
+                            when (val installResult = updateViewModel.installDownloaded()) {
                                 UpdateInstallResult.PermissionRequired -> Toast.makeText(
                                     context,
                                     updateInstallPermissionMessage,
                                     Toast.LENGTH_LONG,
                                 ).show()
 
-                                UpdateInstallResult.ApkUnavailable -> Toast.makeText(
-                                    context,
-                                    updateApkUnavailableMessage,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-
-                                UpdateInstallResult.Failed -> Toast.makeText(
-                                    context,
-                                    updateInstallFailedMessage,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                                UpdateInstallResult.ApkUnavailable,
+                                UpdateInstallResult.Failed -> {
+                                    val fallback = fallbackFromFailedLocalInstall(
+                                        result = installResult,
+                                        downloadUrl = updateUiState.availableUpdate?.downloadUrl,
+                                        copy = { url ->
+                                            copyPlainTextToClipboard(
+                                                context,
+                                                "Duck Detector APK",
+                                                url,
+                                                fallbackCopiedConfirmation,
+                                            )
+                                        },
+                                        open = { url -> openExternalUri(context, url) },
+                                    )
+                                    val message = when {
+                                        fallback?.copied == true && fallback.browserOpened -> fallbackCopiedOpenedMessage
+                                        fallback?.copied == true -> fallbackCopiedOnlyMessage
+                                        fallback?.browserOpened == true -> fallbackOpenedOnlyMessage
+                                        installResult == UpdateInstallResult.ApkUnavailable -> updateApkUnavailableMessage
+                                        else -> updateInstallFailedMessage
+                                    }
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                }
 
                                 UpdateInstallResult.Launched -> Unit
                             }
