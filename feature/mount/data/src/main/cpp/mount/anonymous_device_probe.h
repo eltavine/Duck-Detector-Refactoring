@@ -11,6 +11,7 @@ namespace duckdetector::mount::detail {
         Unavailable,
         Unsupported,
         Inconclusive,
+        Partial,
         Observed,
         NoGaps,
     };

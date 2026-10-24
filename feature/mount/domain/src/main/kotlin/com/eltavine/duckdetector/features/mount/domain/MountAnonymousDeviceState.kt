@@ -10,6 +10,7 @@ enum class MountAnonymousDeviceState(
     UNAVAILABLE("Unavailable", true),
     UNSUPPORTED("Unsupported", true),
     INCONCLUSIVE("Inconclusive", true),
+    PARTIAL("Partial", true),
     OBSERVED("Gaps observed", false),
     NO_GAPS("No gaps observed", false),
 }

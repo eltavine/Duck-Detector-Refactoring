@@ -74,6 +74,14 @@ open class MountNativeBridge(
                 }
             }
 
+        if (snapshot.anonymousDeviceState != MountAnonymousDeviceState.NOT_COLLECTED &&
+            snapshot.anonymousDeviceDetail.isBlank()
+        ) {
+            snapshot = snapshot.copy(
+                anonymousDeviceState = MountAnonymousDeviceState.UNAVAILABLE,
+                anonymousDeviceDetail = "The native anonymous-device result omitted its diagnostic detail.",
+            )
+        }
         return snapshot.copy(findings = findings)
     }
 
@@ -87,6 +95,7 @@ open class MountNativeBridge(
                     "UNAVAILABLE" -> MountAnonymousDeviceState.UNAVAILABLE
                     "UNSUPPORTED" -> MountAnonymousDeviceState.UNSUPPORTED
                     "INCONCLUSIVE" -> MountAnonymousDeviceState.INCONCLUSIVE
+                    "PARTIAL" -> MountAnonymousDeviceState.PARTIAL
                     "OBSERVED" -> MountAnonymousDeviceState.OBSERVED
                     "NO_GAPS" -> MountAnonymousDeviceState.NO_GAPS
                     else -> MountAnonymousDeviceState.NOT_COLLECTED

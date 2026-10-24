@@ -96,6 +96,7 @@ namespace duckdetector::mount::detail {
                     "Anchor order is not usable: " + floor.path + "=0:" + std::to_string(floor.minor) +
                     ", " + ceiling.path + "=0:" + std::to_string(ceiling.minor) + "."};
         }
+        const Anchor fuseCeiling = ceiling;
         bool appBoundary = false;
         size_t overlays = 0;
         for (const auto &entry: entries) {
@@ -114,8 +115,11 @@ namespace duckdetector::mount::detail {
         }
         std::string detail = "Window: " + floor.path + "=0:" + std::to_string(floor.minor) +
                 " .. " + ceiling.path + "=0:" + std::to_string(ceiling.minor) +
-                "; visible unique devices=" + std::to_string(visible.size()) + ". ";
-        if (appBoundary) detail += "Window stops before app-private tmpfs churn. ";
+                "; visible unique devices=" + std::to_string(visible.size()) + ". Only interior intervals between visible devices are compared. ";
+        if (appBoundary) {
+            detail += "Window stops before app-private tmpfs churn; coverage is partial. FUSE ceiling: " +
+                    fuseCeiling.path + "=0:" + std::to_string(fuseCeiling.minor) + ". ";
+        }
         if (visible.size() < 2) {
             return {AnonymousDeviceState::Inconclusive, detail + "Too few interior devices to compare."};
         }
@@ -148,6 +152,7 @@ namespace duckdetector::mount::detail {
                   "These are non-atomic observations, not proof of root or Vector; bind mounts "
                   "reuse a superblock and may leave no additional anonymous device number.";
         return {overlays > 0 ? AnonymousDeviceState::Inconclusive :
+                appBoundary ? AnonymousDeviceState::Partial :
                 gaps > 0 ? AnonymousDeviceState::Observed : AnonymousDeviceState::NoGaps, detail};
     }
 
@@ -156,6 +161,7 @@ namespace duckdetector::mount::detail {
             case AnonymousDeviceState::Unavailable: return "UNAVAILABLE";
             case AnonymousDeviceState::Unsupported: return "UNSUPPORTED";
             case AnonymousDeviceState::Inconclusive: return "INCONCLUSIVE";
+            case AnonymousDeviceState::Partial: return "PARTIAL";
             case AnonymousDeviceState::Observed: return "OBSERVED";
             case AnonymousDeviceState::NoGaps: return "NO_GAPS";
         }

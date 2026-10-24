@@ -80,8 +80,6 @@ namespace duckdetector::mount {
         detect_mountinfo(snapshot, mountInfo, dedupe);
         snapshot.anonymousDevices = observe_anonymous_devices(
                 mountInfo, mountInfoReadable && mountInfoComplete, externalStorageRoot);
-        add_finding(snapshot, dedupe, "CONSISTENCY", "INFO", "Anonymous device minors",
-                    anonymous_device_state_key(snapshot.anonymousDevices.state), snapshot.anonymousDevices.detail);
         detect_namespace(snapshot, dedupe);
         detect_filesystems(snapshot, mounts, dedupe);
         detect_inconsistent_mount(snapshot, mounts, dedupe);

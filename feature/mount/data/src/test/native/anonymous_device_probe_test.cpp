@@ -80,8 +80,12 @@ int main() {
     assert(observe({entry(31), entry(33, "/product", "overlay")}).state == AnonymousDeviceState::Inconclusive);
     assert(observe({entry(31), entry(32, "/product", "overlayfs")}).state == AnonymousDeviceState::Inconclusive);
     const auto app = observe({entry(31), entry(32), entry(33, "/data/user/10"), entry(80)});
-    assert(app.state == AnonymousDeviceState::NoGaps);
+    assert(anonymous_device_state_key(app.state) == std::string("PARTIAL"));
     assert(app.detail.find("Window stops before app-private") != std::string::npos);
+    assert(app.detail.find("FUSE ceiling: /storage/emulated/10=0:100") != std::string::npos);
+    const auto partialGap = observe({entry(31), entry(33), entry(34, "/data/user/10"), entry(80)});
+    assert(anonymous_device_state_key(partialGap.state) == std::string("PARTIAL"));
+    assert(partialGap.detail.find("Gap 0:32..0:32") != std::string::npos);
     assert(observe({entry(31, "/data/misc/profiles/cur"), entry(80)}).state == AnonymousDeviceState::Inconclusive);
     assert(observe({entry(31), entry(33, "/data/user_backup")}).state == AnonymousDeviceState::Observed);
     assert(observe({entry(31)}).state == AnonymousDeviceState::Inconclusive);

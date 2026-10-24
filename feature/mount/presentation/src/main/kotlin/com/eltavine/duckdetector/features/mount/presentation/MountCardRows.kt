@@ -126,6 +126,7 @@ internal fun buildMethodRows(report: MountReport): List<MountDetailRowModel> {
 private fun methodLabels(): List<String> = listOf(
     "Startup preload",
     "Zygote next mount view",
+    "Anonymous device minors",
     "Path probes",
     "Shell tmp view",
     "/proc/self/mounts",
@@ -133,7 +134,6 @@ private fun methodLabels(): List<String> = listOf(
     "/proc/self/mountinfo",
     "Filesystem probes",
     "statx cross-check",
-    "Anonymous device minors",
 )
 
 private fun methodStatus(result: MountMethodResult): DetectorStatus {

@@ -204,7 +204,7 @@ class MountRepositoryTest {
             preloadResultProvider = { EarlyMountPreloadResult.empty() },
         ).scan()
 
-        assertEquals(MountFindingSeverity.INFO, report.findings.single().severity)
+        assertEquals(MountFindingSeverity.INFO, report.findings.single { it.id != "anonymous_device_minors" }.severity)
         assertEquals(DetectorStatus.allClear(), report.toDetectorStatus())
         assertEquals(MountMethodOutcome.SUPPORT, report.methods.single { it.label == "/proc/self/mountinfo" }.outcome)
         assertTrue(report.impacts.none { it.severity == MountFindingSeverity.DANGER })

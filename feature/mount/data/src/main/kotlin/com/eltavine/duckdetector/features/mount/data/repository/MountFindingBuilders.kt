@@ -47,6 +47,19 @@ internal fun MountRepository.buildFindings(
     }
 
     val informational = buildList {
+        add(
+            MountFinding(
+                id = "anonymous_device_minors",
+                label = "Anonymous device minors",
+                value = snapshot.anonymousDeviceState.summary,
+                group = MountFindingGroup.CONSISTENCY,
+                severity = MountFindingSeverity.INFO,
+                detail = snapshot.anonymousDeviceDetail.ifBlank {
+                    "Anonymous-device diagnostic detail was not collected."
+                },
+                detailMonospace = true,
+            ),
+        )
         if (!snapshot.initNamespaceReadable) {
             add(
                 MountFinding(

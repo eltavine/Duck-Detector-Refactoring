@@ -92,11 +92,10 @@ class MountEvidenceClassificationTest {
         val report = scan(baseline.copy(
             anonymousDeviceState = MountAnonymousDeviceState.OBSERVED,
             anonymousDeviceDetail = "Gap 0:32 can be a freed ID or another namespace.",
-            findings = listOf(MountNativeFinding(
-                group = "CONSISTENCY", severity = "INFO", label = "Anonymous device minors",
-                value = "OBSERVED", detail = "Gap 0:32 can be a freed ID or another namespace.",
-            )),
         ))
+        val observation = report.findings.single { it.id == "anonymous_device_minors" }
+        assertEquals("Gaps observed", observation.value)
+        assertEquals(MountFindingSeverity.INFO, observation.severity)
         assertEquals(MountAnonymousDeviceState.OBSERVED, report.anonymousDeviceState)
         assertTrue(report.dangerFindings.isEmpty())
         assertTrue(report.warningFindings.isEmpty())

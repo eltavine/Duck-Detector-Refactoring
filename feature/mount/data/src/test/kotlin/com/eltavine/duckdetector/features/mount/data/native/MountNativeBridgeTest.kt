@@ -44,6 +44,17 @@ class MountNativeBridgeTest {
     }
 
     @Test
+    fun `missing anonymous device evidence cannot become a successful no-gap observation`() {
+        for (detail in listOf("", "\nANON_DEVICE_DETAIL=   ")) {
+            val snapshot = bridge.parse("AVAILABLE=1\nANON_DEVICE_STATE=NO_GAPS$detail\nMAGISK_MOUNT=1")
+            assertEquals(MountAnonymousDeviceState.UNAVAILABLE, snapshot.anonymousDeviceState)
+            assertTrue(snapshot.anonymousDeviceDetail.isNotBlank())
+            assertTrue(snapshot.available)
+            assertTrue(snapshot.magiskMountDetected)
+        }
+    }
+
+    @Test
     fun `parse reads readability flags and counters`() {
         val snapshot = bridge.parse(
             """

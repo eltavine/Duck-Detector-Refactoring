@@ -41,18 +41,19 @@ class MountCardModelMapperTest {
 
     @Test
     fun `anonymous device coverage and observations remain visible without a root verdict`() {
-        val finding = MountFinding(
-            id = "anon_device", label = "Anonymous device minors", value = "INCONCLUSIVE",
-            group = MountFindingGroup.CONSISTENCY, severity = MountFindingSeverity.INFO,
-            detail = "Overlayfs pseudo-devices cannot be fully accounted for.",
-        )
-        val model = mapper.map(report(findings = listOf(finding)).copy(
-            anonymousDeviceState = MountAnonymousDeviceState.INCONCLUSIVE,
-        ))
-        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.status)
-        assertTrue(model.verdict.contains("coverage is limited"))
-        assertEquals("Partial", model.headerFacts.single { it.fact == MountHeaderFact.COVERAGE }.value)
-        assertEquals(finding.detail, model.consistencyRows.single().detail)
+        for (state in listOf(MountAnonymousDeviceState.INCONCLUSIVE, MountAnonymousDeviceState.PARTIAL)) {
+            val finding = MountFinding(
+                id = "anonymous_device_minors", label = "Anonymous device minors", value = state.summary,
+                group = MountFindingGroup.CONSISTENCY, severity = MountFindingSeverity.INFO,
+                detail = "Only part of the anonymous-device window was evaluated.",
+            )
+            val model = mapper.map(report(findings = listOf(finding)).copy(anonymousDeviceState = state))
+            assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.status)
+            assertTrue(model.verdict.contains("coverage is limited"))
+            assertEquals("Partial", model.headerFacts.single { it.fact == MountHeaderFact.COVERAGE }.value)
+            assertEquals(finding.detail, model.consistencyRows.single().detail)
+            assertEquals(state.summary, model.consistencyRows.single().value)
+        }
     }
 
     @Test

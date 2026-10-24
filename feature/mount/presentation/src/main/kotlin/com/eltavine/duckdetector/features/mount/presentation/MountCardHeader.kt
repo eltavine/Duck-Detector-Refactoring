@@ -93,7 +93,7 @@ internal fun buildSummary(report: MountReport): String {
                 "The mount layer is not obviously compromised, but it still contains review-worthy runtime or filesystem drift."
 
             report.anonymousDeviceState?.coverageLimited == true ->
-                "Anonymous-device observations are unavailable, unsupported, or inconclusive. Review the reported window and visibility limits."
+                "Anonymous-device observations have limited coverage. Review the reported window and visibility limits."
 
             else ->
                 "No suspicious Magisk, overlay, writable-system, or mount-coherence artifact surfaced from the current app context."
