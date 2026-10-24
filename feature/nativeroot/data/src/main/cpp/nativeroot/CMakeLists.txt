@@ -6,6 +6,7 @@ duckdetector_native_unit(duckdetector_nativeroot
     srcu_timing_native_bridge.cpp
     initrc_timing_native_bridge.cpp
     probes/initrc_timing_probe.cpp
+    ksu_timing_native_bridge.cpp
     probes/srcu_close_probe.cpp
     probes/prctl_probe.cpp
     probes/kernelpatch_nr_supercall_latency_probe.cpp

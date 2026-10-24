@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.nativeroot.presentation
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootReport
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootStage
 import com.eltavine.duckdetector.features.nativeroot.domain.SrcuTimingVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.hasReducedCoverage
@@ -59,6 +60,11 @@ internal fun buildImpactItems(report: NativeRootReport): List<NativeRootImpactIt
             } else if (report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY) {
                 add(NativeRootImpactItemModel(
                     text = "The optional timing experiment found a repeatable delay relative to both controls. Background fsnotify readers and scheduling remain possible causes; this does not identify a root solution.",
+                    status = DetectorStatus.warning(),
+                ))
+            } else if (report.kernelSuTiming.verdict == KernelSuTimingVerdict.REPEATED_PATTERN) {
+                add(NativeRootImpactItemModel(
+                    text = "Repeated prctl timing is supporting evidence only. Scheduling, virtualization and unrelated security hooks can produce similar effects; this is not a KernelSU or root identification.",
                     status = DetectorStatus.warning(),
                 ))
             } else if (report.nativeAvailable) {

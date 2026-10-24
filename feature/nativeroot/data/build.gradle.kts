@@ -53,4 +53,10 @@ val initRcTimingHostTest = tasks.register<Exec>("initRcTimingHostTest") {
     commandLine("python3", layout.projectDirectory.file("src/test/native/test_initrc_timing_probe.py").asFile)
 }
 
-tasks.named("unitTest") { dependsOn(srcuCloseHostTest, kernelPatchLatencyHostTest, initRcTimingHostTest) }
+val kernelSuTimingHostTest = tasks.register<Exec>("kernelSuTimingHostTest") {
+    group = "verification"
+    description = "Verifies timing sampler ordering and cleanup using fake syscalls only."
+    commandLine("python3", layout.projectDirectory.file("src/test/native/test_ksu_timing_probe.py").asFile)
+}
+
+tasks.named("unitTest") { dependsOn(srcuCloseHostTest, kernelPatchLatencyHostTest, initRcTimingHostTest, kernelSuTimingHostTest) }
