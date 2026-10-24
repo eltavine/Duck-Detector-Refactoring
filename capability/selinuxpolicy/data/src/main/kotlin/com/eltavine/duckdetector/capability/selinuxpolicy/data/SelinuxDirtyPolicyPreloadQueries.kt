@@ -192,6 +192,9 @@ internal fun SelinuxContextValiditySnapshot.applyJavaDirtyPolicyResults(
         "dir",
         "search",
     )
+    val extraPairs = EXTRA_DIRTY_POLICY_RULES.associate { rule ->
+        rule.name to queryAccessPair(checkAccess, rule.source, rule.target, rule.clazz, rule.permission)
+    }
     stable = stable &&
         systemServerExecmem.stable &&
         fsckSysAdmin.stable &&
@@ -237,6 +240,7 @@ internal fun SelinuxContextValiditySnapshot.applyJavaDirtyPolicyResults(
         add(msdDaemonConfigfsFileWrite.note("msd_daemon -> configfs file write"))
         add(xposedDataRead.note("untrusted_app -> xposed_data read"))
         add(zygoteAdbDataSearch.note("zygote -> adb_data_file search"))
+        extraPairs.forEach { (name, pair) -> add(pair.note(name)) }
     }
 
     val dirtyPolicyFailureReason = when {
@@ -276,6 +280,9 @@ internal fun SelinuxContextValiditySnapshot.applyJavaDirtyPolicyResults(
         javaDirtyPolicyMsdDaemonConfigfsFileWriteAllowed = msdDaemonConfigfsFileWrite.stable.thenValue(msdDaemonConfigfsFileWrite.first),
         javaDirtyPolicyXposedDataFileReadAllowed = xposedDataRead.stable.thenValue(xposedDataRead.first),
         javaDirtyPolicyZygoteAdbDataSearchAllowed = zygoteAdbDataSearch.stable.thenValue(zygoteAdbDataSearch.first),
+        javaDirtyPolicyAdditionalRules = extraPairs.mapNotNull { (name, pair) ->
+            pair.stable.thenValue(pair.first)?.let { name to it }
+        }.toMap(),
         javaDirtyPolicyFailureReason = dirtyPolicyFailureReason,
         javaDirtyPolicyNotes = notes,
     )
@@ -345,3 +352,19 @@ private const val CONFIGFS_CONTEXT = "u:object_r:configfs:s0"
 private const val DIRTY_POLICY_NEGATIVE_CONTROL_CONTEXT =
     "u:r:duckdetector_dirty_policy_sentinel:s0"
 internal const val DIRTY_POLICY_QUERY_METHOD = "android.os.SELinux.checkSELinuxAccess"
+
+private data class ExtraDirtyPolicyRule(
+    val name: String,
+    val source: String,
+    val target: String,
+    val clazz: String,
+    val permission: String,
+)
+
+private val EXTRA_DIRTY_POLICY_RULES = listOf(
+    ExtraDirtyPolicyRule("rootfs -> tmpfs associate", "u:object_r:rootfs:s0", "u:object_r:tmpfs:s0", "filesystem", "associate"),
+    ExtraDirtyPolicyRule("kernel -> tmpfs fifo open", "u:r:kernel:s0", "u:object_r:tmpfs:s0", "fifo_file", "open"),
+    ExtraDirtyPolicyRule("kernel -> adb_data_file read", "u:r:kernel:s0", "u:object_r:adb_data_file:s0", "file", "read"),
+    ExtraDirtyPolicyRule("system_server -> apk_data_file execute", "u:r:system_server:s0", "u:object_r:apk_data_file:s0", "file", "execute"),
+    ExtraDirtyPolicyRule("dex2oat -> dex2oat_exec execute_no_trans", "u:r:dex2oat:s0", "u:object_r:dex2oat_exec:s0", "file", "execute_no_trans"),
+)

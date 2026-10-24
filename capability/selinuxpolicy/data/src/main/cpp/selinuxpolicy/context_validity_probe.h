@@ -19,6 +19,7 @@
 #define DUCKDETECTOR_SELINUXPOLICY_CONTEXT_VALIDITY_PROBE_H
 
 #include <jni.h>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -49,6 +50,7 @@ namespace duckdetector::selinux {
         std::optional<bool> msd_daemon_configfs_file_write_allowed;
         std::optional<bool> xposed_data_file_read_allowed;
         std::optional<bool> zygote_adb_data_search_allowed;
+        std::map<std::string, bool> additional_rules;
         bool controls_passed = false;
         bool stable = false;
         std::string query_method;

@@ -42,7 +42,7 @@ public data class SelinuxProcAttrCurrentResult(
         public const val CONTROL_LABEL: String = "Controls"
 
         /** Candidate records after the controls record; must match kTargets in proc_attr_probe.h. */
-        public const val TARGET_COUNT: Int = 9
+        public const val TARGET_COUNT: Int = 11
     }
 }
 

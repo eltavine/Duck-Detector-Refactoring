@@ -118,6 +118,48 @@ class AuditAvcSideChannelProbeTest {
     }
 
     @Test
+    fun `ordinary app getattr data adb is not a su actor even without app marker`() {
+        val result = probe.evaluateSuspiciousActors(
+            """10-25 00:37:00.000 2590 2590 I auditd : type=1400 audit(0.0:98142): avc: denied { getattr } for comm="DefaultDispatch" path="/data/adb" dev="dm-53" ino=343 scontext=u:r:untrusted_app:s0:c139,c258,c512,c768 tcontext=u:object_r:system_data_root_file:s0 tclass=dir permissive=0""",
+        )
+        assertTrue(result.hits.isEmpty())
+    }
+
+    @Test
+    fun `target path or name alone must not identify a root actor`() {
+        val lines = listOf(
+            """comm="DefaultDispatch" path="/data/adb/modules/auditpatch/module.prop""",
+            """comm="DefaultDispatch" name="adb""",
+            """comm="DefaultDispatch" path="/data/adb/ksud""",
+            """comm="DefaultDispatch" path="/system/xbin/su""",
+            """comm="DefaultDispatch" exe="/system/bin/toybox" path="/data/adb/magiskd""",
+            """comm="DefaultDispatch" exe="/data/local/tmp/fake-ksud""",
+        ).mapIndexed { index, fields ->
+            """type=1400 audit(0.0:$index): avc: denied { getattr } for $fields scontext=u:r:untrusted_app:s0:c1,c2 tcontext=u:object_r:system_data_root_file:s0 tclass=file permissive=0"""
+        }.joinToString("\n")
+
+        assertTrue(probe.evaluateSuspiciousActors(lines).hits.isEmpty())
+    }
+
+    @Test
+    fun `actual root executable remains a hit and takes precedence over unrelated comm`() {
+        val result = probe.evaluateSuspiciousActors(
+            """type=1400 audit(0.0:202): avc: denied { read } for comm="DefaultDispatch" exe="/data/adb/ksud" path="/proc/1/maps" scontext=u:r:untrusted_app:s0:c1,c2 tcontext=u:r:init:s0 tclass=file permissive=0""",
+        )
+        assertEquals(1, result.hits.size)
+        assertEquals("exe=/data/adb/ksud", result.hits.single().value)
+    }
+
+    @Test
+    fun `actual root process remains a hit when target is data adb`() {
+        val result = probe.evaluateSuspiciousActors(
+            """type=1400 audit(0.0:203): avc: denied { getattr } for comm="ksud" path="/data/adb" scontext=u:r:su:s0 tcontext=u:object_r:system_data_root_file:s0 tclass=dir permissive=0""",
+        )
+        assertEquals(1, result.hits.size)
+        assertEquals("comm=ksud", result.hits.single().value)
+    }
+
+    @Test
     fun `self app marker does not hide suspicious actor`() {
         val result = probe.evaluateSuspiciousActors(
             """

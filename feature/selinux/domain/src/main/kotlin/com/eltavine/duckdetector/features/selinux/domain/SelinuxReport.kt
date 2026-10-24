@@ -43,6 +43,10 @@ data class SelinuxCheckResult(
     val contextValidity: SelinuxContextValidityReading? = null,
     /** The policy rule this result answers; set only on policy rule queries. */
     val policyRule: SelinuxPolicyRule? = null,
+    /** Newly added DirtySepolicy 2.2 rule evidence stays Warning; existing rules keep their original severity. */
+    val dirtySepolicyWarningOnly: Boolean = false,
+    /** Validated DirtySepolicy compatibility/protocol anomaly. Distinct from ordinary Raw findings. */
+    val dirtySepolicyDanger: Boolean = false,
     /** The candidates the controlled attr/current writes recognized; set only on that oracle's result. */
     val attrCurrentDetections: List<String> = emptyList(),
     /** The controlled attr/current probe's reading; set only on that oracle's result. */

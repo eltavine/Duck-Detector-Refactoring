@@ -31,6 +31,7 @@ public class SelinuxContextValidityPreload {
     private val procAttrCurrentProbe = SelinuxProcAttrCurrentProbe()
     private val avcLookupProbe = SelinuxAvcLookupProbe()
     private val policyloadSeqnoProbe = SelinuxPolicyloadSeqnoProbe()
+    private val dirtySepolicyRawProbe = SelinuxDirtySepolicyRawProbe()
 
     /**
      * Captures the carrier evidence in the app zygote. [trace] is called before each step, so an
@@ -46,6 +47,7 @@ public class SelinuxContextValidityPreload {
         var statusAbi = SelinuxStatusAbiSnapshot()
         var procAttrResults: List<SelinuxProcAttrCurrentResult>? = null
         var avcLookup = SelinuxAvcLookupSnapshot()
+        var dirtySepolicyRaw = SelinuxDirtySepolicyRawSnapshot()
         val payload = try {
             beforeCollection()
             val currentUid = Os.getuid()
@@ -103,7 +105,16 @@ public class SelinuxContextValidityPreload {
                     checkSelinuxAccess(source, target, targetClass, permission)
                 },
             )
-            SelinuxContextValidityPayloadCodec.encode(snapshot)
+            trace("selinux: direct raw access rule replay")
+            val withRaw = collectDirtySepolicyRawSafely(snapshot) {
+                dirtySepolicyRawProbe.inspect(
+                    snapshot, Build.TYPE == "user",
+                    statusHeader = (statusPage as? SelinuxStatusPageResult.Intact)?.header,
+                )
+            }
+            dirtySepolicyRaw = withRaw.dirtySepolicyRaw
+            trace("selinux: raw access state=${dirtySepolicyRaw.state} transactions=${dirtySepolicyRaw.observations.size}")
+            SelinuxContextValidityPayloadCodec.encode(withRaw)
         } catch (throwable: Throwable) {
             fallbackPayload(
                 throwable.message ?: "SELinux app zygote preload failed.",
@@ -111,6 +122,7 @@ public class SelinuxContextValidityPreload {
                 statusAbi,
                 procAttrResults,
                 avcLookup,
+                dirtySepolicyRaw,
             )
         } finally {
             // The access checks above leave libselinux's AVC netlink socket open. Before Android 12,
@@ -267,6 +279,7 @@ public class SelinuxContextValidityPreload {
         statusAbi: SelinuxStatusAbiSnapshot = SelinuxStatusAbiSnapshot(),
         procAttrResults: List<SelinuxProcAttrCurrentResult>? = null,
         avcLookup: SelinuxAvcLookupSnapshot = SelinuxAvcLookupSnapshot(),
+        dirtySepolicyRaw: SelinuxDirtySepolicyRawSnapshot = SelinuxDirtySepolicyRawSnapshot(),
     ): String {
         return SelinuxContextValidityPayloadCodec.encode(fallbackSnapshot(reason).copy(
             sidtab = sidtab,
@@ -274,6 +287,7 @@ public class SelinuxContextValidityPreload {
             procAttrCurrentProbeAttempted = procAttrResults != null,
             procAttrCurrentResults = procAttrResults.orEmpty(),
             avcLookup = avcLookup,
+            dirtySepolicyRaw = dirtySepolicyRaw,
         ))
     }
 

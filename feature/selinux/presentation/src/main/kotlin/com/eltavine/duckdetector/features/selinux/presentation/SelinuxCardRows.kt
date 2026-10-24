@@ -230,55 +230,6 @@ private fun buildAggregatedDroidspacesMethodRow(results: List<SelinuxCheckResult
 private fun List<SelinuxCheckResult>.ruleEdges(verdict: SelinuxRuleVerdict): List<String> =
     mapNotNull { it.policyRule }.filter { it.verdict == verdict }.map { it.edge }
 
-private fun methodStatus(result: SelinuxCheckResult): DetectorStatus {
-    if (result.oracle == SelinuxOracle.ATTR_CURRENT_TIMING) {
-        return if (result.isSecure == false) DetectorStatus.danger()
-        else DetectorStatus.info(InfoKind.SUPPORT)
-    }
-    if (result.oracle == SelinuxOracle.CONTEXT_VALIDITY) {
-        return when (result.contextValidity?.verdict) {
-            SelinuxContextValidityVerdict.KSU_PRESENT -> DetectorStatus.danger()
-            SelinuxContextValidityVerdict.CLEAN -> DetectorStatus.allClear()
-            SelinuxContextValidityVerdict.AMBIGUOUS -> DetectorStatus.warning()
-            SelinuxContextValidityVerdict.SELF_TEST_FAILED -> DetectorStatus.warning()
-            SelinuxContextValidityVerdict.UNSUPPORTED,
-            null -> when (contextValiditySupportState(result)) {
-                AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
-                AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)
-                AppZygoteCarrierSupportState.AVAILABLE -> DetectorStatus.info(InfoKind.SUPPORT)
-            }
-        }
-    }
-    if (result.oracle == SelinuxOracle.PROC_ATTR_CURRENT_WRITE) {
-        return when {
-            result.isSecure == false -> DetectorStatus.warning()
-            else -> DetectorStatus.info(InfoKind.SUPPORT)
-        }
-    }
-    if (result.oracle == SelinuxOracle.POLICYLOAD_SEQNO) {
-        return when {
-            result.isSecure == false -> DetectorStatus.danger()
-            result.isSecure == true -> DetectorStatus.allClear()
-            else -> DetectorStatus.info(InfoKind.SUPPORT)
-        }
-    }
-    if (result.oracle == SelinuxOracle.STATUS_MMAP_ABI) {
-        return when {
-            result.isSecure == false -> DetectorStatus.danger()
-            // "No violation observed" states what the requests saw; it does not exclude a handler
-            // that keeps the upstream checks, so it stays clear without claiming one is absent.
-            result.statusAbi?.verdict == SelinuxStatusAbiVerdict.NO_VIOLATION -> DetectorStatus.allClear()
-            else -> DetectorStatus.info(InfoKind.SUPPORT)
-        }
-    }
-    return when {
-        result.permissionDenied -> DetectorStatus.allClear()
-        result.isSecure == true -> DetectorStatus.allClear()
-        result.isSecure == false -> DetectorStatus.danger()
-        else -> DetectorStatus.info(InfoKind.SUPPORT)
-    }
-}
-
 internal fun buildPolicyRows(policy: SelinuxPolicyAnalysis?): List<SelinuxDetailRowModel> {
     if (policy == null) {
         return emptyList()

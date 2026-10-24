@@ -8,7 +8,7 @@
 
 namespace duckdetector::selinux::proc_attr {
     constexpr unsigned kRounds = 2;
-    constexpr unsigned kTargets = 9;
+    constexpr unsigned kTargets = 11;
     constexpr char kCarrier[] = "u:r:app_zygote:s0";
     constexpr char kMalformed[] = "duckdetector-invalid-context";
     struct Target { const char *label; const char *context; };
@@ -18,6 +18,7 @@ namespace duckdetector::selinux::proc_attr {
         {"LSPosed file", "u:object_r:lsposed_file:s0"}, {"DroidSpaces daemon", "u:r:droidspacesd:s0"},
         {"MSD app", "u:r:msd_app:s0"}, {"MSD daemon", "u:r:msd_daemon:s0"},
         {"Xposed data", "u:object_r:xposed_data:s0"},
+        {"ADB root", "u:r:adbroot:s0"}, {"Xposed file", "u:object_r:xposed_file:s0"},
     }};
     enum class State { kUnavailable, kUnsupported, kPermissionLimited, kInconclusive, kComplete };
     enum class Step { kCarrier, kControlsBefore, kTargets, kControlsAfter, kFinished };

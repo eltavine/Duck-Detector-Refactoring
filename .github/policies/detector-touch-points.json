@@ -45,6 +45,11 @@
       "path": "app/src/androidTest/java/com/eltavine/duckdetector/AppZygoteTimingRuntimeTest.kt",
       "detectors": ["selinux"],
       "reason": "Opt-in integration coverage needs the actual installed host and its SDK App Zygote preload; assertions remain test-only and the generic detector smoke test stays independent."
+    },
+    {
+      "path": "app/src/androidTest/java/com/eltavine/duckdetector/DirtySepolicyRawRuntimeTest.kt",
+      "detectors": ["selinux"],
+      "reason": "Runtime instrumentation verifies SELinux Raw and DirtySepolicy compatibility inside the installed host's App Zygote preload; the dependency is test-only and cannot run equivalently in a standalone feature module."
     }
   ]
 }
