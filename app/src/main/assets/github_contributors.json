@@ -7,7 +7,7 @@
       "asm",
       "kotlin"
     ],
-    "contributions": 116,
+    "contributions": 595,
     "name": "eltavine",
     "avatarAssetPath": "github_contributors/avatars/eltavine.jpg",
     "summaryKey": "author_summary_eltavine",
@@ -19,7 +19,7 @@
       "cpp",
       "kotlin"
     ],
-    "contributions": 36,
+    "contributions": 57,
     "name": "XiaoTong6666",
     "avatarAssetPath": "github_contributors/avatars/xiaotong6666.jpg",
     "summaryKey": "author_summary_xiaotong",
@@ -31,7 +31,7 @@
       "cpp",
       "kotlin"
     ],
-    "contributions": 16,
+    "contributions": 23,
     "name": "FldBudin",
     "avatarAssetPath": "github_contributors/avatars/fldbudin.jpg",
     "summaryKey": "author_summary_baka",
@@ -52,7 +52,7 @@
       "cpp",
       "kotlin"
     ],
-    "contributions": 7,
+    "contributions": 9,
     "name": "AlexLiuDev233",
     "avatarAssetPath": "github_contributors/avatars/alexliudev233.jpg",
     "summaryKey": "author_summary_alex",
@@ -64,11 +64,19 @@
       "ui",
       "kotlin"
     ],
-    "contributions": 5,
+    "contributions": 8,
     "name": "Searchur",
     "avatarAssetPath": "github_contributors/avatars/searchur.jpg",
     "summaryKey": "author_summary_searchur",
     "login": "Searchur"
+  },
+  {
+    "profileUrl": "https://github.com/apps/dependabot",
+    "contributionKeys": [],
+    "contributions": 6,
+    "name": "dependabot[bot]",
+    "avatarAssetPath": "github_contributors/avatars/dependabot_bot_.jpg",
+    "login": "dependabot[bot]"
   },
   {
     "profileUrl": "https://github.com/vvb2060",
@@ -77,6 +85,15 @@
     "name": "vvb2060",
     "avatarAssetPath": "github_contributors/avatars/vvb2060.jpg",
     "login": "vvb2060"
+  },
+  {
+    "profileUrl": "https://github.com/qwq233",
+    "contributionKeys": ["kotlin"],
+    "contributions": 3,
+    "name": "qwq233",
+    "avatarAssetPath": "github_contributors/avatars/qwq233.jpg",
+    "summaryKey": "author_summary_qwq233",
+    "login": "qwq233"
   },
   {
     "profileUrl": "https://github.com/wxxsfxyzm",
@@ -94,6 +111,14 @@
     "name": "NEURAX-FX",
     "avatarAssetPath": "github_contributors/avatars/neurax-fx.jpg",
     "login": "NEURAX-FX"
+  },
+  {
+    "profileUrl": "https://github.com/cursoragent",
+    "contributionKeys": [],
+    "contributions": 3,
+    "name": "cursoragent",
+    "avatarAssetPath": "github_contributors/avatars/cursoragent.jpg",
+    "login": "cursoragent"
   },
   {
     "profileUrl": "https://github.com/VictorModi",
@@ -121,13 +146,29 @@
     "login": "hamjin"
   },
   {
-    "profileUrl": "https://github.com/qwq233",
-    "contributionKeys": ["kotlin"],
+    "profileUrl": "https://github.com/frknkrc44",
+    "contributionKeys": [],
     "contributions": 2,
-    "name": "qwq233",
-    "avatarAssetPath": "github_contributors/avatars/qwq233.jpg",
-    "summaryKey": "author_summary_qwq233",
-    "login": "qwq233"
+    "name": "frknkrc44",
+    "avatarAssetPath": "github_contributors/avatars/frknkrc44.jpg",
+    "login": "frknkrc44"
+  },
+  {
+    "profileUrl": "https://github.com/KodateMitsuru",
+    "contributionKeys": [],
+    "contributions": 2,
+    "name": "KodateMitsuru",
+    "avatarAssetPath": "github_contributors/avatars/kodatemitsuru.jpg",
+    "login": "KodateMitsuru"
+  },
+  {
+    "profileUrl": "https://github.com/aviraxp",
+    "contributionKeys": ["security"],
+    "contributions": 2,
+    "name": "aviraxp",
+    "avatarAssetPath": "github_contributors/avatars/aviraxp.jpg",
+    "summaryKey": "author_summary_aviraxp",
+    "login": "aviraxp"
   },
   {
     "profileUrl": "https://github.com/HSSkyBoy",
@@ -139,12 +180,36 @@
     "login": "HSSkyBoy"
   },
   {
+    "profileUrl": "https://github.com/Lun-OS",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "Lun-OS",
+    "avatarAssetPath": "github_contributors/avatars/lun-os.jpg",
+    "login": "Lun-OS"
+  },
+  {
+    "profileUrl": "https://github.com/rushiranpise",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "rushiranpise",
+    "avatarAssetPath": "github_contributors/avatars/rushiranpise.jpg",
+    "login": "rushiranpise"
+  },
+  {
     "profileUrl": "https://github.com/MhmRdd",
     "contributionKeys": [],
     "contributions": 1,
     "name": "MhmRdd",
     "avatarAssetPath": "github_contributors/avatars/mhmrdd.jpg",
     "login": "MhmRdd"
+  },
+  {
+    "profileUrl": "https://github.com/cwuom",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "cwuom",
+    "avatarAssetPath": "github_contributors/avatars/cwuom.jpg",
+    "login": "cwuom"
   },
   {
     "profileUrl": "https://github.com/Y-0x",
@@ -163,6 +228,14 @@
     "login": "juanma0511"
   },
   {
+    "profileUrl": "https://github.com/xhnaianwisjz",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "xhnaianwisjz",
+    "avatarAssetPath": "github_contributors/avatars/xhnaianwisjz.jpg",
+    "login": "xhnaianwisjz"
+  },
+  {
     "profileUrl": "https://github.com/SQMY-dor",
     "contributionKeys": [
       "ui",
@@ -175,6 +248,22 @@
     "login": "SQMY-dor"
   },
   {
+    "profileUrl": "https://github.com/chisewaguri",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "chisewaguri",
+    "avatarAssetPath": "github_contributors/avatars/chisewaguri.jpg",
+    "login": "chisewaguri"
+  },
+  {
+    "profileUrl": "https://github.com/MiChongs",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "MiChongs",
+    "avatarAssetPath": "github_contributors/avatars/michongs.jpg",
+    "login": "MiChongs"
+  },
+  {
     "profileUrl": "https://github.com/5ec1cff",
     "contributionKeys": ["security"],
     "contributions": 1,
@@ -182,6 +271,14 @@
     "avatarAssetPath": "github_contributors/avatars/5ec1cff.jpg",
     "summaryKey": "author_summary_5ec1cff",
     "login": "5ec1cff"
+  },
+  {
+    "profileUrl": "https://github.com/DebugBoard",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "DebugBoard",
+    "avatarAssetPath": "github_contributors/avatars/debugboard.jpg",
+    "login": "DebugBoard"
   },
   {
     "profileUrl": "https://github.com/LingQingBigKing",
@@ -201,6 +298,14 @@
     "login": "fuqiuluo"
   },
   {
+    "profileUrl": "https://github.com/Kevin233B",
+    "contributionKeys": [],
+    "contributions": 1,
+    "name": "Kevin233B",
+    "avatarAssetPath": "github_contributors/avatars/kevin233b.jpg",
+    "login": "Kevin233B"
+  },
+  {
     "profileUrl": "https://github.com/ZG089",
     "contributionKeys": ["ui"],
     "contributions": 1,
@@ -217,14 +322,6 @@
     "avatarAssetPath": "github_contributors/avatars/mirinchan.jpg",
     "summaryKey": "author_summary_mirin",
     "login": "MiRinChan"
-  },
-  {
-    "profileUrl": "https://github.com/cursoragent",
-    "contributionKeys": [],
-    "contributions": 1,
-    "name": "cursoragent",
-    "avatarAssetPath": "github_contributors/avatars/cursoragent.jpg",
-    "login": "cursoragent"
   },
   {
     "profileUrl": "https://github.com/jiugjk",
@@ -250,15 +347,6 @@
     "avatarAssetPath": "github_contributors/avatars/coolzyd9107.jpg",
     "summaryKey": "author_summary_coolzyd",
     "login": "coolzyd9107"
-  },
-  {
-    "profileUrl": "https://github.com/aviraxp",
-    "contributionKeys": ["security"],
-    "contributions": 1,
-    "name": "aviraxp",
-    "avatarAssetPath": "github_contributors/avatars/aviraxp.jpg",
-    "summaryKey": "author_summary_aviraxp",
-    "login": "aviraxp"
   },
   {
     "profileUrl": "https://github.com/SakanyaNotBot",

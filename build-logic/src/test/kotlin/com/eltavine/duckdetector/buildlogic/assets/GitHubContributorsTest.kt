@@ -42,6 +42,18 @@ class GitHubContributorsTest {
     }
 
     @Test
+    fun `contributors beyond the first thirty are all retained`() {
+        val feed = (1..45).joinToString(prefix = "[", postfix = "]") { index ->
+            """{"total": $index, "author": {"login": "contributor$index"}}"""
+        }
+
+        val contributors = parseGitHubContributors(feed)
+
+        assertEquals(45, contributors.size)
+        assertEquals((45 downTo 1).map { "contributor$it" }, contributors.map { it.login })
+    }
+
+    @Test
     fun `profile urls come from the author path, avatars are requested at 512 pixels`() {
         val byLogin = parseGitHubContributors(feed).associateBy { it.login }
 

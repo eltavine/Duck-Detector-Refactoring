@@ -62,10 +62,12 @@ internal fun contributorWallGeometry(count: Int, avatarSize: Float, gap: Float):
     val maxX = centers.maxOf { it.x }
     val minY = centers.minOf { it.y }
     val maxY = centers.maxOf { it.y }
-    val center = Offset((minX + maxX) / 2f, (minY + maxY) / 2f)
     return ContributorWallGeometry(
-        centers = centers.map { it - center },
-        contentSize = Size(maxX - minX + avatarSize, maxY - minY + avatarSize),
+        centers = centers,
+        contentSize = Size(
+            max(abs(minX), abs(maxX)) * 2f + avatarSize,
+            max(abs(minY), abs(maxY)) * 2f + avatarSize,
+        ),
     )
 }
 
