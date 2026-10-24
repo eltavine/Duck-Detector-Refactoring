@@ -7,7 +7,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SelinuxProcAttrCurrentNativePayloadTest {
-    private val targets = (0..8).map { index ->
+    private val targets = (0 until SelinuxProcAttrCurrentResult.TARGET_COUNT).map { index ->
         SelinuxProcAttrCurrentResult("label$index", "u:r:label$index:s0",
             if (index == 0) "CONTEXT_RECOGNIZED" else "NORMAL_EINVAL", "open_errno=0; write_errno=13")
     }

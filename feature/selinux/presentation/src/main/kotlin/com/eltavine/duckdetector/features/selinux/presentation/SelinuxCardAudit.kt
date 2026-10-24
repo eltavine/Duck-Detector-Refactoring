@@ -100,7 +100,7 @@ internal fun buildAuditRows(analysis: SelinuxAuditIntegrityAnalysis?): List<Seli
             },
             detail = when {
                 analysis.suspiciousActorHits.isNotEmpty() ->
-                    "Readable AVC denials referenced su/magisk/ksud-related actor strings in comm, exe, path, or name fields."
+                    "Readable AVC denials referenced a root-related process name (comm) or executable (exe). Access to /data/adb alone is not a root-process signal."
 
                 analysis.logcatChecked ->
                     "No su-related actor string surfaced in the readable canonical AVC window."

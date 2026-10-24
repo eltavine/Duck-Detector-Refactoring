@@ -51,6 +51,8 @@ public open class SelinuxContextValidityBridge(
         val notes = mutableListOf<String>()
         val dirtyPolicyNotes = mutableListOf<String>()
         val javaDirtyPolicyNotes = mutableListOf<String>()
+        val dirtyPolicyAdditionalRules = mutableMapOf<String, Boolean>()
+        val javaDirtyPolicyAdditionalRules = mutableMapOf<String, Boolean>()
         val policyloadSeqnoNotes = mutableListOf<String>()
         val statusAbiNotes = mutableListOf<String>()
         val procAttrCurrentResults = mutableListOf<SelinuxProcAttrCurrentResult>()
@@ -65,6 +67,20 @@ public open class SelinuxContextValidityBridge(
 
                     line.startsWith("JAVA_DIRTY_POLICY_NOTE=") -> javaDirtyPolicyNotes += line.removePrefix("JAVA_DIRTY_POLICY_NOTE=")
                         .decodeValue()
+
+                    line.startsWith("DIRTY_POLICY_EXTRA_RULE=") -> {
+                        val pair = line.removePrefix("DIRTY_POLICY_EXTRA_RULE=").decodeValue().split('|')
+                        if (pair.size == 2 && pair[1] in listOf("0", "1")) {
+                            dirtyPolicyAdditionalRules[pair[0]] = pair[1] == "1"
+                        }
+                    }
+
+                    line.startsWith("JAVA_DIRTY_POLICY_EXTRA_RULE=") -> {
+                        val pair = line.removePrefix("JAVA_DIRTY_POLICY_EXTRA_RULE=").decodeValue().split('|')
+                        if (pair.size == 2 && pair[1] in listOf("0", "1")) {
+                            javaDirtyPolicyAdditionalRules[pair[0]] = pair[1] == "1"
+                        }
+                    }
 
                     line.startsWith("POLICYLOAD_SEQNO_NOTE=") -> policyloadSeqnoNotes += line.removePrefix("POLICYLOAD_SEQNO_NOTE=")
                         .decodeValue()
@@ -91,6 +107,8 @@ public open class SelinuxContextValidityBridge(
         return snapshot.copy(
             dirtyPolicyNotes = dirtyPolicyNotes,
             javaDirtyPolicyNotes = javaDirtyPolicyNotes,
+            dirtyPolicyAdditionalRules = dirtyPolicyAdditionalRules,
+            javaDirtyPolicyAdditionalRules = javaDirtyPolicyAdditionalRules,
             policyloadSeqnoNotes = policyloadSeqnoNotes,
             procAttrCurrentResults = procAttrCurrentResults,
             notes = notes,
@@ -186,6 +204,7 @@ public open class SelinuxContextValidityBridge(
             "POLICYLOAD_SEQNO_ACCESS_SEQNO" -> copy(policyloadSeqnoAccessSeqno = value.toLongOrNull())
             "POLICYLOAD_SEQNO_PROCESS_CLASS" -> copy(policyloadSeqnoProcessClass = value.toIntOrNull())
             "POLICYLOAD_SEQNO_FAILURE_REASON" -> copy(policyloadSeqnoFailureReason = value.decodeValue())
+            "DIRTY_SEPOLICY_RAW" -> copy(dirtySepolicyRaw = SelinuxDirtySepolicyRawCodec.decode(value.decodeValue()))
             "PROC_ATTR_CURRENT_PROBE_ATTEMPTED" -> copy(procAttrCurrentProbeAttempted = value.asBool())
             "PROC_ATTR_CURRENT_FAILURE_REASON" -> copy(procAttrCurrentFailureReason = value.decodeValue())
             "APP_ZYGOTE_AVC_LOOKUP" -> copy(avcLookup = SelinuxAvcLookupPayloadCodec.decode(value.decodeValue()))

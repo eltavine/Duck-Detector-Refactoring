@@ -106,6 +106,7 @@ class SelinuxRepository(
         methods += buildStatusAbiMethod(carrierSnapshot.statusAbi)
         methods += buildAppZygoteTimingMethod(carrierSnapshot.avcLookup)
         methods += buildDirtyPolicyMethods(carrierSnapshot)
+        methods += buildDirtyPolicyAccessProtocolMethod(carrierSnapshot)
         methods += buildSidtabMethod(carrierSnapshot.sidtab)
 
         val statusResolution = determineStatusWithParadoxLogic(methods)
@@ -191,7 +192,7 @@ class SelinuxRepository(
         if (runtimeProbe.suspiciousActorHits.isNotEmpty()) {
             notes += SelinuxAuditNote(
                 SelinuxAuditNoteKind.SU_ACTOR_REFERENCED,
-                "Readable AVC denials also referenced su-related actor strings such as comm/exe/path tokens. Treat this as supporting visibility evidence, not direct proof of a live root daemon.",
+                "Readable AVC denials referenced a root-related process name or executable. Treat this as supporting evidence, not direct proof of a live root daemon.",
             )
         }
 

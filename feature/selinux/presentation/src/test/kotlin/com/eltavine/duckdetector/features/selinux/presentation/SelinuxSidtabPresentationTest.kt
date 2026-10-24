@@ -69,6 +69,9 @@ class SelinuxSidtabPresentationTest {
         val dirty = SelinuxCardModelMapper().map(report(reading(true), trustedDirtyPolicyHit()))
         assertEquals(DetectorStatus.warning(), dirty.status)
         assertEquals("Enforcing with dirty sepolicy rule", dirty.verdict)
+        assertEquals(DetectorStatus.danger(), dirty.methodRows.single {
+            it.label == "Dirty sepolicy rule: system_server execmem"
+        }.status)
         val dirtyAt = dirty.summary.indexOf("DirtySepolicy")
         assertTrue(dirtyAt >= 0 && dirtyAt < dirty.summary.indexOf("Two bounded rounds"))
 

@@ -18,9 +18,7 @@
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
 import com.eltavine.duckdetector.core.platform.PlatformFailureName
-import java.io.FileInputStream
 import java.io.IOException
-import java.io.RandomAccessFile
 
 // States are only appended, so every existing state keeps its ordinal.
 public enum class SelinuxPolicyloadSeqnoState {
@@ -123,32 +121,11 @@ public class SelinuxPolicyloadSeqnoProbe {
     }
 
     private fun queryAccessDecision(): AccessDecision {
-        val processClass = readProcessClass()
-        val query = "$APP_ZYGOTE_CONTEXT $ISOLATED_APP_CONTEXT $processClass"
-        RandomAccessFile(SELINUX_ACCESS, "rw").use { file ->
-            file.write(query.toByteArray(Charsets.US_ASCII))
-            file.seek(0L)
-            val buffer = ByteArray(ACCESS_RESPONSE_MAX_BYTES)
-            val count = file.read(buffer)
-            if (count <= 0) {
-                throw IOException("SELinux access response was empty.")
-            }
-            val fields = String(buffer, 0, count, Charsets.US_ASCII).trim().split(Regex("\\s+"))
-            if (fields.size < 6) {
-                throw IOException("SELinux access response had ${fields.size} fields.")
-            }
-            return AccessDecision(
-                processClass = processClass,
-                seqno = fields[4].toLongOrNull()
-                    ?: throw IOException("SELinux access seqno was not numeric."),
-            )
-        }
-    }
-
-    private fun readProcessClass(): Int {
-        return FileInputStream(SELINUX_PROCESS_CLASS).use { input ->
-            input.bufferedReader().readText().trim().toIntOrNull()
-        } ?: throw IOException("SELinux process class was unreadable.")
+        val processClass = SelinuxRawAccess.classId("process")
+        val raw = SelinuxRawAccess.query(APP_ZYGOTE_CONTEXT, ISOLATED_APP_CONTEXT, processClass)
+        val decision = SelinuxRawAccess.parse(raw)
+            ?: throw IOException("Invalid access result: $raw")
+        return AccessDecision(processClass = processClass, seqno = decision.seqno)
     }
 
     internal data class AccessDecision(
@@ -157,11 +134,8 @@ public class SelinuxPolicyloadSeqnoProbe {
     )
 
     public companion object {
-        private const val SELINUX_ACCESS = "/sys/fs/selinux/access"
-        private const val SELINUX_PROCESS_CLASS = "/sys/fs/selinux/class/process/index"
         private const val APP_ZYGOTE_CONTEXT = "u:r:app_zygote:s0"
         private const val ISOLATED_APP_CONTEXT = "u:r:isolated_app:s0"
-        private const val ACCESS_RESPONSE_MAX_BYTES = 256
         private const val ZYGOTE_PRELOAD_NOTE =
             "This oracle is trusted only when produced by android:zygotePreloadName inside the dedicated app_zygote carrier."
     }

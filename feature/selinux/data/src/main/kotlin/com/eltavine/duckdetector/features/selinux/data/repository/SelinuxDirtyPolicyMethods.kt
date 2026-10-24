@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.features.selinux.data.repository
 
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValiditySnapshot
+import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxDirtyPolicyRuleClassification
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyRule
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxPolicyRuleSet
@@ -186,7 +187,17 @@ fun buildDirtyPolicyMethods(
             nativeTrack = nativeTrack,
             javaTrack = javaTrack,
         ),
-    )
+    ) + ADDITIONAL_DIRTY_POLICY_EDGES.map { edge ->
+        aggregateDirtyPolicyRuleMethod(
+            set = SelinuxPolicyRuleSet.DIRTY_SEPOLICY,
+            edge = edge,
+            nativeAllowed = nativeTrack.additionalRules[edge],
+            javaAllowed = javaTrack.additionalRules[edge],
+            detail = "Observed edge: $edge. DirtySepolicy 2.2 checks this access rule; an allowed edge alone cannot identify its origin.",
+            nativeTrack = nativeTrack,
+            javaTrack = javaTrack,
+        ).copy(dirtySepolicyWarningOnly = true)
+    }
 }
 
 private fun aggregateDirtyPolicyRuleMethod(
@@ -210,8 +221,10 @@ private fun aggregateDirtyPolicyRuleMethod(
         nativeTrack.trusted && effectiveNativeAllowed == true ||
             javaTrack.trusted && effectiveJavaAllowed == true
         )
+    val classification = if (SelinuxDirtyPolicyRuleClassification.isAlertEligible(edge)) set
+        else SelinuxPolicyRuleSet.POLICY_OBSERVATION
     val rule = SelinuxPolicyRule(
-        set = set,
+        set = classification,
         edge = edge,
         verdict = when (allowed) {
             true -> SelinuxRuleVerdict.ALLOWED
@@ -223,9 +236,8 @@ private fun aggregateDirtyPolicyRuleMethod(
         method = rule.method,
         status = rule.verdict.label,
         isSecure = when (allowed) {
-            true -> false
-            false -> true
             null -> null
+            else -> if (classification == SelinuxPolicyRuleSet.POLICY_OBSERVATION) null else !allowed
         },
         permissionDenied = false,
         details = buildList {
@@ -283,6 +295,7 @@ private fun dirtyPolicyTrack(
             xposedDataFileReadAllowed = snapshot.dirtyPolicyXposedDataFileReadAllowed,
             zygoteAdbDataSearchAllowed = snapshot.dirtyPolicyZygoteAdbDataSearchAllowed,
             failureReason = snapshot.dirtyPolicyFailureReason,
+            additionalRules = snapshot.dirtyPolicyAdditionalRules,
         )
         DirtyPolicyTrackSource.JAVA -> DirtyPolicyTrack(
             label = "java app_zygote",
@@ -314,73 +327,18 @@ private fun dirtyPolicyTrack(
             xposedDataFileReadAllowed = snapshot.javaDirtyPolicyXposedDataFileReadAllowed,
             zygoteAdbDataSearchAllowed = snapshot.javaDirtyPolicyZygoteAdbDataSearchAllowed,
             failureReason = snapshot.javaDirtyPolicyFailureReason,
+            additionalRules = snapshot.javaDirtyPolicyAdditionalRules,
         )
     }
 }
 
-private enum class DirtyPolicyTrackSource {
-    NATIVE,
-    JAVA,
-}
+private val ADDITIONAL_DIRTY_POLICY_EDGES = listOf(
+    "rootfs -> tmpfs associate",
+    "kernel -> tmpfs fifo open",
+    "kernel -> adb_data_file read",
+    SYSTEM_SERVER_APK_EXECUTE_EDGE,
+    DEX2OAT_EXECUTE_NO_TRANS_EDGE,
+)
 
-private data class DirtyPolicyTrack(
-    val label: String,
-    val trusted: Boolean,
-    val available: Boolean,
-    val probeAttempted: Boolean,
-    val carrierContext: String?,
-    val carrierMatchesExpected: Boolean,
-    val controlsPassed: Boolean,
-    val stable: Boolean,
-    val queryMethod: String,
-    val accessControlAllowed: Boolean?,
-    val negativeControlRejected: Boolean?,
-    val systemServerExecmemAllowed: Boolean?,
-    val fsckSysAdminAllowed: Boolean?,
-    val shellSuTransitionAllowed: Boolean?,
-    val adbdAdbrootBinderCallAllowed: Boolean?,
-    val magiskBinderCallAllowed: Boolean?,
-    val ksuFileReadAllowed: Boolean?,
-    val lsposedFileReadAllowed: Boolean?,
-    val magiskDroidspacesdTransitionAllowed: Boolean?,
-    val suDroidspacesdTransitionAllowed: Boolean?,
-    val systemServerDroidspacesdBinderCallAllowed: Boolean?,
-    val msdAppDaemonConnectAllowed: Boolean?,
-    val msdDaemonSelfConnectAllowed: Boolean?,
-    val msdDaemonSelinuxfsReadAllowed: Boolean?,
-    val msdDaemonConfigfsDirSearchAllowed: Boolean?,
-    val msdDaemonConfigfsFileWriteAllowed: Boolean?,
-    val xposedDataFileReadAllowed: Boolean?,
-    val zygoteAdbDataSearchAllowed: Boolean?,
-    val failureReason: String?,
-) {
-    val reportable: Boolean
-        get() = available && probeAttempted && carrierMatchesExpected
-
-    fun describe(verdict: Boolean?): String {
-        val status = when (verdict) {
-            true -> "Allowed"
-            false -> "Denied"
-            null -> "Unavailable"
-        }
-        return buildString {
-            append(status)
-            append(" carrier=")
-            append(carrierContext ?: "<unreadable>")
-            append(" match=")
-            append(if (carrierMatchesExpected) "yes" else "no")
-            append(" controls=")
-            append(if (controlsPassed) "passed" else "failed")
-            append(" stable=")
-            append(if (stable) "yes" else "no")
-            append(" trusted=")
-            append(if (trusted) "yes" else "no")
-            append(" query=")
-            append(queryMethod.ifBlank { "<unavailable>" })
-            failureReason?.takeIf { it.isNotBlank() }?.let {
-                append(" reason=")
-                append(it)
-            }
-        }
-    }
-}
+private const val DEX2OAT_EXECUTE_NO_TRANS_EDGE = "dex2oat -> dex2oat_exec execute_no_trans"
+private const val SYSTEM_SERVER_APK_EXECUTE_EDGE = "system_server -> apk_data_file execute"

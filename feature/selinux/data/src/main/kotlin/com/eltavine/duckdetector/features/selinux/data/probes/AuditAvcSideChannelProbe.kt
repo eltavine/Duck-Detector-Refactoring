@@ -115,13 +115,13 @@ class AuditAvcSideChannelProbe {
             .filter { it.isNotBlank() }
             .mapNotNull(::parseCanonicalRecord)
             .filter(::looksLikeForeignAvcLeak)
-            .filter(::hasSuspiciousActor)
-            .distinctBy { it.line }
+            .mapNotNull { record -> suspiciousActorValue(record)?.let { record to it } }
+            .distinctBy { it.first.line }
             .take(MAX_HITS)
-            .map { record ->
+            .map { (record, actor) ->
                 SelinuxAuditEvidence(
                     label = "su-related AVC",
-                    value = suspiciousActorValue(record),
+                    value = actor,
                     detail = record.line.trimToPreview(),
                     strongSignal = false,
                 )
@@ -201,29 +201,16 @@ class AuditAvcSideChannelProbe {
                 signature.tclass.equals("dir", ignoreCase = true)
     }
 
-    private fun hasSuspiciousActor(
-        record: AuditAvcRecord,
-    ): Boolean {
-        val normalizedComm = record.comm?.trim()?.lowercase()
-        if (normalizedComm != null && normalizedComm in SUSPICIOUS_COMM_VALUES) {
-            return true
-        }
-
-        return listOfNotNull(record.exe, record.path, record.name)
-            .map { it.lowercase() }
-            .any { value ->
-                SUSPICIOUS_PATH_TOKENS.any { token -> token in value }
-            }
-    }
-
     private fun suspiciousActorValue(
         record: AuditAvcRecord,
-    ): String {
-        record.comm?.takeIf { it.isNotBlank() }?.let { return "comm=$it" }
-        record.exe?.takeIf { it.isNotBlank() }?.let { return "exe=$it" }
-        record.path?.takeIf { it.isNotBlank() }?.let { return "path=$it" }
-        record.name?.takeIf { it.isNotBlank() }?.let { return "name=$it" }
-        return "Root-like actor"
+    ): String? {
+        record.comm?.trim()?.takeIf { it.lowercase() in SUSPICIOUS_COMM_VALUES }
+            ?.let { return "comm=$it" }
+        record.exe?.trim()?.takeIf { exe ->
+            exe.substringAfterLast('/').lowercase() in SUSPICIOUS_COMM_VALUES
+        }?.let { return "exe=$it" }
+        // path/name refer to the denied target, not the process that accessed it.
+        return null
     }
 
     private fun extractValue(
@@ -282,15 +269,6 @@ class AuditAvcSideChannelProbe {
             "kernelsu",
             "apatch",
             "apd",
-        )
-        private val SUSPICIOUS_PATH_TOKENS = setOf(
-            "/su",
-            "/magisk",
-            "magiskd",
-            "ksud",
-            "kernelsu",
-            "apatch",
-            "/data/adb",
         )
     }
 }

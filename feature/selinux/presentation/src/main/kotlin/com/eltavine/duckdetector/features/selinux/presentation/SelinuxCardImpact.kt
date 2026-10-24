@@ -180,7 +180,7 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             contextValidity.details ?: "The context validity oracle stayed unavailable.",
             when (appZygoteCarrierState) {
                 AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
-                AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)
+                AppZygoteCarrierSupportState.FAILED -> DetectorStatus.warning()
                 AppZygoteCarrierSupportState.AVAILABLE -> DetectorStatus.info(InfoKind.SUPPORT)
             },
         )
