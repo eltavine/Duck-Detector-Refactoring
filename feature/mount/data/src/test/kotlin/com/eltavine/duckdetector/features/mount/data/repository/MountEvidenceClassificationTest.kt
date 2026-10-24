@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeBridge
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeFinding
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeSnapshot
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
 import com.eltavine.duckdetector.features.mount.domain.MountFindingSeverity
 import com.eltavine.duckdetector.features.mount.domain.MountMethodOutcome
 import com.eltavine.duckdetector.features.mount.domain.toDetectorStatus
@@ -86,6 +87,42 @@ class MountEvidenceClassificationTest {
         assertEquals(DetectorStatus.info(InfoKind.SUPPORT), report.toDetectorStatus())
     }
 
+    @Test
+    fun `anonymous device gaps stay informational and do not attribute a root manager`() = runBlocking {
+        val report = scan(baseline.copy(
+            anonymousDeviceState = MountAnonymousDeviceState.OBSERVED,
+            anonymousDeviceDetail = "Gap 0:32 can be a freed ID or another namespace.",
+            findings = listOf(MountNativeFinding(
+                group = "CONSISTENCY", severity = "INFO", label = "Anonymous device minors",
+                value = "OBSERVED", detail = "Gap 0:32 can be a freed ID or another namespace.",
+            )),
+        ))
+        assertEquals(MountAnonymousDeviceState.OBSERVED, report.anonymousDeviceState)
+        assertTrue(report.dangerFindings.isEmpty())
+        assertTrue(report.warningFindings.isEmpty())
+        assertEquals(MountMethodOutcome.SUPPORT,
+            report.methods.single { it.label == "Anonymous device minors" }.outcome)
+        assertEquals(DetectorStatus.allClear(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun `limited anonymous device coverage never becomes a clean method or all clear report`() = runBlocking {
+        for (state in MountAnonymousDeviceState.entries.filter { it.coverageLimited }) {
+            val report = scan(baseline.copy(anonymousDeviceState = state))
+            assertEquals(DetectorStatus.info(InfoKind.SUPPORT), report.toDetectorStatus())
+            assertEquals(MountMethodOutcome.SUPPORT,
+                report.methods.single { it.label == "Anonymous device minors" }.outcome)
+            assertTrue(report.dangerFindings.isEmpty())
+        }
+        val danger = scan(baseline.copy(
+            anonymousDeviceState = MountAnonymousDeviceState.UNAVAILABLE,
+            findings = listOf(MountNativeFinding(
+                "ARTIFACTS", "DANGER", "Root mount artifact", "/system", "/data/adb/modules/example",
+            )),
+        ))
+        assertEquals(DetectorStatus.danger(), danger.toDetectorStatus())
+    }
+
     private suspend fun scan(snapshot: MountNativeSnapshot) = MountRepository(
         nativeBridge = object : MountNativeBridge() {
             override fun collectSnapshot() = snapshot
@@ -96,6 +133,6 @@ class MountEvidenceClassificationTest {
     private val baseline = MountNativeSnapshot(
         available = true, mountsReadable = true, mountInfoReadable = true,
         mapsReadable = true, filesystemsReadable = true, statxSupported = true,
-        initNamespaceReadable = true,
+        initNamespaceReadable = true, anonymousDeviceState = MountAnonymousDeviceState.NO_GAPS,
     )
 }

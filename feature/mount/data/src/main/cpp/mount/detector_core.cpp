@@ -49,7 +49,7 @@ namespace duckdetector::mount {
 
     using namespace detail;
 
-    MountSnapshot collect_snapshot() {
+    MountSnapshot collect_snapshot(const std::string &externalStorageRoot) {
         MountSnapshot snapshot;
         std::unordered_set<std::string> dedupe;
 
@@ -64,7 +64,8 @@ namespace duckdetector::mount {
         const std::string mapsRaw = read_file_direct("/proc/self/maps", 196608, &mapsReadable);
 
         const std::vector<MountEntry> mounts = parse_mounts(mountsRaw);
-        const std::vector<MountInfoEntry> mountInfo = parse_mount_info(mountInfoRaw);
+        bool mountInfoComplete = false;
+        const std::vector<MountInfoEntry> mountInfo = parse_mount_info(mountInfoRaw, &mountInfoComplete);
 
         snapshot.mountsReadable = mountsReadable && !mounts.empty();
         snapshot.mountInfoReadable = mountInfoReadable && !mountInfo.empty();
@@ -77,6 +78,10 @@ namespace duckdetector::mount {
         detect_maps(snapshot, mapsRaw, dedupe);
         detect_mounts(snapshot, mounts, dedupe);
         detect_mountinfo(snapshot, mountInfo, dedupe);
+        snapshot.anonymousDevices = observe_anonymous_devices(
+                mountInfo, mountInfoReadable && mountInfoComplete, externalStorageRoot);
+        add_finding(snapshot, dedupe, "CONSISTENCY", "INFO", "Anonymous device minors",
+                    anonymous_device_state_key(snapshot.anonymousDevices.state), snapshot.anonymousDevices.detail);
         detect_namespace(snapshot, dedupe);
         detect_filesystems(snapshot, mounts, dedupe);
         detect_inconsistent_mount(snapshot, mounts, dedupe);
@@ -90,6 +95,8 @@ namespace duckdetector::mount {
         };
 
         std::ostringstream out;
+        out << "ANON_DEVICE_STATE=" << anonymous_device_state_key(snapshot.anonymousDevices.state) << '\n';
+        out << "ANON_DEVICE_DETAIL=" << sanitize_field(snapshot.anonymousDevices.detail) << '\n';
         out << "AVAILABLE=" << flag(snapshot.available) << '\n';
         out << "MOUNTS_READABLE=" << flag(snapshot.mountsReadable) << '\n';
         out << "MOUNTINFO_READABLE=" << flag(snapshot.mountInfoReadable) << '\n';

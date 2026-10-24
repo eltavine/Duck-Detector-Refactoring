@@ -51,6 +51,7 @@ internal fun buildVerdict(report: MountReport): String {
                 "${report.warningSignalCount} startup signal(s) need review"
 
             report.warningSignalCount > 0 -> "${report.warningSignalCount} mount signal(s) need review"
+            report.anonymousDeviceState?.coverageLimited == true -> "Mount observation coverage is limited"
             else -> "No suspicious mount-layer signal"
         }
     }
@@ -90,6 +91,9 @@ internal fun buildSummary(report: MountReport): String {
 
             report.warningFindings.isNotEmpty() ->
                 "The mount layer is not obviously compromised, but it still contains review-worthy runtime or filesystem drift."
+
+            report.anonymousDeviceState?.coverageLimited == true ->
+                "Anonymous-device observations are unavailable, unsupported, or inconclusive. Review the reported window and visibility limits."
 
             else ->
                 "No suspicious Magisk, overlay, writable-system, or mount-coherence artifact surfaced from the current app context."
@@ -139,8 +143,9 @@ internal fun buildHeaderFacts(report: MountReport): List<MountHeaderFactModel> {
             ),
             MountHeaderFactModel(
                 fact = MountHeaderFact.COVERAGE,
-                value = "${coveragePercent(report)}%",
+                value = if (report.anonymousDeviceState?.coverageLimited == true) "Partial" else "${coveragePercent(report)}%",
                 status = when {
+                    report.anonymousDeviceState?.coverageLimited == true -> DetectorStatus.info(InfoKind.SUPPORT)
                     report.permissionDenied == 0 -> DetectorStatus.allClear()
                     else -> DetectorStatus.info(InfoKind.SUPPORT)
                 },

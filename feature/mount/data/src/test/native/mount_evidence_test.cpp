@@ -129,7 +129,14 @@ int main() {
     assert(duckdetector::preload::parse_mountinfo_line(
             "1 1 0:1 / / rw shared:3 master:1 - tmpfs tmpfs rw", propagation));
     assert(propagation.peerGroups.size() == 2);
-    const auto entries = parse_mount_info(raw);
+    bool complete = false;
+    const auto entries = parse_mount_info(raw, &complete);
+    assert(complete);
+    const auto partial = parse_mount_info(raw + "malformed record\n", &complete);
+    assert(!complete && partial.size() == entries.size());
+    assert(parse_mount_info("", &complete).empty() && !complete);
+    parse_mount_info("1 1 0:1 / / rw - tmpfs tmpfs", &complete);
+    assert(!complete);
     assert(entries[0].id == 90 && entries[1].id == 20); // Preserve capture order.
     const auto resolved = info(entries); // statx follows /data/data to a different visible mount.
     assert(!resolved.statxMntIdMismatch);

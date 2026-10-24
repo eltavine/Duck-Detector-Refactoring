@@ -227,16 +227,21 @@ namespace duckdetector::mount::detail {
         return true;
     }
 
-    std::vector<MountInfoEntry> parse_mount_info(const std::string &raw) {
+    std::vector<MountInfoEntry> parse_mount_info(const std::string &raw, bool *complete) {
+        bool valid = !raw.empty();
         std::vector<MountInfoEntry> entries;
         std::istringstream stream(raw);
         std::string line;
         while (std::getline(stream, line)) {
             MountInfoEntry entry;
             if (parse_mount_info_line(line, entry)) {
+                if (entry.superOptions.empty()) valid = false;
                 entries.push_back(entry);
+            } else {
+                valid = false;
             }
         }
+        if (complete != nullptr) *complete = valid && !entries.empty();
         return entries;
     }
 

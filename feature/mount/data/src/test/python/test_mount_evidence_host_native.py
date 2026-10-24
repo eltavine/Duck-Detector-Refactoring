@@ -53,6 +53,7 @@ inline bool is_statx_supported() { return true; }
 int syscall_open_readonly(const char *, int = O_RDONLY | O_CLOEXEC);
 std::string lowercase_copy(std::string);
 std::string read_file_direct(const char *, size_t, bool * = nullptr);
+std::vector<MountInfoEntry> parse_mount_info(const std::string &, bool * = nullptr);
 }
 '''
 STATX = r'''

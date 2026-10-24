@@ -18,6 +18,7 @@
 #ifndef DUCKDETECTOR_MOUNT_DETECTOR_CORE_H
 #define DUCKDETECTOR_MOUNT_DETECTOR_CORE_H
 
+#include "mount/anonymous_device_probe.h"
 #include <string>
 #include <vector>
 
@@ -75,10 +76,11 @@ namespace duckdetector::mount {
         bool systemFsTypeAnomaly = false;
         bool tmpfsSizeAnomaly = false;
 
+        detail::AnonymousDeviceObservation anonymousDevices;
         std::vector<MountFindingRecord> findings;
     };
 
-    MountSnapshot collect_snapshot();
+    MountSnapshot collect_snapshot(const std::string &externalStorageRoot = "");
 
     std::string encode_snapshot(const MountSnapshot &snapshot);
 

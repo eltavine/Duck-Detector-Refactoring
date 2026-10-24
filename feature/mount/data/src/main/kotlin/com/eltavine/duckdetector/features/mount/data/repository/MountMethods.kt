@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.mount.data.repository
 import com.eltavine.duckdetector.capability.earlypreload.data.EarlyMountPreloadResult
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeSnapshot
 import com.eltavine.duckdetector.features.mount.data.probes.ShellTmpConcealmentProbeResult
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
 import com.eltavine.duckdetector.features.mount.domain.MountFinding
 import com.eltavine.duckdetector.features.mount.domain.MountFindingGroup
 import com.eltavine.duckdetector.features.mount.domain.MountFindingOrigin
@@ -77,6 +78,18 @@ internal fun buildMethods(
             detail = "Transparent NativeActivity launcher runs early namespace and mount checks before MainActivity starts.",
         ),
         buildZygoteNextMethod(zygoteNext),
+        MountMethodResult(
+            label = "Anonymous device minors",
+            summary = snapshot.anonymousDeviceState.summary,
+            outcome = if (snapshot.anonymousDeviceState == MountAnonymousDeviceState.NO_GAPS) {
+                MountMethodOutcome.CLEAN
+            } else {
+                MountMethodOutcome.SUPPORT
+            },
+            detail = snapshot.anonymousDeviceDetail.ifBlank {
+                "Anonymous-device observations were not collected by the native layer."
+            },
+        ),
         MountMethodResult(
             label = "Path probes",
             summary = when {

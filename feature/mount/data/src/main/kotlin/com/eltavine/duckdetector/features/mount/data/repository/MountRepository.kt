@@ -101,6 +101,7 @@ class MountRepository(
             mountEntryCount = snapshot.mountEntryCount,
             mountInfoEntryCount = snapshot.mountInfoEntryCount,
             mapLineCount = snapshot.mapLineCount,
+            anonymousDeviceState = snapshot.anonymousDeviceState,
             earlyPreloadAvailable = preloadResult.available,
             earlyPreloadDetected = preloadResult.detected,
             earlyPreloadContextValid = preloadResult.isContextValid,

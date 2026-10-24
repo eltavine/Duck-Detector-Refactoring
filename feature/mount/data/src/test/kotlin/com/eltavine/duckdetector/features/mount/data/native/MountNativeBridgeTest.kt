@@ -23,11 +23,25 @@ import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
 import org.junit.Test
 
 class MountNativeBridgeTest {
 
     private val bridge = MountNativeBridge()
+
+    @Test
+    fun `anonymous device payload preserves coverage states and details`() {
+        for (state in MountAnonymousDeviceState.entries) {
+            val parsed = bridge.parse("AVAILABLE=1\nANON_DEVICE_STATE=${state.name}\nANON_DEVICE_DETAIL=Window 0:30..0:100; gap 0:32")
+            assertEquals(state, parsed.anonymousDeviceState)
+            assertTrue(parsed.anonymousDeviceDetail.contains("gap 0:32"))
+        }
+        assertEquals(MountAnonymousDeviceState.NOT_COLLECTED,
+            bridge.parse("AVAILABLE=1").anonymousDeviceState)
+        assertEquals(MountAnonymousDeviceState.NOT_COLLECTED,
+            bridge.parse("AVAILABLE=1\nANON_DEVICE_STATE=FUTURE_STATE").anonymousDeviceState)
+    }
 
     @Test
     fun `parse reads readability flags and counters`() {

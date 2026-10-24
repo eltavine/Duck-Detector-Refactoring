@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.features.mount.data.native
 
 import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
 
 data class MountNativeFinding(
     val group: String,
@@ -29,6 +30,8 @@ data class MountNativeFinding(
 
 data class MountNativeSnapshot(
     val available: Boolean = false,
+    val anonymousDeviceState: MountAnonymousDeviceState = MountAnonymousDeviceState.NOT_COLLECTED,
+    val anonymousDeviceDetail: String = "",
     val mountsReadable: Boolean = false,
     val mountInfoReadable: Boolean = false,
     val mapsReadable: Boolean = false,

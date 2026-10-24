@@ -31,6 +31,7 @@ fun MountReport.toDetectorStatus(): DetectorStatus {
         MountStage.READY -> when {
             dangerSignalCount > 0 -> DetectorStatus.danger()
             warningSignalCount > 0 -> DetectorStatus.warning()
+            anonymousDeviceState?.coverageLimited == true -> DetectorStatus.info(InfoKind.SUPPORT)
             !mountsReadable || !mountInfoReadable -> DetectorStatus.info(InfoKind.SUPPORT)
             else -> DetectorStatus.allClear()
         }

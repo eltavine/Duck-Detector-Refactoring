@@ -26,6 +26,7 @@ import com.eltavine.duckdetector.capability.helperprocess.data.ProcMountViewRoot
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeBridge
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeFinding
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeSnapshot
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
 import com.eltavine.duckdetector.features.mount.domain.MountFindingSeverity
 import com.eltavine.duckdetector.features.mount.domain.MountMethodOutcome
 import com.eltavine.duckdetector.features.mount.domain.toDetectorStatus
@@ -290,6 +291,7 @@ class MountRepositoryTest {
             mountEntryCount = 32,
             mountInfoEntryCount = 32,
             mapLineCount = 128,
+            anonymousDeviceState = MountAnonymousDeviceState.NO_GAPS,
         )
     }
 

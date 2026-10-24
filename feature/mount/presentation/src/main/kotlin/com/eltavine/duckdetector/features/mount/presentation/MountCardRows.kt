@@ -133,6 +133,7 @@ private fun methodLabels(): List<String> = listOf(
     "/proc/self/mountinfo",
     "Filesystem probes",
     "statx cross-check",
+    "Anonymous device minors",
 )
 
 private fun methodStatus(result: MountMethodResult): DetectorStatus {
