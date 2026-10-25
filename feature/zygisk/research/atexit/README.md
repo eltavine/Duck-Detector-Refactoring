@@ -38,6 +38,7 @@ Omit `expectNoAtexitEvidence` for injection environments; pass `expectAtexitEvid
 | Supplied Zygisk Next | 1.5.2 (864-a4a72ce-release) | ce50b13fecb9e4456db69ef17b715f7cfbc094004dd9f30f7d6348dfab619a96 |
 | ReZygisk default-branch CI | 1.0.0 (552-b5aa415-release), [run 38174785673](https://github.com/PerformanC/ReZygisk/actions/runs/38174785673) | 41085b35c44b4c9d8a6b9b48ddc7f7139bc968d05fc67d4c5f716ce7fece8384 |
 | NeoZygisk default-branch CI | 2.4 (295-d161f31-release), [run 39921933576](https://github.com/JingMatrix/NeoZygisk/actions/runs/39921933576) | 5d6cc18f2cf5c415fb4a8119039457d8da4e4efbec3735a683d491f2dc8f1f0c |
+| Supplied zDefend kit (3) | Discovery rule #697852 v12; engine and 26 encrypted assets match kit (2) | 884ffeb3b8f01456a451657792d2cdbabbdb08f6f736950e332024c1876f8c0c |
 
 The CI packages are the latest successful push builds of main/master resolved on 2026-10-25, not the latest tagged releases or unrelated experimental branches. Raw Actions archive hashes match GitHub's artifact digests. Only one injection framework is enabled at a time; Magisk's built-in Zygisk is disabled.
 
@@ -45,7 +46,7 @@ The AVD uses `google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:us
 
 ## Observed results (2026-10-25)
 
-All eight cases passed two scans with the same non-debuggable APK. Each scan recorded UID 10213, `u:r:untrusted_app:s0:c213,c256,c512,c768`, `debuggable=false`, `dumpable=0` and table state `COLLECTED`. SELinux remained Enforcing. Cleared-entry and anchored-gap counts were zero throughout.
+All eight cases passed two scans with the same non-debuggable APK built from source revision [0be879a0](https://github.com/eltavine/Duck-Detector-Refactoring/commit/0be879a072d01fe8be418cc1399c2d74d69bdd6c). Each scan recorded UID 10213, `u:r:untrusted_app:s0:c213,c256,c512,c768`, `debuggable=false`, `dumpable=0` and table state `COLLECTED`. SELinux remained Enforcing. Cleared-entry and anchored-gap counts were zero throughout.
 
 | Environment | Controlled resident memfd payload | Entries | Anonymous callbacks per scan |
 |---|---|---:|---:|
@@ -58,7 +59,7 @@ All eight cases passed two scans with the same non-debuggable APK. Each scan rec
 | NeoZygisk CI 295-d161f31 | No | 1547 | 0 |
 | NeoZygisk CI 295-d161f31 | Yes | 1548 | 1 |
 
-Each positive fixture logged successful libc registration and payload loading before specialization. Both scans then resolved handler 1534 into `/memfd:duck-atexit-fixture (deleted)` and emitted warning-level atexit evidence. Framework/module enable state and daemon state were checked outside the app between reboots. The Magisk-only control had no Zygisk daemon. Entry counts and indices describe this AVD/application build, not portable expected constants.
+Each positive fixture logged successful libc registration and payload loading before specialization. Both scans then resolved handler 1534 into `/memfd:duck-atexit-fixture (deleted)` and emitted warning-level atexit evidence. Framework/module enable state was checked outside the app between reboots; the positive pre-specialize callbacks confirm active injection. The Magisk-only control had no Zygisk daemon. Entry counts and indices describe this AVD/application build, not portable expected constants.
 
 The framework-only negatives demonstrate that enabling these builds does not necessarily leave this residue. The positives establish visibility of a controlled surviving callback, not framework identification, version attribution, arbitrary module unloading or native gap specificity. Runtime-gap interpretation has synthetic regression coverage; no actual framework-produced gap was observed. Missing local libc symbols, unsupported layouts and platform restrictions still reduce coverage on other devices.
 
@@ -66,12 +67,12 @@ Test artifact SHA-256 values:
 
 | Artifact | SHA-256 |
 |---|---|
-| Non-debuggable host APK | 614ecb845cef6b4a824aa82b42f5b7a90efa76b09dbdc53e21edafacf8576ed6 |
-| Instrumentation APK | 5ac8a1d09bc9ce91e7a4b61470bc1313e8b5d2f7eb7c05e8be491162f033fc23 |
+| Non-debuggable host APK | 2b9933952b8eda5d151c95804a7a57054ef573324302517cca5bc1779d7ca5ec |
+| Instrumentation APK | 3574db2d3280c5fe41a4461666a3723ce6006976cdcf26f76f6e725c0f6f876a |
 | ARM64 fixture module library | 5f70a9390f8efee49339e554bef558df2054592eae936177baf187ea65339bc1 |
 | Embedded payload library | 0e77a7511386df7a4a7ac4f94dc44280c2ef88885322b8997687c0ff5089b35f |
 
-The project validation passed 1712 JVM tests, all four ABI builds, app lint, architecture/contract checks, buildHealth, SDK AAR publication/verification and a standalone SDK consumer build. Host-native evidence and memory-copy fixtures passed with undefined-behavior checks. The ELF fixture passed as an ARM64 Android executable because this macOS host has no system `<elf.h>`; the memory-copy fixture also passed on Android with dumpability set to zero by the test executable and verified unchanged by the reader. The application collector never changes that flag.
+The project validation passed 1715 JVM tests, all four ABI builds, app lint, architecture/contract checks, buildHealth, SDK AAR publication/verification and a standalone SDK consumer build. Host-native evidence and memory-copy fixtures passed with undefined-behavior checks, including exact/below-60% clearing and 64-bit inode parsing. The ELF fixture passed alias, mutex-overlap and alignment regressions as an ARM64 Android executable because this macOS host has no system `<elf.h>`; the memory-copy fixture also passed on Android with dumpability set to zero by the test executable and verified unchanged by the reader. Payload regressions reject missing/contradictory counts and preserve typed evidence when aggregate counters are zero. The application collector never changes dumpability.
 
 ```sh
 ./gradlew unitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug \
