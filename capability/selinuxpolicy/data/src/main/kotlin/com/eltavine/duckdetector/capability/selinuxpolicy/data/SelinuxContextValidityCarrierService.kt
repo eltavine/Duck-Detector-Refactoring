@@ -17,6 +17,7 @@
 
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
+import android.app.Application
 import android.app.Service
 import android.content.Intent
 import android.os.Binder
@@ -29,7 +30,11 @@ public class SelinuxContextValidityCarrierService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        trace("onCreate package=$packageName")
+        val serviceLoader = SelinuxContextValidityCarrierService::class.java.classLoader
+        val bridgeLoader = SelinuxContextValidityBridge::class.java.classLoader
+        trace("onCreate package=$packageName process=${Application.getProcessName()} " +
+            "serviceLoader=${loaderLabel(serviceLoader)} bridgeLoader=${loaderLabel(bridgeLoader)} " +
+            "sameLoader=${serviceLoader === bridgeLoader}")
     }
 
     override fun onDestroy() {
@@ -38,8 +43,12 @@ public class SelinuxContextValidityCarrierService : Service() {
     }
 
     private fun trace(message: String) {
-        Log.i("DuckSelinuxCarrier", "service pid=${Os.getpid()} uid=${Os.getuid()} $message")
+        Log.i("DuckSelinuxCarrier", "service pid=${Os.getpid()} ppid=${Os.getppid()} uid=${Os.getuid()} $message")
     }
+
+    private fun loaderLabel(loader: ClassLoader?): String =
+        loader?.let { "${it.toString().substringBefore('[').take(64)}@${System.identityHashCode(it)}" }
+            ?: "bootstrap"
 
     private val binder = object : Binder() {
         override fun onTransact(
@@ -78,6 +87,9 @@ public class SelinuxContextValidityCarrierService : Service() {
         return runCatching {
             resolveCarrierPayload(
                 consumePreloadedRawData = SelinuxContextValidityBridge::consumePreloadedRawDataForCarrier,
+                onPayloadState = { cached, present ->
+                    trace("preload payload cached=$cached present=$present")
+                },
             )
         }.getOrElse { throwable ->
             carrierFailurePayload(
@@ -93,9 +105,14 @@ public class SelinuxContextValidityCarrierService : Service() {
 
         internal fun resolveCarrierPayload(
             consumePreloadedRawData: () -> String?,
+            onPayloadState: (cached: Boolean, present: Boolean) -> Unit = { _, _ -> },
         ): String {
-            cachedPreloadedPayload?.let { return it }
+            cachedPreloadedPayload?.let {
+                onPayloadState(true, true)
+                return it
+            }
             val raw = consumePreloadedRawData()
+            onPayloadState(false, !raw.isNullOrBlank())
             if (!raw.isNullOrBlank()) {
                 cachedPreloadedPayload = raw
                 return raw

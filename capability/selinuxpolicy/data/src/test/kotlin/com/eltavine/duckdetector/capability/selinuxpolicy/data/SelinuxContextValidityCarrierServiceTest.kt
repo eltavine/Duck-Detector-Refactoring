@@ -65,18 +65,22 @@ class SelinuxContextValidityCarrierServiceTest {
             ),
         )
         SelinuxContextValidityBridge.setPreloadedRawData(expected)
+        val states = mutableListOf<Pair<Boolean, Boolean>>()
 
         val first = SelinuxContextValidityCarrierService.resolveCarrierPayload(
             consumePreloadedRawData = SelinuxContextValidityBridge::consumePreloadedRawDataForCarrier,
+            onPayloadState = { cached, present -> states += cached to present },
         )
         val second = SelinuxContextValidityCarrierService.resolveCarrierPayload(
             consumePreloadedRawData = {
                 error("carrier service should not consume preload data twice")
             },
+            onPayloadState = { cached, present -> states += cached to present },
         )
 
         assertEquals(expected, first)
         assertEquals(expected, second)
+        assertEquals(listOf(false to true, true to true), states)
     }
 
     @Test
@@ -84,8 +88,10 @@ class SelinuxContextValidityCarrierServiceTest {
         SelinuxContextValidityCarrierService.clearCachedPreloadedPayloadForTests()
         SelinuxContextValidityBridge.clearPreloadedRawDataForTests()
 
+        val states = mutableListOf<Pair<Boolean, Boolean>>()
         val payload = SelinuxContextValidityCarrierService.resolveCarrierPayload(
             consumePreloadedRawData = { null },
+            onPayloadState = { cached, present -> states += cached to present },
         )
         val snapshot = SelinuxContextValidityBridge().parse(payload)
 
@@ -97,6 +103,7 @@ class SelinuxContextValidityCarrierServiceTest {
         assertEquals(SelinuxPolicyloadSeqnoState.UNAVAILABLE.name, snapshot.policyloadSeqnoState)
         assertTrue(snapshot.policyloadSeqnoNotes.any { it.contains("did not receive a preloaded app_zygote payload") })
         assertTrue(snapshot.notes.any { it.contains("did not receive a preloaded app_zygote payload") })
+        assertEquals(listOf(false to false), states)
     }
 
     private fun baseSnapshot(
