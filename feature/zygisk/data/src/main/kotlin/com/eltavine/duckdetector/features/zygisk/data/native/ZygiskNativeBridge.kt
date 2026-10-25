@@ -21,6 +21,7 @@ import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitState
 
 class ZygiskNativeBridge(
     private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
@@ -86,6 +87,23 @@ class ZygiskNativeBridge(
             "SOLIST_HITS" -> copy(solistHitCount = value.toIntOrNull() ?: solistHitCount)
             "VMAP_HITS" -> copy(vmapHitCount = value.toIntOrNull() ?: vmapHitCount)
             "ATEXIT_HITS" -> copy(atexitHitCount = value.toIntOrNull() ?: atexitHitCount)
+            "ATEXIT_TABLE_STATE" -> copy(atexitTable = atexitTable.copy(
+                state = when (value) {
+                    "COLLECTED" -> ZygiskAtexitState.COLLECTED
+                    "UNSUPPORTED" -> ZygiskAtexitState.UNSUPPORTED
+                    "UNAVAILABLE" -> ZygiskAtexitState.UNAVAILABLE
+                    "PERMISSION_DENIED" -> ZygiskAtexitState.PERMISSION_DENIED
+                    "BUSY" -> ZygiskAtexitState.BUSY
+                    "INVALID" -> ZygiskAtexitState.INVALID
+                    "PARTIAL" -> ZygiskAtexitState.PARTIAL
+                    else -> ZygiskAtexitState.NOT_COLLECTED
+                },
+            ))
+            "ATEXIT_TABLE_ENTRIES" -> copy(atexitTable = atexitTable.copy(entries = value.toCount()))
+            "ATEXIT_TABLE_NULLS" -> copy(atexitTable = atexitTable.copy(nullEntries = value.toCount()))
+            "ATEXIT_TABLE_GAPS" -> copy(atexitTable = atexitTable.copy(anchoredGaps = value.toCount()))
+            "ATEXIT_TABLE_CALLBACKS" -> copy(atexitTable = atexitTable.copy(anonymousCallbacks = value.toCount()))
+            "ATEXIT_TABLE_DETAIL" -> copy(atexitTable = atexitTable.copy(detail = value.decodeValue()))
             "SMAPS_HITS" -> copy(smapsHitCount = value.toIntOrNull() ?: smapsHitCount)
             "NAMESPACE_HITS" -> copy(namespaceHitCount = value.toIntOrNull() ?: namespaceHitCount)
             "LINKER_HOOK_HITS" -> copy(
@@ -100,6 +118,10 @@ class ZygiskNativeBridge(
     }
 
     private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
+
+    private fun String.toCount(): Int = requireNotNull(toIntOrNull()?.takeIf { it >= 0 }) {
+        "Invalid exit-handler count in native payload."
+    }
 
     private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 

@@ -34,6 +34,7 @@ import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignal
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalGroup
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalSeverity
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskStage
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitState
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 import kotlinx.coroutines.withContext
@@ -76,6 +77,7 @@ class ZygiskRepository(
             fdTrapAvailable = fdTrap.available,
             fdTrapDetected = fdTrap.detected,
             nativeAvailable = snapshot.available,
+            atexitTable = snapshot.atexitTable,
             heapAvailable = snapshot.heapAvailable,
             nativeStrongHitCount = snapshot.strongHitCount,
             heuristicHitCount = snapshot.heuristicHitCount,
@@ -211,6 +213,19 @@ class ZygiskRepository(
                     else -> ZygiskMethodOutcome.CLEAN
                 },
                 detail = "Correlates TracerPid, suspicious thread names, and open descriptor targets that frequently survive runtime tampering stacks.",
+            ),
+            ZygiskMethodResult(
+                method = ZygiskMethod.ATEXIT_HANDLERS,
+                summary = if (snapshot.atexitTable.hasEvidence) "Residue observed" else snapshot.atexitTable.state.label,
+                outcome = when {
+                    snapshot.atexitTable.hasEvidence -> ZygiskMethodOutcome.WARNING
+                    snapshot.atexitTable.state == ZygiskAtexitState.COLLECTED -> ZygiskMethodOutcome.CLEAN
+                    else -> ZygiskMethodOutcome.SUPPORT
+                },
+                detail = snapshot.atexitTable.detail + " Entries: ${snapshot.atexitTable.entries}; " +
+                    "cleared: ${snapshot.atexitTable.nullEntries}; runtime-adjacent gaps: ${snapshot.atexitTable.anchoredGaps}; " +
+                    "anonymous callbacks: ${snapshot.atexitTable.anonymousCallbacks}. " +
+                    "These observations do not identify an injection framework or version.",
             ),
             ZygiskMethodResult(
                 method = ZygiskMethod.SOLIST_ATEXIT_HEAP,

@@ -74,6 +74,20 @@ namespace duckdetector::zygisk {
         std::vector<Trace> traces;
     };
 
+    enum class AtexitTableState {
+        kNotCollected, kCollected, kUnsupported, kUnavailable, kPermissionDenied,
+        kBusy, kInvalid, kPartial,
+    };
+
+    struct AtexitObservation {
+        AtexitTableState state = AtexitTableState::kNotCollected;
+        size_t entries = 0;
+        size_t null_entries = 0;
+        size_t anchored_gaps = 0;
+        size_t anonymous_callbacks = 0;
+        std::string detail;
+    };
+
     struct Snapshot {
         bool available = false;
         bool heap_available = false;
@@ -89,6 +103,7 @@ namespace duckdetector::zygisk {
         int heap_hits = 0;
         int thread_hits = 0;
         int fd_hits = 0;
+        AtexitObservation atexit_table;
         std::vector<Trace> traces;
     };
 

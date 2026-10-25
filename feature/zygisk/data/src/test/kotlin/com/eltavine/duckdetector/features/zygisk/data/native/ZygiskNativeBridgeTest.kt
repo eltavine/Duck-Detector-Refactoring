@@ -20,11 +20,53 @@ package com.eltavine.duckdetector.features.zygisk.data.native
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitState
 
 class ZygiskNativeBridgeTest {
 
     private val bridge = ZygiskNativeBridge()
+
+    @Test
+    fun `malformed table counts do not become a zero evidence result`() {
+        listOf("-1", "invalid", "999999999999999999999").forEach { count ->
+            assertThrows(IllegalArgumentException::class.java) {
+                bridge.parse("AVAILABLE=1\nATEXIT_TABLE_ENTRIES=$count")
+            }
+        }
+    }
+
+    @Test
+    fun `missing unknown and unavailable table states do not become evaluated`() {
+        assertEquals(ZygiskAtexitState.NOT_COLLECTED, bridge.parse("AVAILABLE=1").atexitTable.state)
+        assertEquals(ZygiskAtexitState.NOT_COLLECTED, bridge.parse("AVAILABLE=1\nATEXIT_TABLE_STATE=NEW_LAYOUT").atexitTable.state)
+        listOf("UNSUPPORTED", "UNAVAILABLE", "PERMISSION_DENIED", "BUSY", "INVALID", "PARTIAL").forEach { state ->
+            val result = bridge.parse("AVAILABLE=1\nATEXIT_TABLE_STATE=$state")
+            assertEquals(state, result.atexitTable.state.name)
+            assertFalse(result.atexitTable.hasEvidence)
+        }
+    }
+
+    @Test
+    fun `table residue preserves counts and escaped failure details`() {
+        val table = bridge.parse("""
+            AVAILABLE=1
+            ATEXIT_TABLE_STATE=PARTIAL
+            ATEXIT_TABLE_ENTRIES=456
+            ATEXIT_TABLE_NULLS=36
+            ATEXIT_TABLE_GAPS=1
+            ATEXIT_TABLE_CALLBACKS=2
+            ATEXIT_TABLE_DETAIL=Read table\nOne unresolved callback
+        """.trimIndent()).atexitTable
+        assertEquals(ZygiskAtexitState.PARTIAL, table.state)
+        assertEquals(456, table.entries)
+        assertEquals(36, table.nullEntries)
+        assertEquals(1, table.anchoredGaps)
+        assertEquals(2, table.anonymousCallbacks)
+        assertTrue(table.hasEvidence)
+        assertEquals("Read table\nOne unresolved callback", table.detail)
+    }
 
     @Test
     fun `parse decodes scalar keys and traces`() {

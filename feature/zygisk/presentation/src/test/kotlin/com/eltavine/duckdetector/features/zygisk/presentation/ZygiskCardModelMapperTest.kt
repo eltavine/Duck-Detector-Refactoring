@@ -24,6 +24,8 @@ import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignal
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalGroup
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalSeverity
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskStage
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitObservation
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitState
 import com.eltavine.duckdetector.features.zygisk.presentation.model.ZygiskRowIcon
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -152,6 +154,7 @@ class ZygiskCardModelMapperTest {
                 "Maps and smaps" to ZygiskRowIcon.MEMORY,
                 "Threads and FDs" to null,
                 "Solist, atexit, heap" to ZygiskRowIcon.MEMORY,
+                "Exit-handler table" to ZygiskRowIcon.LINKER,
             ),
             model.methodRows.map { it.label to it.icon },
         )
@@ -189,6 +192,7 @@ class ZygiskCardModelMapperTest {
             signals = signals,
             methods = emptyList(),
             references = ZygiskReport.defaultReferences(),
+            atexitTable = ZygiskAtexitObservation(state = ZygiskAtexitState.COLLECTED),
         )
     }
 }

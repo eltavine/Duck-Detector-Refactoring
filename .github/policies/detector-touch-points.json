@@ -33,8 +33,8 @@
     },
     {
       "path": "app/build.gradle.kts",
-      "detectors": ["rootmanagers", "selinux"],
-      "reason": "The composition root signs and packages the feature-owned installer-canary manifest with the host application key; host instrumentation needs the feature data and domain test dependencies. App Zygote acquisition instrumentation also consumes the SELinux domain from the installed host."
+      "detectors": ["rootmanagers", "selinux", "zygisk"],
+      "reason": "The composition root signs and packages the feature-owned installer-canary manifest with the host application key; host instrumentation needs the feature data and domain test dependencies. App Zygote acquisition instrumentation consumes the SELinux domain from the installed host. The feature-owned exit-handler device fixture is assembled into the host instrumentation APK to exercise its actual native runtime with an ordinary app UID."
     },
     {
       "path": "app/src/androidTest/java/com/eltavine/duckdetector/InstallerCanaryRuntimeTest.kt",

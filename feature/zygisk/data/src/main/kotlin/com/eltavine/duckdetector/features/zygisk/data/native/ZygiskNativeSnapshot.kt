@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.features.zygisk.data.native
 
 import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitObservation
 
 data class ZygiskNativeTrace(
     val group: String,
@@ -47,4 +48,5 @@ data class ZygiskNativeSnapshot(
      * found nothing" from "the probe never ran", so the reason is carried here.
      */
     val collection: NativeCollectionStatus = NativeCollectionStatus.Collected,
+    val atexitTable: ZygiskAtexitObservation = ZygiskAtexitObservation(),
 )

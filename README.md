@@ -93,6 +93,7 @@ Supporting modules provide the dashboard, device information, settings, update c
 - **Early native capture:** a transparent `NativeActivity` runs before `MainActivity` and records early mount and virtualization evidence.
 - **Native probes:** the shared native library performs checks that require direct system calls, `/proc` inspection, timing measurements, linker/runtime visibility, or architecture-specific assembly.
 - **Process separation:** selected Zygisk, Mount, Native Root, virtualization, SELinux, LSPosed, and TEE checks run in dedicated or isolated services so evidence can be compared across process boundaries.
+- **Exit-handler evidence:** Zygisk checks libc callback mappings and ordered cleared-handler runs from the ordinary app process, with explicit coverage limits and heuristic findings rather than framework identification.
 - **Evidence correlation:** the dashboard reports individual findings and coverage states instead of treating one heuristic as conclusive.
 
 # Compatibility
