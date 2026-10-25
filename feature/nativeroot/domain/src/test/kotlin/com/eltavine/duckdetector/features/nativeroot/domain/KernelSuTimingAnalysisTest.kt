@@ -69,12 +69,15 @@ class KernelSuTimingAnalysisTest {
         val sparse = histogram(100)
         val analysis = KernelSuTimingClassifier.analyze(List(6) { sparse },
             KernelSuTimingDistance(count, count, count, 0))
-        assertEquals(0.0, analysis.similarity.referenceSimilarity, 0.0)
+        assertTrue(analysis.similarity.referenceSimilarity.isNaN())
+        assertFalse(analysis.valid)
+        assertEquals(0, analysis.support.first().firstMass)
         assertTrue(analysis.similarity.referenceMean.isNaN())
         assertFalse(analysis.matched)
         val medium = histogram(500)
         val mediumResult = KernelSuTimingClassifier.analyze(List(6) { medium }, analysis.distance)
-        assertEquals(0.0, mediumResult.similarity.referenceSimilarity, 0.0)
+        assertTrue(mediumResult.similarity.referenceSimilarity.isNaN())
+        assertFalse(mediumResult.valid)
         assertFalse(mediumResult.similarity.referenceMean.isNaN())
     }
 
@@ -140,7 +143,7 @@ class KernelSuTimingAnalysisTest {
             val distance = if (distanceMatches) KernelSuTimingDistance(count, 0, count, count)
                 else KernelSuTimingDistance(count, count, count, 0)
             val similarity = if (similarityMatches) baseline else baseline.copy(targetSimilarity = 1.0)
-            assertEquals(distanceMatches && similarityMatches, KernelSuTimingAnalysis(distance, similarity).matched)
+            assertEquals(distanceMatches && similarityMatches, KernelSuTimingAnalysis(distance, similarity, List(6) { KernelSuTimingSupport(1, count, count) }).matched)
             checked++
         }
         assertEquals(49, checked)
@@ -154,7 +157,7 @@ class KernelSuTimingAnalysisTest {
         val hundredOne = KernelSuTimingClassifier.analyze(List(6) { histogram(101) }, distance).similarity
         assertTrue(hundred.referenceMean.isNaN())
         assertFalse(hundredOne.referenceMean.isNaN())
-        assertEquals(0.0, KernelSuTimingClassifier.analyze(List(6) { histogram(500) }, distance).similarity.referenceSimilarity, 0.0)
+        assertTrue(KernelSuTimingClassifier.analyze(List(6) { histogram(500) }, distance).similarity.referenceSimilarity.isNaN())
         assertEquals(1.0, KernelSuTimingClassifier.analyze(List(6) { histogram(501) }, distance).similarity.referenceSimilarity, 1e-15)
         val first = mapOf(1uL to 101, 2uL to 9899)
         val second = mapOf(1uL to 100, 2uL to 9900)
@@ -163,4 +166,23 @@ class KernelSuTimingAnalysisTest {
         val wrapped = KernelSuTimingClassifier.analyze(List(6) { mapOf(ULong.MAX_VALUE to count) }, distance).similarity
         assertEquals((ULong.MAX_VALUE * count.toULong()).toDouble() / count, wrapped.referenceMean, 0.0)
     }
+    @Test fun `retained minority is insufficient even with nonempty finite metrics`() {
+        fun histogram(mass: Int) = mapOf(0uL to mass) + (1..(count - mass)).associate { it.toULong() to 1 }
+        val distance = KernelSuTimingDistance(count, count, count, 0)
+        for (mass in listOf(501, 5000, 5001, count)) {
+            val result = KernelSuTimingClassifier.analyze(List(6) { histogram(mass) }, distance)
+            assertEquals(mass >= 5001, result.valid)
+            assertEquals(mass, result.support.first().firstMass)
+            assertEquals(1, result.support.first().retainedBins)
+        }
+    }
+
+    @Test fun `missing classifier support cannot be a valid negative`() {
+        val analysis = KernelSuTimingClassifier.summarize(vectors(10uL, 10uL))
+        assertTrue(analysis.valid)
+        assertFalse(analysis.copy(support = emptyList()).valid)
+        val singleMissing = analysis.support.toMutableList().apply { this[5] = KernelSuTimingSupport(0, 0, 0) }
+        assertFalse(analysis.copy(support = singleMissing).valid)
+    }
+
 }

@@ -74,6 +74,8 @@ Native Root also offers an optional [fsnotify SRCU timing experiment](feature/na
 
 On arm64, Native Root also collects an experimental [init.rc hook timing contrast](feature/nativeroot/INIT_RC_TIMING.md) using private same-inode files and a dedicated worker. Results remain supporting evidence, preserve failures and raw samples, and do not identify or exclude KernelSU; physical-device calibration is outstanding.
 
+Native Root also collects supporting [KernelSU prctl timing evidence](feature/nativeroot/KERNELSU_TIMING.md) on eligible arm64 processes. Each CPU has an independent preflight; syscall outcomes, retries, histogram support and CPU eligibility remain visible. A complete non-match requires every present CPU; excluded or changing CPUs leave coverage partial. Timing cannot confirm or exclude KernelSU or root.
+
 Supporting modules provide the dashboard, device information, settings, update checks, notifications, license information, and common UI infrastructure.
 
 # How it works

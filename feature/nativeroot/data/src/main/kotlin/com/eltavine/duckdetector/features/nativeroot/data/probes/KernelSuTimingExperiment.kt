@@ -17,23 +17,25 @@
 
 package com.eltavine.duckdetector.features.nativeroot.data.probes
 
+import com.eltavine.duckdetector.core.platform.PlatformFailureName
 import com.eltavine.duckdetector.features.nativeroot.data.native.KernelSuTimingWindow
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingAnalysis
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingClassifier
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCollection
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCoreAttempt
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCoreStatus
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCpuSnapshot
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingObservation
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingPreflight
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingPreflightStatus
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingProfile
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingWindowEvidence
 import kotlinx.coroutines.CancellationException
-import com.eltavine.duckdetector.core.platform.PlatformFailureName
 
 internal interface KernelSuTimingBackend {
     fun supported(): Boolean
     fun interactive(): Boolean
-    fun cpus(): List<Int>
+    fun cpuSnapshot(): KernelSuTimingCpuSnapshot
     fun sample(cpu: Int, preflight: Boolean): KernelSuTimingWindow
     fun elapsedMillis(): Long
 }
@@ -48,62 +50,75 @@ internal class KernelSuTimingExperiment(private val backend: KernelSuTimingBacke
             !backend.interactive() -> KernelSuTimingCollection.NONINTERACTIVE
             else -> null
         }
+        fun finish(state: KernelSuTimingCollection): KernelSuTimingObservation = observation.copy(
+            collection = state, finalCpus = backend.cpuSnapshot())
         try {
             if (!backend.supported()) return observation.copy(collection = KernelSuTimingCollection.UNSUPPORTED)
-            stop()?.let { return observation.copy(collection = it) }
-            observation = observation.copy(cleanupCompleted = false)
-            val preflightWindow = backend.sample(-1, true)
-            observation = observation.copy(cleanupCompleted = preflightWindow.cleanup,
-                counterFrequencyHz = preflightWindow.frequency)
-            if (preflightWindow.status != KernelSuTimingCoreStatus.MEASURED || !preflightWindow.cleanup) {
-                return observation.copy(collection = if (preflightWindow.status == null)
-                    KernelSuTimingCollection.UNSUPPORTED else KernelSuTimingCollection.UNAVAILABLE,
-                    detail = "Preflight sampling failed: ${preflightWindow.status}")
-            }
-            val frequencies = preflightWindow.vectors.single().groupingBy { it }.eachCount()
-                .flatMap { (ticks, count) -> listOf(ticks, count.toULong()) }
-            observation = observation.copy(preflight = KernelSuTimingPreflight.fromFrequencies(frequencies))
-            stop()?.let { return observation.copy(collection = it) }
-            if (observation.preflight.status != KernelSuTimingPreflightStatus.ACCEPTED) {
-                return observation.copy(collection = KernelSuTimingCollection.PREFLIGHT_REJECTED)
-            }
-            observation = observation.copy(enumeratedCpus = backend.cpus())
-            if (observation.enumeratedCpus.isEmpty()) return observation.copy(collection = KernelSuTimingCollection.UNAVAILABLE)
-            for (cpu in observation.enumeratedCpus) {
+            stop()?.let { return finish(it) }
+            observation = observation.copy(initialCpus = backend.cpuSnapshot())
+            val initial = observation.initialCpus
+            if (!initial.complete || initial.present.isNullOrEmpty()) return finish(KernelSuTimingCollection.UNAVAILABLE)
+            val present = initial.present.orEmpty()
+            for (cpu in present.take(KernelSuTimingProfile.MAXIMUM_CORES)) {
+                if (cpu !in initial.eligible) continue
                 val rounds = mutableListOf<KernelSuTimingAnalysis>()
-                var attempt = KernelSuTimingCoreAttempt(cpu, null, KernelSuTimingCoreStatus.SAMPLING_FAILED)
-                for (round in 0 until KernelSuTimingProfile.REQUIRED_ROUNDS) {
-                    stop()?.let { return observation.copy(collection = it) }
-                    observation = observation.copy(cleanupCompleted = false)
-                    val window = backend.sample(cpu, false)
+                val windows = mutableListOf<KernelSuTimingWindowEvidence>()
+                var preflight = KernelSuTimingPreflight()
+                for (index in 0..KernelSuTimingProfile.REQUIRED_ROUNDS) {
+                    stop()?.let { return finish(it) }
+                    val before = backend.cpuSnapshot()
+                    val window = if (cpu in before.eligible && before.complete &&
+                        (windows.isEmpty() || windows.first().before == before)) {
+                        observation = observation.copy(cleanupCompleted = false)
+                        backend.sample(cpu, index == 0)
+                    } else KernelSuTimingWindow(KernelSuTimingCoreStatus.ELIGIBILITY_CHANGED, null,
+                        0uL, true, emptyList(), emptyList(), emptyList())
                     observation = observation.copy(cleanupCompleted = window.cleanup)
-                    val status = when {
+                    val evidence = KernelSuTimingWindowEvidence(before, backend.cpuSnapshot(),
+                        window.allowedCpus, window.outcomes, window.frequency)
+                    windows += evidence
+                    var status = when {
                         !window.cleanup -> KernelSuTimingCoreStatus.CLEANUP_FAILED
                         window.status != KernelSuTimingCoreStatus.MEASURED ->
                             window.status ?: KernelSuTimingCoreStatus.SAMPLING_FAILED
-                        window.frequency != observation.counterFrequencyHz || window.frequency == 0uL ->
+                        window.actualCpu != cpu -> KernelSuTimingCoreStatus.CPU_MISMATCH
+                        !evidence.stable || cpu !in evidence.before.eligible -> KernelSuTimingCoreStatus.ELIGIBILITY_CHANGED
+                        window.frequency == 0uL || window.frequency != windows.first().counterFrequencyHz ->
                             KernelSuTimingCoreStatus.TIMER_UNAVAILABLE
-                        window.actualCpu != cpu && window.status == KernelSuTimingCoreStatus.MEASURED ->
-                            KernelSuTimingCoreStatus.CPU_MISMATCH
-                        else -> window.status ?: KernelSuTimingCoreStatus.SAMPLING_FAILED
+                        !evidence.expectedOutcomes -> KernelSuTimingCoreStatus.OUTCOME_CONTAMINATED
+                        else -> KernelSuTimingCoreStatus.MEASURED
                     }
-                    if (status == KernelSuTimingCoreStatus.MEASURED) {
-                        rounds += KernelSuTimingClassifier.summarize(window.vectors)
+                    if (index == 0 && window.status == KernelSuTimingCoreStatus.MEASURED) {
+                        val frequencies = window.vectors.single().groupingBy { it }.eachCount()
+                            .flatMap { (ticks, count) -> listOf(ticks, count.toULong()) }
+                        preflight = KernelSuTimingPreflight.fromFrequencies(frequencies)
+                        if (status == KernelSuTimingCoreStatus.MEASURED &&
+                            preflight.status != KernelSuTimingPreflightStatus.ACCEPTED) {
+                            status = KernelSuTimingCoreStatus.PREFLIGHT_REJECTED
+                        }
+                    } else if (index > 0 && status == KernelSuTimingCoreStatus.MEASURED) {
+                        val analysis = KernelSuTimingClassifier.summarize(window.vectors)
+                        rounds += analysis
+                        if (!analysis.valid) status = KernelSuTimingCoreStatus.INSUFFICIENT_SUPPORT
                     }
-                    attempt = KernelSuTimingCoreAttempt(cpu, window.actualCpu, status, rounds.toList())
+                    val attempt = KernelSuTimingCoreAttempt(cpu, window.actualCpu, status,
+                        rounds.toList(), preflight, windows.toList())
                     observation = observation.copy(attempts = observation.attempts.filterNot { it.requestedCpu == cpu } + attempt)
-                    stop()?.let { return observation.copy(collection = it) }
-                    if (!window.cleanup) return observation.copy(collection = KernelSuTimingCollection.PARTIAL)
-                    if (status != KernelSuTimingCoreStatus.MEASURED || !rounds.last().matched) break
+                    stop()?.let { return finish(it) }
+                    if (!window.cleanup) return finish(KernelSuTimingCollection.PARTIAL)
+                    if (status != KernelSuTimingCoreStatus.MEASURED || (index > 0 && !rounds.last().matched)) break
                 }
-                if (attempt.confirmed) return observation.copy(collection = KernelSuTimingCollection.COLLECTED)
+                if (observation.attempts.last().confirmed) return finish(KernelSuTimingCollection.COLLECTED)
             }
-            return observation.copy(collection = if (observation.attempts.all { it.completed })
-                KernelSuTimingCollection.COLLECTED else KernelSuTimingCollection.PARTIAL)
+            val finished = finish(KernelSuTimingCollection.PARTIAL)
+            val complete = finished.coverageStable && finished.attempts.all { it.completed } &&
+                finished.attempts.map { it.requestedCpu } == initial.present
+            return finished.copy(collection = if (complete) KernelSuTimingCollection.COLLECTED
+                else KernelSuTimingCollection.PARTIAL)
         } catch (failure: Exception) {
             if (failure is CancellationException) throw failure
             return observation.copy(collection = KernelSuTimingCollection.UNAVAILABLE,
-                detail = PlatformFailureName.describe(failure))
+                detail = PlatformFailureName.describe(failure).take(160))
         }
     }
 }

@@ -24,6 +24,17 @@
 #include <unistd.h>
 #include <vector>
 
+#if defined(__APPLE__)
+// Host-only stand-in for Linux's fixed-size affinity mask. All scheduler
+// operations below are fakes; these tests never change host thread affinity.
+struct cpu_set_t { uint64_t words[16]; };
+constexpr int CPU_SETSIZE = 1024;
+#define CPU_ZERO(value) std::memset(value, 0, sizeof(cpu_set_t))
+#define CPU_SET(cpu, value) ((value)->words[(cpu) / 64] |= (uint64_t{1} << ((cpu) % 64)))
+#define CPU_ISSET(cpu, value) (((value)->words[(cpu) / 64] >> ((cpu) % 64)) & 1)
+#define CPU_EQUAL(first, second) (std::memcmp(first, second, sizeof(cpu_set_t)) == 0)
+#endif
+
 static cpu_set_t mask;
 static uint64_t test_frequency;
 static uint64_t clock_ticks;
@@ -45,7 +56,8 @@ static long test_prctl(uint64_t option, int command, const char *path) {
         assert(command == 7 && !path);
     }
     ++calls;
-    if (scenario == 7 && calls == 1) return -EINTR;
+    if ((scenario == 7 && calls == 1) || scenario == 10) return -EINTR;
+    if (scenario == 11 && option == 0xDEADBEEF) return -EPERM;
     return -EINVAL;
 }
 static uid_t test_getuid() { return uid_value; }
@@ -91,7 +103,7 @@ static Window collect_case(int kind, bool preflight = false) {
     CPU_SET(2, &mask);
     CPU_SET(3, &mask);
     Window window;
-    window.requested_cpu = preflight ? -1 : 2;
+    window.requested_cpu = 2;
     window.preflight = preflight;
     window.ticks.resize(sample_count * (preflight ? 1 : 6));
     collect(window);
@@ -103,6 +115,11 @@ int main() {
     assert(measured.status == 0 && measured.cleanup && calls == 60000 && measured.actual_cpu == 2);
     assert(measured.ticks.size() == 60000);
     for (auto ticks : measured.ticks) assert(ticks == 100);
+    assert(measured.allowed == std::vector<jlong>({2, 3}));
+    for (const auto &outcome : measured.outcomes) {
+        assert(outcome.used == 1 && outcome.codes[0] == -EINVAL && outcome.counts[0] == 10000);
+        assert(outcome.total_retries == 0 && outcome.other == 0);
+    }
     assert(CPU_ISSET(2, &mask) && CPU_ISSET(3, &mask));
     auto preflight = collect_case(0, true);
     assert(preflight.status == 0 && preflight.cleanup && calls == 10000);
@@ -114,8 +131,20 @@ int main() {
     }
     const auto retried = collect_case(7);
     assert(retried.status == 0 && retried.cleanup && calls == 60001);
+    assert(retried.outcomes[3].retried == 1 && retried.outcomes[3].total_retries == 1);
+    assert(retried.outcomes[3].max_retries == 1 && retried.outcomes[3].retry_limit == 0);
+    const auto exhausted = collect_case(10, true);
+    assert(exhausted.status == 0 && calls == 40000);
+    assert(exhausted.outcomes[0].codes[0] == -EINTR && exhausted.outcomes[0].retry_limit == 10000);
+    assert(exhausted.outcomes[0].total_retries == 30000 && exhausted.outcomes[0].max_retries == 3);
+    const auto intercepted = collect_case(11);
+    assert(intercepted.status == 0 && intercepted.outcomes[1].codes[0] == -EPERM);
+    assert(intercepted.outcomes[0].codes[0] == -EINVAL);
+    Outcomes overflow;
+    for (int code = 0; code < 10; ++code) overflow.record({100, code, 0});
+    assert(overflow.used == 8 && overflow.other == 2);
     const auto rejected = collect_case(8);
     assert(rejected.status != 0 && calls == 0 && affinity_sets == 0);
-    const auto next_allowed = collect_case(9, true);
-    assert(next_allowed.status == 0 && next_allowed.actual_cpu == 3 && next_allowed.cleanup);
+    const auto rejected_cpu = collect_case(9, true);
+    assert(rejected_cpu.status == 1 && calls == 0 && rejected_cpu.cleanup);
 }

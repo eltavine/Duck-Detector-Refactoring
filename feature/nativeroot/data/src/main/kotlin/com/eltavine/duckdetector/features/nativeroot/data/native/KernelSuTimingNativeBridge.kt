@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.nativeroot.data.native
 import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCoreStatus
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingProfile
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingSyscallSummary
 
 internal data class KernelSuTimingWindow(
     val status: KernelSuTimingCoreStatus?,
@@ -27,6 +28,8 @@ internal data class KernelSuTimingWindow(
     val frequency: ULong,
     val cleanup: Boolean,
     val vectors: List<List<ULong>>,
+    val allowedCpus: List<Int>,
+    val outcomes: List<KernelSuTimingSyscallSummary>,
 )
 
 internal class KernelSuTimingNativeBridge {
@@ -35,17 +38,43 @@ internal class KernelSuTimingNativeBridge {
         return parse(nativeSample(cpu, preflight), preflight)
     }
 
+    fun affinity(): List<Int> {
+        check(DuckDetectorNativeLibrary.isLoaded) { "Native library unavailable" }
+        val raw = nativeAffinity()
+        require(raw.size in 1..1025 && raw[0] in 0..4095)
+        check(raw[0] == 0L) { "sched_getaffinity errno=${raw[0]}" }
+        return raw.drop(1).map { require(it in 0L..1023L); it.toInt() }
+            .also { require(it == it.distinct().sorted()) }
+    }
+
     internal fun parse(raw: LongArray, preflight: Boolean): KernelSuTimingWindow {
-        require(raw.size in 4..60004)
-        require(raw[0] in 0L..6L && raw[1] in -1L..1023L && raw[3] in 0L..1L)
-        val status = raw[0].toInt()
-        val expected = if (preflight) KernelSuTimingProfile.SAMPLE_COUNT else 6 * KernelSuTimingProfile.SAMPLE_COUNT
-        require(raw.size == if (status == 0) expected + 4 else 4)
-        require(status != 0 || (raw[2] != 0L && raw[1] >= 0 && raw[3] == 1L))
-        return KernelSuTimingWindow(KernelSuTimingCoreStatus.entries.getOrNull(status),
-            raw[1].toInt().takeIf { it >= 0 }, raw[2].toULong(), raw[3] == 1L,
-            raw.drop(4).map { it.toULong() }.chunked(KernelSuTimingProfile.SAMPLE_COUNT))
+        require(raw.size in 8..62000)
+        var offset = 0
+        fun next(): Long { require(offset < raw.size); return raw[offset++] }
+        fun count(maximum: Int) = next().also { require(it in 0..maximum.toLong()) }.toInt()
+        require(next() == 2L)
+        val status = count(6)
+        val actual = next().also { require(it in -1L..1023L) }.toInt().takeIf { it >= 0 }
+        val frequency = next().toULong()
+        val cleanup = count(1) == 1
+        val allowed = List(count(1024)) { count(1023) }.also { require(it == it.distinct().sorted()) }
+        val vectorCount = count(6)
+        require(vectorCount == 0 || vectorCount == if (preflight) 1 else 6)
+        val outcomes = List(vectorCount) {
+            val entries = List(count(8)) { next() to count(10000) }
+            require(entries.map { it.first }.distinct().size == entries.size)
+            KernelSuTimingSyscallSummary(entries.toMap(), count(10000), count(10000), count(30000), count(3), count(10000))
+        }
+        val ticks = count(60000)
+        val expected = (if (preflight) 1 else 6) * KernelSuTimingProfile.SAMPLE_COUNT
+        require(ticks == if (status == 0) expected else 0)
+        require(status != 0 || (frequency != 0uL && actual != null && cleanup && vectorCount > 0))
+        require(raw.size - offset == ticks)
+        val vectors = raw.drop(offset).map { it.toULong() }.chunked(KernelSuTimingProfile.SAMPLE_COUNT)
+        return KernelSuTimingWindow(if (status == 6) null else KernelSuTimingCoreStatus.entries[status],
+            actual, frequency, cleanup, vectors, allowed, outcomes)
     }
 
     private external fun nativeSample(cpu: Int, preflight: Boolean): LongArray
+    private external fun nativeAffinity(): LongArray
 }

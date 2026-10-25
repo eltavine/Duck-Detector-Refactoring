@@ -28,7 +28,7 @@ internal fun kernelSuTimingRow(observation: KernelSuTimingObservation): NativeRo
     val verdict = observation.verdict
     val value = when (verdict) {
         KernelSuTimingVerdict.REPEATED_PATTERN -> "Repeated timing pattern (supporting)"
-        KernelSuTimingVerdict.NOT_OBSERVED -> "Pattern not observed"
+        KernelSuTimingVerdict.NOT_OBSERVED -> "Pattern not observed on all present CPUs"
         KernelSuTimingVerdict.NOT_EVALUATED -> if (observation.collection == KernelSuTimingCollection.UNSUPPORTED)
             "Unsupported ABI or UID" else "Not run"
         KernelSuTimingVerdict.INCONCLUSIVE -> when (observation.collection) {
@@ -44,14 +44,34 @@ internal fun kernelSuTimingRow(observation: KernelSuTimingObservation): NativeRo
     val detail = buildString {
         appendLine("Supporting AArch64 prctl timing observation; not a KernelSU or root identification. Absence does not exclude either.")
         appendLine("collection=${observation.collection}; verdict=$verdict; cleanup=${observation.cleanupCompleted}")
-        appendLine("counterFrequencyHz=${observation.counterFrequencyHz}; unit=CNTVCT ticks (not CPU cycles or nanoseconds)")
-        appendLine("preflight=${observation.preflight.status}; bins=${observation.preflight.binCount}; minimumTicks=${observation.preflight.minimumTicks}")
-        appendLine("enumeratedCpus=${observation.enumeratedCpus}; attemptedCpus=${observation.attempts.map { it.requestedCpu }}")
+        appendLine("coverageScope=all present CPUs; coverageStable=${observation.coverageStable}")
+        appendLine("initialCpus=${observation.initialCpus}; finalCpus=${observation.finalCpus}")
+        appendLine("sampledCpus=${observation.sampledCpus}; completedCpus=${observation.attempts.filter { it.completed }.map { it.requestedCpu }}")
+        observation.initialCpus.present.orEmpty().forEachIndexed { index, cpu ->
+            val reasons = buildList {
+                if (observation.initialCpus.online == null) add("online state unavailable")
+                else if (cpu !in observation.initialCpus.online.orEmpty()) add("offline")
+                if (observation.initialCpus.allowed == null) add("affinity/cpuset unavailable")
+                else if (cpu !in observation.initialCpus.allowed.orEmpty()) add("outside worker affinity/cpuset snapshot")
+                if (index >= 16) add("CPU budget limit")
+                if (observation.attempts.none { it.requestedCpu == cpu }) add("not sampled")
+            }
+            if (reasons.isNotEmpty()) appendLine("cpu=$cpu; exclusions=$reasons")
+        }
+        observation.finalCpus?.present.orEmpty().filter { it !in observation.initialCpus.present.orEmpty() }.forEach { cpu ->
+            appendLine("cpu=$cpu; exclusions=[appeared after initial inventory, not sampled]")
+        }
         if (observation.detail.isNotEmpty()) appendLine(observation.detail)
         observation.attempts.forEach { core ->
             appendLine("cpu=${core.requestedCpu}; actual=${core.actualCpu}; status=${core.status}; confirmed=${core.confirmed}")
+            appendLine("preflight=${core.preflight.status}; bins=${core.preflight.binCount}; minimumTicks=${core.preflight.minimumTicks}")
+            core.windows.forEachIndexed { index, window ->
+                appendLine("window=$index; counterFrequencyHz=${window.counterFrequencyHz}; unit=CNTVCT ticks; stable=${window.stable}")
+                appendLine("before=${window.before}; after=${window.after}; workerAllowed=${window.workerAllowed}")
+                appendLine("syscallOutcomes=${window.outcomes}")
+            }
             core.rounds.forEachIndexed { index, round ->
-                appendLine("round=$index; distance=${round.distance}; similarity=${round.similarity}; matched=${round.matched}")
+                appendLine("round=$index; distance=${round.distance}; similarity=${round.similarity}; validity=${round.validity}; support=${round.support}; matched=${round.matched}")
             }
         }
     }.trimEnd()

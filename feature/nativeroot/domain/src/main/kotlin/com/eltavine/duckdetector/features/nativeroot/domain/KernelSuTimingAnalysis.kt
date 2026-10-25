@@ -25,6 +25,9 @@ object KernelSuTimingProfile {
     const val JOINT_MINIMUM = 50
     const val COSINE_BIN_MINIMUM = 500
     const val MEAN_BIN_MINIMUM = 100
+    // Retain a strict majority of each operand; modal filters must not
+    // decide a round from a minority of its samples. This is a coverage guard.
+    const val MINIMUM_SUPPORT_MASS = 5001
     const val REQUIRED_ROUNDS = 3
     const val MAXIMUM_CORES = 16
 }
@@ -69,11 +72,33 @@ data class KernelSuTimingSimilarity(
             firstControlSimilarity >= 0.99 && secondControlSimilarity >= 0.99
 }
 
+data class KernelSuTimingSupport(val retainedBins: Int, val firstMass: Int, val secondMass: Int) {
+    init {
+        require(retainedBins in 0..20000 && firstMass in 0..10000 && secondMass in 0..10000)
+    }
+    val sufficient: Boolean get() = retainedBins > 0 &&
+        firstMass >= KernelSuTimingProfile.MINIMUM_SUPPORT_MASS &&
+        secondMass >= KernelSuTimingProfile.MINIMUM_SUPPORT_MASS
+}
+
+enum class KernelSuTimingValidity { VALID, INSUFFICIENT_SUPPORT, NONFINITE_METRICS }
+
 data class KernelSuTimingAnalysis(
     val distance: KernelSuTimingDistance,
     val similarity: KernelSuTimingSimilarity,
+    // H0/H2, R/H1, H2/H3, H3/H4, H4/H5, then the R/H1 means.
+    val support: List<KernelSuTimingSupport> = emptyList(),
 ) {
-    val matched: Boolean get() = distance.matched && similarity.matched
+    init { require(support.isEmpty() || support.size == 6) }
+    val validity: KernelSuTimingValidity get() = when {
+        support.size != 6 || support.any { !it.sufficient } -> KernelSuTimingValidity.INSUFFICIENT_SUPPORT
+        with(similarity) { listOf(referenceSimilarity, targetSimilarity, controlSimilarity,
+            firstControlSimilarity, secondControlSimilarity, referenceMean, targetMean).any { !it.isFinite() } } ->
+            KernelSuTimingValidity.NONFINITE_METRICS
+        else -> KernelSuTimingValidity.VALID
+    }
+    val valid: Boolean get() = validity == KernelSuTimingValidity.VALID
+    val matched: Boolean get() = valid && distance.matched && similarity.matched
 }
 
 object KernelSuTimingClassifier {
@@ -97,15 +122,19 @@ object KernelSuTimingClassifier {
             (reference[it] ?: 0) > KernelSuTimingProfile.MEAN_BIN_MINIMUM ||
                 (target[it] ?: 0) > KernelSuTimingProfile.MEAN_BIN_MINIMUM
         }
+        val cosines = listOf(first to second, reference to target, second to histograms[3],
+            histograms[3] to histograms[4], histograms[4] to histograms[5]).map { (a, b) -> cosine(a, b) }
+        val meanSupport = KernelSuTimingSupport(meanKeys.size,
+            meanKeys.sumOf { reference[it] ?: 0 }, meanKeys.sumOf { target[it] ?: 0 })
         return KernelSuTimingAnalysis(distance, KernelSuTimingSimilarity(
-            referenceSimilarity = cosine(first, second),
-            targetSimilarity = cosine(reference, target),
-            controlSimilarity = cosine(second, histograms[3]),
-            firstControlSimilarity = cosine(histograms[3], histograms[4]),
-            secondControlSimilarity = cosine(histograms[4], histograms[5]),
+            referenceSimilarity = cosines[0].first,
+            targetSimilarity = cosines[1].first,
+            controlSimilarity = cosines[2].first,
+            firstControlSimilarity = cosines[3].first,
+            secondControlSimilarity = cosines[4].first,
             referenceMean = mean(reference, meanKeys),
             targetMean = mean(target, meanKeys),
-        ))
+        ), cosines.map { it.second } + meanSupport)
     }
 
     fun summarize(vectors: List<List<ULong>>): KernelSuTimingAnalysis {
@@ -125,21 +154,29 @@ object KernelSuTimingClassifier {
             KernelSuTimingDistance(zeros[0], zeros[1], zeros[2], jointTargetHigh))
     }
 
-    private fun cosine(first: Map<ULong, Int>, second: Map<ULong, Int>): Double {
+    private fun cosine(first: Map<ULong, Int>, second: Map<ULong, Int>): Pair<Double, KernelSuTimingSupport> {
         var dot = 0.0
         var firstNorm = 0.0
         var secondNorm = 0.0
+        var bins = 0
+        var firstMass = 0
+        var secondMass = 0
         (first.keys + second.keys).forEach { key ->
             val firstCount = first[key] ?: 0
             val secondCount = second[key] ?: 0
             if (firstCount > KernelSuTimingProfile.COSINE_BIN_MINIMUM ||
                 secondCount > KernelSuTimingProfile.COSINE_BIN_MINIMUM) {
+                bins++
+                firstMass += firstCount
+                secondMass += secondCount
                 dot += firstCount.toDouble() * secondCount
                 firstNorm += firstCount.toDouble() * firstCount
                 secondNorm += secondCount.toDouble() * secondCount
             }
         }
-        return dot / maxOf(1.0, sqrt(firstNorm) * sqrt(secondNorm))
+        val score = if (firstNorm == 0.0 || secondNorm == 0.0) Double.NaN
+            else dot / (sqrt(firstNorm) * sqrt(secondNorm))
+        return score to KernelSuTimingSupport(bins, firstMass, secondMass)
     }
 
     private fun mean(histogram: Map<ULong, Int>, keys: List<ULong>): Double {

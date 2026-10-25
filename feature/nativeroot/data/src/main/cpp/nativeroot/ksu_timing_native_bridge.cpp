@@ -16,6 +16,7 @@
  */
 
 #include <jni.h>
+#include <array>
 #include <cerrno>
 #include <cstdlib>
 #include <cstdint>
@@ -27,6 +28,38 @@
 
 namespace {
 constexpr size_t sample_count = 10000;
+constexpr int maximum_retries = 3;
+struct Measurement {
+    uint64_t ticks;
+    long result;
+    int retries;
+};
+struct Outcomes {
+    std::array<long, 8> codes{};
+    std::array<int, 8> counts{};
+    int used = 0;
+    int other = 0;
+    int retried = 0;
+    int total_retries = 0;
+    int max_retries = 0;
+    int retry_limit = 0;
+    void record(const Measurement &value) {
+        int bin = 0;
+        while (bin < used && codes[bin] != value.result) ++bin;
+        if (bin < used) ++counts[bin];
+        else if (used < 8) { codes[used] = value.result; counts[used++] = 1; }
+        else ++other;
+        if (value.retries > 0) ++retried;
+        total_retries += value.retries;
+        if (value.retries > max_retries) max_retries = value.retries;
+        if (value.result == -EINTR && value.retries == maximum_retries) ++retry_limit;
+    }
+    void append(std::vector<jlong> &header) const {
+        header.push_back(used);
+        for (int i = 0; i < used; ++i) { header.push_back(codes[i]); header.push_back(counts[i]); }
+        header.insert(header.end(), {other, retried, total_retries, max_retries, retry_limit});
+    }
+};
 struct Window {
     int requested_cpu = -1;
     bool preflight = false;
@@ -35,6 +68,8 @@ struct Window {
     uint64_t frequency = 0;
     bool cleanup = true;
     std::vector<jlong> ticks;
+    std::vector<jlong> allowed;
+    std::vector<Outcomes> outcomes;
 };
 
 #if defined(__aarch64__) || defined(DUCKDETECTOR_KSU_TIMING_TEST)
@@ -45,7 +80,7 @@ static_assert(sizeof(cpu_set_t) == 128);
 // DUCKDETECTOR_KSU_TIMING_TEST replaces counter reads and prctl with
 // deterministic host-test helpers, exercising the same control flow without
 // ARM64 instructions.
-__attribute__((noinline)) uint64_t measure(uint64_t option, bool preflight) {
+__attribute__((noinline)) Measurement measure(uint64_t option, bool preflight) {
     uint64_t begin;
     uint64_t end;
     const char path[] = "/data/data/com.android.keychain";
@@ -59,6 +94,7 @@ __attribute__((noinline)) uint64_t measure(uint64_t option, bool preflight) {
     asm volatile("isb\n\tmrs %0, cntvct_el0\n\tisb" : "=r"(begin) :: "memory");
 #endif
     long result;
+    int retries = 0;
     do {
 #if defined(DUCKDETECTOR_KSU_TIMING_TEST)
         result = test_prctl(option, preflight ? 1 : 7, preflight ? path : nullptr);
@@ -87,8 +123,9 @@ __attribute__((noinline)) uint64_t measure(uint64_t option, bool preflight) {
     // -EINTR can result when a signal interrupts an interruptible kernel wait
     // and the syscall is not automatically restarted. Signal delivery alone
     // does not imply -EINTR; an unsupported prctl option normally returns
-    // -EINVAL instead. Retry only -EINTR; all other results exit.
-    } while (result == -EINTR);
+    // -EINVAL instead. Bound retries; any retried sample is inconclusive.
+    } while (result == -EINTR && retries++ < maximum_retries);
+    if (retries > maximum_retries) retries = maximum_retries;
 #if defined(DUCKDETECTOR_KSU_TIMING_TEST)
     end = test_counter();
 #else
@@ -96,7 +133,7 @@ __attribute__((noinline)) uint64_t measure(uint64_t option, bool preflight) {
     // retries.
     asm volatile("isb\n\tmrs %0, cntvct_el0\n\tisb" : "=r"(end) :: "memory");
 #endif
-    return end - begin;
+    return {end - begin, result, retries};
 }
 
 bool restore(const cpu_set_t &saved) {
@@ -111,6 +148,9 @@ void collect(Window &window) {
     if (app_id < 10000 || app_id > 19999 || geteuid() != getuid()) return;
     cpu_set_t saved;
     if (sched_getaffinity(0, sizeof(saved), &saved) != 0) { window.status = 1; return; }
+    for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
+        if (CPU_ISSET(cpu, &saved)) window.allowed.push_back(cpu);
+    }
     int selected = window.requested_cpu;
     cpu_set_t requested;
     auto bind = [&](int cpu) {
@@ -120,18 +160,11 @@ void collect(Window &window) {
         do { result = sched_setaffinity(0, sizeof(requested), &requested); } while (result != 0 && errno == EINTR);
         return result == 0;
     };
-    if (selected == -1) {
-        for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
-            if (!CPU_ISSET(cpu, &saved)) continue;
-            if (bind(cpu)) { selected = cpu; break; }
-            if (!restore(saved)) { window.status = 5; window.cleanup = false; return; }
-        }
-    }
     if (selected < 0 || selected >= CPU_SETSIZE || !CPU_ISSET(selected, &saved)) {
         window.status = 1;
         return;
     }
-    if (window.requested_cpu != -1 && !bind(selected)) {
+    if (!bind(selected)) {
         window.status = 1;
         window.cleanup = restore(saved);
         return;
@@ -153,16 +186,23 @@ void collect(Window &window) {
         if (window.frequency == 0) {
             window.status = 3;
         } else {
+            window.outcomes.resize(window.preflight ? 1 : 6);
+            auto sample = [&](size_t vector, size_t index, uint64_t option) {
+                const auto value = measure(option, window.preflight);
+                window.ticks[vector * sample_count + index] = static_cast<jlong>(value.ticks);
+                // Summarize outside the timed interval, without per-sample allocation.
+                window.outcomes[vector].record(value);
+            };
             for (size_t index = 0; index < sample_count; ++index) {
                 if (window.preflight) {
-                    window.ticks[index] = static_cast<jlong>(measure(0xDEADBEEF, true));
+                    sample(0, index, 0xDEADBEEF);
                 } else {
-                    window.ticks[3 * sample_count + index] = static_cast<jlong>(measure(0xDEADBEED, false));
-                    window.ticks[index] = static_cast<jlong>(measure(0xDEADBEEE, false));
-                    window.ticks[4 * sample_count + index] = static_cast<jlong>(measure(0xDEADBEED, false));
-                    window.ticks[sample_count + index] = static_cast<jlong>(measure(0xDEADBEEF, false));
-                    window.ticks[5 * sample_count + index] = static_cast<jlong>(measure(0xDEADBEED, false));
-                    window.ticks[2 * sample_count + index] = static_cast<jlong>(measure(0xDEADBEEE, false));
+                    sample(3, index, 0xDEADBEED);
+                    sample(0, index, 0xDEADBEEE);
+                    sample(4, index, 0xDEADBEED);
+                    sample(1, index, 0xDEADBEEF);
+                    sample(5, index, 0xDEADBEED);
+                    sample(2, index, 0xDEADBEEE);
                 }
             }
             window.status = sched_getcpu() == selected ? 0 : 2;
@@ -191,7 +231,7 @@ Java_com_eltavine_duckdetector_features_nativeroot_data_native_KernelSuTimingNat
     Window window;
     window.requested_cpu = cpu;
     window.preflight = preflight == JNI_TRUE;
-    if (cpu < -1 || cpu >= 16 || (preflight == JNI_TRUE && cpu != -1)) return nullptr;
+    if (cpu < 0 || cpu >= CPU_SETSIZE) return nullptr;
     try {
         window.ticks.resize(sample_count * (window.preflight ? 1 : 6));
     } catch (...) { return nullptr; }
@@ -200,13 +240,38 @@ Java_com_eltavine_duckdetector_features_nativeroot_data_native_KernelSuTimingNat
         if (pthread_join(thread, nullptr) != 0) std::abort();
     }
     if (window.status != 0) window.ticks.clear();
-    const jlong header[] = {window.status, window.actual_cpu,
-        static_cast<jlong>(window.frequency), window.cleanup ? 1 : 0};
-    const auto result = env->NewLongArray(static_cast<jsize>(window.ticks.size() + 4));
+    // Private JNI protocol v2: worker affinity and bounded outcome summaries
+    // precede raw vectors. Binder receives only the later Kotlin summaries.
+    std::vector<jlong> header{2, window.status, window.actual_cpu,
+        static_cast<jlong>(window.frequency), window.cleanup ? 1 : 0,
+        static_cast<jlong>(window.allowed.size())};
+    header.insert(header.end(), window.allowed.begin(), window.allowed.end());
+    header.push_back(static_cast<jlong>(window.outcomes.size()));
+    for (const auto &summary : window.outcomes) summary.append(header);
+    header.push_back(static_cast<jlong>(window.ticks.size()));
+    const auto result = env->NewLongArray(static_cast<jsize>(window.ticks.size() + header.size()));
     if (!result) return nullptr;
-    env->SetLongArrayRegion(result, 0, 4, header);
+    env->SetLongArrayRegion(result, 0, static_cast<jsize>(header.size()), header.data());
     if (!env->ExceptionCheck() && !window.ticks.empty()) {
-        env->SetLongArrayRegion(result, 4, static_cast<jsize>(window.ticks.size()), window.ticks.data());
+        env->SetLongArrayRegion(result, static_cast<jsize>(header.size()),
+            static_cast<jsize>(window.ticks.size()), window.ticks.data());
     }
+    return env->ExceptionCheck() ? nullptr : result;
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_com_eltavine_duckdetector_features_nativeroot_data_native_KernelSuTimingNativeBridge_nativeAffinity(
+        JNIEnv *env, jobject) {
+    cpu_set_t mask;
+    std::vector<jlong> values;
+    if (sched_getaffinity(0, sizeof(mask), &mask) != 0) {
+        values.push_back(errno);
+    } else {
+        values.push_back(0);
+        for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) if (CPU_ISSET(cpu, &mask)) values.push_back(cpu);
+    }
+    const auto result = env->NewLongArray(static_cast<jsize>(values.size()));
+    if (!result) return nullptr;
+    env->SetLongArrayRegion(result, 0, static_cast<jsize>(values.size()), values.data());
     return env->ExceptionCheck() ? nullptr : result;
 }

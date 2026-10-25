@@ -19,35 +19,47 @@ package com.eltavine.duckdetector.features.nativeroot.data.native
 
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCoreStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class KernelSuTimingNativeBridgeTest {
     private val bridge = KernelSuTimingNativeBridge()
+    private fun raw(preflight: Boolean, frequency: Long = 19200000, outcome: Long = -22): LongArray {
+        val vectors = if (preflight) 1 else 6
+        return longArrayOf(2, 0, 2, frequency, 1, 2, 2, 3, vectors.toLong()) +
+            (0 until vectors).flatMap { listOf(1L, outcome, 10000L, 0L, 0L, 0L, 0L, 0L) }.toLongArray() +
+            longArrayOf(vectors * 10000L) + LongArray(vectors * 10000) { -1 }
+    }
 
-    @Test fun `unsigned ticks and frequency retain all bits`() {
-        val raw = longArrayOf(0, 2, -1, 1) + LongArray(60000) { -1 }
-        val result = bridge.parse(raw, false)
+    @Test fun `unsigned ticks frequency worker affinity and outcomes retain their values`() {
+        val result = bridge.parse(raw(false, -1), false)
         assertEquals(ULong.MAX_VALUE, result.frequency)
         assertEquals(ULong.MAX_VALUE, result.vectors.last().last())
         assertEquals(KernelSuTimingCoreStatus.MEASURED, result.status)
         assertEquals(2, result.actualCpu)
+        assertEquals(listOf(2, 3), result.allowedCpus)
+        assertEquals(mapOf(-22L to 10000), result.outcomes.last().outcomes)
+        assertFalse(bridge.parse(raw(true, outcome = 0), true).outcomes.single().expectedRejection)
     }
 
-    @Test fun `malformed and inconsistent windows are rejected`() {
-        for (raw in listOf(longArrayOf(), longArrayOf(0, 0, 1, 1), longArrayOf(7, 0, 1, 1),
-            longArrayOf(1, 0, 1, 2), longArrayOf(1, 0, 1, 1, 0),
-            longArrayOf(0, 0, 0, 1) + LongArray(10000),
-            longArrayOf(0, -1, 1, 1) + LongArray(10000),
-            longArrayOf(0, 0, 1, 0) + LongArray(10000))) {
-            assertThrows(IllegalArgumentException::class.java) { bridge.parse(raw, true) }
+    @Test fun `malformed inconsistent and old version windows are rejected`() {
+        val valid = raw(true)
+        for (bad in listOf(longArrayOf(), valid.copyOf().apply { this[0] = 1 },
+            valid.copyOf().apply { this[1] = 7 }, valid.copyOf().apply { this[4] = 2 },
+            valid.copyOf().apply { this[3] = 0 }, valid.copyOf().apply { this[2] = -1 },
+            valid.copyOf().apply { this[4] = 0 }, valid.copyOf().apply { this[7] = 2 },
+            valid.copyOf().apply { this[11] = 9999 }, valid.copyOf().apply { this[15] = 4 },
+            valid.dropLast(1).toLongArray(), valid + longArrayOf(0))) {
+            assertThrows(IllegalArgumentException::class.java) { bridge.parse(bad, true) }
         }
+        assertThrows(IllegalArgumentException::class.java) { bridge.parse(raw(true), false) }
     }
 
-    @Test fun `unsupported has no samples and preflight accepts only one vector`() {
-        assertEquals(null, bridge.parse(longArrayOf(6, -1, 0, 1), true).status)
-        val raw = longArrayOf(0, 0, 1, 1) + LongArray(10000)
-        assertEquals(1, bridge.parse(raw, true).vectors.size)
-        assertThrows(IllegalArgumentException::class.java) { bridge.parse(raw, false) }
+    @Test fun `unsupported and failed affinity have no timing vectors`() {
+        val unsupported = longArrayOf(2, 6, -1, 0, 1, 0, 0, 0)
+        assertEquals(null, bridge.parse(unsupported, true).status)
+        assertEquals(KernelSuTimingCoreStatus.AFFINITY_FAILED,
+            bridge.parse(unsupported.copyOf().apply { this[1] = 1 }, false).status)
     }
 }

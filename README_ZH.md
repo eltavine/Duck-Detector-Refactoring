@@ -84,6 +84,8 @@ Native Root 另有默认关闭的 [fsnotify SRCU 时序实验](feature/nativeroo
 
 在 arm64 进程中，Native Root 还会通过私有目录中的同 inode 文件和独立线程采集实验性的 [init.rc 钩子时序差分](feature/nativeroot/INIT_RC_TIMING.md)。结果保留原始样本与失败原因，只作为辅助证据，不能据此确认或排除 KernelSU；真机校准尚未完成。
 
+Native Root 还会在适用的 arm64 进程中采集辅助性的 [KernelSU prctl 时序证据](feature/nativeroot/KERNELSU_TIMING.md)。各 CPU 独立预检，并保留 syscall 结果、重试次数、直方图支撑与 CPU 可用性。完整未观察到模式要求覆盖所有 present CPU；排除的 CPU 或可用性变化会保留为部分覆盖。时序结果不能确认或排除 KernelSU 或 root。
+
 # 兼容性
 
 | 项目 | 说明 |

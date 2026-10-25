@@ -21,11 +21,11 @@ import android.content.Context
 import android.os.PowerManager
 import android.os.Process
 import android.os.SystemClock
-import android.system.ErrnoException
 import android.system.Os
-import android.system.OsConstants
+import com.eltavine.duckdetector.core.platform.PlatformFailureName
 import com.eltavine.duckdetector.features.nativeroot.data.native.KernelSuTimingNativeBridge
-import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingProfile
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCpuSnapshot
+import java.io.File
 
 internal class AndroidKernelSuTimingBackend(context: Context) : KernelSuTimingBackend {
     private val power = requireNotNull(context.getSystemService(PowerManager::class.java))
@@ -35,17 +35,16 @@ internal class AndroidKernelSuTimingBackend(context: Context) : KernelSuTimingBa
     override fun interactive(): Boolean = power.isInteractive
     override fun elapsedMillis(): Long = SystemClock.elapsedRealtime()
     override fun sample(cpu: Int, preflight: Boolean) = bridge.sample(cpu, preflight)
-    override fun cpus(): List<Int> {
-        val found = mutableListOf<Int>()
-        for (cpu in 0 until KernelSuTimingProfile.MAXIMUM_CORES) {
-            try {
-                Os.stat("/sys/devices/system/cpu/cpu$cpu")
-                found += cpu
-            } catch (failure: ErrnoException) {
-                if (failure.errno == OsConstants.ENOENT) break
-                throw failure
-            }
-        }
-        return found
+    override fun cpuSnapshot(): KernelSuTimingCpuSnapshot {
+        val failures = mutableListOf<String>()
+        fun capture(name: String, read: () -> List<Int>): List<Int>? = try { read() }
+            catch (failure: Exception) { failures += "$name: ${PlatformFailureName.of(failure)}"; null }
+        fun read(name: String) = KernelSuTimingCpuList.parse(File("/sys/devices/system/cpu/$name").readText())
+        // These are sequential snapshots, not a hotplug lock. Each sampling
+        // pthread reports its own inherited mask for comparison before binding.
+        val present = capture("present") { read("present") }
+        val online = capture("online") { read("online") }
+        val allowed = capture("affinity") { bridge.affinity() }
+        return KernelSuTimingCpuSnapshot(present, online, allowed, failures.joinToString("; "))
     }
 }
