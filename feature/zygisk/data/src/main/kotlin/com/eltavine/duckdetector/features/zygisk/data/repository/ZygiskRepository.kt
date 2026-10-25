@@ -132,7 +132,7 @@ class ZygiskRepository(
         val heuristicFamilies = listOf(
             snapshot.solistHitCount,
             snapshot.vmapHitCount,
-            snapshot.atexitHitCount,
+            maxOf(snapshot.atexitHitCount, if (snapshot.atexitTable.hasEvidence) 1 else 0),
             snapshot.smapsHitCount,
             snapshot.heapHitCount,
             snapshot.threadHitCount,
@@ -160,13 +160,13 @@ class ZygiskRepository(
                 method = ZygiskMethod.NATIVE_SNAPSHOT,
                 summary = when {
                     !snapshot.available -> "Unavailable"
-                    snapshot.strongHitCount > 0 || snapshot.heuristicHitCount > 0 -> "Signals captured"
+                    snapshot.strongHitCount > 0 || snapshot.heuristicHitCount > 0 || snapshot.atexitTable.hasEvidence -> "Signals captured"
                     else -> "Clean"
                 },
                 outcome = when {
                     !snapshot.available -> ZygiskMethodOutcome.SUPPORT
                     snapshot.strongHitCount > 0 -> ZygiskMethodOutcome.DETECTED
-                    snapshot.heuristicHitCount > 0 -> ZygiskMethodOutcome.WARNING
+                    snapshot.heuristicHitCount > 0 || snapshot.atexitTable.hasEvidence -> ZygiskMethodOutcome.WARNING
                     else -> ZygiskMethodOutcome.CLEAN
                 },
                 detail = "Collects linker, namespace, maps, smaps, thread, fd, and heap traces from the current app process.",

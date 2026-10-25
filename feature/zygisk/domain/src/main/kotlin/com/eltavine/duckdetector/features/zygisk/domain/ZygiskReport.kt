@@ -111,6 +111,7 @@ data class ZygiskReport(
                 !fdTrapDetected &&
                 nativeStrongHitCount == 0 &&
                 heuristicHitCount == 0 &&
+                !atexitTable.hasEvidence &&
                 (!fdTrapAvailable || !nativeAvailable || atexitTable.state != ZygiskAtexitState.COLLECTED)
 
     val fullyClean: Boolean
@@ -118,6 +119,7 @@ data class ZygiskReport(
                 !fdTrapDetected &&
                 nativeStrongHitCount == 0 &&
                 heuristicHitCount == 0 &&
+                !atexitTable.hasEvidence &&
                 fdTrapAvailable &&
                 nativeAvailable &&
                 atexitTable.state == ZygiskAtexitState.COLLECTED

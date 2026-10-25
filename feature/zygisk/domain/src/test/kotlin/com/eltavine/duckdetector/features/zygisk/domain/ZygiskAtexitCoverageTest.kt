@@ -28,4 +28,15 @@ class ZygiskAtexitCoverageTest {
         assertEquals(DetectorStatus.warning(), warning.toDetectorStatus())
         assertFalse(warning.supportOnly)
     }
+
+    @Test fun tableEvidenceCannotBeClearedByAnEmptyAggregateCounter() {
+        listOf(ZygiskAtexitState.COLLECTED, ZygiskAtexitState.PARTIAL).forEach { state ->
+            val observed = report(state).copy(atexitTable = ZygiskAtexitObservation(
+                state = state, entries = 10, anonymousCallbacks = 1,
+            ))
+            assertFalse(observed.fullyClean)
+            assertFalse(observed.supportOnly)
+            assertEquals(DetectorStatus.warning(), observed.toDetectorStatus())
+        }
+    }
 }

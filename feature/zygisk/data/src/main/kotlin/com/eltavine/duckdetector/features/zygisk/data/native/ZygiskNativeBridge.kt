@@ -71,6 +71,20 @@ class ZygiskNativeBridge(
                     }
                 }
             }
+        val table = snapshot.atexitTable
+        if (table.state == ZygiskAtexitState.COLLECTED || table.state == ZygiskAtexitState.PARTIAL) {
+            NativePayloadContract.requireKeys(raw,
+                "ATEXIT_TABLE_ENTRIES", "ATEXIT_TABLE_NULLS", "ATEXIT_TABLE_GAPS",
+                "ATEXIT_TABLE_CALLBACKS", "ATEXIT_TABLE_DETAIL",
+            )
+            require(table.state != ZygiskAtexitState.COLLECTED || table.entries > 0) {
+                "Evaluated exit-handler coverage requires a nonempty bounded table."
+            }
+            require(table.nullEntries <= table.entries && table.anchoredGaps <= table.nullEntries / 3 &&
+                table.anonymousCallbacks <= table.entries - table.nullEntries) {
+                "Contradictory exit-handler counts in native payload."
+            }
+        }
         return snapshot.copy(traces = traces)
     }
 
