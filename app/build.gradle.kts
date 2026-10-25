@@ -76,6 +76,9 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.material)
+    constraints {
+        implementation(libs.androidx.tracing)
+    }
     testImplementation(project(":core:report"))
     testImplementation(project(":feature:deviceinfo:presentation"))
     testImplementation(libs.bundles.test.unit)
