@@ -99,6 +99,9 @@ class ZygiskNativeBridge(
                     else -> ZygiskAtexitState.NOT_COLLECTED
                 },
             ))
+            "ATEXIT_TABLE_DUMPABLE" -> copy(atexitTable = atexitTable.copy(
+                dumpable = value.toIntOrNull()?.takeIf { it in 0..2 } ?: -1,
+            ))
             "ATEXIT_TABLE_ENTRIES" -> copy(atexitTable = atexitTable.copy(entries = value.toCount()))
             "ATEXIT_TABLE_NULLS" -> copy(atexitTable = atexitTable.copy(nullEntries = value.toCount()))
             "ATEXIT_TABLE_GAPS" -> copy(atexitTable = atexitTable.copy(anchoredGaps = value.toCount()))

@@ -81,6 +81,7 @@ namespace duckdetector::zygisk {
 
     struct AtexitObservation {
         AtexitTableState state = AtexitTableState::kNotCollected;
+        int dumpable = -1;
         size_t entries = 0;
         size_t null_entries = 0;
         size_t anchored_gaps = 0;

@@ -19,6 +19,7 @@
 #include "zygisk/probes/atexit/table.h"
 
 #include <dlfcn.h>
+#include <sys/prctl.h>
 
 namespace duckdetector::zygisk {
 
@@ -39,6 +40,7 @@ namespace duckdetector::zygisk {
 
     AtexitProbeResult collect_atexit_probe() {
         AtexitProbeResult output;
+        output.table.dumpable = prctl(PR_GET_DUMPABLE);
         auto &result = output.signals;
         const auto maps = read_proc_maps();
         if (maps.empty()) {

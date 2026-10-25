@@ -14,6 +14,7 @@ enum class ZygiskAtexitState(val label: String) {
 
 data class ZygiskAtexitObservation(
     val state: ZygiskAtexitState = ZygiskAtexitState.NOT_COLLECTED,
+    val dumpable: Int = -1,
     val entries: Int = 0,
     val nullEntries: Int = 0,
     val anchoredGaps: Int = 0,

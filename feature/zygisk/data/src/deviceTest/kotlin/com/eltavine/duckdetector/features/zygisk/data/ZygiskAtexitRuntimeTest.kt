@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.eltavine.duckdetector.features.zygisk.data
 
+import android.content.pm.ApplicationInfo
 import android.os.Process
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -20,17 +21,24 @@ class ZygiskAtexitRuntimeTest {
         assertTrue("uid=${Process.myUid()}", Process.myUid() >= 10000)
         assertTrue(domain, domain.startsWith("u:r:untrusted_app"))
         val environment = InstrumentationRegistry.getArguments().getString("environment") ?: "unspecified"
+        val debuggable = InstrumentationRegistry.getInstrumentation().targetContext.applicationInfo.flags and
+            ApplicationInfo.FLAG_DEBUGGABLE != 0
         val bridge = ZygiskNativeBridge()
         repeat(2) {
             val snapshot = bridge.collectSnapshot()
             val table = snapshot.atexitTable
-            Log.i("AtexitRuntime", "$environment uid=${Process.myUid()} domain=$domain state=${table.state} " +
+            Log.i("AtexitRuntime", "$environment uid=${Process.myUid()} domain=$domain debuggable=$debuggable " +
+                "dumpable=${table.dumpable} state=${table.state} " +
                 "entries=${table.entries} cleared=${table.nullEntries} gaps=${table.anchoredGaps} " +
                 "callbacks=${table.anonymousCallbacks} detail=${table.detail}")
             snapshot.traces.forEach { Log.i("AtexitRuntime", "${it.label}: ${it.detail}") }
             assertTrue(snapshot.available)
             assertEquals(table.detail, ZygiskAtexitState.COLLECTED, table.state)
             assertTrue(table.entries > 0)
+            if (InstrumentationRegistry.getArguments().getString("expectNonDebuggable") == "true") {
+                assertFalse(debuggable)
+                assertEquals(0, table.dumpable)
+            }
             if (InstrumentationRegistry.getArguments().getString("expectNoAtexitEvidence") == "true") {
                 assertFalse(table.toString(), table.hasEvidence)
             }

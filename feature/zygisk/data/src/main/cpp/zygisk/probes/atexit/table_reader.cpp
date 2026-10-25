@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "zygisk/probes/atexit/table.h"
 #include "zygisk/probes/atexit/libc_objects.h"
+#include "zygisk/probes/atexit/self_memory.h"
 
 #include <android/api-level.h>
 #include <cerrno>
@@ -100,8 +101,8 @@ namespace duckdetector::zygisk::atexit {
                 return failure(TableState::kUnavailable, "Libc exit-handler metadata is outside readable mappings.");
             }
         }
-        File memory("/proc/self/mem");
-        if (memory.fd < 0) return io_failure("Opening this process's memory", errno);
+        SelfMemory memory;
+        if (!memory.available()) return io_failure("Creating a private memory-copy pipe", memory.error());
 
         // Allocate before taking libc's lock; no allocator, loader, logging or callbacks inside it.
         std::vector<Entry> entries(kMaxEntries);
@@ -115,9 +116,9 @@ namespace duckdetector::zygisk::atexit {
         uint64_t appends = 0;
         bool readable = true;
         for (size_t i = 0; i < values.size(); ++i) {
-            readable = readable && read_at(memory.fd, objects.fields[i], &values[i], sizeof(uintptr_t));
+            readable = readable && memory.read(objects.fields[i], &values[i], sizeof(uintptr_t));
         }
-        readable = readable && read_at(memory.fd, objects.fields[4], &appends, sizeof(appends));
+        readable = readable && memory.read(objects.fields[4], &appends, sizeof(appends));
         const uintptr_t pointer = values[0];
         const size_t size = values[1], extracted = values[2], capacity = values[3];
         const bool bounded = size <= kMaxEntries && capacity <= kMaxEntries;
@@ -125,9 +126,9 @@ namespace duckdetector::zygisk::atexit {
                            appends >= size && (size == 0 || (pointer != 0 && pointer % alignof(Entry) == 0));
         bool table_read = false;
         if (valid && bounded && (size == 0 || covered(maps, pointer, size * sizeof(Entry)))) {
-            table_read = read_at(memory.fd, pointer, entries.data(), size * sizeof(Entry));
+            table_read = memory.read(pointer, entries.data(), size * sizeof(Entry));
         }
-        const int read_error = errno;
+        const int read_error = memory.error();
         const int unlock_error = pthread_mutex_unlock(mutex);
         if (unlock_error != 0) return failure(TableState::kUnavailable, "Libc exit-handler lock release failed.");
         if (!readable) return io_failure("Reading exit-handler metadata", read_error);

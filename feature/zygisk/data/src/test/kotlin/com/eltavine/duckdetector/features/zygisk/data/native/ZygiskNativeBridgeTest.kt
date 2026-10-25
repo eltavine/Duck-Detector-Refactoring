@@ -29,6 +29,17 @@ class ZygiskNativeBridgeTest {
     private val bridge = ZygiskNativeBridge()
 
     @Test
+    fun `dumpability preserves zero without treating missing values as zero`() {
+        assertEquals(-1, bridge.parse("AVAILABLE=1").atexitTable.dumpable)
+        listOf("0", "1", "2").forEach {
+            assertEquals(it.toInt(), bridge.parse("AVAILABLE=1\nATEXIT_TABLE_DUMPABLE=$it").atexitTable.dumpable)
+        }
+        listOf("-1", "3", "bad").forEach {
+            assertEquals(-1, bridge.parse("AVAILABLE=1\nATEXIT_TABLE_DUMPABLE=$it").atexitTable.dumpable)
+        }
+    }
+
+    @Test
     fun `malformed table counts do not become a zero evidence result`() {
         listOf("-1", "invalid", "999999999999999999999").forEach { count ->
             assertThrows(IllegalArgumentException::class.java) {

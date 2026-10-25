@@ -12,6 +12,18 @@ ROOT = Path(__file__).resolve().parents[6]
 
 
 class AtexitEvidenceTest(unittest.TestCase):
+    def test_memory_copy_and_unreadable_pages(self):
+        cpp = OWNER / "src/main/cpp"
+        with tempfile.TemporaryDirectory(prefix="zygisk-atexit-memory-") as directory:
+            binary = Path(directory) / "test"
+            subprocess.run([
+                shutil.which("c++"), "-std=c++17", "-Wall", "-Wextra", "-Werror",
+                "-fsanitize=undefined", "-fno-sanitize-recover=undefined", "-I", str(cpp),
+                str(cpp / "zygisk/probes/atexit/self_memory.cpp"),
+                str(OWNER / "src/test/native/atexit_self_memory_test.cpp"), "-o", str(binary),
+            ], check=True)
+            subprocess.run([str(binary)], check=True)
+
     def test_runtime_anchors_and_visibility_limits(self):
         compiler = shutil.which("c++")
         self.assertIsNotNone(compiler)

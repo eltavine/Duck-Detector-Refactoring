@@ -6,6 +6,7 @@ duckdetector_native_unit(duckdetector_zygisk
     probes/vmap_probe.cpp
     probes/atexit_probe.cpp
     probes/atexit/libc_objects.cpp
+    probes/atexit/self_memory.cpp
     probes/atexit/table_reader.cpp
     probes/atexit/table_evidence.cpp
     probes/smaps_probe.cpp
