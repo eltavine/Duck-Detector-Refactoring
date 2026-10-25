@@ -139,7 +139,21 @@ namespace duckdetector::zygisk::atexit {
             out.fields[i] = split[i] != 0 ? split[i] : expected;
         }
         if (conflict) out.state = ObjectState::kMalformed;
-        else if (out.mutex != 0 && std::all_of(out.fields.begin(), out.fields.end(), [](auto p) { return p != 0; })) out.state = ObjectState::kFound;
+        else if (out.mutex != 0 && std::all_of(out.fields.begin(), out.fields.end(), [](auto p) { return p != 0; })) {
+            bool distinct = true;
+            for (size_t i = 0; i < out.fields.size(); ++i) {
+                const size_t bytes = i == 4 ? sizeof(uint64_t) : sizeof(uintptr_t);
+                const size_t alignment = i == 4 ? alignof(uint64_t) : alignof(uintptr_t);
+                const uintptr_t start = out.fields[i], end = start + bytes;
+                distinct = distinct && start % alignment == 0 &&
+                    !(start < out.mutex + out.mutex_size && out.mutex < end);
+                for (size_t j = 0; j < i; ++j) {
+                    const size_t other_bytes = j == 4 ? sizeof(uint64_t) : sizeof(uintptr_t);
+                    distinct = distinct && !(start < out.fields[j] + other_bytes && out.fields[j] < end);
+                }
+            }
+            out.state = distinct ? ObjectState::kFound : ObjectState::kMalformed;
+        }
         return out;
     }
 }  // namespace duckdetector::zygisk::atexit

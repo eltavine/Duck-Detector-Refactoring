@@ -2,6 +2,7 @@
 #include "zygisk/probes/atexit/table.h"
 
 #include <cassert>
+#include <unistd.h>
 
 using namespace duckdetector::zygisk;
 using namespace duckdetector::zygisk::atexit;
@@ -38,6 +39,17 @@ namespace {
 }
 
 int main() {
+    char path[] = "/tmp/duck-atexit-maps-XXXXXX";
+    const int fd = mkstemp(path);
+    assert(fd >= 0);
+    constexpr char row[] = "1000-2000 r-xp 1000 fe:abcde 4294967297 /apex/libc.so\n";
+    assert(write(fd, row, sizeof(row) - 1) == static_cast<ssize_t>(sizeof(row) - 1));
+    close(fd);
+    const auto parsed = read_proc_maps(path);
+    unlink(path);
+    assert(parsed.size() == 1 && parsed[0].inode == UINT64_C(4294967297));
+    assert(parsed[0].device_major == 0xfe && parsed[0].device_minor == 0xabcde);
+
     auto clean = gap(0);
     auto result = interpret_table(clean, maps);
     assert(result.bounded && result.anchored_gaps == 0 && result.anonymous_callbacks == 0);

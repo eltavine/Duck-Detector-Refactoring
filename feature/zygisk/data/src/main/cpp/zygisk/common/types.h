@@ -113,7 +113,9 @@ namespace duckdetector::zygisk {
         uintptr_t end = 0;
         std::string perms;
         uintptr_t offset = 0;
-        unsigned long inode = 0;
+        uint64_t inode = 0;
+        unsigned int device_major = 0;
+        unsigned int device_minor = 0;
         std::string path;
 
         [[nodiscard]] bool readable() const { return perms.find('r') != std::string::npos; }
@@ -196,20 +198,21 @@ namespace duckdetector::zygisk {
             unsigned long long offset = 0;
             unsigned long long inode = 0;
             char perms[5] = {};
-            char device[32] = {};
+            unsigned int device_major = 0, device_minor = 0;
             int path_offset = 0;
             const int matched = std::sscanf(
                     line.c_str(),
-                    "%llx-%llx %4s %llx %31s %llu %n",
+                    "%llx-%llx %4s %llx %x:%x %llu %n",
                     &start,
                     &end,
                     perms,
                     &offset,
-                    device,
+                    &device_major,
+                    &device_minor,
                     &inode,
                     &path_offset
             );
-            if (matched < 6) {
+            if (matched < 7) {
                 continue;
             }
             MapEntry entry;
@@ -217,7 +220,9 @@ namespace duckdetector::zygisk {
             entry.end = static_cast<uintptr_t>(end);
             entry.perms = perms;
             entry.offset = static_cast<uintptr_t>(offset);
-            entry.inode = static_cast<unsigned long>(inode);
+            entry.inode = static_cast<uint64_t>(inode);
+            entry.device_major = device_major;
+            entry.device_minor = device_minor;
             if (path_offset > 0 && path_offset < static_cast<int>(line.size())) {
                 entry.path = trim_copy(line.substr(static_cast<size_t>(path_offset)));
             }

@@ -105,6 +105,22 @@ int main() {
     result = locate_objects(split.finish(), base);
     assert(result.state == ObjectState::kFound && result.fields[3] == base + 0x2060);
 
+    Fixture aliased;
+    for (size_t i = 0; i < 5; ++i) aliased.add("_ZL7g_array." + std::to_string(i), 0x2000,
+                                               i == 4 ? 8 : sizeof(uintptr_t));
+    aliased.add("_ZL13g_atexit_lock", 0x2200, 40);
+    assert(locate_objects(aliased.finish(), base).state == ObjectState::kMalformed);
+
+    Fixture lock_overlap;
+    lock_overlap.add("_ZL7g_array", 0x2000, 4 * sizeof(uintptr_t) + 8);
+    lock_overlap.add("_ZL13g_atexit_lock", 0x2000, 40);
+    assert(locate_objects(lock_overlap.finish(), base).state == ObjectState::kMalformed);
+
+    Fixture unaligned;
+    unaligned.add("_ZL7g_array", 0x2001, 4 * sizeof(uintptr_t) + 8);
+    unaligned.add("_ZL13g_atexit_lock", 0x2080, 40);
+    assert(locate_objects(unaligned.finish(), base).state == ObjectState::kMalformed);
+
     split.add("_ZL7g_array.0", 0x2400, sizeof(uintptr_t));
     assert(locate_objects(split.finish(), base).state == ObjectState::kMalformed);
     assert(locate_objects(good, std::numeric_limits<uintptr_t>::max() - 1).state == ObjectState::kMalformed);

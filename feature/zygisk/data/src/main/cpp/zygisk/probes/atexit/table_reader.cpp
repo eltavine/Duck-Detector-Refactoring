@@ -10,6 +10,7 @@
 #include <limits>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <unistd.h>
 
 namespace duckdetector::zygisk::atexit {
@@ -82,6 +83,12 @@ namespace duckdetector::zygisk::atexit {
         if (image_file.fd < 0) return io_failure("Opening libc", errno);
         struct stat stat{};
         if (fstat(image_file.fd, &stat) != 0) return io_failure("Inspecting libc", errno);
+        // A replaced file/mount can retain the same pathname but have a different private layout.
+        const auto *loaded = find_map_for_address(maps, reinterpret_cast<uintptr_t>(entry));
+        if (loaded == nullptr || loaded->inode == 0 || loaded->inode != stat.st_ino ||
+            loaded->device_major != major(stat.st_dev) || loaded->device_minor != minor(stat.st_dev)) {
+            return failure(TableState::kUnavailable, "The loaded libc mapping and symbol file have different identities.");
+        }
         if (stat.st_size <= 0 || uint64_t(stat.st_size) > kMaxImage) {
             return failure(TableState::kUnsupported, "Libc image exceeds the bounded symbol-reader size.");
         }

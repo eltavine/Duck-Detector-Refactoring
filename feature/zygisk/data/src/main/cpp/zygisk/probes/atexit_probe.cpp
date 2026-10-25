@@ -30,7 +30,9 @@ namespace duckdetector::zygisk {
             for (const auto &map : before) {
                 const auto match = std::find_if(after.begin(), after.end(), [&](const MapEntry &other) {
                     return map.start == other.start && map.end == other.end && map.perms == other.perms &&
-                           map.offset == other.offset && map.inode == other.inode && map.path == other.path;
+                           map.offset == other.offset && map.inode == other.inode &&
+                           map.device_major == other.device_major && map.device_minor == other.device_minor &&
+                           map.path == other.path;
                 });
                 if (match != after.end()) stable.push_back(map);
             }
