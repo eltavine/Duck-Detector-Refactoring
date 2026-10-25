@@ -94,6 +94,21 @@ class ScanCoordinatorTest {
     }
 
     @Test
+    fun `completion callback observes each coordinator session without collecting its StateFlow`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val tee = MutableStateFlow(summary("tee", ready = false))
+            val completed = mutableListOf<Int>()
+            ScanCoordinator(clock, backgroundScope, listOf(tee)) { state ->
+                completed += state.timeline.session
+            }
+            repeat(10) {
+                tee.value = summary("tee", ready = true)
+                tee.value = summary("tee", ready = false)
+            }
+            assertEquals((1..10).toList(), completed)
+        }
+
+    @Test
     fun `timeline advance is a no-op while loading continues`() {
         val loading = ScanTimeline(session = 3, startedAtElapsedMillis = 10)
 

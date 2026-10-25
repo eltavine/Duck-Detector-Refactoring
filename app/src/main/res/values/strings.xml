@@ -16,6 +16,9 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="scan_history_issue_title">Scan history requires attention</string>
+    <string name="scan_history_recovered">%1$d damaged history record(s) were excluded. The original file was preserved as %2$s in the private scan-history directory. Valid entries have been restored.</string>
+    <string name="scan_history_failed">Scan history could not be loaded or saved (%1$s). The existing file was not discarded. New history may not be recorded until storage access is restored.</string>
     <string name="navigation_home">Home</string>
     <string name="navigation_settings">Settings</string>
     <string name="duck_logo_description">Duck Detector logo</string>
