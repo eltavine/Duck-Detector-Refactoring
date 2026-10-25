@@ -1950,10 +1950,10 @@
     },
     {
       "uniqueId": "androidx.tracing:tracing",
-      "artifactVersion": "1.2.0",
+      "artifactVersion": "2.0.5",
       "name": "Android Tracing",
       "description": "Android Tracing",
-      "website": "https://developer.android.com/jetpack/androidx/releases/tracing#1.2.0",
+      "website": "https://developer.android.com/jetpack/androidx/releases/tracing#2.0.5",
       "developers": [
         {
           "name": "The Android Open Source Project"
@@ -2502,7 +2502,7 @@
     },
     {
       "uniqueId": "io.github.xiaotong6666:uihelper",
-      "artifactVersion": "56",
+      "artifactVersion": "57",
       "name": "uihelper",
       "description": "Adaptive Material and Miuix Compose components for utility-style Android apps.",
       "website": "https://github.com/XiaoTong6666/uihelper",
