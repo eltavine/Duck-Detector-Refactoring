@@ -75,6 +75,7 @@ import com.eltavine.duckdetector.features.dashboard.presentation.export.ExportHe
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardFindingModel
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardOverviewModel
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardUiState
+import com.eltavine.duckdetector.features.dashboard.presentation.model.ScanHistoryCounts
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -93,6 +94,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
+    history: ScanHistoryCounts = ScanHistoryCounts(),
     detectors: List<DetectorSession>,
     deviceProfile: DeviceProfileSession,
     modifier: Modifier = Modifier,
@@ -201,7 +203,7 @@ fun DashboardScreen(
             // Hosted pages put brand actions in the real app bar. Keep the original
             // inline brand header only for standalone/dashboard preview hosts.
             if (showStandaloneMaterialChrome) {
-                item { BrandHeader() }
+                item { BrandHeader(history = history) }
             }
             item {
                 DashboardSummarySection(

@@ -18,13 +18,22 @@
 package com.eltavine.duckdetector.ui.scan
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.eltavine.duckdetector.core.scan.DetectorSummary
 import com.eltavine.duckdetector.core.scan.ScanClock
 import com.eltavine.duckdetector.core.scan.ScanCoordinator
+import com.eltavine.duckdetector.features.dashboard.presentation.model.completedHistoricalVerdict
+import com.eltavine.duckdetector.ui.scan.history.ScanHistoryJournal
+import java.io.IOException
+import java.util.UUID
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Hosts the scan coordinator for the lifetime of the activity's view models.
@@ -35,16 +44,51 @@ import kotlinx.coroutines.flow.StateFlow
  */
 internal class DetectorScanViewModel(
     detectors: List<StateFlow<DetectorSummary>>,
+    val history: ScanHistoryJournal,
 ) : ViewModel() {
 
     val coordinator = ScanCoordinator(AndroidScanClock, viewModelScope, detectors)
+    private val historyWriteMutex = Mutex()
+    private val runId = UUID.randomUUID()
+
+    init {
+        viewModelScope.launch {
+            historyWriteMutex.withLock {
+                try {
+                    history.load()
+                } catch (error: IOException) {
+                    Log.e("ScanHistory", "Failed to read local history", error)
+                }
+            }
+        }
+        viewModelScope.launch {
+            coordinator.state.collect { state ->
+                val completedAt = state.timeline.completedAtEpochMillis ?: return@collect
+                val verdict = state.completedHistoricalVerdict() ?: return@collect
+                // Do not block the StateFlow collector on disk I/O: rapid rescans still get
+                // distinct session records, serialized and deduplicated by the journal.
+                launch {
+                    historyWriteMutex.withLock {
+                        try {
+                            history.record(runId, state.timeline.session, completedAt, verdict)
+                        } catch (error: IOException) {
+                            Log.e("ScanHistory", "Failed to persist completed scan", error)
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     companion object {
-        fun factory(detectors: List<StateFlow<DetectorSummary>>): ViewModelProvider.Factory {
+        fun factory(
+            detectors: List<StateFlow<DetectorSummary>>,
+            history: ScanHistoryJournal,
+        ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return DetectorScanViewModel(detectors) as T
+                    return DetectorScanViewModel(detectors, history) as T
                 }
             }
         }

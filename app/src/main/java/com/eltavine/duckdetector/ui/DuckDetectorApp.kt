@@ -19,9 +19,11 @@ package com.eltavine.duckdetector.ui
 
 import android.Manifest
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Surface
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,6 +59,9 @@ import com.eltavine.duckdetector.ui.shell.StartupPolicyScreen
 import com.eltavine.duckdetector.ui.shell.combineConsentDecisions
 import com.eltavine.duckdetector.ui.shell.resolveStartupGateState
 import com.eltavine.duckdetector.ui.shell.shouldCreateDetectorViewModels
+import com.eltavine.duckdetector.ui.scan.history.ScanHistoryJournal
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.launch
 import io.github.xiaotong6666.uihelper.mode.UiMode
 
@@ -76,6 +81,18 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
     val onDecideDetectorConsent = rememberConsentDecisionHandler()
     val context = LocalContext.current
     val appContext = context.applicationContext
+    // Load the recorded verdicts before the startup gate creates detector sessions.
+    val scanHistoryJournal = remember(appContext) {
+        ScanHistoryJournal(File(appContext.noBackupFilesDir, "scan-history/records.bin"))
+    }
+    val scanHistory by scanHistoryJournal.counts.collectAsStateWithLifecycle()
+    LaunchedEffect(scanHistoryJournal) {
+        try {
+            scanHistoryJournal.load()
+        } catch (error: IOException) {
+            Log.e("ScanHistory", "Failed to load history at startup", error)
+        }
+    }
     val agreementStore = remember(appContext) { AgreementAcceptanceStore.getInstance(appContext) }
     val notificationConsentStore = remember(appContext) {
         ScanNotificationConsentStore.getInstance(appContext)
@@ -239,6 +256,7 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
 
                 !agreementAccepted -> {
                     AgreementScreen(
+                        history = scanHistory,
                         onAgree = {
                             scope.launch {
                                 agreementStore.accept()
@@ -250,6 +268,7 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
 
                 startupPoliciesReady -> {
                     AppReadyShell(
+                        history = scanHistoryJournal,
                         destination = destination,
                         onSelectDestination = { selected -> destination = selected },
                         onUiModeChange = onUiModeChange,
@@ -260,6 +279,7 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
 
                 else -> {
                     StartupPolicyScreen(
+                        history = scanHistory,
                         gateState = gateState,
                         notificationPrefs = notificationPrefs,
                         notificationPermissionState = notificationPermissionState,

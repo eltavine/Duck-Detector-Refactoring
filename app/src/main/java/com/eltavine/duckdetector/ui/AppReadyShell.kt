@@ -102,6 +102,7 @@ import com.eltavine.duckdetector.features.update.ui.UpdateViewModel
 import com.eltavine.duckdetector.notifications.ScanProgressNotificationSnapshot
 import com.eltavine.duckdetector.notifications.ScanProgressNotifier
 import com.eltavine.duckdetector.ui.scan.DetectorScanViewModel
+import com.eltavine.duckdetector.ui.scan.history.ScanHistoryJournal
 import com.eltavine.duckdetector.ui.shell.AppDestination
 import io.github.xiaotong6666.uihelper.chrome.AdaptiveNavigationShell
 import io.github.xiaotong6666.uihelper.chrome.NavigationShellItem
@@ -114,6 +115,7 @@ import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
 internal fun AppReadyShell(
+    history: ScanHistoryJournal,
     destination: AppDestination,
     onSelectDestination: (AppDestination) -> Unit,
     onUiModeChange: (UiMode) -> Unit,
@@ -163,8 +165,11 @@ internal fun AppReadyShell(
         }
     }
     val scanViewModel: DetectorScanViewModel = viewModel(
-        factory = remember { DetectorScanViewModel.factory(detectors.map { it.summary }) },
+        factory = remember(detectors, history) {
+            DetectorScanViewModel.factory(detectors.map { it.summary }, history)
+        },
     )
+    val scanHistory by scanViewModel.history.counts.collectAsStateWithLifecycle()
     val scanState by scanViewModel.coordinator.state.collectAsStateWithLifecycle()
     val detectorSummaries = scanState.detectors
     val isDashboardLoading = scanState.isLoading
@@ -262,11 +267,11 @@ internal fun AppReadyShell(
                             compactTopBarTitle = "Duck Detector",
                             icon = Icons.Outlined.HomeOutline,
                             selectedIcon = Icons.Rounded.Home,
-                            leadingContent = { DashboardTopBarBrandIcon() },
-                            largeTitleLeadingContent = { DashboardTopBarBrandIcon() },
+                            leadingContent = { DashboardTopBarBrandIcon(scanHistory) },
+                            largeTitleLeadingContent = { DashboardTopBarBrandIcon(scanHistory) },
                             materialTitleContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    DashboardTopBarBrandIcon()
+                                    DashboardTopBarBrandIcon(scanHistory)
                                     Spacer(modifier = Modifier.size(10.dp))
                                     Text("Duck Detector", maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
@@ -289,6 +294,7 @@ internal fun AppReadyShell(
                     when (page) {
                         0 -> DashboardScreen(
                             uiState = dashboardState,
+                            history = scanHistory,
                             detectors = detectors,
                             deviceProfile = deviceProfile,
                             scaffoldPadding = padding,

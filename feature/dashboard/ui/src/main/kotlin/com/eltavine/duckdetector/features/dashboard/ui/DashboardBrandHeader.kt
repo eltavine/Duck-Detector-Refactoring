@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
+import com.eltavine.duckdetector.features.dashboard.presentation.model.ScanHistoryCounts
 import com.eltavine.duckdetector.core.ui.openExternalUri
 import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
 import io.github.xiaotong6666.uihelper.adaptive.AdaptiveFilledIconButton
@@ -50,7 +51,7 @@ import com.eltavine.duckdetector.core.ui.R as CoreUiR
 
 /** Standalone dashboard fallback; hosted pages place branding in their native top bars. */
 @Composable
-internal fun BrandHeader(showTitle: Boolean = true) {
+internal fun BrandHeader(showTitle: Boolean = true, history: ScanHistoryCounts = ScanHistoryCounts()) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -60,7 +61,7 @@ internal fun BrandHeader(showTitle: Boolean = true) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MaterialAppIcon()
+            MaterialAppIcon(history = history)
             Spacer(modifier = Modifier.weight(1f))
             DashboardTelegramAction()
         }
@@ -81,12 +82,17 @@ internal fun BrandHeader(showTitle: Boolean = true) {
 // The logo is a one-color glyph tinted with the text color, so it inverts with the theme: black on
 // the light tile, white on the dark one.
 @Composable
-private fun MaterialAppIcon(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 56.dp) {
+private fun MaterialAppIcon(
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 56.dp,
+    history: ScanHistoryCounts = ScanHistoryCounts(),
+) {
     Box(
         modifier = modifier
             .size(size)
             // Preserve the original 56dp/14dp tile proportions in the compact bar.
-            .background(color = DuckTheme.palette.groupedSurface, shape = RoundedCornerShape(size / 4)),
+            .background(color = DuckTheme.palette.groupedSurface, shape = RoundedCornerShape(size / 4))
+            .materialScanHistoryBorder(history),
         contentAlignment = Alignment.Center,
     ) {
         DuckIcon(
@@ -100,17 +106,12 @@ private fun MaterialAppIcon(modifier: Modifier = Modifier, size: androidx.compos
 
 /** App-owned top bar mark: preserve Material's tile and use only the duck line art on MIUIX. */
 @Composable
-public fun DashboardTopBarBrandIcon() {
+public fun DashboardTopBarBrandIcon(history: ScanHistoryCounts = ScanHistoryCounts()) {
     AdaptiveContent(
         miuix = {
-            DuckIcon(
-                painter = painterResource(R.drawable.ic_duck_logo),
-                contentDescription = null,
-                tint = adaptiveOnSurfaceColor(),
-                modifier = Modifier.size(30.dp),
-            )
+            MiuixHistoryDuck(counts = history, modifier = Modifier.size(30.dp))
         },
-        material = { MaterialAppIcon(size = 40.dp) },
+        material = { MaterialAppIcon(size = 40.dp, history = history) },
     )
 }
 
