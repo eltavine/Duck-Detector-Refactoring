@@ -35,7 +35,7 @@ json = { module = "org.json:json", version.ref = "json" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
-androidx-tracing = { module = "androidx.tracing:tracing", version = "1.2.0" }
+androidx-tracing = { module = "androidx.tracing:tracing", version = "2.0.5" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodel" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodel" }
