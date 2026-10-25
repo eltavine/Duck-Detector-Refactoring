@@ -27,7 +27,7 @@ enum class KernelSuTimingVerdict {
 }
 
 enum class KernelSuTimingPreflightStatus {
-    NOT_RUN, ACCEPTED, MALFORMED, TOO_MANY_BINS,
+    NOT_RUN, ACCEPTED, MALFORMED, TOO_MANY_BINS, EXCESSIVE_MINIMUM,
 }
 
 data class KernelSuTimingPreflight(
@@ -37,9 +37,13 @@ data class KernelSuTimingPreflight(
 ) {
     init {
         require(binCount in 0..10000)
-        require(status != KernelSuTimingPreflightStatus.ACCEPTED || (binCount in 1..750 && minimumTicks != null))
+        require(status != KernelSuTimingPreflightStatus.ACCEPTED ||
+            (binCount in 1..750 && minimumTicks != null && minimumTicks <= MAXIMUM_MINIMUM_TICKS))
     }
     companion object {
+        // Preserve the original applicability gate in counter ticks, independently for each CPU.
+        private const val MAXIMUM_MINIMUM_TICKS: ULong = 135uL
+
         fun fromFrequencies(frequencies: List<ULong>): KernelSuTimingPreflight {
             if (frequencies.isEmpty() || frequencies.size % 2 != 0 || frequencies.size > 20000) {
                 return KernelSuTimingPreflight(KernelSuTimingPreflightStatus.MALFORMED)
@@ -49,8 +53,13 @@ data class KernelSuTimingPreflight(
                 bins.map { it[0] }.distinct().size != bins.size) {
                 return KernelSuTimingPreflight(KernelSuTimingPreflightStatus.MALFORMED)
             }
-            return KernelSuTimingPreflight(if (bins.size > 750) KernelSuTimingPreflightStatus.TOO_MANY_BINS
-                else KernelSuTimingPreflightStatus.ACCEPTED, bins.size, bins.minOf { it[0] })
+            val minimumTicks = bins.minOf { it[0] }
+            val status = when {
+                bins.size > 750 -> KernelSuTimingPreflightStatus.TOO_MANY_BINS
+                minimumTicks > MAXIMUM_MINIMUM_TICKS -> KernelSuTimingPreflightStatus.EXCESSIVE_MINIMUM
+                else -> KernelSuTimingPreflightStatus.ACCEPTED
+            }
+            return KernelSuTimingPreflight(status, bins.size, minimumTicks)
         }
     }
 }

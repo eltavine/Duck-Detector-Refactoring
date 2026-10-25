@@ -69,10 +69,19 @@ class KernelSuTimingObservationTest {
         assertEquals(KernelSuTimingVerdict.INCONCLUSIVE, observation(contaminated, core(1, listOf(negative))).verdict)
     }
 
-    @Test fun `preflight records high ticks without an uncalibrated absolute cutoff`() {
-        val accepted = KernelSuTimingPreflight.fromFrequencies(listOf(999uL, 5000uL, 136uL, 5000uL))
+    @Test fun `preflight preserves the inclusive minimum tick boundary and diagnostics`() {
+        val accepted = KernelSuTimingPreflight.fromFrequencies(listOf(999uL, 5000uL, 135uL, 5000uL))
         assertEquals(KernelSuTimingPreflightStatus.ACCEPTED, accepted.status)
-        assertEquals(136uL, accepted.minimumTicks)
+        assertEquals(135uL, accepted.minimumTicks)
+        val rejected = KernelSuTimingPreflight.fromFrequencies(listOf(999uL, 5000uL, 136uL, 5000uL))
+        assertEquals(KernelSuTimingPreflightStatus.EXCESSIVE_MINIMUM, rejected.status)
+        assertEquals(136uL, rejected.minimumTicks)
+        assertEquals(2, rejected.binCount)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `accepted summaries cannot bypass the minimum tick gate`() {
+        KernelSuTimingPreflight(KernelSuTimingPreflightStatus.ACCEPTED, 1, 136uL)
     }
 
     @Test fun `preflight rejects malformed or excessive histogram shapes`() {

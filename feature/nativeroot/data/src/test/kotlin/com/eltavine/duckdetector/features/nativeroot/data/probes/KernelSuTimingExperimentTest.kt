@@ -21,6 +21,7 @@ import com.eltavine.duckdetector.features.nativeroot.data.native.KernelSuTimingW
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCollection
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCoreStatus
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingCpuSnapshot
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingPreflightStatus
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingSyscallSummary
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingVerdict
 import org.junit.Assert.assertEquals
@@ -66,14 +67,34 @@ class KernelSuTimingExperimentTest {
         assertEquals(KernelSuTimingVerdict.REPEATED_PATTERN, result.verdict)
     }
 
-    @Test fun `slow preflight ticks and different counter frequencies do not impose an absolute cutoff`() {
-        val backend = Backend()
+    @Test fun `tick gate rejects only the affected CPU regardless of counter frequency`() {
         for (frequency in listOf(19200000uL, 100000000uL)) {
-            backend.preflight = { cpu -> window(cpu, true, true).copy(frequency = frequency,
-                vectors = listOf(List(10000) { 1000uL })) }
-            backend.main = { window(it, false).copy(frequency = frequency) }
-            assertEquals(KernelSuTimingVerdict.NOT_OBSERVED, KernelSuTimingExperiment(backend).collect { false }.verdict)
+            for (positive in listOf(false, true)) {
+                val backend = Backend()
+                backend.preflight = { cpu -> window(cpu, true, true).copy(frequency = frequency,
+                    vectors = listOf(List(10000) { if (cpu == 0) 136uL else 135uL })) }
+                backend.main = { window(it, positive).copy(frequency = frequency) }
+                val result = KernelSuTimingExperiment(backend).collect { false }
+                assertEquals(listOf(0 to true, 1 to true) + List(if (positive) 3 else 1) { 1 to false },
+                    backend.calls)
+                assertEquals(KernelSuTimingCoreStatus.PREFLIGHT_REJECTED, result.attempts[0].status)
+                assertEquals(KernelSuTimingPreflightStatus.EXCESSIVE_MINIMUM, result.attempts[0].preflight.status)
+                assertEquals(136uL, result.attempts[0].preflight.minimumTicks)
+                assertEquals(KernelSuTimingPreflightStatus.ACCEPTED, result.attempts[1].preflight.status)
+                assertEquals(if (positive) KernelSuTimingVerdict.REPEATED_PATTERN else KernelSuTimingVerdict.INCONCLUSIVE,
+                    result.verdict)
+            }
         }
+    }
+
+    @Test fun `all CPUs above the tick gate remain inconclusive without main sampling`() {
+        val backend = Backend()
+        backend.preflight = { window(it, true, true).copy(vectors = listOf(List(10000) { 136uL })) }
+        val result = KernelSuTimingExperiment(backend).collect { false }
+        assertEquals(listOf(0 to true, 1 to true), backend.calls)
+        assertTrue(result.attempts.all { it.preflight.status == KernelSuTimingPreflightStatus.EXCESSIVE_MINIMUM })
+        assertTrue(result.sampledCpus.isEmpty())
+        assertEquals(KernelSuTimingVerdict.INCONCLUSIVE, result.verdict)
     }
 
     @Test fun `negative endings are per CPU and no positive is accumulated across CPUs`() {
