@@ -47,6 +47,11 @@ int main() {
     assert(result.traces.size() == 1 && result.traces[0].severity == SignalSeverity::kWarning);
     assert(interpret_table(gap(2), maps).anchored_gaps == 0);
 
+    assert(interpret_table(gap(26), maps).anchored_gaps == 1);
+    const auto dense = interpret_table(gap(27), maps);
+    assert(dense.bounded && dense.dense_clearing && dense.anchored_gaps == 0 && dense.traces.empty());
+    assert(!interpret_table(gap(26), maps).dense_clearing);
+
     auto short_art = gap(3);
     short_art.erase(short_art.begin());
     assert(interpret_table(short_art, maps).anchored_gaps == 0);

@@ -59,8 +59,11 @@ namespace duckdetector::zygisk::atexit {
             }
         }
         // An absent boundary cannot establish which registrations came from zygote.
-        if (boundary == entries.size()) return out;
-        out.bounded = true;
+        out.bounded = boundary < entries.size();
+        // A discovery-rule quality cutoff, not a Bionic invariant: extensive finalization removes
+        // too much live ordering context. Decline interpretation and retain partial coverage.
+        out.dense_clearing = !entries.empty() && out.null_entries * 5 >= entries.size() * 3;
+        if (!out.bounded || out.dense_clearing) return out;
         for (size_t i = 0; i < boundary; ++i) {
             const auto &entry = entries[i];
             if (entry.empty()) continue;

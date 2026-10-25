@@ -88,9 +88,11 @@ namespace duckdetector::zygisk {
             output.table.null_entries = evidence.null_entries;
             output.table.anchored_gaps = evidence.anchored_gaps;
             output.table.anonymous_callbacks = evidence.anonymous_callbacks;
-            if (!evidence.bounded || evidence.unresolved_callbacks > 0) {
+            if (!evidence.bounded || evidence.dense_clearing || evidence.unresolved_callbacks > 0) {
                 output.table.state = AtexitTableState::kPartial;
-                output.table.detail += " Some registrations could not be placed in the pre-application window.";
+                if (!evidence.bounded) output.table.detail += " No stable application-registration boundary was found.";
+                if (evidence.dense_clearing) output.table.detail += " At least 60% of entries were cleared; live ordering context is insufficient.";
+                if (evidence.unresolved_callbacks > 0) output.table.detail += " Some callback owners could not be resolved in stable executable mappings.";
             }
             result.traces.insert(result.traces.end(), evidence.traces.begin(), evidence.traces.end());
             const size_t hits = evidence.anchored_gaps + evidence.anonymous_callbacks;

@@ -23,6 +23,7 @@ namespace duckdetector::zygisk::atexit {
 
     struct Evidence {
         bool bounded = false;
+        bool dense_clearing = false;
         size_t null_entries = 0;
         size_t anchored_gaps = 0;
         size_t anonymous_callbacks = 0;
