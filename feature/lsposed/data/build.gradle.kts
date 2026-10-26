@@ -24,6 +24,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:evidence"))
     implementation(project(":capability:packageinventory:data"))
     api(project(":capability:packageinventory:domain"))
     api(project(":capability:selinuxpolicy:data"))

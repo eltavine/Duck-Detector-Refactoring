@@ -17,25 +17,38 @@
 
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScanSharedCollectionTest {
 
-    private var now = 0L
-    private val shared = ScanSharedCollection<String>(clock = { now })
+    private val initial = ScanEpoch.begin(100_000_000L)
+    private val shared = ScanSharedCollection<String>()
+
+    @Test
+    fun `failed preload is shared within one scan but a later scan may recover`() = runTest {
+        var attempts = 0
+        val first = shared.collect(initial) { attempts++; "preload missing" }
+        val second = shared.collect(initial) { attempts++; "should not run" }
+        val recovered = shared.collect(ScanEpoch.begin(200_000_000L)) { attempts++; "collected" }
+        assertEquals("preload missing", first)
+        assertEquals(first, second)
+        assertEquals("collected", recovered)
+        assertEquals(2, attempts)
+    }
 
     @Test
     fun `detectors of the same scan share one collection`() = runTest {
         var collections = 0
-        now = 110
-
-        val first = shared.collect(scanStartedAt = 100) { collections++; "snapshot" }
-        val second = shared.collect(scanStartedAt = 100) { collections++; "again" }
+        val first = shared.collect(initial) { collections++; "snapshot" }
+        val second = shared.collect(initial) { collections++; "again" }
 
         assertEquals("snapshot", first)
         assertEquals("snapshot", second)
@@ -43,28 +56,33 @@ class ScanSharedCollectionTest {
     }
 
     @Test
-    fun `a scan that started after the last collection began collects afresh`() = runTest {
-        now = 110
-        shared.collect(scanStartedAt = 100) { "earlier scan" }
+    fun `a new scan always collects afresh even within the same millisecond`() = runTest {
+        shared.collect(initial) { "earlier scan" }
+        assertEquals("later scan", shared.collect(ScanEpoch.begin(initial.startedNanos)) { "later scan" })
+    }
 
-        now = 210
-        assertEquals("later scan", shared.collect(scanStartedAt = 200) { "later scan" })
+    @Test
+    fun `late LSPosed request in the same scan reuses SELinux result even after newer timestamps`() = runTest {
+        var collections = 0
+        val selinux = shared.collect(initial) { collections++; "parent 23823" }
+        // Old comparison (collectedAt >= detectorStartedAt) re-bound because LSPosed starts later.
+        val lsposed = shared.collect(initial) { collections++; "different parent" }
+        assertEquals(selinux, lsposed)
+        assertEquals(1, collections)
     }
 
     @Test
     fun `a detector waits for the collection in progress and takes it`() = runTest {
         val collectionDone = CompletableDeferred<Unit>()
         var collections = 0
-        now = 110
-
         val first = async {
-            shared.collect(scanStartedAt = 100) {
+            shared.collect(initial) {
                 collections++
                 collectionDone.await()
                 "snapshot"
             }
         }
-        val second = async { shared.collect(scanStartedAt = 100) { collections++; "again" } }
+        val second = async { shared.collect(initial) { collections++; "again" } }
         runCurrent()
         collectionDone.complete(Unit)
 

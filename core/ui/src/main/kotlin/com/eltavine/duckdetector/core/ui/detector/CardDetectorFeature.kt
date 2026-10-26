@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eltavine.duckdetector.core.detector.Detector
 import com.eltavine.duckdetector.core.evidence.DetectorId
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.report.DetectorHeadline
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.scan.DetectorSummary
@@ -45,13 +46,15 @@ public class CardDetectorFeature<R : Any, M : DetectorHeadline>(
     override val id: DetectorId = detector.id
 
     @Composable
-    override fun rememberSession(): DetectorSession {
+    override fun rememberSession(initialScan: ScanEpoch): DetectorSession {
         val context = LocalContext.current
         // Every card session shares this view model class, so the detector id keeps them apart.
         val viewModel: CardDetectorViewModel<R, M> = viewModel(
             key = detector.id.value,
-            factory = remember(context) {
-                CardDetectorViewModel.factory(detector) { detector.createScanner(context.applicationContext) }
+            factory = remember(context, initialScan) {
+                CardDetectorViewModel.factory(detector, initialScan) {
+                    detector.createScanner(context.applicationContext)
+                }
             },
         )
         return remember(viewModel) { CardDetectorSession(detector, viewModel, card) }

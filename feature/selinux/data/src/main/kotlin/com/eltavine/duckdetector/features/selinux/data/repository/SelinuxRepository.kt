@@ -21,6 +21,7 @@ import android.content.Context
 import android.os.Build
 import android.os.SystemClock
 import com.eltavine.duckdetector.core.platform.PathState
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.platform.PathStat
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValidityCarrierManager
@@ -60,7 +61,7 @@ class SelinuxRepository(
     }
 
     private suspend fun scanInternal(): SelinuxReport {
-        val scanStartedAt = SystemClock.elapsedRealtime()
+        val scan = ScanEpoch.current(SystemClock::elapsedRealtimeNanos)
         val methods = mutableListOf<SelinuxCheckResult>()
 
         val filesystemResult = checkSelinuxFilesystem()
@@ -96,7 +97,7 @@ class SelinuxRepository(
         // app_zygote attr/current oracle. It never requires root privileges.
         methods += buildSelinuxHideTimingMethod(hideTimingProbe.collectSnapshot())
 
-        val carrierSnapshot = contextValidityCarrierManager.collectSnapshot(scanStartedAt)
+        val carrierSnapshot = contextValidityCarrierManager.collectSnapshot(scan)
         val carrierResult = contextValidityProbe.interpret(carrierSnapshot)
         val contextValidityResult = carrierResult
         methods += buildContextValidityMethod(contextValidityResult)

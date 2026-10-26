@@ -23,6 +23,7 @@ import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.core.evidence.DetectorId
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.report.DetectorHeadline
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.scan.DetectorSummary
@@ -56,7 +57,7 @@ class CardDetectorViewModelTest {
     @Test
     fun `shows the loading card until the first scan finishes`() = runTest(dispatcher) {
         val scanner = GatedScanner()
-        val viewModel = CardDetectorViewModel(ProbeDetector, scanner)
+        val viewModel = CardDetectorViewModel(ProbeDetector, scanner, ScanEpoch.begin(10_000_001L), { 20_000_001L })
 
         assertEquals(CardDetectorState(ready = false, cardModel = Card(0)), viewModel.state.value)
         assertEquals(summary(verdict = "report 0", ready = false), viewModel.summary.value)
@@ -70,7 +71,7 @@ class CardDetectorViewModelTest {
     @Test
     fun `a rescan shows the loading card again and then publishes the new report`() = runTest(dispatcher) {
         val scanner = GatedScanner()
-        val viewModel = CardDetectorViewModel(ProbeDetector, scanner)
+        val viewModel = CardDetectorViewModel(ProbeDetector, scanner, ScanEpoch.begin(10_000_001L), { 20_000_001L })
         scanner.finish(1)
 
         viewModel.rescan()
@@ -79,6 +80,25 @@ class CardDetectorViewModelTest {
         scanner.finish(2)
         assertEquals(CardDetectorState(ready = true, cardModel = Card(2)), viewModel.state.value)
         assertEquals(2, scanner.scans)
+    }
+
+    @Test
+    fun `initial dashboard cards use the shared epoch and a rescan does not reuse it`() = runTest(dispatcher) {
+        val batch = ScanEpoch.begin(12_345_678L)
+        val firstScanner = GatedScanner()
+        val secondScanner = GatedScanner()
+        val first = CardDetectorViewModel(ProbeDetector, firstScanner, batch, { 20_000_001L })
+        val second = CardDetectorViewModel(ProbeDetector, secondScanner, batch)
+
+        assertEquals(batch.id, firstScanner.epochs.single().id)
+        assertEquals(batch.id, secondScanner.epochs.single().id)
+        firstScanner.finish(1)
+        secondScanner.finish(2)
+        first.rescan()
+        assertEquals(2, firstScanner.epochs.size)
+        org.junit.Assert.assertNotEquals(batch.id, firstScanner.epochs.last().id)
+        assertEquals(1, secondScanner.epochs.size)
+        firstScanner.finish(3)
     }
 
     private fun summary(verdict: String, ready: Boolean) = DetectorSummary(
@@ -113,9 +133,11 @@ class CardDetectorViewModelTest {
     private class GatedScanner : DetectorScanner<Int> {
         private var pending = CompletableDeferred<Int>()
         var scans = 0
+        val epochs = mutableListOf<ScanEpoch>()
 
         override suspend fun scan(): Int {
             scans++
+            epochs += ScanEpoch.current { error("Scan epoch was not provided") }
             return pending.await().also { pending = CompletableDeferred() }
         }
 

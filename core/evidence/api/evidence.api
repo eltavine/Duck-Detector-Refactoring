@@ -64,3 +64,15 @@ public abstract interface class com/eltavine/duckdetector/core/evidence/NamedFai
 	public abstract fun getFailureName ()Ljava/lang/String;
 }
 
+public final class com/eltavine/duckdetector/core/evidence/ScanEpoch : kotlin/coroutines/AbstractCoroutineContextElement {
+	public static final field Key Lcom/eltavine/duckdetector/core/evidence/ScanEpoch$Key;
+	public final fun getId ()J
+	public final fun getStartedMillis ()J
+	public final fun getStartedNanos ()J
+}
+
+public final class com/eltavine/duckdetector/core/evidence/ScanEpoch$Key : kotlin/coroutines/CoroutineContext$Key {
+	public final fun begin (J)Lcom/eltavine/duckdetector/core/evidence/ScanEpoch;
+	public final fun current (Lkotlin/jvm/functions/Function0;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+

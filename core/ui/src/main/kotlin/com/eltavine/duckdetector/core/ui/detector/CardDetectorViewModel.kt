@@ -22,6 +22,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.eltavine.duckdetector.core.detector.Detector
 import com.eltavine.duckdetector.core.detector.DetectorScanner
+import android.os.SystemClock
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.report.DetectorHeadline
 import com.eltavine.duckdetector.core.scan.DetectorSummary
 import com.eltavine.duckdetector.core.scan.ScanSessionRunner
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 
 /** The card a detector session shows, and whether its latest scan has finished. */
 internal data class CardDetectorState<M : DetectorHeadline>(
@@ -49,7 +52,11 @@ internal data class CardDetectorState<M : DetectorHeadline>(
 internal class CardDetectorViewModel<R : Any, M : DetectorHeadline>(
     private val detector: Detector<R, M>,
     private val scanner: DetectorScanner<R>,
+    initialScan: ScanEpoch,
+    private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos,
 ) : ViewModel() {
+
+    private var nextEpoch: ScanEpoch? = initialScan
 
     private val _state = MutableStateFlow(
         CardDetectorState(ready = false, cardModel = detector.describe(detector.loadingReport())),
@@ -67,12 +74,14 @@ internal class CardDetectorViewModel<R : Any, M : DetectorHeadline>(
     }
 
     fun rescan() {
+        val epoch = nextEpoch ?: ScanEpoch.begin(clockNanos())
+        nextEpoch = null
         scans.launch(
             begin = {
                 val loading = detector.loadingReport()
                 _state.update { it.copy(ready = false, cardModel = detector.describe(loading)) }
             },
-            collect = { scanner.scan() },
+            collect = { withContext(epoch) { scanner.scan() } },
             publish = { report ->
                 _state.update { it.copy(ready = true, cardModel = detector.describe(report)) }
             },
@@ -84,11 +93,12 @@ internal class CardDetectorViewModel<R : Any, M : DetectorHeadline>(
     companion object {
         fun <R : Any, M : DetectorHeadline> factory(
             detector: Detector<R, M>,
+            initialScan: ScanEpoch,
             createScanner: () -> DetectorScanner<R>,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                CardDetectorViewModel(detector, createScanner()) as T
+                CardDetectorViewModel(detector, createScanner(), initialScan) as T
         }
     }
 }

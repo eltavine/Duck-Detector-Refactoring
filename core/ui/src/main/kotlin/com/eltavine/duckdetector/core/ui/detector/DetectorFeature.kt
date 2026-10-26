@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.core.ui.detector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import com.eltavine.duckdetector.core.evidence.DetectorId
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.report.DeviceReport
 import com.eltavine.duckdetector.core.scan.DetectorSummary
@@ -41,7 +42,7 @@ public interface DetectorFeature {
 
     /** Binds the detector's state holder to the current composition's owner and returns its session. */
     @Composable
-    public fun rememberSession(): DetectorSession
+    public fun rememberSession(initialScan: ScanEpoch): DetectorSession
 }
 
 @Stable

@@ -73,6 +73,8 @@ import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.detector.ConsentDecision
 import com.eltavine.duckdetector.core.detector.ConsentId
+import android.os.SystemClock
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.navigation.DuckNavHost
 import com.eltavine.duckdetector.core.navigation.DuckRoute
 import com.eltavine.duckdetector.core.navigation.rememberDuckRoutes
@@ -145,7 +147,10 @@ internal fun AppReadyShell(
         gitHubAcceleration?.let { shouldOfferGitHubAcceleration(it, appLocale) } == true
     // Every detector session starts scanning when it is created, so the catalog order is the order
     // in which detector scans begin.
-    val detectorSessions = DetectorFeatures.all.map { feature -> key(feature.id) { feature.rememberSession() } }
+    val initialScan = remember { ScanEpoch.begin(SystemClock.elapsedRealtimeNanos()) }
+    val detectorSessions = DetectorFeatures.all.map { feature ->
+        key(feature.id) { feature.rememberSession(initialScan) }
+    }
     val deviceProfile = DetectorFeatures.deviceProfile.rememberSession()
     // The scan coordinator, the dashboard and the export list detectors by id.
     val detectors = remember(detectorSessions) { detectorSessions.sortedBy { it.id.value } }

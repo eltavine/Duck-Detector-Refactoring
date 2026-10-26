@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
 import android.content.pm.ApplicationInfo
 import android.os.Build
+import android.os.SystemClock
 import android.system.Os
 import java.lang.reflect.Method
 
@@ -42,6 +43,7 @@ public class SelinuxContextValidityPreload {
         trace: (step: String) -> Unit = {},
         beforeCollection: () -> Unit,
     ) {
+        val preloadStartedNanos = SystemClock.elapsedRealtimeNanos()
         // Kept outside the try: a finished experiment's kernel side effects outlive a later failure.
         var sidtab = SelinuxSidtabSnapshot()
         var statusAbi = SelinuxStatusAbiSnapshot()
@@ -133,7 +135,18 @@ public class SelinuxContextValidityPreload {
                 SelinuxContextValidityBridge.closeProcessLocalAvc()
             }
         }
-        SelinuxContextValidityBridge.setPreloadedRawData(payload)
+        SelinuxContextValidityBridge.setPreloadedRawData(
+            SelinuxCarrierProvenanceCodec.attach(
+                payload,
+                SelinuxCarrierProvenance(
+                    preloadPid = Os.getpid(),
+                    appUid = appInfo.uid,
+                    startedNanos = preloadStartedNanos,
+                    apkPath = appInfo.sourceDir.orEmpty(),
+                    splitPaths = appInfo.splitSourceDirs?.toList().orEmpty(),
+                ),
+            ),
+        )
     }
 
     private fun collectBaseSnapshot(

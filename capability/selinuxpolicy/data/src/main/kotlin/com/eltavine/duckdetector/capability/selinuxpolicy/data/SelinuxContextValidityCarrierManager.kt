@@ -27,6 +27,7 @@ import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import com.eltavine.duckdetector.core.platform.AppZygoteStartGate
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
@@ -41,46 +42,90 @@ public open class SelinuxContextValidityCarrierManager(
 ) {
 
     /**
-     * Collects the carrier snapshot for a scan that started at [scanStartedAt], on the
-     * [SystemClock.elapsedRealtime] clock. Another detector's collection from the same scan is
-     * reused rather than starting the carrier's app zygote a second time.
+     * One dashboard/SDK scan shares a single epoch across SELinux and LSPosed detectors.
      */
-    public open suspend fun collectSnapshot(scanStartedAt: Long): SelinuxContextValiditySnapshot {
+    public open suspend fun collectSnapshot(scan: ScanEpoch): SelinuxContextValiditySnapshot {
         val appContext = context?.applicationContext ?: return carrierFailureSnapshot(
             "SELinux carrier service unavailable.",
         )
-        trace("request scan=$scanStartedAt package=${appContext.packageName} service=${serviceClass.name}")
-        val snapshot = sharedCollection(serviceClass).collect(scanStartedAt) {
-            trace("shared collection miss scan=$scanStartedAt")
-            withTimeoutOrNull(DETECTION_TIMEOUT_MS) {
-                AppZygoteStartGate.Default.admit(
-                    scanStartedAt = scanStartedAt,
+        trace("request scan=${scan.id} package=${appContext.packageName} service=${serviceClass.name}")
+        val snapshot = sharedCollection(serviceClass).collect(scan) {
+            trace("shared collection miss scan=${scan.id}")
+            boundedSingleAttempt(TOTAL_TIMEOUT_MS, onTimeout = {
+                carrierFailureSnapshot("SELinux carrier probe timed out.")
+            }) {
+                val first = AppZygoteStartGate.Default.admit(
+                    scanStartedAt = scan.startedMillis,
                     refused = {
-                        trace("start gate refused scan=$scanStartedAt")
+                        trace("start gate refused scan=${scan.id}")
                         failedAttempt(SKIPPED_AFTER_FAILED_START)
                     },
                     stoppedBeforeConnecting = CarrierAttempt::stoppedBeforeConnecting,
-                    attempt = { performRemoteSnapshotCollection(appContext) },
+                    attempt = {
+                        boundedSingleAttempt(DETECTION_TIMEOUT_MS, onTimeout = {
+                            failedAttempt("SELinux carrier probe timed out.")
+                        }) { performRemoteSnapshotCollection(appContext, scan) }
+                    },
+                )
+                // Do not occupy the start gate while waiting: ThroneHunt may still be using
+                // this parent, and its remaining observation window must finish normally.
+                SelinuxAppZygoteRecovery.recover(
+                    first = first,
+                    reason = { it.snapshot.failureReason },
+                    parentPid = CarrierAttempt::parentPid,
+                    awaitExit = { pid ->
+                        trace("waiting for old App Zygote pid=$pid to exit scan=${scan.id}")
+                        val exited = withTimeoutOrNull(PARENT_EXIT_TIMEOUT_MS) {
+                            SelinuxAppZygoteRecovery.awaitParentExit(pid)
+                        } == true
+                        trace("old App Zygote pid=$pid exited=$exited")
+                        exited
+                    },
+                    retry = {
+                        trace("old App Zygote retired; rebinding for a new preload")
+                        AppZygoteStartGate.Default.admit(
+                            scanStartedAt = scan.startedMillis,
+                            refused = { failedAttempt(SKIPPED_AFTER_FAILED_START) },
+                            stoppedBeforeConnecting = CarrierAttempt::stoppedBeforeConnecting,
+                            attempt = {
+                                boundedSingleAttempt(REBIND_TIMEOUT_MS, onTimeout = {
+                                    failedAttempt("SELinux carrier recovery binding timed out.")
+                                }) { performRemoteSnapshotCollection(appContext, scan) }
+                            },
+                        )
+                    },
+                    failure = { reason -> failedAttempt(reason) },
                 ).snapshot
-            } ?: carrierFailureSnapshot(
-                "SELinux carrier probe timed out.",
-            )
+            }
         }
-        trace("return scan=$scanStartedAt available=${snapshot.available} carrier=${snapshot.carrierContext} " +
+        trace("return scan=${scan.id} available=${snapshot.available} carrier=${snapshot.carrierContext} " +
             "avc=${snapshot.avcLookup.state} pairs=${snapshot.avcLookup.pairs} failure=${snapshot.failureReason}")
         return snapshot
     }
 
-    private suspend fun performRemoteSnapshotCollection(context: Context): CarrierAttempt {
+    private suspend fun performRemoteSnapshotCollection(context: Context, scan: ScanEpoch): CarrierAttempt {
+        val codeAtBind = readExpectedCode(context)
         return performRemoteCall(
             context = context,
             onConnected = { proxy ->
                 trace("snapshot transaction begin")
                 val raw = proxy.collectSnapshot()
                 trace("snapshot transaction returned chars=${raw.length}")
+                val codeAfter = readExpectedCode(context)
+                val origin = SelinuxCarrierProvenanceCodec.read(raw)
+                val mismatch = provenanceFailureReason(
+                    raw, codeAtBind, codeAfter, SystemClock.elapsedRealtimeNanos(),
+                )
+                val freshness = if (mismatch == null && SelinuxAppZygoteRecovery.stale(origin, scan.startedNanos)) {
+                    SelinuxAppZygoteRecovery.STALE_PRELOAD
+                } else mismatch
+                trace("snapshot preload pid=${origin?.preloadPid} apk=${origin?.apkPath} " +
+                    "expectedApk=${codeAfter?.apkPath} freshness=$freshness scan=${scan.id}")
                 CarrierAttempt(
-                    snapshot = SelinuxContextValidityBridge().parse(raw),
+                    snapshot = if (freshness == null) SelinuxContextValidityBridge().parse(raw)
+                    else carrierFailureSnapshot(freshness),
                     stoppedBeforeConnecting = false,
+                    parentPid = SelinuxCarrierProvenanceCodec.carrierParentPid(raw),
                 )
             },
             onNullBinder = { failedAttempt("SELinux carrier service returned a null binder.") },
@@ -94,6 +139,30 @@ public open class SelinuxContextValidityCarrierManager(
         )
     }
 
+    internal fun provenanceFailureReason(
+        raw: String,
+        codeAtBind: SelinuxCarrierExpectedCode?,
+        codeAtReply: SelinuxCarrierExpectedCode?,
+        nowNanos: Long,
+    ): String? {
+        val parsed = SelinuxContextValidityBridge().parse(raw)
+        if (codeAtBind == null || codeAtReply == null) return "SELinux carrier APK identity unavailable."
+        if (codeAtBind != codeAtReply) return "SELinux carrier APK changed during collection."
+        val origin = SelinuxCarrierProvenanceCodec.read(raw)
+        if (origin == null) return parsed.failureReason ?: "App Zygote preload provenance unavailable."
+        return SelinuxCarrierProvenanceCodec.mismatch(origin, codeAtReply, nowNanos)
+    }
+
+    private fun readExpectedCode(context: Context): SelinuxCarrierExpectedCode? = runCatching {
+        val component = ComponentName(context, serviceClass)
+        val info = context.packageManager.getServiceInfo(component, 0).applicationInfo
+        SelinuxCarrierExpectedCode(
+            appUid = info.uid,
+            apkPath = info.sourceDir.orEmpty(),
+            splitPaths = info.splitSourceDirs?.toList().orEmpty(),
+        )
+    }.getOrNull()
+
     private fun failedAttempt(
         reason: String,
         stoppedBeforeConnecting: Boolean = false,
@@ -105,6 +174,7 @@ public open class SelinuxContextValidityCarrierManager(
     private class CarrierAttempt(
         val snapshot: SelinuxContextValiditySnapshot,
         val stoppedBeforeConnecting: Boolean,
+        val parentPid: Int? = null,
     )
 
     private fun carrierFailureSnapshot(
@@ -166,6 +236,10 @@ public open class SelinuxContextValidityCarrierManager(
             ) {
                 event("onServiceConnected component=$name binder=${service?.let { System.identityHashCode(it) }} " +
                     "alive=${service?.isBinderAlive}")
+                if (!continuation.isActive) {
+                    requestCleanup()
+                    return
+                }
                 connected.set(true)
                 if (service == null) {
                     finish(onNullBinder())
@@ -237,12 +311,21 @@ public open class SelinuxContextValidityCarrierManager(
     public companion object {
         private const val TRACE_TAG = "DuckSelinuxCarrier"
         private const val DETECTION_TIMEOUT_MS = 15_000L
+        private const val PARENT_EXIT_TIMEOUT_MS = 23_000L
+        private const val REBIND_TIMEOUT_MS = 8_000L
+        private const val TOTAL_TIMEOUT_MS = DETECTION_TIMEOUT_MS + PARENT_EXIT_TIMEOUT_MS + REBIND_TIMEOUT_MS
         private const val SKIPPED_AFTER_FAILED_START =
             "Not started: an app zygote carrier was stopped before it connected earlier in this " +
                 "scan, and starting another would stop the app's other helper processes again."
         private val REMOTE_CALLBACK_EXECUTOR = Dispatchers.IO.asExecutor()
         private val sharedCollections =
             ConcurrentHashMap<Class<out Service>, ScanSharedCollection<SelinuxContextValiditySnapshot>>()
+
+        internal suspend fun <T> boundedSingleAttempt(
+            timeoutMs: Long,
+            onTimeout: () -> T,
+            attempt: suspend () -> T,
+        ): T = withTimeoutOrNull(timeoutMs) { attempt() } ?: onTimeout()
 
         private fun trace(message: String) {
             Log.i(TRACE_TAG, "pid=${Process.myPid()} tid=${Process.myTid()} uid=${Process.myUid()} $message")
@@ -251,8 +334,6 @@ public open class SelinuxContextValidityCarrierManager(
         private fun sharedCollection(
             serviceClass: Class<out Service>,
         ): ScanSharedCollection<SelinuxContextValiditySnapshot> =
-            sharedCollections.computeIfAbsent(serviceClass) {
-                ScanSharedCollection(clock = SystemClock::elapsedRealtime)
-            }
+            sharedCollections.computeIfAbsent(serviceClass) { ScanSharedCollection() }
     }
 }
