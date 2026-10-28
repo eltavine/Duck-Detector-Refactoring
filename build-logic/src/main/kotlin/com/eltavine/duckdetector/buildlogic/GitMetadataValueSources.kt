@@ -32,6 +32,7 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 private const val UNKNOWN = "unknown"
+const val DUCK_DETECTOR_VERSION_CODE_BASE: Int = 300
 private val BUILD_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
     .withZone(ZoneOffset.UTC)
 // Use the Singapore calendar date as the stable versionName prefix.

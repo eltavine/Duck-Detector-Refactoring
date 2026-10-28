@@ -18,8 +18,12 @@
 package com.eltavine.duckdetector.core.platform
 
 import android.os.SystemClock
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Lets one app zygote carrier start at a time, and turns the rest of a scan away once one start
@@ -34,8 +38,17 @@ import kotlinx.coroutines.sync.withLock
 public class AppZygoteStartGate(
     private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) {
+    private val operationMutex = Mutex()
     private val mutex = Mutex()
+    private val activeLeaseCount = AtomicInteger()
     private var lastFailedStartAt: Long? = null
+
+    /**
+     * Runs an App Zygote lifecycle operation exclusively. Recovery uses this to prevent another
+     * `useAppZygote` bind from cancelling ActivityManager's delayed zygote retirement.
+     */
+    public suspend fun <T> withExclusive(block: suspend () -> T): T =
+        operationMutex.withLock { block() }
 
     /**
      * Runs [attempt], or returns [refused] without it when a carrier start has failed since
@@ -45,6 +58,21 @@ public class AppZygoteStartGate(
      * service connected, which is how a client sees its app zygote fail to start.
      */
     public suspend fun <T> admit(
+        scanStartedAt: Long,
+        refused: () -> T,
+        stoppedBeforeConnecting: (T) -> Boolean,
+        attempt: suspend () -> T,
+    ): T = operationMutex.withLock {
+        admitExclusive(
+            scanStartedAt = scanStartedAt,
+            refused = refused,
+            stoppedBeforeConnecting = stoppedBeforeConnecting,
+            attempt = attempt,
+        )
+    }
+
+    /** Runs a start while the caller already holds [withExclusive]. */
+    public suspend fun <T> admitExclusive(
         scanStartedAt: Long,
         refused: () -> T,
         stoppedBeforeConnecting: (T) -> Boolean,
@@ -59,6 +87,35 @@ public class AppZygoteStartGate(
             lastFailedStartAt = clock()
         }
         result
+    }
+
+    /** Tracks a connected child that keeps the shared App Zygote alive. */
+    public fun acquireLease(): Lease {
+        activeLeaseCount.incrementAndGet()
+        return Lease { activeLeaseCount.decrementAndGet() }
+    }
+
+    /** Waits until tracked `useAppZygote` services have disconnected. */
+    public suspend fun awaitNoActiveLeases(
+        timeoutMs: Long,
+        pollIntervalMs: Long = 50L,
+    ): Boolean {
+        require(timeoutMs >= 0L)
+        require(pollIntervalMs > 0L)
+        return withTimeoutOrNull(timeoutMs) {
+            while (activeLeaseCount.get() != 0) delay(pollIntervalMs)
+            true
+        } ?: false
+    }
+
+    public class Lease internal constructor(
+        private val releaseAction: () -> Unit,
+    ) {
+        private val closed = AtomicBoolean(false)
+
+        public fun close() {
+            if (closed.compareAndSet(false, true)) releaseAction()
+        }
     }
 
     public companion object {

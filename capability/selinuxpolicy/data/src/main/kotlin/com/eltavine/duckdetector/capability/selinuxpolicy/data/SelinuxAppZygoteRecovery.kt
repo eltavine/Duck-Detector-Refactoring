@@ -17,17 +17,14 @@
 
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
-import android.system.ErrnoException
-import android.system.Os
-import android.system.OsConstants
-import kotlinx.coroutines.delay
-
 internal object SelinuxAppZygoteRecovery {
     const val STALE_PRELOAD = "App Zygote preload belongs to an earlier scan."
     private const val MISSING_PARENT = "App Zygote parent PID unavailable for recovery."
-    private const val PARENT_NOT_RETIRED = "App Zygote parent did not exit before recovery deadline."
+    private const val CARRIERS_NOT_RETIRED = "App Zygote carrier children did not retire before recovery deadline."
     private const val SAME_PARENT = "App Zygote was reused after waiting for retirement."
     private const val UNKNOWN_PARENT = "Replacement App Zygote parent PID unavailable."
+    const val GENERATION_ALREADY_CONSUMED = "App Zygote preload generation was already consumed."
+    const val GENERATION_FENCE_UNAVAILABLE = "App Zygote generation fence unavailable."
 
     fun stale(origin: SelinuxCarrierProvenance?, scanStartedNanos: Long): Boolean =
         origin != null && origin.startedNanos < scanStartedNanos
@@ -35,55 +32,32 @@ internal object SelinuxAppZygoteRecovery {
     fun recoverable(reason: String?): Boolean = reason == STALE_PRELOAD ||
         reason == SelinuxContextValidityCarrierService.PRELOAD_PAYLOAD_UNAVAILABLE ||
         reason == "App Zygote preload APK generation mismatch." ||
-        reason == "App Zygote preload parent PID mismatch."
+        reason == "App Zygote preload parent PID mismatch." ||
+        reason == "App Zygote preload schema mismatch." ||
+        reason == "App Zygote preload version code mismatch." ||
+        reason == "App Zygote preload build revision mismatch." ||
+        reason == GENERATION_ALREADY_CONSUMED
 
-    /** Waiting never holds the start gate: other carriers may finish and release the old parent. */
+    /**
+     * The caller holds the global start gate while [awaitRetirement] drains known children and
+     * observes the framework's delayed-retirement window. Existing connections can still finish
+     * and close because those operations do not acquire the start gate.
+     */
     suspend fun <T> recover(
         first: T,
         reason: (T) -> String?,
         parentPid: (T) -> Int?,
-        awaitExit: suspend (Int) -> Boolean,
+        awaitRetirement: suspend (Int) -> Boolean,
         retry: suspend () -> T,
         failure: (String) -> T,
     ): T {
         if (!recoverable(reason(first))) return first
         val previous = parentPid(first) ?: return failure(MISSING_PARENT)
-        if (!awaitExit(previous)) return failure(PARENT_NOT_RETIRED)
+        if (!awaitRetirement(previous)) return failure(CARRIERS_NOT_RETIRED)
         val second = retry()
+        if (reason(second) != null) return second
         val replacement = parentPid(second)
-            ?: return if (reason(second) != null) second else failure(UNKNOWN_PARENT)
+            ?: return failure(UNKNOWN_PARENT)
         return if (replacement != previous) second else failure(SAME_PARENT)
-    }
-
-    /** Linux kill(pid, 0) tests existence without sending a signal. EPERM means it exists. */
-    fun parentAlive(pid: Int): Boolean? {
-        if (pid <= 1) return null
-        return try {
-            Os.kill(pid, 0)
-            true
-        } catch (error: ErrnoException) {
-            when (error.errno) {
-                OsConstants.ESRCH -> false
-                OsConstants.EPERM -> true
-                else -> null
-            }
-        } catch (_: SecurityException) {
-            null
-        }
-    }
-
-    /** No blind rebind: an unobservable PID is not proof of exit. Caller imposes a deadline. */
-    suspend fun awaitParentExit(
-        pid: Int,
-        probe: (Int) -> Boolean? = ::parentAlive,
-        intervalMs: Long = 250L,
-    ): Boolean {
-        while (true) {
-            when (probe(pid)) {
-                false -> return true
-                null -> return false
-                true -> delay(intervalMs)
-            }
-        }
     }
 }

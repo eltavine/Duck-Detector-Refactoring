@@ -42,6 +42,21 @@ public class SelinuxContextValidityPreload {
         appInfo: ApplicationInfo,
         trace: (step: String) -> Unit = {},
         beforeCollection: () -> Unit,
+    ): Unit = preload(
+        appInfo = appInfo,
+        versionCode = 0L,
+        buildRevision = "unknown",
+        trace = trace,
+        beforeCollection = beforeCollection,
+    )
+
+    /** The host build metadata must be captured with the same preload as the evidence payload. */
+    public fun preload(
+        appInfo: ApplicationInfo,
+        versionCode: Long,
+        buildRevision: String,
+        trace: (step: String) -> Unit = {},
+        beforeCollection: () -> Unit,
     ) {
         val preloadStartedNanos = SystemClock.elapsedRealtimeNanos()
         // Kept outside the try: a finished experiment's kernel side effects outlive a later failure.
@@ -144,6 +159,9 @@ public class SelinuxContextValidityPreload {
                     startedNanos = preloadStartedNanos,
                     apkPath = appInfo.sourceDir.orEmpty(),
                     splitPaths = appInfo.splitSourceDirs?.toList().orEmpty(),
+                    versionCode = versionCode,
+                    payloadSchemaVersion = SelinuxCarrierBuildMetadata.CURRENT_PAYLOAD_SCHEMA_VERSION,
+                    buildRevision = buildRevision.ifBlank { "unknown" },
                 ),
             ),
         )

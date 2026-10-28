@@ -25,6 +25,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import com.eltavine.duckdetector.core.native.NativeCollectionOutcome
 import com.eltavine.duckdetector.core.native.NativeCollectionStatus
+import com.eltavine.duckdetector.core.platform.AppZygoteCarrierLease
 import com.eltavine.duckdetector.core.platform.AppZygoteStartGate
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,7 @@ open class ThroneHuntCarrierManager(
     private var activeContext: Context? = null
     private var activeConnection: ServiceConnection? = null
     private var activeProxy: ThroneHuntCarrierProxy? = null
+    private var activeLease: AppZygoteCarrierLease? = null
 
     // Setup call. Safe to repeat: it never reads the event stream. [scanStartedAt] is the scan's
     // start on the SystemClock.elapsedRealtime clock, which the app zygote start gate compares.
@@ -127,12 +129,16 @@ open class ThroneHuntCarrierManager(
             val unbindAttempted = AtomicBoolean(false)
             val completionAttempted = AtomicBoolean(false)
             val connected = AtomicBoolean(false)
+            val carrierLease = AppZygoteCarrierLease()
             lateinit var connection: ServiceConnection
 
             fun requestCleanup() {
                 cleanupRequested.set(true)
                 if (bindAttemptFinished.get() && unbindAttempted.compareAndSet(false, true)) {
                     runCatching { context.unbindService(connection) }
+                    // Unbind does not prove that the isolated child has exited. An attached lease
+                    // stays active until Binder death; this only retires pre-connect failures.
+                    carrierLease.bindingFailed()
                 }
             }
 
@@ -150,9 +156,23 @@ open class ThroneHuntCarrierManager(
                     name: ComponentName?,
                     service: IBinder?,
                 ) {
+                    if (!continuation.isActive) {
+                        requestCleanup()
+                        carrierLease.bindingFailed()
+                        return
+                    }
                     connected.set(true)
                     if (service == null) {
+                        carrierLease.bindingFailed()
                         finish(CarrierConnection.Failed(NULL_BINDER))
+                        return
+                    }
+                    if (!carrierLease.attach(service)) {
+                        finish(
+                            CarrierConnection.Failed(
+                                "The throne hunt carrier died before its Binder could be observed.",
+                            ),
+                        )
                         return
                     }
                     try {
@@ -161,6 +181,16 @@ open class ThroneHuntCarrierManager(
                             activeContext = context
                             activeConnection = connection
                             activeProxy = proxy
+                            activeLease = carrierLease
+                        }
+                        if (!carrierLease.isActive) {
+                            close()
+                            finish(
+                                CarrierConnection.Failed(
+                                    "The throne hunt carrier Binder died during connection setup.",
+                                ),
+                            )
+                            return
                         }
                         finish(CarrierConnection.Connected(proxy))
                     } catch (throwable: Throwable) {
@@ -173,6 +203,7 @@ open class ThroneHuntCarrierManager(
                 }
 
                 override fun onNullBinding(name: ComponentName?) {
+                    carrierLease.bindingFailed()
                     finish(CarrierConnection.Failed(NULL_BINDER))
                 }
 
@@ -193,11 +224,9 @@ open class ThroneHuntCarrierManager(
                 }
 
                 override fun onServiceDisconnected(name: ComponentName?) {
-                    synchronized(this@ThroneHuntCarrierManager) {
-                        activeProxy = null
-                        activeConnection = null
-                        activeContext = null
-                    }
+                    // Drop the dead proxy and unbind. The death recipient, not the unbind return,
+                    // releases the lease after the child process actually exits.
+                    close()
                 }
             }
 
@@ -205,6 +234,7 @@ open class ThroneHuntCarrierManager(
                 requestCleanup()
             }
             if (!continuation.isActive) {
+                carrierLease.bindingFailed()
                 return@suspendCancellableCoroutine
             }
 
@@ -228,15 +258,19 @@ open class ThroneHuntCarrierManager(
     fun close() {
         val cleanup = synchronized(this) {
             val triple = Triple(activeContext, activeConnection, activeProxy)
+            val lease = activeLease
             activeContext = null
             activeConnection = null
             activeProxy = null
-            triple
+            activeLease = null
+            triple to lease
         }
-        val (context, connection, _) = cleanup
+        val (triple, lease) = cleanup
+        val (context, connection, _) = triple
         if (context != null && connection != null) {
             runCatching { context.unbindService(connection) }
         }
+        lease?.bindingFailed()
     }
 
     private sealed interface CarrierConnection {

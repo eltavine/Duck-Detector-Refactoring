@@ -26,6 +26,9 @@ internal data class SelinuxCarrierProvenance(
     val startedNanos: Long,
     val apkPath: String,
     val splitPaths: List<String> = emptyList(),
+    val versionCode: Long = 0L,
+    val payloadSchemaVersion: Int = SelinuxCarrierBuildMetadata.CURRENT_PAYLOAD_SCHEMA_VERSION,
+    val buildRevision: String = "unknown",
 )
 
 internal data class SelinuxCarrierExpectedCode(
@@ -33,11 +36,28 @@ internal data class SelinuxCarrierExpectedCode(
     val apkPath: String,
     val splitPaths: List<String> = emptyList(),
     val parentPid: Int? = null,
+    val versionCode: Long = 0L,
+    val payloadSchemaVersion: Int = SelinuxCarrierBuildMetadata.CURRENT_PAYLOAD_SCHEMA_VERSION,
+    val buildRevision: String = "unknown",
 )
+
+/** Build metadata is injected by the host APK and travels with the preload that consumed it. */
+public object SelinuxCarrierBuildMetadata {
+    public const val VERSION_CODE_META_DATA: String = "com.eltavine.duckdetector.PRELOAD_VERSION_CODE"
+    public const val BUILD_HASH_META_DATA: String = "com.eltavine.duckdetector.PRELOAD_BUILD_HASH"
+    public const val UNKNOWN_BUILD_REVISION: String = "unknown"
+    public const val CURRENT_PAYLOAD_SCHEMA_VERSION: Int = 1
+}
 
 internal object SelinuxCarrierProvenanceCodec {
     private const val PREFIX = "DUCK_PRELOAD_"
     private const val PARENT_KEY = "DUCK_CARRIER_PARENT_PID="
+    private val legacyFields = setOf(
+        "DUCK_PRELOAD_PID", "DUCK_PRELOAD_UID", "DUCK_PRELOAD_STARTED_NS", "DUCK_PRELOAD_APK",
+    )
+    private val currentFields = legacyFields + setOf(
+        "DUCK_PRELOAD_VERSION_CODE", "DUCK_PRELOAD_SCHEMA_VERSION", "DUCK_PRELOAD_BUILD_REVISION",
+    )
 
     fun attachCarrierParent(payload: String, parentPid: Int): String =
         payload.trimEnd('\n') + "\n$PARENT_KEY$parentPid\n"
@@ -54,6 +74,10 @@ internal object SelinuxCarrierProvenanceCodec {
         append("DUCK_PRELOAD_UID=").append(origin.appUid).append('\n')
         append("DUCK_PRELOAD_STARTED_NS=").append(origin.startedNanos).append('\n')
         append("DUCK_PRELOAD_APK=").append(NativePayloadCodec.encodeValue(origin.apkPath)).append('\n')
+        append("DUCK_PRELOAD_VERSION_CODE=").append(origin.versionCode).append('\n')
+        append("DUCK_PRELOAD_SCHEMA_VERSION=").append(origin.payloadSchemaVersion).append('\n')
+        append("DUCK_PRELOAD_BUILD_REVISION=")
+            .append(NativePayloadCodec.encodeValue(origin.buildRevision)).append('\n')
         origin.splitPaths.forEach {
             append("DUCK_PRELOAD_SPLIT=").append(NativePayloadCodec.encodeValue(it)).append('\n')
         }
@@ -72,15 +96,28 @@ internal object SelinuxCarrierProvenanceCodec {
                 return null
             }
         }
-        if (fields.keys != setOf(
-                "DUCK_PRELOAD_PID", "DUCK_PRELOAD_UID", "DUCK_PRELOAD_STARTED_NS", "DUCK_PRELOAD_APK",
-            )) return null
+        val isLegacy = fields.keys == legacyFields
+        if (!isLegacy && fields.keys != currentFields) return null
         val pid = fields["DUCK_PRELOAD_PID"]?.toIntOrNull() ?: return null
         val uid = fields["DUCK_PRELOAD_UID"]?.toIntOrNull() ?: return null
         val started = fields["DUCK_PRELOAD_STARTED_NS"]?.toLongOrNull() ?: return null
         val apk = NativePayloadCodec.decodeValue(fields["DUCK_PRELOAD_APK"].orEmpty())
-        if (pid <= 0 || uid < 0 || started <= 0 || apk.isBlank() || splits.any(String::isBlank)) return null
-        return SelinuxCarrierProvenance(pid, uid, started, apk, splits)
+        val versionCode = if (isLegacy) 0L else fields["DUCK_PRELOAD_VERSION_CODE"]?.toLongOrNull() ?: return null
+        val schemaVersion = if (isLegacy) 0 else fields["DUCK_PRELOAD_SCHEMA_VERSION"]?.toIntOrNull() ?: return null
+        val buildRevision = if (isLegacy) "unknown" else
+            NativePayloadCodec.decodeValue(fields["DUCK_PRELOAD_BUILD_REVISION"].orEmpty())
+        if (pid <= 0 || uid < 0 || started <= 0 || apk.isBlank() || versionCode < 0 || schemaVersion < 0 ||
+            buildRevision.isBlank() || splits.any(String::isBlank)) return null
+        return SelinuxCarrierProvenance(
+            preloadPid = pid,
+            appUid = uid,
+            startedNanos = started,
+            apkPath = apk,
+            splitPaths = splits,
+            versionCode = versionCode,
+            payloadSchemaVersion = schemaVersion,
+            buildRevision = buildRevision,
+        )
     }
 
     /** A reused parent is legitimate only while it still runs the exact same APK generation. */
@@ -93,6 +130,12 @@ internal object SelinuxCarrierProvenanceCodec {
         origin.appUid != expected.appUid -> "App Zygote preload UID mismatch."
         origin.apkPath != expected.apkPath || origin.splitPaths != expected.splitPaths ->
             "App Zygote preload APK generation mismatch."
+        origin.payloadSchemaVersion != expected.payloadSchemaVersion ->
+            "App Zygote preload schema mismatch."
+        origin.versionCode > 0 && expected.versionCode > 0 && origin.versionCode != expected.versionCode ->
+            "App Zygote preload version code mismatch."
+        origin.buildRevision != "unknown" && expected.buildRevision != "unknown" &&
+            origin.buildRevision != expected.buildRevision -> "App Zygote preload build revision mismatch."
         expected.parentPid != null && origin.preloadPid != expected.parentPid ->
             "App Zygote preload parent PID mismatch."
         nowNanos <= 0 || origin.startedNanos > nowNanos ->

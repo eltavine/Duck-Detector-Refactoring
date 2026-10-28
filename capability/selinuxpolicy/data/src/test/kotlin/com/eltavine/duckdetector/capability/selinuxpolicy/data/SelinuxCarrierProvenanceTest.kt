@@ -95,6 +95,21 @@ class SelinuxCarrierProvenanceTest {
         ))
     }
 
+    @Test fun `version code schema and build revision mismatches are rejected`() {
+        val builtOrigin = origin.copy(versionCode = 321L, buildRevision = "abc123")
+        val builtCurrent = current.copy(versionCode = 321L, buildRevision = "abc123")
+        assertNull(SelinuxCarrierProvenanceCodec.mismatch(builtOrigin, builtCurrent, 50_000_000L))
+        assertEquals("App Zygote preload version code mismatch.", SelinuxCarrierProvenanceCodec.mismatch(
+            builtOrigin, builtCurrent.copy(versionCode = 322L), 50_000_000L,
+        ))
+        assertEquals("App Zygote preload schema mismatch.", SelinuxCarrierProvenanceCodec.mismatch(
+            builtOrigin, builtCurrent.copy(payloadSchemaVersion = 2), 50_000_000L,
+        ))
+        assertEquals("App Zygote preload build revision mismatch.", SelinuxCarrierProvenanceCodec.mismatch(
+            builtOrigin, builtCurrent.copy(buildRevision = "def456"), 50_000_000L,
+        ))
+    }
+
     @Test fun `missing corrupted and future-dated origins are not trusted`() {
         assertEquals("App Zygote preload provenance unavailable.", SelinuxCarrierProvenanceCodec.mismatch(
             null, current, 50_000_000L,

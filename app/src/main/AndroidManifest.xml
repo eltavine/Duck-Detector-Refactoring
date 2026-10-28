@@ -48,6 +48,12 @@ limitations under the License.
         android:supportsRtl="true"
         android:theme="@style/Theme.DuckDetector"
         tools:targetApi="tiramisu">
+        <meta-data
+            android:name="com.eltavine.duckdetector.PRELOAD_VERSION_CODE"
+            android:value="${duckDetectorVersionCode}" />
+        <meta-data
+            android:name="com.eltavine.duckdetector.PRELOAD_BUILD_HASH"
+            android:value="${duckDetectorBuildHash}" />
         <activity
             android:name="android.app.NativeActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"

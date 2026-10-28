@@ -23,6 +23,12 @@ public data class SelinuxContextValiditySnapshot(
     val available: Boolean = false,
     val probeAttempted: Boolean = false,
     val carrierContext: String? = null,
+    /** Actual App-Zygote parent PID reported by the bound carrier, not the isolated child PID. */
+    val appZygoteParentPid: Int? = null,
+    val appZygotePreloadStartedNanos: Long? = null,
+    /** Build identity embedded in the App-Zygote preload that produced this snapshot. */
+    val appZygotePreloadVersionCode: Long? = null,
+    val appZygotePreloadBuildRevision: String? = null,
     val carrierMatchesExpected: Boolean = false,
     val selinuxEnabled: Boolean? = null,
     val selinuxEnforced: Boolean? = null,

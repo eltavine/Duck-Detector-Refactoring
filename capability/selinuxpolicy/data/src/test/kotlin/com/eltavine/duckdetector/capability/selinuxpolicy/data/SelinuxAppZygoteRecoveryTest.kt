@@ -20,10 +20,10 @@ package com.eltavine.duckdetector.capability.selinuxpolicy.data
 import com.eltavine.duckdetector.core.platform.AppZygoteStartGate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -35,13 +35,13 @@ class SelinuxAppZygoteRecoveryTest {
 
     private suspend fun recover(
         first: Result,
-        awaitExit: suspend (Int) -> Boolean,
+        awaitRetirement: suspend (Int) -> Boolean,
         retry: suspend () -> Result,
     ): Result = SelinuxAppZygoteRecovery.recover(
         first = first,
         reason = Result::reason,
         parentPid = Result::pid,
-        awaitExit = awaitExit,
+        awaitRetirement = awaitRetirement,
         retry = retry,
         failure = { Result(reason = it) },
     )
@@ -60,7 +60,7 @@ class SelinuxAppZygoteRecoveryTest {
         var waitedPid = -1
         var bindings = 0
         val result = recover(Result(SelinuxAppZygoteRecovery.STALE_PRELOAD, 14),
-            awaitExit = { waitedPid = it; true },
+            awaitRetirement = { waitedPid = it; true },
             retry = { bindings++; Result(pid = 15) },
         )
         assertEquals(14, waitedPid)
@@ -74,7 +74,7 @@ class SelinuxAppZygoteRecoveryTest {
         assertEquals(error, recover(first, { true }, { error }))
     }
 
-    @Test fun `unknown parent and unavailable observation do not attempt another bind`() = runTest {
+    @Test fun `unknown parent and failed retirement do not attempt another bind`() = runTest {
         var bindings = 0
         val noPid = recover(Result(SelinuxAppZygoteRecovery.STALE_PRELOAD), { true }, {
             bindings++; Result(pid = 16)
@@ -83,7 +83,7 @@ class SelinuxAppZygoteRecoveryTest {
             bindings++; Result(pid = 16)
         })
         assertTrue(noPid.reason.orEmpty().contains("PID unavailable"))
-        assertTrue(cannotObserve.reason.orEmpty().contains("did not exit"))
+        assertTrue(cannotObserve.reason.orEmpty().contains("carrier children did not retire"))
         assertEquals(0, bindings)
     }
 
@@ -109,48 +109,31 @@ class SelinuxAppZygoteRecoveryTest {
         assertEquals(timedOut, result)
     }
 
-    @Test fun `waiting observes a still alive parent before the exit without rebinding`() = runTest {
-        var checks = 0
-        val waiting = async {
-            SelinuxAppZygoteRecovery.awaitParentExit(14, probe = {
-                checks++
-                if (checks == 3) false else true
-            }, intervalMs = 100L)
-        }
-        runCurrent()
-        assertTrue(waiting.await())
-        assertEquals(3, checks)
-        assertEquals(200L, testScheduler.currentTime)
-    }
-
-    @Test fun `unobservable parent is not treated as a dead parent`() = runTest {
-        assertFalse(SelinuxAppZygoteRecovery.awaitParentExit(14, probe = { null }))
-    }
-
-    @Test fun `permanently active parent times out without pretending it exited`() = runTest {
-        val result = withTimeoutOrNull(350L) {
-            SelinuxAppZygoteRecovery.awaitParentExit(14, probe = { true }, intervalMs = 100L)
-        }
-        assertEquals(null, result)
-        assertEquals(350L, testScheduler.currentTime)
-    }
-
-    @Test fun `another carrier finishes while old parent retirement is being observed`() = runTest {
+    @Test fun `retirement waits for active children and prevents new binds until the quiet window ends`() = runTest {
         val gate = AppZygoteStartGate(clock = { testScheduler.currentTime })
-        val parentGone = CompletableDeferred<Unit>()
+        val activeThroneHuntChild = gate.acquireLease()
+        val retirementStarted = CompletableDeferred<Unit>()
         val recovering = async {
-            val first = gate.admit(
-                scanStartedAt = 0L, refused = { Result("blocked") },
-                stoppedBeforeConnecting = { false },
-            ) { Result(SelinuxAppZygoteRecovery.STALE_PRELOAD, 14) }
-            recover(first, awaitExit = { parentGone.await(); true }, retry = {
-                gate.admit(
-                    scanStartedAt = 0L, refused = { Result("blocked") },
-                    stoppedBeforeConnecting = { false },
-                ) { Result(pid = 15) }
-            })
+            gate.withExclusive {
+                retirementStarted.complete(Unit)
+                recover(
+                    first = Result(SelinuxAppZygoteRecovery.STALE_PRELOAD, 14),
+                    awaitRetirement = { _ ->
+                        val childrenRetired = gate.awaitNoActiveLeases(timeoutMs = 5_000L)
+                        if (childrenRetired) delay(6_000L)
+                        childrenRetired
+                    },
+                    retry = {
+                        gate.admitExclusive(
+                            scanStartedAt = 0L,
+                            refused = { Result("blocked") },
+                            stoppedBeforeConnecting = { false },
+                        ) { Result(pid = 15) }
+                    },
+                )
+            }
         }
-        runCurrent()
+        retirementStarted.await()
         var competingStarts = 0
         val competing = async {
             gate.admit(
@@ -162,9 +145,11 @@ class SelinuxAppZygoteRecoveryTest {
             }
         }
         runCurrent()
-        // Counterexample: keeping the gate locked during awaitExit blocks this carrier.
-        assertEquals(1, competingStarts)
-        parentGone.complete(Unit)
+        assertEquals(0, competingStarts)
+        assertFalse(competing.isCompleted)
+
+        // A previously connected carrier can finish and die without acquiring the admission gate.
+        activeThroneHuntChild.close()
         assertEquals(Result(pid = 15), recovering.await())
         assertEquals(Result(pid = 15), competing.await())
         assertEquals(1, competingStarts)

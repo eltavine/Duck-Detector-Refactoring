@@ -16,6 +16,9 @@
  */
 
 import com.eltavine.duckdetector.buildlogic.DETECTOR_LAYER
+import com.eltavine.duckdetector.buildlogic.DUCK_DETECTOR_VERSION_CODE_BASE
+import com.eltavine.duckdetector.buildlogic.GitCommitCountValueSource
+import com.eltavine.duckdetector.buildlogic.GitShortHashValueSource
 import com.eltavine.duckdetector.buildlogic.detectorModules
 
 plugins {
@@ -24,8 +27,28 @@ plugins {
     id("duckdetector.contract-values")
 }
 
+val preloadBuildRevision = providers.environmentVariable("GITHUB_SHA")
+    .map { it.take(12) }
+    .orElse(
+        providers.of(GitShortHashValueSource::class.java) {
+            parameters.repositoryRoot.set(rootDir.absolutePath)
+        }
+    )
+    .orElse("unknown")
+val preloadVersionCode = providers.of(GitCommitCountValueSource::class.java) {
+    parameters.repositoryRoot.set(rootDir.absolutePath)
+}.map { commitCount -> DUCK_DETECTOR_VERSION_CODE_BASE + commitCount }
+
 android {
     namespace = "com.eltavine.duckdetector.sdk"
+    buildFeatures {
+        // The preload executes before PackageManager metadata is populated in ApplicationInfo.
+        buildConfig = true
+    }
+    defaultConfig {
+        buildConfigField("int", "PRELOAD_VERSION_CODE", preloadVersionCode.get().toString())
+        buildConfigField("String", "PRELOAD_BUILD_REVISION", "\"${preloadBuildRevision.get()}\"")
+    }
 }
 
 kotlin {
