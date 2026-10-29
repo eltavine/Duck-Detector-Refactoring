@@ -21,9 +21,9 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValidityCarrierManager
 import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.platform.AppZygoteStartGate
+import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxAppZygoteLifecycleProbe
 import com.eltavine.duckdetector.features.nativeroot.data.service.ThroneHuntCarrierManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -57,9 +57,9 @@ class AppZygoteLifecycleRuntimeTest {
                     gate.awaitNoActiveLeases(timeoutMs = 500L),
                 )
 
-                val selinux = SelinuxContextValidityCarrierManager(context)
+                val selinux = SelinuxAppZygoteLifecycleProbe(context)
                 val scan = ScanEpoch.begin(SystemClock.elapsedRealtimeNanos())
-                val recovery = async(Dispatchers.IO) { selinux.collectSnapshot(scan) }
+                val recovery = async(Dispatchers.IO) { selinux.collect(scan.startedNanos) }
 
                 // The stale SELinux result must not bypass the still-connected ThroneHunt child.
                 delay(1_000L)
@@ -97,31 +97,31 @@ class AppZygoteLifecycleRuntimeTest {
                 assertEquals(
                     "Preload version code was not captured from the actual App-Zygote build",
                     com.eltavine.duckdetector.sdk.BuildConfig.PRELOAD_VERSION_CODE.toLong(),
-                    replacement.appZygotePreloadVersionCode,
+                    replacement.preloadVersionCode,
                 )
                 assertEquals(
                     "Preload build revision was not captured from the actual App-Zygote build",
                     com.eltavine.duckdetector.sdk.BuildConfig.PRELOAD_BUILD_REVISION,
-                    replacement.appZygotePreloadBuildRevision,
+                    replacement.preloadBuildRevision,
                 )
                 // Backdate the logical scan deliberately: timestamp-only freshness would accept
                 // this still-live generation, so this assertion specifically exercises the
                 // persistent generation fence across manager instances.
-                val acceptedPreloadStartedNanos = requireNotNull(replacement.appZygotePreloadStartedNanos) {
+                val acceptedPreloadStartedNanos = requireNotNull(replacement.preloadStartedNanos) {
                     "Fresh carrier did not report its preload timestamp"
                 }
                 // Start one nanosecond before the exact preload timestamp. The generation would
                 // pass the timestamp check, so only the persistent consumed-generation fence can
                 // force retirement and prevent reuse of the same parent.
                 val replayScan = ScanEpoch.begin(acceptedPreloadStartedNanos - 1L)
-                val restartedManager = SelinuxContextValidityCarrierManager(context)
-                val replay = withTimeout(55_000L) { restartedManager.collectSnapshot(replayScan) }
+                val restartedProbe = SelinuxAppZygoteLifecycleProbe(context)
+                val replay = withTimeout(55_000L) { restartedProbe.collect(replayScan.startedNanos) }
                 Log.i(TAG, "replay fence result available=${replay.available} " +
                     "parentPid=${replay.appZygoteParentPid} failure=${replay.failureReason}")
                 assertTrue("Replay recovery did not produce an available snapshot: ${replay.failureReason}",
                     replay.available)
-                assertEquals(replacement.appZygotePreloadVersionCode, replay.appZygotePreloadVersionCode)
-                assertEquals(replacement.appZygotePreloadBuildRevision, replay.appZygotePreloadBuildRevision)
+                assertEquals(replacement.preloadVersionCode, replay.preloadVersionCode)
+                assertEquals(replacement.preloadBuildRevision, replay.preloadBuildRevision)
                 assertTrue(
                     "Generation-fence replay test did not actually predate the original preload",
                     acceptedPreloadStartedNanos > replayScan.startedNanos,

@@ -33,8 +33,8 @@
     },
     {
       "path": "app/build.gradle.kts",
-      "detectors": ["rootmanagers", "selinux", "zygisk"],
-      "reason": "The composition root signs and packages the feature-owned installer-canary manifest with the host application key; host instrumentation needs the feature data and domain test dependencies. App Zygote acquisition instrumentation consumes the SELinux domain from the installed host. The feature-owned exit-handler device fixture is assembled into the host instrumentation APK to exercise its actual native runtime with an ordinary app UID."
+      "detectors": ["nativeroot", "rootmanagers", "selinux", "zygisk"],
+      "reason": "The composition root signs and packages the feature-owned installer-canary manifest with the host application key; host instrumentation needs the feature data and domain test dependencies. App Zygote lifecycle instrumentation holds the feature-owned ThroneHunt carrier while exercising SELinux preload recovery, so the native-root data dependency is test-only. The feature-owned exit-handler device fixture is assembled into the host instrumentation APK to exercise its actual native runtime with an ordinary app UID."
     },
     {
       "path": "app/src/androidTest/java/com/eltavine/duckdetector/InstallerCanaryRuntimeTest.kt",
@@ -50,6 +50,11 @@
       "path": "app/src/androidTest/java/com/eltavine/duckdetector/DirtySepolicyRawRuntimeTest.kt",
       "detectors": ["selinux"],
       "reason": "Runtime instrumentation verifies SELinux Raw and DirtySepolicy compatibility inside the installed host's App Zygote preload; the dependency is test-only and cannot run equivalently in a standalone feature module."
+    },
+    {
+      "path": "app/src/androidTest/java/com/eltavine/duckdetector/AppZygoteLifecycleRuntimeTest.kt",
+      "detectors": ["nativeroot", "selinux"],
+      "reason": "The lifecycle regression test deliberately holds the feature-owned ThroneHunt App-Zygote child alive while verifying SELinux stale-preload recovery. Both detector integrations are instrumentation-only and are required to reproduce the real cross-carrier lifecycle race."
     }
   ]
 }
