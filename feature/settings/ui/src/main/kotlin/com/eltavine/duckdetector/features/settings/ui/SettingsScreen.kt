@@ -46,6 +46,7 @@ import com.eltavine.duckdetector.features.settings.ui.components.ConsentSettingI
 import com.eltavine.duckdetector.features.settings.ui.components.ConsentPermissionButton
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorNameWordmark
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorsSection
+import com.eltavine.duckdetector.features.settings.ui.components.ImportantSection
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsGroup
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsSection
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsSwitchItem
@@ -178,6 +179,8 @@ private fun SettingsPage(
                         )
                     }
                 }
+
+                ImportantSection()
 
                 AboutSection(
                     uiState = uiState,
