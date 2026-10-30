@@ -16,6 +16,13 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="settings_important_title">중요 안내</string>
+    <string name="settings_important_why">Duck Detector가 필요한 이유는 무엇인가요?</string>
+    <string name="settings_important_intro">Duck Detector는 Momo와 비슷한 Android 기기 환경 검사 도구입니다.</string>
+    <string name="settings_important_context">기기 환경이 «정상»인지에 지나치게 집착하는 것은 과할 수 있지만, 일부 앱과 서비스는 실제로 기기 무결성, 시스템 환경 및 기타 위험 신호에 따라 사용자를 다르게 대우합니다.</string>
+    <string name="settings_important_consequences">추가 본인 확인, 기능 제한, 서비스 거부 또는 불투명한 위험 관리가 적용될 수 있습니다. 명확한 알림을 받지 못하거나 기기가 다른 대우를 받는 이유를 알지 못할 수도 있습니다.</string>
+    <string name="settings_important_goal">Duck Detector는 이처럼 불투명한 기기 환경 신호를 눈에 보이게 만드는 것을 목표로 합니다.</string>
+    <string name="settings_important_evidence">우리는 제삼자 앱을 대신해 기기를 신뢰할 수 있는지 판단하는 것이 아니라, 진단 결과와 이를 뒷받침하는 증거를 제공합니다.</string>
     <string name="author_wall_title">기여자</string>
     <string name="author_wall_hint">드래그하여 이동 · 두 손가락으로 확대 및 축소 · 눌러서 상세 정보 보기</string>
     <string name="author_wordmark_hint">두 손가락으로 확대해 기여자 이름의 글자를 살펴보세요</string>

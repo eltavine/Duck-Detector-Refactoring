@@ -35,6 +35,7 @@ import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUi
 import com.eltavine.duckdetector.features.settings.ui.components.AboutSection
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorNameWordmark
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorsSection
+import com.eltavine.duckdetector.features.settings.ui.components.ImportantSection
 import com.eltavine.duckdetector.features.settings.ui.components.ConsentPermissionButton
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsGroup
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsSection
@@ -126,6 +127,7 @@ internal fun SettingsMiuixPage(
                 }
             }
         }
+        item(key = "important") { ImportantSection() }
         item(key = "about") {
             AboutSection(
                 uiState = uiState,
