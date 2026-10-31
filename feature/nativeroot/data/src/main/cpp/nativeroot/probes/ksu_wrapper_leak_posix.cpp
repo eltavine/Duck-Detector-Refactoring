@@ -26,8 +26,9 @@ public:
     std::string reopen;
     WrapperStage stage = WrapperStage::kUnavailable;
     int saved_error = 0;
-    const std::chrono::steady_clock::time_point deadline =
-            std::chrono::steady_clock::now() + std::chrono::seconds(8);
+    std::chrono::steady_clock::time_point deadline;
+    explicit PosixWrapperIo(std::chrono::steady_clock::time_point stop =
+            std::chrono::steady_clock::now() + std::chrono::seconds(8)) : deadline(stop) {}
     bool fail(WrapperStage value, int code) { stage = value; saved_error = code; return false; }
     bool check_deadline() {
         return std::chrono::steady_clock::now() < deadline || fail(WrapperStage::kTimedOut, ETIMEDOUT);
@@ -68,13 +69,25 @@ public:
             int fd = open("/proc/sys/fs/file-nr", O_RDONLY | O_CLOEXEC);
             if (fd < 0) return io_error();
             char buffer[128]{};
-            ssize_t length;
-            do { length = read(fd, buffer, sizeof(buffer) - 1); } while (length < 0 && errno == EINTR && check_deadline());
-            const int read_error = errno;
-            if (!close_owned(fd)) return false;
-            if (length < 0) { errno = read_error; return io_error(); }
-            if (length == static_cast<ssize_t>(sizeof(buffer) - 1) ||
-                std::memchr(buffer, 0, static_cast<size_t>(length)) != nullptr || !parse_file_nr(buffer, value))
+            size_t used = 0;
+            bool read_ok = true;
+            while (true) {
+                if (!check_deadline()) { read_ok = false; break; }
+                const ssize_t length = read(fd, buffer + used, sizeof(buffer) - 1 - used);
+                if (length < 0) {
+                    if (errno == EINTR) continue;
+                    read_ok = io_error();
+                    break;
+                }
+                if (length == 0) break;
+                used += static_cast<size_t>(length);
+                if (used == sizeof(buffer) - 1) {
+                    read_ok = fail(WrapperStage::kMalformedCounter, EOVERFLOW);
+                    break;
+                }
+            }
+            if (!close_owned(fd) || !read_ok) return false;
+            if (std::memchr(buffer, 0, used) != nullptr || !parse_file_nr(buffer, value))
                 return fail(WrapperStage::kMalformedCounter, EINVAL);
             if (!settle(10)) return false;
         }
@@ -87,6 +100,11 @@ public:
     bool device_number(int fd, unsigned int &device) {
         if (ioctl(fd, TIOCGDEV, &device) < 0) return io_error();
         return true;
+    }
+    bool tty_accessible(int fd) {
+        if (isatty(fd) == 1) return true;
+        if (errno == EACCES || errno == EPERM) return io_error();
+        return fail(WrapperStage::kUnavailable, errno ? errno : ENOTTY);
     }
     bool prepare_terminal() {
         unsigned int candidate_device = 0;
@@ -169,8 +187,8 @@ WrapperLeakSample collect_wrapper_leak() {
         if (!io.close_owned(owned)) enumeration_ok = false;
         if (!enumeration_ok) break;
     }
-    if (closedir(directory) != 0) { io.io_error(); enumeration_ok = false; }
     if (!io.check_deadline()) enumeration_ok = false;
+    if (closedir(directory) != 0) { io.fail(WrapperStage::kCleanupFailed, errno); enumeration_ok = false; }
     if (!enumeration_ok || io.candidate < 0) {
         WrapperLeakSample result;
         result.stage = enumeration_ok ? WrapperStage::kNoCandidate : io.failure();
@@ -182,10 +200,9 @@ WrapperLeakSample collect_wrapper_leak() {
     struct statfs fs{};
     if (io.direct < 0) io.io_error();
     else if (fstatfs(io.direct, &fs) != 0) io.io_error();
-    else if (fs.f_type == kDevptsFs && isatty(io.direct) == 1 && isatty(io.candidate) == 1) {
-        if (io.prepare_terminal()) return sample_wrapper_leak(io);
-    }
-    else io.fail(WrapperStage::kUnavailable, ENOTTY);
+    else if (fs.f_type != kDevptsFs) io.fail(WrapperStage::kUnavailable, ENOTTY);
+    else if (io.tty_accessible(io.direct) && io.tty_accessible(io.candidate) && io.prepare_terminal())
+        return sample_wrapper_leak(io);
     WrapperLeakSample result;
     result.stage = io.failure(); result.error = io.error();
     if (!io.cleanup()) { result.stage = WrapperStage::kCleanupFailed; result.error = io.error(); }

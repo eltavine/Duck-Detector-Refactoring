@@ -26,9 +26,27 @@ namespace {
 int opened = 100, ioctl_error = 0;
 unsigned int candidate_device = 7, opened_device = 7;
 bool swapped = false;
+int read_error = 0, close_error = 0, tty_error = 0;
+std::chrono::steady_clock::time_point *interrupt_deadline = nullptr;
+std::vector<std::string> frame;
+size_t chunk = 0;
 std::vector<int> closed;
-int fake_open(const char *, int, ...) { return opened++; }
-int fake_close(int fd) { closed.push_back(fd); return 0; }
+int fake_open(const char *, int, ...) { chunk = 0; return opened++; }
+int fake_close(int fd) { closed.push_back(fd); errno = close_error; return close_error ? -1 : 0; }
+int fake_isatty(int) { errno = tty_error; return tty_error ? 0 : 1; }
+int fake_nanosleep(const timespec *, timespec *) { return 0; }
+ssize_t fake_read(int, void *buffer, size_t size) {
+    if (interrupt_deadline) {
+        *interrupt_deadline = std::chrono::steady_clock::now() - std::chrono::seconds(1);
+        errno = EINTR; return -1;
+    }
+    if (read_error) { errno = read_error; return -1; }
+    if (chunk == frame.size()) return 0;
+    const std::string &data = frame[chunk++];
+    assert(data.size() <= size);
+    std::memcpy(buffer, data.data(), data.size());
+    return static_cast<ssize_t>(data.size());
+}
 int fake_ioctl(int fd, unsigned long request, ...) {
     assert(request == TIOCGDEV);
     if (ioctl_error) { errno = ioctl_error; return -1; }
@@ -48,11 +66,17 @@ int fake_fstat(int fd, struct stat *out) {
 }
 #define open fake_open
 #define close fake_close
+#define read fake_read
+#define isatty fake_isatty
+#define nanosleep fake_nanosleep
 #define ioctl fake_ioctl
 #define fstat(fd, out) fake_fstat(fd, out)
 #include "ksu_wrapper_leak_posix.cpp"
 #undef open
 #undef close
+#undef read
+#undef isatty
+#undef nanosleep
 #undef ioctl
 #undef fstat
 
@@ -80,4 +104,32 @@ int main() {
     assert(!io.prepare_terminal() && io.failure() == WrapperStage::kPermissionLimited);
     assert(io.cleanup());
     assert(closed[closed.size()-2] == 2 && closed.back() == 1);
+    ioctl_error = 0;
+    tty_error = EACCES;
+    assert(!io.tty_accessible(1) && io.failure() == WrapperStage::kPermissionLimited);
+    tty_error = ENOTTY;
+    assert(!io.tty_accessible(1) && io.failure() == WrapperStage::kUnavailable);
+    tty_error = 0;
+
+    closed.clear();
+    PosixWrapperIo reader;
+    FileNrPoint point;
+    frame = {"10", "000 0 ", "100000\n"};
+    assert(reader.counter(point) && point.median == 10000 && point.spread == 0 && closed.size() == 5);
+    frame = {"10000 0 100000", " trailing"};
+    assert(!reader.counter(point) && reader.failure() == WrapperStage::kMalformedCounter && closed.size() == 6);
+    frame = {"10000 0 100000", std::string("\0extra", 6)};
+    assert(!reader.counter(point) && reader.failure() == WrapperStage::kMalformedCounter && closed.size() == 7);
+    read_error = EACCES;
+    assert(!reader.counter(point) && reader.failure() == WrapperStage::kPermissionLimited && closed.size() == 8);
+    read_error = 0;
+    frame = {"10000 0 100000\n"};
+    close_error = EIO;
+    assert(!reader.counter(point) && reader.failure() == WrapperStage::kCleanupFailed && closed.size() == 9);
+    close_error = 0;
+    PosixWrapperIo expired;
+    interrupt_deadline = &expired.deadline;
+    assert(!expired.counter(point) && expired.failure() == WrapperStage::kTimedOut && closed.size() == 10);
+    assert(expired.error() == ETIMEDOUT);
+    interrupt_deadline = nullptr;
 }
