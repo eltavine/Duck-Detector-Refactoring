@@ -64,7 +64,6 @@ internal fun buildVerdict(report: NativeRootReport): String {
             report.hasDangerFindings -> "${report.dangerFindingCount} runtime root signal(s)"
             report.mountAnchorDriftCount > 0 -> "Isolated mount drift suggests namespace tampering"
             report.mountDriftSignalCount > 0 -> "Isolated-process namespace drift needs review"
-            report.ksuThroneHuntDetected -> "KernelSU throne hunt traversal observed"
             report.ksuManagerPackagePresent && report.ksuManagerTraitHitCount > 0 ->
                 "KernelSU manager weak fingerprint detected"
 

@@ -237,6 +237,9 @@ internal fun buildThroneHuntDiagnostics(report: NativeRootReport): String {
     // 这份文本仍然有用。
     return buildString {
         appendLine("NativeRoot ksuThroneHunt diagnostic")
+        appendLine("interpretation=diagnostic_only")
+        appendLine("accessorAttribution=unverified")
+        appendLine("Zero events cannot exclude a manager scan or KernelSU.")
         appendLine("available=${report.ksuThroneHuntAvailable}")
         appendLine("collectionOutcome=${report.ksuThroneHuntCollectionOutcome}")
         appendLine("collectionDetail=${report.ksuThroneHuntCollectionDetail}")

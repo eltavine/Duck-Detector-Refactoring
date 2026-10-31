@@ -17,8 +17,6 @@
 
 package com.eltavine.duckdetector.features.nativeroot.data.probes
 
-import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFindingSeverity
-import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootGroup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -37,20 +35,22 @@ class KernelSuThroneHuntProbeTest {
     )
 
     @Test
-    fun `directory traversal yields a danger finding`() {
-        val result = KernelSuThroneHuntProbe().run(readyRound)
+    fun `reported directory events remain diagnostic without a root finding`() {
+        val result = KernelSuThroneHuntProbe().run(
+            readyRound.copy(directoryOpenCount = 3, directoryAccessCount = 3, rawEventCount = 42)
+        )
 
         assertTrue(result.available)
-        assertEquals(2, result.hitCount)
-        val finding = result.findings.single()
-        assertEquals("KernelSU throne hunt", finding.label)
-        assertEquals("open=1 access=1", finding.value)
-        assertEquals(NativeRootGroup.PACKAGE, finding.group)
-        assertEquals(NativeRootFindingSeverity.DANGER, finding.severity)
+        assertEquals(6, result.hitCount)
+        assertEquals(42, result.rawEventCount)
+        assertEquals(12, result.watchDescriptor)
+        assertTrue(result.detail.contains("directoryOpen=3"))
+        assertTrue(result.detail.contains("directoryAccess=3"))
+        assertTrue(result.findings.isEmpty())
     }
 
     @Test
-    fun `clean round emits no finding so runtime counting stays honest`() {
+    fun `zero event round emits no root finding`() {
         val result = KernelSuThroneHuntProbe().run(
             readyRound.copy(directoryOpenCount = 0, directoryAccessCount = 0)
         )
@@ -85,8 +85,8 @@ class KernelSuThroneHuntProbeTest {
                 stimulusApplied = false,
                 packageDirectory = "/data/app/package",
                 watchDescriptor = 12,
-                directoryOpenCount = 0,
-                directoryAccessCount = 0,
+                directoryOpenCount = 3,
+                directoryAccessCount = 2,
                 rawEventCount = 5,
                 invalidEventCount = 1,
                 baselineHitCount = 2,
@@ -100,6 +100,8 @@ class KernelSuThroneHuntProbeTest {
         assertEquals(1, result.invalidEventCount)
         assertEquals(2, result.baselineHitCount)
         assertEquals(12, result.watchDescriptor)
+        assertEquals(5, result.hitCount)
+        assertTrue(result.findings.isEmpty())
         assertTrue(result.stimulusDetail.contains("binder unavailable"))
     }
 

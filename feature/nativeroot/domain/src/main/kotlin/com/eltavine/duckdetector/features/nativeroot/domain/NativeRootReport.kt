@@ -209,13 +209,13 @@ data class NativeRootReport(
     val hasWarningFindings: Boolean
         get() = warningFindingCount > 0
 
-    // The throne hunt traversal opens the package directory inode before iterating it, so a
-    // directory-level IN_OPEN/IN_ACCESS pair is the detectable surface.
+    // Raw directory event count; inotify cannot identify the accessor or establish root.
     val ksuThroneHuntHitCount: Int
         get() = ksuThroneHuntOpenCount + ksuThroneHuntAccessCount
 
+    @Deprecated("Directory events cannot identify KernelSU; inspect the diagnostic counters instead.")
     val ksuThroneHuntDetected: Boolean
-        get() = ksuThroneHuntStimulusApplied && ksuThroneHuntHitCount > 0
+        get() = false
 
     val detectedFamilies: List<String>
         get() = buildList {

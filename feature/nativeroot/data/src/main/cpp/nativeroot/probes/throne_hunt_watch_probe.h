@@ -34,10 +34,9 @@ namespace duckdetector::nativeroot {
         std::string package_directory;
     };
 
-    // Creates an inotify instance and adds the app's own /data/app/<pkg>-<hash> directory so the
-    // KernelSU throne hunt (search_manager -> filp_open + iterate_dir) shows up as an
-    // IN_OPEN/IN_ACCESS on the directory inode. Runs in the app_zygote context, so the returned
-    // descriptor survives into the isolated child.
+    // Watches this package's directory for IN_OPEN/IN_ACCESS without accessor attribution.
+    // Runs in app_zygote so the descriptor survives into the isolated child. Notifications
+    // suppressed by FMODE_NONOTIFY are invisible; this watch cannot identify or exclude KernelSU.
     ThroneHuntWatchResult install_throne_hunt_watch(const std::string &package_directory);
 
     // Non-blocking drain of the inherited watch descriptor. Returns the number of directory
@@ -52,7 +51,7 @@ namespace duckdetector::nativeroot {
 
     ThroneHuntEventSummary drain_throne_hunt_watch(int watch_descriptor);
 
-    // Reading the event stream without consuming it keeps the carrier stateless across calls.
+    // Discards queued events to begin a new observation window.
     void reset_throne_hunt_watch(int watch_descriptor);
 
 }  // namespace duckdetector::nativeroot

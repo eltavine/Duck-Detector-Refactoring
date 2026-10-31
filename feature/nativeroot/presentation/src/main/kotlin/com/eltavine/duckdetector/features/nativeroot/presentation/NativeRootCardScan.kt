@@ -256,21 +256,16 @@ internal fun buildScanRows(report: NativeRootReport): List<NativeRootDetailRowMo
             NativeRootDetailRowModel(
                 label = "Throne hunt",
                 value = when {
+                    report.ksuThroneHuntWatchDenied -> "Watch denied"
+                    !report.ksuThroneHuntAvailable || !report.ksuThroneHuntStimulusApplied ->
+                        report.ksuThroneHuntFailureStage
                     report.ksuThroneHuntHitCount > 0 ->
                         "open=${report.ksuThroneHuntOpenCount} access=${report.ksuThroneHuntAccessCount}"
-                    report.ksuThroneHuntWatchDenied -> "Watch denied"
-                    !report.ksuThroneHuntStimulusApplied -> report.ksuThroneHuntFailureStage
-                    report.ksuThroneHuntAvailable -> "Clean"
-                    else -> report.ksuThroneHuntFailureStage
+                    else -> "No directory events"
                 },
-                status = when {
-                    report.ksuThroneHuntHitCount > 0 -> DetectorStatus.danger()
-                    report.ksuThroneHuntWatchDenied -> DetectorStatus.info(InfoKind.SUPPORT)
-                    report.ksuThroneHuntAvailable && report.ksuThroneHuntStimulusApplied -> DetectorStatus.allClear()
-                    report.ksuThroneHuntAvailable -> DetectorStatus.info(InfoKind.SUPPORT)
-                    else -> DetectorStatus.info(InfoKind.SUPPORT)
-                },
-                detail = "Collection ${report.ksuThroneHuntCollectionOutcome}; " +
+                status = DetectorStatus.info(InfoKind.SUPPORT),
+                detail = "Unattributed directory activity; diagnostic only. " +
+                    "Zero events cannot exclude KernelSU. Collection ${report.ksuThroneHuntCollectionOutcome}; " +
                     "baseline=${report.ksuThroneHuntBaselineHitCount}",
                 hiddenCopyText = buildThroneHuntDiagnostics(report),
             ),
@@ -281,12 +276,7 @@ internal fun buildScanRows(report: NativeRootReport): List<NativeRootDetailRowMo
                     "raw=${report.ksuThroneHuntRawEventCount} " +
                     "invalid=${report.ksuThroneHuntInvalidEventCount} " +
                     "baseline=${report.ksuThroneHuntBaselineHitCount}",
-                status = when {
-                    report.ksuThroneHuntHitCount > 0 -> DetectorStatus.danger()
-                    report.ksuThroneHuntStimulusApplied && report.ksuThroneHuntAvailable ->
-                        DetectorStatus.allClear()
-                    else -> DetectorStatus.info(InfoKind.SUPPORT)
-                },
+                status = DetectorStatus.info(InfoKind.SUPPORT),
                 detail = "Watch fd=${report.ksuThroneHuntWatchDescriptor}; " +
                     "stage=${report.ksuThroneHuntFailureStage}",
                 hiddenCopyText = buildThroneHuntDiagnostics(report),
