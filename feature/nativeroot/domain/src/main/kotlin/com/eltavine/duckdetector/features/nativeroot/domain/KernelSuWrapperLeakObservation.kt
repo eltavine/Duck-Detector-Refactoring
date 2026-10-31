@@ -1,8 +1,8 @@
 package com.eltavine.duckdetector.features.nativeroot.domain
 
-enum class WrapperLeakCollection {
-    COLLECTED, NO_CANDIDATE, UNAVAILABLE, PERMISSION_LIMITED, MALFORMED_COUNTER,
-    IO_FAILED, TIMED_OUT, CLEANUP_FAILED, NOISY_CONTROLS, NOT_REQUESTED,
+enum class WrapperLeakCollection(val wireCode: Int) {
+    COLLECTED(0), NO_CANDIDATE(1), UNAVAILABLE(2), PERMISSION_LIMITED(3), MALFORMED_COUNTER(4),
+    IO_FAILED(5), TIMED_OUT(6), CLEANUP_FAILED(7), NOISY_CONTROLS(8), NOT_REQUESTED(-1),
 }
 enum class WrapperLeakVerdict { REPEATED_GROWTH, NO_PATTERN, INCONCLUSIVE, NOT_EVALUATED }
 data class WrapperFileNrPoint(val median: Long, val spread: Long)

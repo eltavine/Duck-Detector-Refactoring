@@ -7,8 +7,10 @@ namespace duckdetector::nativeroot {
 constexpr int kWrapperRounds = 3;
 constexpr int kWrapperCycles = 256;
 // Wire codes are also validated by KernelSuWrapperLeakNativeBridge.
-enum class WrapperStage { kCollected, kNoCandidate, kUnavailable, kPermissionLimited,
-                          kMalformedCounter, kIoFailed, kTimedOut, kCleanupFailed, kNoisyControls };
+enum class WrapperStage {
+    kCollected = 0, kNoCandidate = 1, kUnavailable = 2, kPermissionLimited = 3,
+    kMalformedCounter = 4, kIoFailed = 5, kTimedOut = 6, kCleanupFailed = 7, kNoisyControls = 8
+};
 struct FileNrPoint { int64_t median = 0; int64_t spread = 0; };
 struct WrapperLeakSample {
     WrapperStage stage = WrapperStage::kUnavailable;
