@@ -6,6 +6,9 @@ duckdetector_native_unit(duckdetector_nativeroot
     srcu_timing_native_bridge.cpp
     initrc_timing_native_bridge.cpp
     probes/initrc_timing_probe.cpp
+    ksu_wrapper_leak_native_bridge.cpp
+    probes/ksu_wrapper_leak_probe.cpp
+    probes/ksu_wrapper_leak_posix.cpp
     ksu_timing_native_bridge.cpp
     probes/srcu_close_probe.cpp
     probes/prctl_probe.cpp

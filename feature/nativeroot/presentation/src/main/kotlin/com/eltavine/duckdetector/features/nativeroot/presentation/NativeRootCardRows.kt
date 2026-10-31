@@ -176,7 +176,7 @@ internal fun buildMethodRows(report: NativeRootReport): List<NativeRootDetailRow
             "Failed"
         )
 
-        NativeRootStage.READY -> report.methods.map { result ->
+        NativeRootStage.READY -> (report.methods + wrapperLeakMethod(report.wrapperLeak)).map { result ->
             NativeRootDetailRowModel(
                 label = result.label,
                 value = result.summary,

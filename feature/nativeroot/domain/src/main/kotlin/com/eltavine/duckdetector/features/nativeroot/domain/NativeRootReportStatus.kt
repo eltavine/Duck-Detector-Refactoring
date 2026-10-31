@@ -35,7 +35,7 @@ fun NativeRootReport.toDetectorStatus(): DetectorStatus {
 }
 
 fun NativeRootReport.hasReducedCoverage(): Boolean {
-    return srcuTiming.reducesCoverage() || kernelSuTiming.verdict == KernelSuTimingVerdict.INCONCLUSIVE || ksuSupercallBlocked ||
+    return wrapperLeak.reducesCoverage() || srcuTiming.reducesCoverage() || kernelSuTiming.verdict == KernelSuTimingVerdict.INCONCLUSIVE || ksuSupercallBlocked ||
             !ksuSupercallAttempted ||
             hasRuntimeReducedCoverage()
 }
@@ -58,4 +58,9 @@ fun NativeRootReport.hasRuntimeReducedCoverage(): Boolean {
             !ksuThroneHuntStimulusApplied ||
             ksuManagerVisibilityRestricted ||
             ksuManagerVisibilityUnknown
+}
+
+private fun KernelSuWrapperLeakObservation.reducesCoverage(): Boolean = when (collection) {
+    WrapperLeakCollection.NOT_REQUESTED, WrapperLeakCollection.NO_CANDIDATE -> false
+    else -> verdict == WrapperLeakVerdict.NOT_EVALUATED || verdict == WrapperLeakVerdict.INCONCLUSIVE
 }

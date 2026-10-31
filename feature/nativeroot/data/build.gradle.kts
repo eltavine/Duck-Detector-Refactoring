@@ -60,3 +60,10 @@ val kernelSuTimingHostTest = tasks.register<Exec>("kernelSuTimingHostTest") {
 }
 
 tasks.named("unitTest") { dependsOn(srcuCloseHostTest, kernelPatchLatencyHostTest, initRcTimingHostTest, kernelSuTimingHostTest) }
+
+val kernelSuWrapperLeakHostTest by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Verifies wrapper leak controls, reopen budget, failure states and cleanup using fake I/O."
+    commandLine("python3", layout.projectDirectory.file("src/test/native/test_ksu_wrapper_leak_probe.py").asFile)
+}
+tasks.named("unitTest") { dependsOn(kernelSuWrapperLeakHostTest) }
