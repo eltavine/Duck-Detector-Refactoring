@@ -101,8 +101,9 @@ a kernel call that does not return. Coroutine cancellation propagates after the 
 native call; it never changes a failed experiment into a clean result.
 
 There are at most 768 wrapped reopens and 1,536 direct control opens per collector
-owner. The probe caches its observation, including failures, and serializes concurrent
-calls. Rescanning with that scanner reuses the same result. Creating a new scanner or
+owner. The probe consumes admission before collection begins, caches its observation including
+failures, and serializes concurrent calls. An exception or cancellation after entry
+also consumes admission; an attempt that never returns an observation cannot be retried. Rescanning with that scanner reuses the same result. Creating a new scanner or
 restarting the process creates a new budget; this is not a device-wide lifetime limit.
 On affected kernels, closing descriptors cannot recover the leaked kernel references,
 which can remain pinned after the process exits. Do not run repeated affected-kernel
@@ -141,8 +142,10 @@ python3 feature/nativeroot/data/src/test/native/test_ksu_wrapper_leak_probe.py
 ./gradlew :feature:nativeroot:domain:unitTest :feature:nativeroot:data:unitTest :feature:nativeroot:presentation:unitTest :app:assembleDebug
 ```
 
-The native harness executes the production sampler with fake I/O and never leaks
-real kernel resources. It verifies ordering, successful-open accounting, parser
+The native harness executes the production sampler and POSIX adapter with fake I/O
+and never leaks real kernel resources. It verifies split/complete counter reads,
+interrupted-read deadlines, terminal identity changes, denied ioctls and close failures.
+It also checks native/Kotlin status codes against each other. It verifies ordering, successful-open accounting, parser
 rejection, every sampler operation's failure path and cleanup. JVM tests exercise
 noisy controls, incomplete samples, malformed JNI replies, caching and presentation.
 Android compilation validates platform declarations and ABI portability.

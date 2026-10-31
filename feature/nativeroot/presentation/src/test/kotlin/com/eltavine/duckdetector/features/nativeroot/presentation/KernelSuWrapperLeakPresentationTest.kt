@@ -3,6 +3,8 @@ package com.eltavine.duckdetector.features.nativeroot.presentation
 import com.eltavine.duckdetector.features.nativeroot.domain.*
 import org.junit.Assert.*
 import org.junit.Test
+import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
 
 class KernelSuWrapperLeakPresentationTest {
     private fun positive(): KernelSuWrapperLeakObservation {
@@ -30,5 +32,25 @@ class KernelSuWrapperLeakPresentationTest {
             assertFalse(row.summary.contains("Clean"))
             assertFalse(row.summary.contains("Repeated"))
         }
+    }
+    @Test fun `applicable failures reduce coverage in both card and export`() {
+        val covered = NativeRootReport.loading().copy(stage = NativeRootStage.READY,
+            nativeAvailable = true, cgroupAvailable = true, ksuSupercallAttempted = true,
+            isolatedMountProbeAvailable = true, ksuThroneHuntAvailable = true, ksuThroneHuntStimulusApplied = true)
+        assertFalse(covered.hasReducedCoverage())
+        for (state in WrapperLeakCollection.entries.filter { it !in setOf(
+            WrapperLeakCollection.COLLECTED, WrapperLeakCollection.NOT_REQUESTED, WrapperLeakCollection.NO_CANDIDATE) }) {
+            val report = covered.copy(wrapperLeak = KernelSuWrapperLeakObservation(collection = state))
+            val model = NativeRootCardModelMapper().map(report)
+            assertTrue(report.hasReducedCoverage())
+            assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.status)
+            assertEquals(model.status.severity, model.toDetectorReport().severity)
+            assertFalse(report.rootDetected)
+            assertFalse(report.kernelSuDetected)
+        }
+    }
+    @Test fun `not requested is explicitly unevaluated and scanner budget is disclosed`() {
+        assertEquals("Not evaluated", wrapperLeakMethod(KernelSuWrapperLeakObservation()).summary)
+        assertTrue(wrapperLeakMethod(positive()).detail.contains("new scanner has a new budget"))
     }
 }

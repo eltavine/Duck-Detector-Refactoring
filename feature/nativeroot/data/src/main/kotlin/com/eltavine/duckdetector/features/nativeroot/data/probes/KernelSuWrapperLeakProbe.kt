@@ -8,7 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.ensureActive
 
-/** Owns one bounded experiment for this detector's lifetime, including concurrent/repeated scans. */
+/** Owns one bounded experiment for this scanner's lifetime, including concurrent/repeated scans. */
 class KernelSuWrapperLeakProbe internal constructor(
     private val collect: () -> KernelSuWrapperLeakObservation,
 ) {

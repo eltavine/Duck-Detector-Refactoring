@@ -13,6 +13,7 @@ fun wrapperLeakMethod(observation: KernelSuWrapperLeakObservation): NativeRootMe
         NativeRootMethod.KSU_WRAPPER_REFERENCE_LEAK,
         when {
             matched -> "Repeated file-object growth"
+            observation.collection == WrapperLeakCollection.NOT_REQUESTED -> "Not evaluated"
             observation.collection == WrapperLeakCollection.NO_CANDIDATE -> "No wrapper candidate; not evaluated"
             observation.collection == WrapperLeakCollection.PERMISSION_LIMITED -> "Permission limited"
             observation.verdict == WrapperLeakVerdict.NO_PATTERN -> "Leak pattern not observed"
@@ -24,7 +25,7 @@ fun wrapperLeakMethod(observation: KernelSuWrapperLeakObservation): NativeRootMe
             append("Reopens an existing anonymous-inode PTY wrapper through /proc/self/fd, interleaving idle and direct-terminal controls. ")
             append("file-nr is system-wide and approximate; repeated growth is supporting evidence, not KSU or root identification. ")
             append("KernelSU PR #3958 fixes the reference imbalance. A patched wrapper, a missing candidate or restricted procfs cannot exclude KSU. ")
-            append("No root request is made. At most 768 wrapped reopens run once per detector instance; results are reused on later scans. ")
+            append("No root request is made. At most 768 wrapped reopens run once per scanner instance; results are reused on later scans, and a new scanner has a new budget. ")
             append("On affected kernels, pinned file objects can persist after descriptors close and after process exit. ")
             append("Thresholds are provisional and have not been calibrated across devices.\n")
             append("collection=${observation.collection}; errno=${observation.error}; rounds=${observation.completedRounds}; reopens=${observation.reopens}\n")
