@@ -2,6 +2,7 @@ package com.eltavine.duckdetector.features.nativeroot.data.probes
 
 import com.eltavine.duckdetector.features.nativeroot.data.native.KernelSuWrapperLeakNativeBridge
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuWrapperLeakObservation
+import com.eltavine.duckdetector.features.nativeroot.domain.WrapperLeakCollection
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.coroutineContext
@@ -18,7 +19,12 @@ class KernelSuWrapperLeakProbe internal constructor(
     suspend fun collect(): KernelSuWrapperLeakObservation = admission.withLock {
         coroutineContext.ensureActive()
         cached?.let { return@withLock it }
-        // Cache before observing cancellation: an interrupted caller must not repeat the stimulus.
+        // Consume admission before entering collection: even an unexpected exception can occur
+        // after a successful reopen. Only an explicit returned observation replaces this state.
+        cached = KernelSuWrapperLeakObservation(
+            collection = WrapperLeakCollection.UNAVAILABLE,
+            detail = "A previous collection attempt did not return an observation; no retry is permitted for this scanner.",
+        )
         val result = collect.invoke()
         cached = result
         coroutineContext.ensureActive()
