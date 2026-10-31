@@ -22,6 +22,7 @@ import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootReport
 import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootStage
+import com.eltavine.duckdetector.features.nativeroot.domain.WrapperLeakVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.SrcuTimingVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.hasReducedCoverage
 import com.eltavine.duckdetector.features.nativeroot.presentation.model.NativeRootImpactItemModel
@@ -65,6 +66,11 @@ internal fun buildImpactItems(report: NativeRootReport): List<NativeRootImpactIt
             } else if (report.kernelSuTiming.verdict == KernelSuTimingVerdict.REPEATED_PATTERN) {
                 add(NativeRootImpactItemModel(
                     text = "Repeated prctl timing is supporting evidence only. Scheduling, virtualization and unrelated security hooks can produce similar effects; this is not a KernelSU or root identification.",
+                    status = DetectorStatus.warning(),
+                ))
+            } else if (report.wrapperLeak.verdict == WrapperLeakVerdict.REPEATED_GROWTH) {
+                add(NativeRootImpactItemModel(
+                    text = "Repeated file-object growth correlates with wrapper reopens. Review this as a leak indicator; global file activity can confound the result, and fixed KernelSU builds do not have this leak.",
                     status = DetectorStatus.warning(),
                 ))
             } else if (report.nativeAvailable) {

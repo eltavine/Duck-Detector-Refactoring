@@ -17,6 +17,7 @@
 
 package com.eltavine.duckdetector.features.nativeroot.data.repository
 
+import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuWrapperLeakProbe
 import android.content.Context
 import android.os.SystemClock
 import com.eltavine.duckdetector.core.detector.DetectorScanner
@@ -60,6 +61,7 @@ class NativeRootRepository(
     private val throneHuntProbe: KernelSuThroneHuntProbe = KernelSuThroneHuntProbe(),
     private val srcuTimingProbe: SrcuTimingProbe = SrcuTimingProbe(context?.applicationContext),
     private val initRcTimingProbe: InitRcTimingProbe = InitRcTimingProbe(context?.applicationContext),
+    private val wrapperLeakProbe: KernelSuWrapperLeakProbe = KernelSuWrapperLeakProbe(),
     private val kernelSuTimingProbe: KernelSuTimingProbe = KernelSuTimingProbe(context?.applicationContext),
 ) : DetectorScanner<NativeRootReport> {
 
@@ -86,6 +88,7 @@ class NativeRootRepository(
         val mountNamespaceResult = mountNamespaceDriftProbe.run()
         val managerFingerprintResult = kernelSuManagerFingerprintProbe.run()
         val tempRootArtifactResult = tempRootArtifactProbe.run()
+        val wrapperLeak = wrapperLeakProbe.collect()
         val initRcTiming = initRcTimingProbe.collect()
         // Stimuli run last, serially. The timing experiments precede the asynchronous MIME
         // rewrite so this detector cannot introduce its own delayed write into the idle controls.
@@ -106,6 +109,7 @@ class NativeRootRepository(
         return NativeRootReport(
             stage = NativeRootStage.READY,
             initRcTiming = initRcTiming,
+            wrapperLeak = wrapperLeak,
             srcuTiming = srcuTiming,
             kernelSuTiming = kernelSuTiming,
             findings = findings,
