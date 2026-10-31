@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <string>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <sys/vfs.h>
 #include <time.h>
 #include <unistd.h>
@@ -81,6 +82,32 @@ public:
         point = {values[2], values[4] - values[0]};
         return true;
     }
+    struct stat terminal_identity{};
+    unsigned int terminal_device = 0;
+    bool device_number(int fd, unsigned int &device) {
+        if (ioctl(fd, TIOCGDEV, &device) < 0) return io_error();
+        return true;
+    }
+    bool prepare_terminal() {
+        unsigned int candidate_device = 0;
+        if (fstat(direct, &terminal_identity) < 0) return io_error();
+        if (!device_number(direct, terminal_device) || !device_number(candidate, candidate_device)) return false;
+        if (candidate_device != terminal_device) return fail(WrapperStage::kUnavailable, EXDEV);
+        return true;
+    }
+    bool validate_terminal(int fd, bool wrapped) {
+        unsigned int device = 0;
+        if (!device_number(fd, device)) return false;
+        if (device != terminal_device) return fail(WrapperStage::kUnavailable, EXDEV);
+        if (!wrapped) {
+            struct stat identity{};
+            if (fstat(fd, &identity) < 0) return io_error();
+            if (identity.st_dev != terminal_identity.st_dev || identity.st_ino != terminal_identity.st_ino ||
+                identity.st_rdev != terminal_identity.st_rdev)
+                return fail(WrapperStage::kUnavailable, ESTALE);
+        }
+        return true;
+    }
     bool cycles(bool wrapped, int count, int &completed) override {
         // Both paths open the same PTY, without I/O or controlling-terminal acquisition.
         const char *path = wrapped ? reopen.c_str() : terminal.c_str();
@@ -89,7 +116,8 @@ public:
             int fd = open(path, O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
             if (fd < 0) return io_error();
             ++completed;
-            if (!close_owned(fd)) return false;
+            const bool valid = validate_terminal(fd, wrapped);
+            if (!close_owned(fd) || !valid) return false;
         }
         return true;
     }
@@ -154,8 +182,9 @@ WrapperLeakSample collect_wrapper_leak() {
     struct statfs fs{};
     if (io.direct < 0) io.io_error();
     else if (fstatfs(io.direct, &fs) != 0) io.io_error();
-    else if (fs.f_type == kDevptsFs && isatty(io.direct) == 1 && isatty(io.candidate) == 1)
-        return sample_wrapper_leak(io);
+    else if (fs.f_type == kDevptsFs && isatty(io.direct) == 1 && isatty(io.candidate) == 1) {
+        if (io.prepare_terminal()) return sample_wrapper_leak(io);
+    }
     else io.fail(WrapperStage::kUnavailable, ENOTTY);
     WrapperLeakSample result;
     result.stage = io.failure(); result.error = io.error();

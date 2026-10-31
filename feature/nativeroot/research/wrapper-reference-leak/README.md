@@ -40,6 +40,9 @@ KernelSU verdict.
   resolves a proc FD link to its file path;
   [anon_inodes.c](https://android.googlesource.com/kernel/common/+/3a8b5df06c041e54b2d9d6751f542858758eb29d/fs/anon_inodes.c)
   allocates pseudo files on the anonymous-inode mount.
+  [tty_io.c](https://android.googlesource.com/kernel/common/+/3a8b5df06c041e54b2d9d6751f542858758eb29d/drivers/tty/tty_io.c)
+  implements `TIOCGDEV` by returning the encoded device number of the underlying TTY;
+  the wrapper forwards this ioctl to its original file.
   [fs sysctl documentation](https://android.googlesource.com/kernel/common/+/3a8b5df06c041e54b2d9d6751f542858758eb29d/Documentation/admin-guide/sysctl/fs.rst)
   defines the three counters and the zero unused-file field for modern kernels.
 - [Android SELinux documentation](https://source.android.com/docs/security/features/selinux)
@@ -67,7 +70,11 @@ Only the current process's FDs are enumerated. `F_DUPFD_CLOEXEC` pins a candidat
 without running its `open` operation, avoiding FD-number reuse races. Eligibility
 requires a character-device mode, anonymous-inode filesystem and numeric
 `/dev/pts/N` displayed path. The direct path must open on devpts; both descriptors
-must accept `isatty`. These checks describe a wrapper candidate, not proven KSU
+must accept `isatty` and return matching `TIOCGDEV` device numbers. Every subsequent
+open checks that device number again; each direct open must also retain the pinned
+control's device/inode/rdev identity. A changed path or device stops the experiment.
+TTY device numbers can be reused across distinct devpts mounts, so these checks do
+not prove underlying mount identity. These checks describe a wrapper candidate, not proven KSU
 provenance. All probe-owned FDs close on every exit. Original FDs are untouched.
 Terminal opens use `O_NOCTTY | O_NONBLOCK | O_CLOEXEC`; no terminal data is read or
 written. The direct path and wrapped path use the same access flags.
