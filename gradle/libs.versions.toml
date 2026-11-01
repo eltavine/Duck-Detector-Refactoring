@@ -24,7 +24,7 @@ coroutines = "1.11.0"
 composeIcons = "1.1.1"
 aboutLibraries = "15.3.0"
 miuix = "0.9.4"
-dependencyAnalysis = "3.19.2"
+dependencyAnalysis = "3.20.0"
 poko = "0.23.2"
 
 [libraries]
