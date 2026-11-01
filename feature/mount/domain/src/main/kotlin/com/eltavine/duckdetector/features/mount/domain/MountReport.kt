@@ -114,6 +114,7 @@ data class MountReport(
     val procMountViewRootToken: MountRootToken? = null,
     val procMountViewTokenDetail: String = "",
     val procMountViewDetail: String = "",
+    val anonymousDeviceState: MountAnonymousDeviceState? = null,
 ) {
     val artifactRows: List<MountFinding>
         get() = findings.filter { it.group == MountFindingGroup.ARTIFACTS }

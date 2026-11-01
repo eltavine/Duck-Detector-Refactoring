@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.capability.attestation.data
 
 import com.eltavine.duckdetector.capability.attestation.domain.TeeTier
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -35,6 +36,7 @@ class BootConsistencyProbeTest {
         val result = probe.inspect(snapshot(rootOfTrust = rootOfTrust(hash = "aabbcc")))
 
         assertFalse(result.vbmetaDigestMismatch)
+        assertTrue(result.runtimeComparisonPerformed)
         assertTrue(result.detail.contains("matched", ignoreCase = true))
     }
 
@@ -49,6 +51,7 @@ class BootConsistencyProbeTest {
         val result = probe.inspect(snapshot(rootOfTrust = rootOfTrust(hash = "aabb")))
 
         assertTrue(result.vbmetaDigestMissingWhileAttestedHashPresent)
+        assertFalse(result.runtimeComparisonPerformed)
     }
 
     @Test
@@ -62,7 +65,44 @@ class BootConsistencyProbeTest {
         val result = probe.inspect(snapshot(rootOfTrust = null))
 
         assertFalse(result.hasHardAnomaly)
+        assertTrue(result.runtimePropsAvailable)
+        assertFalse(result.runtimeComparisonPerformed)
         assertTrue(result.detail.contains("missing", ignoreCase = true))
+    }
+
+    @Test
+    fun `missing attested hash leaves readable runtime digest untested`() {
+        val result = BootConsistencyProbe(SystemPropertyReader {
+            PropertyReadResult(available = true, value = "aabb")
+        }).inspect(snapshot(rootOfTrust = rootOfTrust(hash = "")))
+
+        assertTrue(result.runtimePropsAvailable)
+        assertFalse(result.runtimeComparisonPerformed)
+        assertFalse(result.hasHardAnomaly)
+    }
+
+    @Test
+    fun `unavailable runtime property cannot complete comparison`() {
+        val result = BootConsistencyProbe(SystemPropertyReader {
+            PropertyReadResult(available = false)
+        }).inspect(snapshot(rootOfTrust = rootOfTrust(hash = "aabb")))
+
+        assertFalse(result.runtimePropsAvailable)
+        assertFalse(result.runtimeComparisonPerformed)
+        assertFalse(result.hasHardAnomaly)
+    }
+
+    @Test
+    fun `self signed state compares digests while unknown states do not`() {
+        for (state in listOf("Self-signed", "Unknown", "", null)) {
+            val result = BootConsistencyProbe(SystemPropertyReader {
+                PropertyReadResult(available = true, value = "aabb")
+            }).inspect(snapshot(rootOfTrust = rootOfTrust(hash = "aabb").copy(verifiedBootState = state)))
+
+            assertTrue(result.runtimePropsAvailable)
+            assertFalse(result.hasHardAnomaly)
+            assertEquals(state, state == "Self-signed", result.runtimeComparisonPerformed)
+        }
     }
 
     @Test
@@ -159,6 +199,7 @@ class BootConsistencyProbeTest {
         assertFalse(result.verifiedBootKeyAllZeros)
         assertFalse(result.verifiedBootHashAllZeros)
         assertFalse(result.vbmetaDigestMismatch)
+        assertFalse(result.runtimeComparisonPerformed)
         assertFalse(result.hasHardAnomaly)
         assertTrue(result.detail.contains("does not guarantee", ignoreCase = true))
     }

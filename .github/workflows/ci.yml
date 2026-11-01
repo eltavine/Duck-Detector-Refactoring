@@ -74,6 +74,19 @@ jobs:
           python3 capability/selinuxpolicy/data/src/test/python/test_avc_lookup_native.py
           python3 capability/selinuxpolicy/data/src/test/python/test_status_abi_native.py
 
+      - name: Test native observation policies and feature probes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 core/native/src/test/python/test_mount_id_observation.py
+          python3 core/native/src/test/python/test_installed_package_path.py
+          for suite in feature/*/data/src/test/python; do
+            # Device-driven scripts need their own runner; discover only host suites here.
+            compgen -G "${suite}/test_*_host_native.py" > /dev/null || continue
+            python3 -m unittest discover -s "$suite" -p 'test_*_host_native.py'
+          done
+
       # Research tools pin the upstream inputs behind a detector's evidence record. Their
       # self-tests are offline; the network audit stays an explicit manual step.
       - name: Self-test detector research tooling
@@ -153,13 +166,17 @@ jobs:
         with:
           cache-read-only: "true"
 
+      - name: Generate contributors JSON and avatars
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./gradlew --stacktrace -Pduckdetector.githubContributors.refresh=true :app:generateGithubContributorsAsset
+
       # Every module registers a unitTest lifecycle task, so the unqualified name runs the tests of
       # all core, capability, feature and app modules; :build-logic:test runs the module boundary
       # validator's self-tests. Configuring the build already fails on a boundary violation.
       # checkPublicApi compares the SDK contract modules' public API with their committed dumps.
       # assembleDebug covers externalNativeBuildDebug, so the CMake configuration and all four ABIs
-      # are compiled here. The contributors asset is deliberately left unrefreshed: pull requests
-      # have no reason to reach github.com during the build.
+      # are compiled here, with the contributors snapshot generated above packaged in the APK.
       - name: Run unit tests and assemble debug
         shell: bash
         run: |

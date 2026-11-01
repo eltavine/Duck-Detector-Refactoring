@@ -28,6 +28,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":core:evidence"))
     api(project(":core:native"))
     implementation(project(":core:platform"))
     implementation(libs.kotlinx.coroutines.android)

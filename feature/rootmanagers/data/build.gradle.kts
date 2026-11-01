@@ -31,5 +31,5 @@ dependencies {
     implementation(project(":core:platform"))
     api(project(":feature:rootmanagers:domain"))
     implementation(libs.hiddenapibypass)
-    implementation(libs.kotlinx.coroutines.android)
+    api(libs.kotlinx.coroutines.android)
 }

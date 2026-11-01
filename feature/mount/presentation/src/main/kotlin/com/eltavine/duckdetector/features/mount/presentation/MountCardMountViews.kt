@@ -90,8 +90,8 @@ internal fun zygoteNextMountViewRow(report: MountReport): MountDetailRowModel {
             "Root mount"
         } else {
             when (result.namespaceAssessment) {
-                MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY -> "Private namespace anomaly"
-                MountZygoteNextNamespaceAssessment.INCONSISTENT -> "Evidence inconsistent"
+                MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY -> "Namespace observation"
+                MountZygoteNextNamespaceAssessment.INCONSISTENT -> "Namespace observation"
                 MountZygoteNextNamespaceAssessment.UNVERIFIED -> "Coverage unverified"
                 MountZygoteNextNamespaceAssessment.LIKELY_INIT -> "Clean"
             }
@@ -107,7 +107,7 @@ internal fun zygoteNextMountViewRow(report: MountReport): MountDetailRowModel {
         } else {
             when (result.namespaceAssessment) {
                 MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY,
-                MountZygoteNextNamespaceAssessment.INCONSISTENT -> DetectorStatus.warning()
+                MountZygoteNextNamespaceAssessment.INCONSISTENT -> DetectorStatus.info(InfoKind.SUPPORT)
 
                 MountZygoteNextNamespaceAssessment.UNVERIFIED ->
                     DetectorStatus.info(InfoKind.SUPPORT)

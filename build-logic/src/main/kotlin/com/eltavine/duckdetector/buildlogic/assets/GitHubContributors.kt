@@ -17,15 +17,15 @@
 
 package com.eltavine.duckdetector.buildlogic.assets
 
-import java.util.Locale
+import java.net.URI
 import org.gradle.api.GradleException
 import org.json.JSONArray
 import org.json.JSONException
 
 internal const val GITHUB_CONTRIBUTORS_API_URL =
-    "https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors-data"
+    "https://api.github.com/repos/eltavine/Duck-Detector-Refactoring/stats/contributors"
 
-/** One contributor in GitHub's contributors-data feed. */
+/** One contributor in GitHub's repository statistics API. */
 internal data class GitHubContributor(
     val login: String,
     val name: String,
@@ -35,7 +35,7 @@ internal data class GitHubContributor(
     val codeVolume: Int,
 )
 
-/** Parses GitHub's contributors-data feed, most contributions and then most changed lines first. */
+/** Parses GitHub's repository statistics API, most contributions and then most changed lines first. */
 internal fun parseGitHubContributors(body: String): List<GitHubContributor> {
     val array = try {
         JSONArray(body)
@@ -52,10 +52,8 @@ internal fun parseGitHubContributors(body: String): List<GitHubContributor> {
             val author = item.optJSONObject("author")
                 ?: throw GradleException("GitHub contributors item #$index is missing author.")
             val login = author.optString("login").trim()
-            val profileUrl = author.optString("path").trim().ifBlank { null }?.let { path ->
-                "https://github.com$path"
-            } ?: "https://github.com/$login"
-            val avatarUrl = author.optString("avatar").trim().ifBlank { null }?.let(::upgradeAvatarUrl)
+            val profileUrl = author.optString("html_url").trim().ifBlank { "https://github.com/$login" }
+            val avatarUrl = author.optString("avatar_url").trim().ifBlank { null }?.let(::upgradeAvatarUrl)
             val contributions = item.optInt("total", -1)
             val codeVolume = item.optJSONArray("weeks").sumCodeVolume()
             if (login.isEmpty() || contributions < 0) {
@@ -79,21 +77,17 @@ internal fun parseGitHubContributors(body: String): List<GitHubContributor> {
     )
 }
 
-/**
- * The headers the task sends to GitHub: the contributors-data page gets a browser user agent and a
- * JSON accept header, every other URL, such as an avatar, the REST API's headers; [token] authorises
- * both when present.
- */
+/** Credentials belong only to the API origin, never to contributor-supplied avatar URLs. */
 internal fun githubRequestHeaders(url: String, token: String?): Map<String, String> = buildMap {
-    if (url.lowercase(Locale.ROOT).contains("/graphs/contributors-data")) {
-        put("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0")
-        put("Accept", "application/json")
-    } else {
-        put("User-Agent", "Duck-Detector-Refactoring-Gradle")
+    put("User-Agent", "Duck-Detector-Refactoring-Gradle")
+    val uri = URI.create(url)
+    if (uri.scheme == "https" && uri.host.equals("api.github.com", ignoreCase = true) &&
+        (uri.port == -1 || uri.port == 443)
+    ) {
         put("Accept", "application/vnd.github+json")
         put("X-GitHub-Api-Version", "2022-11-28")
+        token?.takeIf(String::isNotBlank)?.let { put("Authorization", "Bearer $it") }
     }
-    token?.takeIf(String::isNotBlank)?.let { put("Authorization", "Bearer $it") }
 }
 
 private fun JSONArray?.sumCodeVolume(): Int {

@@ -62,7 +62,7 @@ object HmaUidPermissionPolicy {
         )
     }
 
-    // Android 15/16's manifest omits the instant protection flag for these normal permissions.
+    // Android 15–17 manifests omit the instant protection flag for these normal permissions.
     // PermissionService rejects non-instant permissions for instant apps, even if requested.
     val PERMISSIONS: List<String> = listOf(
         "android.permission.RECEIVE_BOOT_COMPLETED",

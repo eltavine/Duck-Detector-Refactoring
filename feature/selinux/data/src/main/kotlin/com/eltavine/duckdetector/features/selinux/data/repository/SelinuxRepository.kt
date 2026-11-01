@@ -21,6 +21,7 @@ import android.content.Context
 import android.os.Build
 import android.os.SystemClock
 import com.eltavine.duckdetector.core.platform.PathState
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.platform.PathStat
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValidityCarrierManager
@@ -60,7 +61,7 @@ class SelinuxRepository(
     }
 
     private suspend fun scanInternal(): SelinuxReport {
-        val scanStartedAt = SystemClock.elapsedRealtime()
+        val scan = ScanEpoch.current(SystemClock::elapsedRealtimeNanos)
         val methods = mutableListOf<SelinuxCheckResult>()
 
         val filesystemResult = checkSelinuxFilesystem()
@@ -96,7 +97,7 @@ class SelinuxRepository(
         // app_zygote attr/current oracle. It never requires root privileges.
         methods += buildSelinuxHideTimingMethod(hideTimingProbe.collectSnapshot())
 
-        val carrierSnapshot = contextValidityCarrierManager.collectSnapshot(scanStartedAt)
+        val carrierSnapshot = contextValidityCarrierManager.collectSnapshot(scan)
         val carrierResult = contextValidityProbe.interpret(carrierSnapshot)
         val contextValidityResult = carrierResult
         methods += buildContextValidityMethod(contextValidityResult)
@@ -104,7 +105,9 @@ class SelinuxRepository(
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
         methods += buildAvcLookupMethod(carrierSnapshot.avcLookup)
         methods += buildStatusAbiMethod(carrierSnapshot.statusAbi)
+        methods += buildAppZygoteTimingMethod(carrierSnapshot.avcLookup)
         methods += buildDirtyPolicyMethods(carrierSnapshot)
+        methods += buildDirtyPolicyAccessProtocolMethod(carrierSnapshot)
         methods += buildSidtabMethod(carrierSnapshot.sidtab)
 
         val statusResolution = determineStatusWithParadoxLogic(methods)
@@ -190,7 +193,7 @@ class SelinuxRepository(
         if (runtimeProbe.suspiciousActorHits.isNotEmpty()) {
             notes += SelinuxAuditNote(
                 SelinuxAuditNoteKind.SU_ACTOR_REFERENCED,
-                "Readable AVC denials also referenced su-related actor strings such as comm/exe/path tokens. Treat this as supporting visibility evidence, not direct proof of a live root daemon.",
+                "Readable AVC denials referenced a root-related process name or executable. Treat this as supporting evidence, not direct proof of a live root daemon.",
             )
         }
 

@@ -20,11 +20,99 @@ package com.eltavine.duckdetector.features.zygisk.data.native
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitState
 
 class ZygiskNativeBridgeTest {
 
     private val bridge = ZygiskNativeBridge()
+
+    private fun evaluatedPayload(entries: Int = 10, cleared: Int = 0, gaps: Int = 0, callbacks: Int = 0) = """
+        AVAILABLE=1
+        ATEXIT_TABLE_STATE=COLLECTED
+        ATEXIT_TABLE_ENTRIES=$entries
+        ATEXIT_TABLE_NULLS=$cleared
+        ATEXIT_TABLE_GAPS=$gaps
+        ATEXIT_TABLE_CALLBACKS=$callbacks
+        ATEXIT_TABLE_DETAIL=Bounded table
+    """.trimIndent()
+
+    @Test
+    fun `evaluated coverage requires every count and explanation`() {
+        val complete = evaluatedPayload()
+        listOf("ENTRIES", "NULLS", "GAPS", "CALLBACKS", "DETAIL").forEach { field ->
+            val incomplete = complete.lineSequence().filterNot { it.startsWith("ATEXIT_TABLE_$field=") }.joinToString("\n")
+            assertThrows(IllegalArgumentException::class.java) { bridge.parse(incomplete) }
+        }
+        assertEquals(ZygiskAtexitState.COLLECTED, bridge.parse(complete).atexitTable.state)
+    }
+
+    @Test
+    fun `contradictory evaluated counts are rejected`() {
+        listOf(
+            evaluatedPayload(entries = 0),
+            evaluatedPayload(cleared = 11),
+            evaluatedPayload(cleared = 3, gaps = 2),
+            evaluatedPayload(cleared = 5, callbacks = 6),
+        ).forEach { payload ->
+            assertThrows(IllegalArgumentException::class.java) { bridge.parse(payload) }
+        }
+    }
+
+    @Test
+    fun `dumpability preserves zero without treating missing values as zero`() {
+        assertEquals(-1, bridge.parse("AVAILABLE=1").atexitTable.dumpable)
+        listOf("0", "1", "2").forEach {
+            assertEquals(it.toInt(), bridge.parse("AVAILABLE=1\nATEXIT_TABLE_DUMPABLE=$it").atexitTable.dumpable)
+        }
+        listOf("-1", "3", "bad").forEach {
+            assertEquals(-1, bridge.parse("AVAILABLE=1\nATEXIT_TABLE_DUMPABLE=$it").atexitTable.dumpable)
+        }
+    }
+
+    @Test
+    fun `malformed table counts do not become a zero evidence result`() {
+        listOf("-1", "invalid", "999999999999999999999").forEach { count ->
+            assertThrows(IllegalArgumentException::class.java) {
+                bridge.parse("AVAILABLE=1\nATEXIT_TABLE_ENTRIES=$count")
+            }
+        }
+    }
+
+    @Test
+    fun `missing unknown and unavailable table states do not become evaluated`() {
+        assertEquals(ZygiskAtexitState.NOT_COLLECTED, bridge.parse("AVAILABLE=1").atexitTable.state)
+        assertEquals(ZygiskAtexitState.NOT_COLLECTED, bridge.parse("AVAILABLE=1\nATEXIT_TABLE_STATE=NEW_LAYOUT").atexitTable.state)
+        listOf("UNSUPPORTED", "UNAVAILABLE", "PERMISSION_DENIED", "BUSY", "INVALID").forEach { state ->
+            val result = bridge.parse("AVAILABLE=1\nATEXIT_TABLE_STATE=$state")
+            assertEquals(state, result.atexitTable.state.name)
+            assertFalse(result.atexitTable.hasEvidence)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            bridge.parse("AVAILABLE=1\nATEXIT_TABLE_STATE=PARTIAL")
+        }
+    }
+
+    @Test
+    fun `table residue preserves counts and escaped failure details`() {
+        val table = bridge.parse("""
+            AVAILABLE=1
+            ATEXIT_TABLE_STATE=PARTIAL
+            ATEXIT_TABLE_ENTRIES=456
+            ATEXIT_TABLE_NULLS=36
+            ATEXIT_TABLE_GAPS=1
+            ATEXIT_TABLE_CALLBACKS=2
+            ATEXIT_TABLE_DETAIL=Read table\nOne unresolved callback
+        """.trimIndent()).atexitTable
+        assertEquals(ZygiskAtexitState.PARTIAL, table.state)
+        assertEquals(456, table.entries)
+        assertEquals(36, table.nullEntries)
+        assertEquals(1, table.anchoredGaps)
+        assertEquals(2, table.anonymousCallbacks)
+        assertTrue(table.hasEvidence)
+        assertEquals("Read table\nOne unresolved callback", table.detail)
+    }
 
     @Test
     fun `parse decodes scalar keys and traces`() {

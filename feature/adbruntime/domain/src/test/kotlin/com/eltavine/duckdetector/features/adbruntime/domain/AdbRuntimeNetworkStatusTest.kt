@@ -98,7 +98,7 @@ class AdbRuntimeNetworkStatusTest {
 
         val finding = report(first, second).findings().single()
 
-        assertEquals(AdbProtocolResponseKind.CONNECT, finding.endpoint.responseKind)
+        assertEquals(AdbProtocolResponseKind.CONNECT, finding.endpoint?.responseKind)
     }
 
     @Test
@@ -185,10 +185,51 @@ class AdbRuntimeNetworkStatusTest {
         },
     )
 
+    @Test
+    fun stoppedInitWithAVisibleJdwpSocketIsAContradiction() {
+        val report = report(jdwpState = AdbProbeState.OBSERVED)
+
+        assertTrue(report.findings().any { it.kind == AdbFindingKind.INIT_STOPPED_WITH_ADB_JDWP_SOCKET })
+        assertEquals(DetectorStatus.danger(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun eachVisibleSocketBecomesItsOwnFinding() {
+        val report = report(jdwpState = AdbProbeState.OBSERVED, initSocketPresent = true)
+
+        assertEquals(2, report.findings().size)
+        assertEquals(DetectorStatus.danger(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun anInitSocketAloneAlsoContradictsStoppedInit() {
+        val report = report(initSocketPresent = true)
+
+        assertTrue(report.findings().any { it.kind == AdbFindingKind.INIT_STOPPED_WITH_ADB_INIT_SOCKET })
+        assertEquals(DetectorStatus.danger(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun aSocketSeenInOneSampleOnlyIsNoContradiction() {
+        val report = report(jdwpState = AdbProbeState.OBSERVED, secondJdwpState = AdbProbeState.NOT_OBSERVED)
+
+        assertTrue(report.findings().isEmpty())
+    }
+
+    @Test
+    fun aSocketWithADaemonThatIsNotStoppedIsNoContradiction() {
+        val report = report(jdwpState = AdbProbeState.OBSERVED, secondInitState = "running")
+
+        assertTrue(report.findings().isEmpty())
+    }
+
     private fun report(
         vararg mdnsSamples: AdbMdnsSnapshot,
         wifiEnabled: Boolean = false,
         secondInitState: String = "stopped",
+        jdwpState: AdbProbeState = AdbProbeState.NOT_OBSERVED,
+        secondJdwpState: AdbProbeState = jdwpState,
+        initSocketPresent: Boolean = false,
     ): AdbRuntimeReport {
         val first = AdbRuntimeSample(
             usbDebuggingEnabled = true,
@@ -199,8 +240,16 @@ class AdbRuntimeNetworkStatusTest {
                 initAdbdState = "stopped",
             ),
             usb = UsbRuntimeSnapshot(state = AdbProbeState.OBSERVED),
+            initSocket = AdbInitSocketSnapshot(
+                state = AdbProbeState.OBSERVED,
+                presence = if (initSocketPresent) AdbSocketPresence.PRESENT else AdbSocketPresence.ABSENT,
+            ),
+            jdwpSocket = AdbJdwpSocketSnapshot(abstract = jdwpState),
         )
-        val second = first.copy(properties = first.properties.copy(initAdbdState = secondInitState))
+        val second = first.copy(
+            properties = first.properties.copy(initAdbdState = secondInitState),
+            jdwpSocket = AdbJdwpSocketSnapshot(abstract = secondJdwpState),
+        )
         return AdbRuntimeReport(
             stage = AdbRuntimeStage.READY,
             platformApiLevel = 36,

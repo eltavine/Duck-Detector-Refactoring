@@ -24,7 +24,9 @@ namespace duckdetector::selinux::avc_lookup {
                   same_tail(kPayloadA + 1, kPayloadB + 1));
     constexpr unsigned kPayloadLength = sizeof(kPayloadA) - 1;
     constexpr unsigned kWarmup = 32;
-    constexpr unsigned kPairs = 128;
+    // Collect 512 paired timing samples after warm-up.
+    constexpr unsigned kPairs = 512;
+    constexpr unsigned kBlockPairs = 32;
     constexpr unsigned kRounds = 4;
     constexpr unsigned kWrites = 4096;
     // Largest CPU number plus one, and most cache_stats rows, the parsers accept.
@@ -52,9 +54,36 @@ namespace duckdetector::selinux::avc_lookup {
         unsigned cpu_rows = 0;
         unsigned possible_cpus = 0;
         unsigned pairs = 0;
+        unsigned cpu_migrations = 0;
+        unsigned a_slower = 0;
+        unsigned positive_blocks = 0;
+        unsigned negative_blocks = 0;
+        unsigned zero_blocks = 0;
         unsigned rounds = 0;
+        int pid = -1;
+        bool timing_medians_available = false;
         std::array<uint32_t, kRounds> batch_a{};
         std::array<uint32_t, kRounds> batch_b{};
+        int64_t median_a_ns = 0;
+        int64_t median_b_ns = 0;
+        int64_t median_delta_ns = 0;
+    };
+    // Protocol 1 is the unpinned preload-parent experiment, retaining only
+    // samples whose observed endpoints stay on its entry CPU. Legacy pinned
+    // parent diagnostics carry no protocol and must not drive the timing verdict.
+    struct ParentTiming {
+        unsigned protocol = 0;
+        int error = 0;
+        int pid = -1;
+        int cpu = -1;
+        unsigned pairs = 0;
+        unsigned migrations = 0;
+        unsigned a_slower = 0;
+        unsigned positive_blocks = 0;
+        unsigned negative_blocks = 0;
+        unsigned zero_blocks = 0;
+        bool medians_available = false;
+        bool complete = false;
         int64_t median_a_ns = 0;
         int64_t median_b_ns = 0;
         int64_t median_delta_ns = 0;
@@ -86,9 +115,15 @@ namespace duckdetector::selinux::avc_lookup {
     void close_attr(int fd);
     int now_ns(uint64_t &value);
     int pin_to_allowed_cpu(int &cpu);
+    // The observed CPU index, or -1 with errno on failure.
+    int current_cpu();
     // EXDEV when the thread runs elsewhere or its affinity is no longer exactly cpu.
     int verify_pinned(int cpu);
 
     Result collect();
+    // Safety gate in a disposable child before the PoC-equivalent parent measurement.
+    // No costly AVC-counting workload is run before timing in the parent.
+    int verify_parent_timing_preflight();
+    ParentTiming collect_parent_timing();
 }
 #endif

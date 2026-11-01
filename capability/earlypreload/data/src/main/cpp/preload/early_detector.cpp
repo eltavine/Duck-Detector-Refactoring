@@ -146,8 +146,8 @@ namespace duckdetector::preload {
                 detected = true;
                 result.futileHideDetected = true;
                 result.findings.push_back(
-                        "FUTILE_HIDE|ns/mnt ctime anomaly: delta=" + std::to_string(delta) +
-                        " ns|DANGER"
+                        "FUTILE_HIDE|ns/mnt inode ctime observation: delta=" + std::to_string(delta) +
+                        " ns|INFO"
                 );
             }
         }
@@ -163,8 +163,8 @@ namespace duckdetector::preload {
                 detected = true;
                 result.futileHideDetected = true;
                 result.findings.push_back(
-                        "FUTILE_HIDE|mountinfo ctime anomaly: delta=" + std::to_string(delta) +
-                        " ns|DANGER"
+                        "FUTILE_HIDE|mountinfo inode ctime observation: delta=" + std::to_string(delta) +
+                        " ns|INFO"
                 );
             }
         }
@@ -193,7 +193,7 @@ namespace duckdetector::preload {
             );
         }
 
-        if (target.starts_with("/data/adb")) {
+        if (target == "/data/adb" || target.starts_with("/data/adb/")) {
             detected = true;
             result.mntStringsDetected = true;
             result.findings.push_back(

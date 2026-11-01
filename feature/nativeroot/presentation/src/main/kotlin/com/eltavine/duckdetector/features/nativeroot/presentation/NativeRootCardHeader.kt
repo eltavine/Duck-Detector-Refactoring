@@ -22,7 +22,9 @@ import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFindingSeverity
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootReport
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootStage
+import com.eltavine.duckdetector.features.nativeroot.domain.WrapperLeakVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.SrcuTimingVerdict
+import com.eltavine.duckdetector.features.nativeroot.domain.KernelSuTimingVerdict
 import com.eltavine.duckdetector.features.nativeroot.domain.hasReducedCoverage
 import com.eltavine.duckdetector.features.nativeroot.domain.hasRuntimeReducedCoverage
 import com.eltavine.duckdetector.features.nativeroot.presentation.model.NativeRootHeaderFact
@@ -62,13 +64,14 @@ internal fun buildVerdict(report: NativeRootReport): String {
             report.hasDangerFindings -> "${report.dangerFindingCount} runtime root signal(s)"
             report.mountAnchorDriftCount > 0 -> "Isolated mount drift suggests namespace tampering"
             report.mountDriftSignalCount > 0 -> "Isolated-process namespace drift needs review"
-            report.ksuThroneHuntDetected -> "KernelSU throne hunt traversal observed"
             report.ksuManagerPackagePresent && report.ksuManagerTraitHitCount > 0 ->
                 "KernelSU manager weak fingerprint detected"
 
             report.ksuManagerPackagePresent -> "KernelSU manager package detected"
             report.hasFindingWarnings -> "${report.warningFindingCount} native signal(s) need review"
             report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY -> "Experimental fsnotify/SRCU timing anomaly"
+            report.kernelSuTiming.verdict == KernelSuTimingVerdict.REPEATED_PATTERN -> "Repeated prctl timing pattern"
+            report.wrapperLeak.verdict == WrapperLeakVerdict.REPEATED_GROWTH -> "Repeated wrapper file-object growth"
             !report.nativeAvailable -> "Native detector unavailable"
             report.hasReducedCoverage() -> "Native root scan has reduced coverage"
             else -> "No native root indicators"
@@ -93,6 +96,12 @@ internal fun buildSummary(report: NativeRootReport): String {
 
             report.srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY ->
                 "The optional experiment observed a repeatable fsnotify/SRCU timing delay relative to both controls. This is supporting contention evidence; it does not identify a root solution. Other indicators retain their own meaning."
+
+            report.kernelSuTiming.verdict == KernelSuTimingVerdict.REPEATED_PATTERN ->
+                "Three consecutive rounds on one CPU matched both prctl timing classifiers. This is supporting evidence, not proof of KernelSU or root; scheduling, virtualization and security hooks remain confounders."
+
+            report.wrapperLeak.verdict == WrapperLeakVerdict.REPEATED_GROWTH ->
+                "Three reopen batches showed persistent file-object growth while direct-terminal and idle controls stayed bounded. This is supporting leak evidence; system-wide activity remains a confounder and it does not identify KSU or root."
 
             !report.nativeAvailable ->
                 "This detector relies mostly on JNI-backed native probes. Native coverage was unavailable on this build, and the remaining runtime checks stayed clean."

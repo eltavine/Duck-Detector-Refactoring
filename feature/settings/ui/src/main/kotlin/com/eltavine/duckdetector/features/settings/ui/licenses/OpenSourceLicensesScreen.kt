@@ -46,6 +46,8 @@ import io.github.xiaotong6666.uihelper.chrome.DetailPageHost
 import io.github.xiaotong6666.uihelper.dialog.rememberRetainedDialogPayload
 import io.github.xiaotong6666.uihelper.mode.LocalUiMode
 import io.github.xiaotong6666.uihelper.mode.UiMode
+import io.github.xiaotong6666.uihelper.miuix.primitive.miuixDetailHorizontalInsets
+import io.github.xiaotong6666.uihelper.adaptive.UiContentSpacing
 import com.mikepenz.aboutlibraries.entity.Library
 import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 import com.mikepenz.aboutlibraries.ui.compose.m3.chipColors
@@ -82,6 +84,7 @@ fun OpenSourceLicensesScreen(
                 Column(
                     modifier = pageModifier
                         .fillMaxSize()
+                        .miuixDetailHorizontalInsets()
                         .padding(contentPadding)
                         .padding(horizontal = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -106,14 +109,15 @@ fun OpenSourceLicensesScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
+                        .miuixDetailHorizontalInsets()
                         .adaptiveVerticalScrollFeedback()
                         .then(pageModifier),
                     overscrollEffect = null,
                     contentPadding = PaddingValues(
                         start = 12.dp,
-                        top = contentPadding.calculateTopPadding() + 12.dp,
+                        top = contentPadding.calculateTopPadding() + UiContentSpacing.PageTop,
                         end = 12.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 20.dp,
+                        bottom = contentPadding.calculateBottomPadding() + UiContentSpacing.DetailBottom,
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {

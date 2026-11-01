@@ -37,8 +37,16 @@ using duckdetector::common::ChildEnd;
 static std::string mode;
 static uint32_t counters[kCpuLimit];
 static int pinned;
-static unsigned writes, identity_reads, stats_reads;
+static unsigned writes, identity_reads, stats_reads, cpu_reads, clock_reads, affinity_checks;
 static uint64_t clock_ns;
+// Deterministic scheduling for injected host tests; production uses the real sched_getcpu().
+extern "C" int sched_getcpu(void) noexcept {
+    ++cpu_reads;
+    if (mode == "single_migration" && cpu_reads == 260) return 3;
+    if (mode == "timing_migrated" && (cpu_reads % 2) == 0) return 3;
+    if (mode == "cpu_shift" && cpu_reads > 260) return 3;
+    return pinned >= 0 ? pinned : 2;
+}
 // Android 15 levelFrom=user assigns these categories to the primary user.
 static const char kCarrierLevel[] = "u:r:app_zygote:s0:c512,c768";
 static bool sparse() { return mode == "sparse"; }
@@ -48,6 +56,9 @@ noexcept
 #endif
 { return mode == "wrong_uid" ? 1000 : 10123; }
 namespace duckdetector::selinux::avc_lookup {
+int current_cpu() { return sched_getcpu(); }
+// The separate parent-loop test exercises its production collector.
+ParentTiming collect_parent_timing() { return {}; }
 int read_identity(char *context, unsigned capacity) {
     ++identity_reads;
     if (mode == "identity_unreadable") return EACCES;
@@ -109,7 +120,15 @@ WriteOutcome write_payload(int fd, const char *payload) {
     const bool a = !strcmp(payload, kPayloadA);
     assert(fd == 42 && (a || !strcmp(payload, kPayloadB)));
     ++writes;
-    clock_ns += a ? 300 : 200;
+    // Every 32-pair block has sixteen negative and sixteen positive differences.
+    // A lower median is negative; the upper median and midpoint average are positive.
+    if (mode == "median_boundary" && writes >= 3 + 2 * kWarmup &&
+        writes < 3 + 2 * (kWarmup + kPairs)) {
+        const unsigned pair = (writes - 3) / 2 - kWarmup;
+        clock_ns += a ? (pair % kBlockPairs < kBlockPairs / 2 ? 199 : 300) : 200;
+    } else {
+        clock_ns += a ? 300 : 200;
+    }
     if (mode == "no_setcurrent") return {EACCES, -1};
     if (mode == "control_success" && writes == 1) return {0, static_cast<int64_t>(kPayloadLength)};
     if (mode == "control_b_eperm" && writes == 2) return {EPERM, -1};
@@ -120,6 +139,7 @@ WriteOutcome write_payload(int fd, const char *payload) {
 }
 void close_attr(int fd) { assert(fd == 42); }
 int now_ns(uint64_t &value) {
+    ++clock_reads;
     if (mode == "clock_failed") return EINVAL;
     value = ++clock_ns;
     return 0;
@@ -131,7 +151,11 @@ int pin_to_allowed_cpu(int &cpu) {
     return 0;
 }
 int verify_pinned(int cpu) {
-    assert(cpu == pinned);
+    if (mode == "post_timing_affinity" && ++affinity_checks == 3) return EXDEV;
+    if (cpu != pinned) {
+        fprintf(stderr, "verify_pinned mismatch mode=%s cpu=%d pinned=%d\n", mode.c_str(), cpu, pinned);
+        abort();
+    }
     return mode == "migrated" && stats_reads >= 4 ? EXDEV : 0;
 }
 }
@@ -146,8 +170,12 @@ ChildOutcome run_disposable_child(std::span<unsigned char> report, ChildDeadline
     assert(file);
     const int status = body(context, fileno(file));
     const long written = lseek(fileno(file), 0, SEEK_CUR);
-    assert(written > 0 && written % static_cast<long>(sizeof(Report)) == 0);
-    assert(written / static_cast<long>(sizeof(Report)) <= 13);
+    if (report.size() == sizeof(int)) {
+        assert(written == static_cast<long>(sizeof(int)));
+    } else {
+        assert(written > 0 && written % static_cast<long>(sizeof(Report)) == 0);
+        assert(written / static_cast<long>(sizeof(Report)) <= 14);
+    }
     const size_t kept = std::min(static_cast<size_t>(written), report.size());
     lseek(fileno(file), 0, SEEK_SET);
     assert(read(fileno(file), report.data(), kept) == static_cast<ssize_t>(kept));
@@ -159,12 +187,13 @@ ChildOutcome run_disposable_child(std::span<unsigned char> report, ChildDeadline
 }
 }
 extern "C" jstring Java_com_eltavine_duckdetector_capability_selinuxpolicy_data_SelinuxAvcLookupProbe_nativeCollectAvcLookup(JNIEnv *, jobject);
+extern "C" jstring Java_com_eltavine_duckdetector_capability_selinuxpolicy_data_SelinuxAvcLookupProbe_nativeCollectParentTiming(JNIEnv *, jobject);
 static void reset(const char *test) {
     mode = test;
     // Counters start just below the 32-bit wrap, so every batch delta needs modular arithmetic.
     std::fill(std::begin(counters), std::end(counters), 0xFFFFF000u);
     pinned = -1;
-    writes = identity_reads = stats_reads = 0;
+    writes = identity_reads = stats_reads = cpu_reads = clock_reads = affinity_checks = 0;
     clock_ns = 1000;
 }
 static void parsers() {
@@ -199,22 +228,46 @@ static void expect(const char *test, State state, Step step, int error) {
     reset(test);
     const Result result = collect();
     const Report &report = result.report;
-    assert(report.state == state && report.step == step && report.error == error);
+    if (report.state != state || report.step != step || report.error != error) {
+        fprintf(stderr, "test=%s state=%d expected=%d step=%d expected=%d error=%d expected=%d pairs=%u migrations=%u\n",
+                test, (int)report.state, (int)state, (int)report.step, (int)step,
+                report.error, error, report.pairs, report.cpu_migrations);
+        abort();
+    }
     const bool counted = state == State::kCollected;
     const uint32_t a = mode == "two_two" ? 8198 : 4102, b = mode == "one_two" || mode == "two_two" ? 8198 : 4102;
     if (counted || report.identity_changed) {
         assert(report.rounds == kRounds && report.pairs == kPairs && writes == 2 + 2 * (kWarmup + kPairs) + 2 * kRounds * kWrites);
         assert(report.cpu == (sparse() ? 4 : 2) && report.cpu_row == 2 && report.cpu_rows == (sparse() ? 4u : 8u));
         assert(report.possible_cpus == report.cpu_rows && stats_reads == 1 + 4 * kRounds);
+        // Each write needs its own start and end clock reads.
+        assert(clock_reads == 4 * (kWarmup + kPairs));
         for (unsigned round = 0; round < kRounds; ++round) assert(report.batch_a[round] == a && report.batch_b[round] == b);
-        assert(report.median_a_ns == 301 && report.median_b_ns == 201 && report.median_delta_ns == 100);
+        if (mode == "median_boundary") {
+            assert(report.median_a_ns == 200 && report.median_b_ns == 201 && report.median_delta_ns == -1);
+            assert(report.negative_blocks == 16 && report.positive_blocks == 0 && report.a_slower == 256);
+        } else {
+            assert(report.median_a_ns == 301 && report.median_b_ns == 201 && report.median_delta_ns == 100);
+        }
     }
     if (counted) assert(report.unexpected == Payload::kNone && !report.identity_changed && identity_reads == 2);
     if (state == State::kTimingOnly) assert(report.pairs == kPairs && report.unexpected == Payload::kNone);
 }
 int main() {
     parsers();
-    for (const char *test : {"stock", "one_two", "two_two", "sparse", "carrier_plain", "carrier_secondary", "carrier_all"}) expect(test, State::kCollected, Step::kFinished, 0);
+    // The lightweight safety gate runs before parent timing. It must issue only
+    // two rejected writes, with no pinning, clock sampling or AVC workload.
+    reset("stock");
+    assert(verify_parent_timing_preflight() == 0);
+    assert(writes == 2 && identity_reads == 2 && clock_reads == 0 && pinned < 0);
+    for (const char *test : {"wrong_uid", "wrong_domain", "permissive", "open_denied",
+                              "no_setcurrent", "control_success", "identity_changed",
+                              "not_started", "timeout", "seccomp"}) {
+        reset(test);
+        assert(verify_parent_timing_preflight() != 0);
+        assert(clock_reads == 0 && pinned < 0 && writes <= 2);
+    }
+    for (const char *test : {"stock", "one_two", "two_two", "sparse", "carrier_plain", "carrier_secondary", "carrier_all", "median_boundary"}) expect(test, State::kCollected, Step::kFinished, 0);
     expect("wrong_uid", State::kUnsupported, Step::kCarrier, 0);
     for (const char *test : {"wrong_domain", "domain_prefix", "wrong_role", "level_prefix", "empty_categories", "bad_categories"}) {
         expect(test, State::kUnsupported, Step::kCarrier, 0);
@@ -234,13 +287,29 @@ int main() {
     assert(writes == 1 && accepted.unexpected == Payload::kA && accepted.unexpected_bytes == kPayloadLength);
     expect("control_b_eperm", State::kPermissionLimited, Step::kControls, EPERM);
     expect("timing_eintr", State::kInconclusive, Step::kTiming, EINTR);
+    expect("timing_migrated", State::kInconclusive, Step::kTiming, EAGAIN);
+    assert(writes == 2 + 2 * (kWarmup + kPairs));
+    expect("cpu_shift", State::kInconclusive, Step::kTiming, EAGAIN);
+    assert(writes == 2 + 2 * (kWarmup + kPairs));
     expect("clock_failed", State::kInconclusive, Step::kTiming, EINVAL);
     expect("counting_short", State::kInconclusive, Step::kCounting, 0);
     reset("counting_short");
     const Report short_write = collect().report;
     assert(short_write.unexpected == Payload::kB && short_write.unexpected_bytes == 3 && short_write.rounds == 0);
-    expect("affinity_failed", State::kTimingOnly, Step::kAffinity, EPERM);
+    expect("affinity_failed", State::kUnavailable, Step::kAffinity, EPERM);
+    assert(clock_reads == 0);
+    expect("single_migration", State::kInconclusive, Step::kTiming, EAGAIN);
+    reset("single_migration");
+    const Report partial = collect().report;
+    assert(partial.pairs == 511 && partial.cpu_migrations == 1);
+    assert(partial.timing_medians_available && partial.median_delta_ns == 100);
+    assert(partial.a_slower == 511 && partial.positive_blocks == 15);
     expect("no_possible", State::kTimingOnly, Step::kCpuMap, ENOENT);
+    expect("post_timing_affinity", State::kTimingOnly, Step::kAffinity, EXDEV);
+    reset("post_timing_affinity");
+    const Report moved_after_timing = collect().report;
+    assert(moved_after_timing.pairs == kPairs && moved_after_timing.timing_medians_available);
+    assert(moved_after_timing.median_delta_ns == 100 && moved_after_timing.cpu_migrations == 0);
     expect("bad_possible", State::kTimingOnly, Step::kCpuMap, EPROTO);
     expect("no_stats", State::kTimingOnly, Step::kStats, ENOENT);
     expect("bad_header", State::kTimingOnly, Step::kStats, EPROTO);
@@ -265,7 +334,8 @@ int main() {
     };
     const std::string one_two = payload("one_two");
     assert(one_two.starts_with("SCHEMA=1\nSTATE=COLLECTED\nSTEP=FINISHED\nERRNO=0\nUNEXPECTED_PAYLOAD=NONE\n"));
-    for (const char *line : {"\nCPU=2\nCPU_ROW=2\nCPU_ROWS=8\nPOSSIBLE_CPUS=8\nPAIRS=128\nROUNDS=4\nWRITES=4096\n",
+    for (const char *line : {"\nCPU=2\nCPU_ROW=2\nCPU_ROWS=8\nPOSSIBLE_CPUS=8\nPAIRS=512\nPID=",
+            "\nCPU_MIGRATIONS=0\nTIMING_MEDIANS_VALID=1\nA_SLOWER=512\nPOSITIVE_BLOCKS=16\nNEGATIVE_BLOCKS=0\nZERO_BLOCKS=0\nROUNDS=4\nWRITES=4096\n",
             "\nBATCH_A=4102,4102,4102,4102\nBATCH_B=8198,8198,8198,8198\n",
             "\nMEDIAN_A_NS=301\nMEDIAN_B_NS=201\nMEDIAN_DELTA_NS=100\n",
             "\nCHILD_END=EXITED\nCHILD_EXIT=0\nCHILD_SIGNAL=0\nCHILD_ERRNO=0\n"}) {
@@ -276,6 +346,10 @@ int main() {
     const std::string not_started = "\nSTATE=UNAVAILABLE\nSTEP=CARRIER\nERRNO=" + std::to_string(EAGAIN) + "\n";
     assert(payload("not_started").find(not_started) != std::string::npos);
     assert(payload("no_setcurrent").find("\nUNEXPECTED_PAYLOAD=A\nUNEXPECTED_RETURNED=-1\n") != std::string::npos);
+    const std::string partial_payload = payload("single_migration");
+    assert(partial_payload.find("\nPAIRS=511\n") != std::string::npos);
+    assert(partial_payload.find("\nTIMING_MEDIANS_VALID=1\n") != std::string::npos);
+    assert(partial_payload.find("\nMEDIAN_DELTA_NS=100\n") != std::string::npos);
     const std::string no_stats = "\nSTATE=TIMING_ONLY\nSTEP=STATS\nERRNO=" + std::to_string(ENOENT) + "\n";
     assert(payload("no_stats").find(no_stats) != std::string::npos);
 }
@@ -291,7 +365,7 @@ class AvcLookupNativeTest(unittest.TestCase):
             path = Path(directory)
             (path / "test.cpp").write_text(harness)
             (path / "jni.h").write_text(JNI)
-            command = [compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-I", str(path),
+            command = [compiler, "-O2", "-std=c++20", "-Wall", "-Wextra", "-Werror", "-I", str(path),
                        "-I", str(NATIVE), "-I", str(COMMON), str(path / "test.cpp"), *map(str, sources),
                        "-o", str(path / "test")]
             subprocess.run(command, check=True, timeout=60)
@@ -299,7 +373,12 @@ class AvcLookupNativeTest(unittest.TestCase):
 
     def test_parsers_control_flow_and_native_payload(self):
         self.compile_and_run(FLOW, [NATIVE / "selinuxpolicy/avc_lookup_probe.cpp",
+                               NATIVE / "selinuxpolicy/avc_lookup_parsers.cpp",
                                    NATIVE / "selinuxpolicy/avc_lookup_native_bridge.cpp"])
+
+    def test_poc_parent_timing_protocol_and_failures(self):
+        harness = (Path(__file__).resolve().parents[1] / "cpp/app_zygote_timing_test.cpp").read_text()
+        self.compile_and_run(harness, [])
 
     def test_io_adapter_transactions_and_reads(self):
         self.compile_and_run(IO, [])

@@ -25,6 +25,18 @@ import org.junit.Test
 
 class ContributorWallGeometryTest {
     @Test
+    fun firstContributorStaysAtTheExactCenterForAnyContributorCount() {
+        for (count in 1..150) {
+            val geometry = contributorWallGeometry(count, avatarSize = 56f, gap = 6f)
+            assertEquals("count=$count", Offset.Zero, geometry.centers.first())
+            geometry.centers.forEach { position ->
+                assertTrue(kotlin.math.abs(position.x) + 28f <= geometry.contentSize.width / 2f + 0.001f)
+                assertTrue(kotlin.math.abs(position.y) + 28f <= geometry.contentSize.height / 2f + 0.001f)
+            }
+        }
+    }
+
+    @Test
     fun twentyNineContributorsFormBalancedPairsAroundTheFirstContributor() {
         val centers = contributorWallGeometry(29, avatarSize = 56f, gap = 6f).centers
         assertEquals(Offset.Zero, centers.first())
@@ -35,7 +47,7 @@ class ContributorWallGeometryTest {
 
     @Test
     fun allContributorsHaveDistinctNonOverlappingHoneycombPositions() {
-        for (count in listOf(0, 1, 7, 29, 100)) {
+        for (count in listOf(0, 1, 7, 29, 30, 40, 44, 46, 100)) {
             val geometry = contributorWallGeometry(count, avatarSize = 48f, gap = 8f)
             assertEquals(count, geometry.centers.size)
             for (i in geometry.centers.indices) {

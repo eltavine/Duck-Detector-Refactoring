@@ -44,7 +44,7 @@ internal fun ContributorsSection(
 ) {
     val context = LocalContext.current
     val miuix = LocalUiMode.current == UiMode.Miuix
-    val contributorSnapshots = remember(context) { loadContributorSnapshots(context) }
+    val contributorSnapshots = remember(context) { loadContributorSnapshots(context).shuffled() }
     val authors = contributorSnapshots.map { snapshot ->
         AuthorProfile(
             login = snapshot.login,

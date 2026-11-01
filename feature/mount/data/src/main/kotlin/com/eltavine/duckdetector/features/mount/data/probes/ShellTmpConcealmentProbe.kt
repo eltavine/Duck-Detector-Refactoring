@@ -59,6 +59,7 @@ internal data class ShellTmpObservation(
     val javaCanRead: Boolean,
     val javaListable: Boolean,
     val dedicatedMounts: List<ShellTmpMountEntry>,
+    val mountInfoReadable: Boolean = true,
 )
 
 class ShellTmpConcealmentProbe {
@@ -67,7 +68,8 @@ class ShellTmpConcealmentProbe {
         val parentAccessible = canStat(PARENT_PATH)
         val accessState = resolveAccessState(SHELL_TMP_PATH)
         val path = File(SHELL_TMP_PATH)
-        val dedicatedMounts = parseDedicatedMounts(readMountInfo())
+        val mountInfo = readMountInfo()
+        val dedicatedMounts = parseDedicatedMounts(mountInfo.orEmpty())
 
         return evaluate(
             ShellTmpObservation(
@@ -78,6 +80,7 @@ class ShellTmpConcealmentProbe {
                 javaCanRead = path.canRead(),
                 javaListable = path.list() != null,
                 dedicatedMounts = dedicatedMounts,
+                mountInfoReadable = mountInfo != null,
             ),
         )
     }
@@ -93,7 +96,7 @@ class ShellTmpConcealmentProbe {
                         label = "Shell tmp dedicated mount",
                         value = observation.dedicatedMounts.first().fsType.ifBlank { "Detected" },
                         group = MountFindingGroup.CONSISTENCY,
-                        severity = MountFindingSeverity.DANGER,
+                        severity = MountFindingSeverity.WARNING,
                         detail = observation.dedicatedMounts.joinToString(separator = "\n") { entry ->
                             "target=${entry.target} fs=${entry.fsType} source=${entry.source}"
                         },
@@ -114,27 +117,23 @@ class ShellTmpConcealmentProbe {
                             ShellTmpAccessState.ACCESSIBLE -> "Accessible"
                         },
                         group = MountFindingGroup.CONSISTENCY,
-                        severity = if (observation.dedicatedMounts.isNotEmpty()) {
-                            MountFindingSeverity.DANGER
-                        } else {
-                            MountFindingSeverity.WARNING
-                        },
+                        severity = MountFindingSeverity.INFO,
                         detail = "Parent $PARENT_PATH is visible, but $SHELL_TMP_PATH resolved as ${observation.accessState.name.lowercase()}.",
                     ),
                 )
             }
 
             if (observation.accessState == ShellTmpAccessState.ACCESSIBLE &&
-                (!observation.javaExists || !observation.javaDirectory)
+                !observation.javaExists
             ) {
                 add(
                     MountFinding(
                         id = "shell_tmp_api_mismatch",
                         label = "Shell tmp API mismatch",
-                        value = "Java hidden",
+                        value = "API observations differ",
                         group = MountFindingGroup.CONSISTENCY,
-                        severity = MountFindingSeverity.DANGER,
-                        detail = "Low-level stat reported $SHELL_TMP_PATH as accessible, but Java File reported exists=${observation.javaExists}, dir=${observation.javaDirectory}.",
+                        severity = MountFindingSeverity.INFO,
+                        detail = "Low-level stat reported $SHELL_TMP_PATH as accessible, but a later Java File query reported exists=${observation.javaExists}, dir=${observation.javaDirectory}. The queries are not atomic.",
                     ),
                 )
             } else if (observation.accessState != ShellTmpAccessState.ACCESSIBLE &&
@@ -144,9 +143,9 @@ class ShellTmpConcealmentProbe {
                     MountFinding(
                         id = "shell_tmp_api_mismatch",
                         label = "Shell tmp API mismatch",
-                        value = "Stat hidden",
+                        value = "API observations differ",
                         group = MountFindingGroup.CONSISTENCY,
-                        severity = MountFindingSeverity.DANGER,
+                        severity = MountFindingSeverity.INFO,
                         detail = "Low-level stat reported ${observation.accessState.name.lowercase()} for $SHELL_TMP_PATH, but Java File still reported exists=${observation.javaExists}, dir=${observation.javaDirectory}.",
                     ),
                 )
@@ -154,7 +153,7 @@ class ShellTmpConcealmentProbe {
         }
 
         return ShellTmpConcealmentProbeResult(
-            available = true,
+            available = observation.accessState != ShellTmpAccessState.ERROR || observation.mountInfoReadable,
             findings = findings,
             dedicatedMountCount = observation.dedicatedMounts.size,
             detail = buildString {
@@ -162,6 +161,7 @@ class ShellTmpConcealmentProbe {
                 append(observation.parentAccessible)
                 append(", accessState=")
                 append(observation.accessState)
+                append(", mountinfoReadable=${observation.mountInfoReadable}")
                 append(", dedicatedMounts=")
                 append(observation.dedicatedMounts.size)
             },
@@ -170,7 +170,7 @@ class ShellTmpConcealmentProbe {
 
     private fun canStat(path: String): Boolean {
         return try {
-            Os.lstat(path)
+            Os.stat(path)
             true
         } catch (_: ErrnoException) {
             false
@@ -181,7 +181,7 @@ class ShellTmpConcealmentProbe {
 
     private fun resolveAccessState(path: String): ShellTmpAccessState {
         return try {
-            Os.lstat(path)
+            Os.stat(path)
             ShellTmpAccessState.ACCESSIBLE
         } catch (error: ErrnoException) {
             when (error.errno) {
@@ -194,10 +194,10 @@ class ShellTmpConcealmentProbe {
         }
     }
 
-    private fun readMountInfo(): String {
+    private fun readMountInfo(): String? {
         return runCatching {
-            File(MOUNTINFO_PATH).takeIf { it.exists() && it.canRead() }?.readText().orEmpty()
-        }.getOrDefault("")
+            File(MOUNTINFO_PATH).readText().takeIf { it.isNotBlank() }
+        }.getOrNull()
     }
 
     internal fun parseDedicatedMounts(

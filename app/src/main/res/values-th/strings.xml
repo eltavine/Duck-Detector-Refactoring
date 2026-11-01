@@ -95,5 +95,9 @@ limitations under the License.
     <string name="update_download_failed">ไม่สามารถดาวน์โหลดหรือตรวจสอบการอัปเดตได้</string>
     <string name="update_install_permission_required">อนุญาตให้ติดตั้งจาก Duck Detector แล้วแตะติดตั้งอีกครั้ง</string>
     <string name="update_install_failed">ไม่สามารถเปิดตัวติดตั้งได้</string>
+    <string name="update_install_fallback_copied_opened">การติดตั้งในเครื่องล้มเหลว คัดลอก URL ของ APK และเปิดในเบราว์เซอร์แล้ว</string>
+    <string name="update_install_fallback_copied_only">การติดตั้งในเครื่องล้มเหลว คัดลอก URL ของ APK แล้ว แต่ไม่สามารถเปิดเบราว์เซอร์ได้</string>
+    <string name="update_install_fallback_opened_only">การติดตั้งในเครื่องล้มเหลว เปิด URL ของ APK ในเบราว์เซอร์แล้ว แต่คัดลอกไม่สำเร็จ</string>
+    <string name="update_install_link_copied">คัดลอกลิงก์ดาวน์โหลด APK แล้ว</string>
     <string name="update_apk_unavailable">ไฟล์อัปเดตที่ดาวน์โหลดใช้ไม่ได้ โปรดดาวน์โหลดอีกครั้ง</string>
 </resources>

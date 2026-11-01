@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.dangerousapps.presentation
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.report.ReportBlock
 import com.eltavine.duckdetector.core.report.ReportFact
+import com.eltavine.duckdetector.core.report.ReportRow
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsCardModel
 
 private const val CATALOG_LINE_WIDTH = 95
@@ -66,9 +67,9 @@ fun DangerousAppsCardModel.toDetectorReport(): DetectorReport = DetectorReport(
                 ),
             )
         }
-        if (context.isNotEmpty()) {
-            add(ReportBlock.Verbatim("Context & Inventory", context.map { "    • ${it.label}: ${it.value}" }))
-        }
+        add(ReportBlock.Rows("Impact", impactRows.map { ReportRow(it.label, it.value, it.detail) }))
+        add(ReportBlock.Rows("Detection methods", methodRows.map { ReportRow(it.label, it.value, it.detail) }))
+        add(ReportBlock.Rows("Scan summary", context.map { ReportRow(it.label, it.value, it.detail) }))
         if (targetApps.isNotEmpty()) {
             val byCategory = targetApps.groupBy { it.category }
             add(

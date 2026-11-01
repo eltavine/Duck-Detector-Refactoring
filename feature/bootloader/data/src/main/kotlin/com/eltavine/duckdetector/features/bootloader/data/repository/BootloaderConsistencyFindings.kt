@@ -78,11 +78,11 @@ internal fun buildConsistencyFindings(
             id = "boot_consistency_clean",
             label = "Attested hash vs vbmeta digest",
             value = when {
-                bootConsistency.runtimePropsAvailable -> "Aligned"
-                else -> "Partial"
+                bootConsistency.runtimeComparisonPerformed -> "Aligned"
+                else -> "Not compared"
             },
             group = BootloaderFindingGroup.CONSISTENCY,
-            severity = if (bootConsistency.runtimePropsAvailable) {
+            severity = if (bootConsistency.runtimeComparisonPerformed) {
                 BootloaderFindingSeverity.SAFE
             } else {
                 BootloaderFindingSeverity.INFO

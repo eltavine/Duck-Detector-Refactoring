@@ -30,11 +30,12 @@ import com.eltavine.duckdetector.capability.earlypreload.data.EarlyVirtualizatio
 import com.eltavine.duckdetector.capability.packageinventory.data.InstalledPackageVisibilityChecker
 import com.eltavine.duckdetector.core.detector.Detector
 import com.eltavine.duckdetector.core.detector.run
+import android.os.SystemClock
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.report.DetectorResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
@@ -58,15 +59,18 @@ public object DuckDetector {
      * The scans run concurrently, as they do in the application; each detector moves its own
      * collection off the calling dispatcher.
      */
-    public suspend fun scan(context: Context): List<DetectorResult> = coroutineScope {
+    public suspend fun scan(context: Context): List<DetectorResult> =
+        withContext(ScanEpoch.begin(SystemClock.elapsedRealtimeNanos())) {
         val application = context.applicationContext
         detectors.map { detector -> async { detector.run(application) } }.awaitAll()
     }
 
     /** Runs every detector once and emits each result as soon as that detector finishes. */
     public fun results(context: Context): Flow<DetectorResult> = channelFlow {
-        val application = context.applicationContext
-        detectors.forEach { detector -> launch { send(detector.run(application)) } }
+        withContext(ScanEpoch.begin(SystemClock.elapsedRealtimeNanos())) {
+            val application = context.applicationContext
+            detectors.forEach { detector -> launch { send(detector.run(application)) } }
+        }
     }
 
     /** Reads how much of the installed package list this process sees, off the calling dispatcher. */

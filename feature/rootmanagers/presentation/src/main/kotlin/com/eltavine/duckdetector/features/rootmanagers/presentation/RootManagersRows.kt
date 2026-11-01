@@ -87,6 +87,7 @@ internal class RootManagersRows {
             RootManagersDetailRowModel(label, value, status, detail, detail != null, diagnostics)
 
         return buildList {
+            addAll(installerCanaryRows(report.installerCanary))
             add(row("Enumeration", enumerationLabel(report.enumerationState), enumerationStatus(report.enumerationState)))
             add(
                 row(

@@ -38,6 +38,33 @@ enum class SelinuxAvcLookupCollection(val label: String) {
     INCONCLUSIVE("Inconclusive"),
 }
 
+enum class SelinuxAppZygoteTimingVerdict(val label: String) {
+    POSITIVE("Positive A−B timing asymmetry"),
+    NEGATIVE("Negative A−B timing asymmetry"),
+    BASELINE("Zero A−B timing baseline"),
+    INCONCLUSIVE("Timing direction inconclusive"),
+    UNAVAILABLE("Timing unavailable"),
+}
+
+/** Preload-parent timing without affinity changes; complete samples stay on one observed CPU. */
+data class SelinuxParentTimingReading(
+    val attempted: Boolean = false,
+    val complete: Boolean = false,
+    val error: Int = 0,
+    val pid: Int = -1,
+    val cpu: Int = -1,
+    val pairs: Int = 0,
+    val migrations: Int = 0,
+    val aSlower: Int = 0,
+    val medianANs: Long? = null,
+    val medianBNs: Long? = null,
+    val medianDeltaNs: Long? = null,
+    val protocol: Int = 0,
+    val positiveBlocks: Int = 0,
+    val negativeBlocks: Int = 0,
+    val zeroBlocks: Int = 0,
+)
+
 data class SelinuxAvcLookupCollectionDetails(
     val step: String?,
     val errno: Int,
@@ -53,6 +80,7 @@ data class SelinuxAvcLookupCollectionDetails(
     val cpuRows: Int,
     val possibleCpus: Int,
     val failureReason: String?,
+    val childPid: Int = -1,
 )
 
 data class SelinuxAvcLookupReading(
@@ -66,8 +94,49 @@ data class SelinuxAvcLookupReading(
     val medianBNs: Long,
     val medianDeltaNs: Long,
     val details: SelinuxAvcLookupCollectionDetails,
+    val cpuMigrations: Int = 0,
+    val aSlower: Int = 0,
+    val positiveBlocks: Int = 0,
+    val negativeBlocks: Int = 0,
+    val zeroBlocks: Int = 0,
+    val timingMediansAvailable: Boolean = true,
+    val parentTiming: SelinuxParentTimingReading = SelinuxParentTimingReading(),
 ) {
-    /** Only collected counts are classified; timing is shown but never classified. */
+    /** Direction of a consistent parent sample, with no integrity or tool attribution. */
+    val timingVerdict: SelinuxAppZygoteTimingVerdict
+        get() {
+            val sample = parentTiming
+            if (!sample.attempted || sample.protocol != 1)
+                return SelinuxAppZygoteTimingVerdict.UNAVAILABLE
+            // The parent has its own preflight and identity checks. A failure in
+            // the later AVC child cannot erase an already completed parent sample.
+            if (sample.pid <= 0 || sample.cpu < 0 ||
+                sample.pairs !in 1..512 || sample.migrations !in 0..512 ||
+                sample.aSlower !in 0..sample.pairs ||
+                sample.medianANs == null || sample.medianBNs == null || sample.medianDeltaNs == null ||
+                sample.medianANs < 0 || sample.medianBNs < 0 ||
+                sample.positiveBlocks !in 0..16 || sample.negativeBlocks !in 0..16 || sample.zeroBlocks !in 0..16 ||
+                sample.positiveBlocks + sample.negativeBlocks + sample.zeroBlocks != sample.pairs / 32)
+                return SelinuxAppZygoteTimingVerdict.INCONCLUSIVE
+            val complete = sample.complete && sample.error == 0 &&
+                sample.pairs == 512 && sample.migrations == 0
+            // Migrations alone may invalidate one or more pairs without changing
+            // the sign of a strong remaining signal. Keep other failures excluded.
+            val strongMigrationSignal = !sample.complete && sample.error == 11 &&
+                sample.migrations > 0 && sample.pairs + sample.migrations == 512 &&
+                sample.pairs >= 256 && sample.medianDeltaNs > 0 &&
+                sample.aSlower.toLong() * 10 >= sample.pairs.toLong() * 9
+            if (!complete && !strongMigrationSignal)
+                return SelinuxAppZygoteTimingVerdict.INCONCLUSIVE
+            // Classification follows the standalone paired-median PoC. Block
+            // counts are diagnostic only for a complete sample.
+            return when {
+                sample.medianDeltaNs > 0 -> SelinuxAppZygoteTimingVerdict.POSITIVE
+                sample.medianDeltaNs < 0 -> SelinuxAppZygoteTimingVerdict.NEGATIVE
+                else -> SelinuxAppZygoteTimingVerdict.BASELINE
+            }
+        }
+    /** Only collected counts determine the lookup profile. */
     val profile: SelinuxAvcLookupProfile?
         get() {
             if (collection != SelinuxAvcLookupCollection.COLLECTED) return null

@@ -24,6 +24,9 @@ import androidx.lifecycle.viewModelScope
 import com.eltavine.duckdetector.core.scan.DetectorSummary
 import com.eltavine.duckdetector.core.scan.ScanClock
 import com.eltavine.duckdetector.core.scan.ScanCoordinator
+import com.eltavine.duckdetector.features.dashboard.presentation.model.completedHistoricalVerdict
+import com.eltavine.duckdetector.ui.scan.history.ScanHistoryJournal
+import java.util.UUID
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -35,16 +38,23 @@ import kotlinx.coroutines.flow.StateFlow
  */
 internal class DetectorScanViewModel(
     detectors: List<StateFlow<DetectorSummary>>,
+    val history: ScanHistoryJournal,
 ) : ViewModel() {
-
-    val coordinator = ScanCoordinator(AndroidScanClock, viewModelScope, detectors)
+    private val runId = UUID.randomUUID()
+    val coordinator = ScanCoordinator(AndroidScanClock, viewModelScope, detectors) { state ->
+        val verdict = state.completedHistoricalVerdict() ?: return@ScanCoordinator
+        history.enqueue(runId, state.timeline.session, requireNotNull(state.timeline.completedAtEpochMillis), verdict)
+    }
 
     companion object {
-        fun factory(detectors: List<StateFlow<DetectorSummary>>): ViewModelProvider.Factory {
+        fun factory(
+            detectors: List<StateFlow<DetectorSummary>>,
+            history: ScanHistoryJournal,
+        ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return DetectorScanViewModel(detectors) as T
+                    return DetectorScanViewModel(detectors, history) as T
                 }
             }
         }

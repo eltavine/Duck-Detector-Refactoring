@@ -111,6 +111,7 @@ internal fun ZygiskMethod.rowIcon(): ZygiskRowIcon? = when (this) {
     ZygiskMethod.LINKER_AND_NAMESPACE -> ZygiskRowIcon.LINKER
     ZygiskMethod.MAPS_AND_SMAPS,
     ZygiskMethod.SOLIST_ATEXIT_HEAP -> ZygiskRowIcon.MEMORY
+    ZygiskMethod.ATEXIT_HANDLERS -> ZygiskRowIcon.LINKER
     ZygiskMethod.NATIVE_SNAPSHOT,
     ZygiskMethod.THREADS_AND_FDS -> null
 }

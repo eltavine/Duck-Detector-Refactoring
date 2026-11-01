@@ -100,9 +100,7 @@ public class SystemPropertyReadUtils(
     private fun readViaJvm(
         property: String,
     ): String {
-        return runCatching {
-            System.getProperty(property)?.trim().orEmpty()
-        }.getOrDefault("")
+        return readJvmProperty(property).getOrNull()?.trim().orEmpty()
     }
 
     private fun readGetpropSnapshot(): Map<String, String> {

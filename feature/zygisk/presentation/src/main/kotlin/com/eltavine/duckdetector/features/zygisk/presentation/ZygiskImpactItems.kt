@@ -45,11 +45,15 @@ internal fun buildImpactItems(
         ZygiskStage.READY -> when (report.toDetectorStatus()) {
             DetectorStatus.danger() -> listOf(
                 ZygiskImpactItemModel(
-                    text = "A red result means this process exposed direct runtime evidence or the cross-process specialization path behaved like a Zygisk-sanitized child process.",
+                    text = if (report.fdTrapDetected || report.nativeStrongHitCount > 0) {
+                        "This process exposed direct runtime evidence or the cross-process specialization path behaved like a Zygisk-sanitized child process."
+                    } else {
+                        "Multiple heuristic families need review. Their convergence does not establish Zygisk injection."
+                    },
                     status = DetectorStatus.danger(),
                 ),
                 ZygiskImpactItemModel(
-                    text = "This is stronger than package residue because it touches live loader behavior, specialization side effects, or process runtime state directly.",
+                    text = "Read the individual findings together with Memory and Mount; runtime residue can also have legitimate causes.",
                     status = DetectorStatus.warning(),
                 ),
             )

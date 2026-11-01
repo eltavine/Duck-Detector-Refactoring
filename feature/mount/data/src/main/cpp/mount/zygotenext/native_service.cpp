@@ -1,3 +1,4 @@
+#include "common/mount_artifact_markers.h"
 /*
  * Copyright 2026 Duck Apps Contributor
  * If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
@@ -107,66 +108,6 @@ bool parse_mount_record(const std::string &line, MountRecord *record) {
     return true;
 }
 
-std::string lowercase(const std::string &value) {
-    std::string normalized = value;
-    for (char &ch: normalized) {
-        ch = static_cast<char>(tolower(static_cast<unsigned char>(ch)));
-    }
-    return normalized;
-}
-
-bool contains_named_marker(const std::string &text, const std::string &marker,
-                           const bool require_end = true) {
-    size_t start = text.find(marker);
-    while (start != std::string::npos) {
-        const size_t end = start + marker.size();
-        const bool start_boundary = start == 0 ||
-                                    !isalnum(static_cast<unsigned char>(text[start - 1]));
-        const bool end_boundary = !require_end || end == text.size() ||
-                                  !isalnum(static_cast<unsigned char>(text[end]));
-        if (start_boundary && end_boundary) return true;
-        start = text.find(marker, start + 1);
-    }
-    return false;
-}
-
-bool contains_path_prefix(const std::string &text, const std::string &path) {
-    size_t start = text.find(path);
-    while (start != std::string::npos) {
-        const size_t end = start + path.size();
-        const bool end_boundary = end == text.size() || text[end] == '/' ||
-                                  isspace(static_cast<unsigned char>(text[end])) ||
-                                  text[end] == ',' || text[end] == ':';
-        if (end_boundary) return true;
-        start = text.find(path, start + 1);
-    }
-    return false;
-}
-
-std::vector<std::string> marker_labels(const std::string &line) {
-    const std::string normalized = lowercase(line);
-    std::vector<std::string> labels;
-    if (normalized.find("magisk") != std::string::npos) labels.emplace_back("Magisk");
-    if (normalized.find("kernelsu") != std::string::npos ||
-        contains_named_marker(normalized, "ksu")) {
-        labels.emplace_back("KernelSU");
-    }
-    if (normalized.find("zygisk") != std::string::npos) labels.emplace_back("Zygisk");
-    if (contains_named_marker(normalized, "zn")) labels.emplace_back("ZN");
-    if (contains_named_marker(normalized, "sui")) labels.emplace_back("Sui");
-    if (contains_named_marker(normalized, "lsp", false)) labels.emplace_back("LSP");
-    if (contains_path_prefix(normalized, "/data/adb")) {
-        labels.emplace_back("data/adb");
-    } else if (contains_path_prefix(normalized, "/adb/modules")) {
-        // Magisk's mountinfo parser identifies module mounts by roots such as /adb/modules.
-        labels.emplace_back("ADB modules");
-    }
-    if (normalized.find("/debug_ramdisk") != std::string::npos) {
-        labels.emplace_back("debug_ramdisk");
-    }
-    return labels;
-}
-
 uint64_t read_namespace_inode() {
     char target[128];
     const ssize_t length = readlink("/proc/self/ns/mnt", target, sizeof(target) - 1);
@@ -225,7 +166,8 @@ std::string collect_payload() {
             if (is_anchor_mount_point(record.point)) {
                 anchor_mount_ids[record.point] = record.mount_id;
             }
-            auto labels = marker_labels(line);
+            auto labels = duckdetector::common::mount_artifact_labels(
+                    record.root, record.point, record.source);
             if (!labels.empty()) {
                 markers.push_back({std::move(labels), std::move(record), line});
             }

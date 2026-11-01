@@ -26,24 +26,11 @@ import com.eltavine.duckdetector.features.nativeroot.data.probes.MountNamespaceD
 import com.eltavine.duckdetector.features.nativeroot.data.probes.TempRootArtifactProbeResult
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootMethodResult
 
-/** The method row named [label], built from [snapshot] with every Kotlin-side probe left unavailable. */
-internal fun methodRow(snapshot: NativeRootNativeSnapshot, label: String): NativeRootMethodResult = buildMethods(
-    snapshot = snapshot,
-    findings = emptyList(),
-    shellTmpDetail = "",
-    rootProcessDetail = "",
-    cgroupResult = CgroupProcessLeakProbeResult(false, 0, 0, 0, 0, emptyList(), ""),
-    mountNamespaceResult = MountNamespaceDriftProbeResult(false, false, "", "", 0, emptyList(), ""),
-    managerFingerprintResult = KernelSuManagerFingerprintProbeResult(
-        false,
-        InstalledPackageVisibility.UNKNOWN,
-        false,
-        0,
-        emptyList(),
-        "",
-    ),
-    tempRootArtifactResult = TempRootArtifactProbeResult(false, 0, emptyList(), false, false, ""),
-    throneHuntResult = KernelSuThroneHuntProbeResult(
+/** The method row named [label], with the remaining Kotlin-side probes left unavailable. */
+internal fun methodRow(
+    snapshot: NativeRootNativeSnapshot,
+    label: String,
+    throneHuntResult: KernelSuThroneHuntProbeResult = KernelSuThroneHuntProbeResult(
         available = false,
         watchInstalled = false,
         watchDenied = false,
@@ -58,4 +45,21 @@ internal fun methodRow(snapshot: NativeRootNativeSnapshot, label: String): Nativ
         findings = emptyList(),
         detail = "",
     ),
+): NativeRootMethodResult = buildMethods(
+    snapshot = snapshot,
+    findings = throneHuntResult.findings,
+    shellTmpDetail = "",
+    rootProcessDetail = "",
+    cgroupResult = CgroupProcessLeakProbeResult(false, 0, 0, 0, 0, emptyList(), ""),
+    mountNamespaceResult = MountNamespaceDriftProbeResult(false, false, "", "", 0, emptyList(), ""),
+    managerFingerprintResult = KernelSuManagerFingerprintProbeResult(
+        false,
+        InstalledPackageVisibility.UNKNOWN,
+        false,
+        0,
+        emptyList(),
+        "",
+    ),
+    tempRootArtifactResult = TempRootArtifactProbeResult(false, 0, emptyList(), false, false, ""),
+    throneHuntResult = throneHuntResult,
 ).single { it.label == label }

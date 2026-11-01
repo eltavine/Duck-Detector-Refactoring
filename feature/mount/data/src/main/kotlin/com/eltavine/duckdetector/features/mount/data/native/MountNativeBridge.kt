@@ -17,16 +17,23 @@
 
 package com.eltavine.duckdetector.features.mount.data.native
 
+import android.os.Environment
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
 
 open class MountNativeBridge(
     private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+    private val externalStorageRootProvider: () -> String = {
+        Environment.getExternalStorageDirectory().absolutePath
+    },
 ) {
 
     open fun collectSnapshot(): MountNativeSnapshot = collector.collect(
-        readPayload = ::nativeCollectSnapshot,
+        readPayload = {
+            nativeCollectSnapshot(runCatching(externalStorageRootProvider).getOrDefault(""))
+        },
         parse = ::parse,
         unavailable = { status -> MountNativeSnapshot(collection = status) },
     )
@@ -67,6 +74,14 @@ open class MountNativeBridge(
                 }
             }
 
+        if (snapshot.anonymousDeviceState != MountAnonymousDeviceState.NOT_COLLECTED &&
+            snapshot.anonymousDeviceDetail.isBlank()
+        ) {
+            snapshot = snapshot.copy(
+                anonymousDeviceState = MountAnonymousDeviceState.UNAVAILABLE,
+                anonymousDeviceDetail = "The native anonymous-device result omitted its diagnostic detail.",
+            )
+        }
         return snapshot.copy(findings = findings)
     }
 
@@ -75,6 +90,18 @@ open class MountNativeBridge(
         value: String,
     ): MountNativeSnapshot {
         return when (key) {
+            "ANON_DEVICE_STATE" -> copy(
+                anonymousDeviceState = when (value) {
+                    "UNAVAILABLE" -> MountAnonymousDeviceState.UNAVAILABLE
+                    "UNSUPPORTED" -> MountAnonymousDeviceState.UNSUPPORTED
+                    "INCONCLUSIVE" -> MountAnonymousDeviceState.INCONCLUSIVE
+                    "PARTIAL" -> MountAnonymousDeviceState.PARTIAL
+                    "OBSERVED" -> MountAnonymousDeviceState.OBSERVED
+                    "NO_GAPS" -> MountAnonymousDeviceState.NO_GAPS
+                    else -> MountAnonymousDeviceState.NOT_COLLECTED
+                },
+            )
+            "ANON_DEVICE_DETAIL" -> copy(anonymousDeviceDetail = value)
             "AVAILABLE" -> copy(available = value.asBool())
             "MOUNTS_READABLE" -> copy(mountsReadable = value.asBool())
             "MOUNTINFO_READABLE" -> copy(mountInfoReadable = value.asBool())
@@ -95,6 +122,7 @@ open class MountNativeBridge(
 
             "MAP_LINE_COUNT" -> copy(mapLineCount = value.toIntOrNull() ?: mapLineCount)
             "BUSYBOX" -> copy(busyboxDetected = value.asBool())
+            "ROOT_MOUNT_ARTIFACT" -> copy(rootMountArtifactDetected = value.asBool())
             "MAGISK_MOUNT" -> copy(magiskMountDetected = value.asBool())
             "ZYGISK_CACHE" -> copy(zygiskCacheDetected = value.asBool())
             "SYSTEM_RW" -> copy(systemRwDetected = value.asBool())
@@ -126,5 +154,5 @@ open class MountNativeBridge(
 
     private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
 
-    private external fun nativeCollectSnapshot(): String
+    private external fun nativeCollectSnapshot(externalStorageRoot: String): String
 }

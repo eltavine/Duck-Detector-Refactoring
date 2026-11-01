@@ -15,6 +15,7 @@ set(DUCKDETECTOR_NATIVE_UNITS
     tee              feature/tee/data
     packageinventory capability/packageinventory/data
     dangerousapps    feature/dangerousapps/data
+    adbruntime       feature/adbruntime/data
     su               feature/su/data
     selinuxpolicy    capability/selinuxpolicy/data
     selinux          feature/selinux/data

@@ -24,6 +24,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:evidence"))
     api(project(":capability:selinuxpolicy:data"))
     api(project(":core:detector"))
     api(project(":core:native"))

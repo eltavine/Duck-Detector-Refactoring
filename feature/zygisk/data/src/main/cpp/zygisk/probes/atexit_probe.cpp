@@ -16,17 +16,40 @@
  */
 
 #include "zygisk/probes/atexit_probe.h"
+#include "zygisk/probes/atexit/table.h"
 
 #include <dlfcn.h>
+#include <sys/prctl.h>
 
 namespace duckdetector::zygisk {
 
-    ProbeResult collect_atexit_probe() {
-        ProbeResult result;
+    namespace {
+        std::vector<MapEntry> unchanged_maps(const std::vector<MapEntry> &before,
+                                             const std::vector<MapEntry> &after) {
+            std::vector<MapEntry> stable;
+            for (const auto &map : before) {
+                const auto match = std::find_if(after.begin(), after.end(), [&](const MapEntry &other) {
+                    return map.start == other.start && map.end == other.end && map.perms == other.perms &&
+                           map.offset == other.offset && map.inode == other.inode &&
+                           map.device_major == other.device_major && map.device_minor == other.device_minor &&
+                           map.path == other.path;
+                });
+                if (match != after.end()) stable.push_back(map);
+            }
+            return stable;
+        }
+    }
+
+    AtexitProbeResult collect_atexit_probe() {
+        AtexitProbeResult output;
+        output.table.dumpable = prctl(PR_GET_DUMPABLE);
+        auto &result = output.signals;
         const auto maps = read_proc_maps();
         if (maps.empty()) {
             result.available = false;
-            return result;
+            output.table.state = AtexitTableState::kUnavailable;
+            output.table.detail = "This process's memory map could not be read.";
+            return output;
         }
 
         void *cxa_atexit = dlsym(RTLD_DEFAULT, "__cxa_atexit");
@@ -54,10 +77,33 @@ namespace duckdetector::zygisk {
                                             detail,
                                     });
             result.hit_count = 1;
-            result.heuristic_hits = 1;
+            result.heuristic_families.insert(HeuristicFamily::kAtexit);
         }
 
-        return result;
+        const auto table = atexit::read_table(maps);
+        output.table.state = table.state;
+        output.table.detail = table.detail;
+        output.table.entries = table.entries.size();
+        if (table.state == AtexitTableState::kCollected) {
+            // dlclose can unmap an owner after releasing the atexit lock. Changed owners are unknown.
+            const auto evidence = atexit::interpret_table(table.entries, unchanged_maps(maps, read_proc_maps()));
+            output.table.null_entries = evidence.null_entries;
+            output.table.anchored_gaps = evidence.anchored_gaps;
+            output.table.anonymous_callbacks = evidence.anonymous_callbacks;
+            if (!evidence.bounded || evidence.dense_clearing || evidence.unresolved_callbacks > 0) {
+                output.table.state = AtexitTableState::kPartial;
+                if (!evidence.bounded) output.table.detail += " No stable application-registration boundary was found.";
+                if (evidence.dense_clearing) output.table.detail += " At least 60% of entries were cleared; live ordering context is insufficient.";
+                if (evidence.unresolved_callbacks > 0) output.table.detail += " Some callback owners could not be resolved in stable executable mappings.";
+            }
+            result.traces.insert(result.traces.end(), evidence.traces.begin(), evidence.traces.end());
+            const size_t hits = evidence.anchored_gaps + evidence.anonymous_callbacks;
+            if (hits != 0) {
+                result.hit_count += static_cast<int>(hits);
+                result.heuristic_families.insert(HeuristicFamily::kAtexit);
+            }
+        }
+        return output;
     }
 
 }  // namespace duckdetector::zygisk

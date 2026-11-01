@@ -18,51 +18,27 @@
 package com.eltavine.duckdetector.features.dangerousapps.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Category
-import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import com.eltavine.duckdetector.core.designsystem.theme.ShapeTokens
-import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsTargetAppModel
-import io.github.xiaotong6666.uihelper.adaptive.AdaptiveHorizontalDivider
-import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
-import io.github.xiaotong6666.uihelper.adaptive.AdaptiveIconLabelChip
-import io.github.xiaotong6666.uihelper.adaptive.AdaptiveMetricChip
-import io.github.xiaotong6666.uihelper.adaptive.AdaptiveSurfaceTone
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveFootnoteStyle
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveHeadlineStyle
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveOnSurfaceColor
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveSecondaryTextColor
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceBackground
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceClip
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveSurfaceColor
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveDetailSectionTitle
+import io.github.xiaotong6666.uihelper.adaptive.AdaptiveMetricSummaryCard
+import io.github.xiaotong6666.uihelper.adaptive.DetailMetric
+import io.github.xiaotong6666.uihelper.adaptive.DetailTextRow
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveGroupedTextRows
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 import io.github.xiaotong6666.uihelper.dialog.AdaptiveDetailsDialog
-import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixMetricItem
-import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixMetricSummaryCard
-import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixSectionTitle
-import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixTextRow
-import io.github.xiaotong6666.uihelper.miuix.primitive.MiuixTextRowsCard
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DangerousAppsTargetsDialog(
     show: Boolean,
@@ -70,7 +46,12 @@ internal fun DangerousAppsTargetsDialog(
     onDismiss: () -> Unit,
 ) {
     val categoryCount = targets.map { it.category }.distinct().size
-    val listSurface = adaptiveSurfaceColor(AdaptiveSurfaceTone.Low)
+    val groupedTargets = remember(targets) { targets.groupBy { it.category } }
+    // Leave the Material dialog's header and close action outside the scrolling content.
+    val maxListHeight = adaptiveValue(material = 500.dp, miuix = 440.dp)
+    val targetLabel = stringResource(R.string.target_app_list_targets)
+    val categoryLabel = stringResource(R.string.target_app_list_categories)
+    val overviewLabel = stringResource(R.string.target_app_list_overview)
 
     AdaptiveDetailsDialog(
         show = show,
@@ -81,161 +62,40 @@ internal fun DangerousAppsTargetsDialog(
         onDismiss = onDismiss,
         materialTitleStyle = MaterialTheme.typography.titleLarge,
     ) {
-        AdaptiveContent(
-            material = {
-                DangerousAppsTargetsMaterialContent(
-                    targets = targets,
-                    categoryCount = categoryCount,
-                    listSurface = listSurface,
-                )
-            },
-            miuix = {
-                DangerousAppsTargetsMiuixContent(
-                    targets = targets,
-                    categoryCount = categoryCount,
-                )
-            },
-        )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun DangerousAppsTargetsMaterialContent(
-    targets: List<DangerousAppsTargetAppModel>,
-    categoryCount: Int,
-    listSurface: androidx.compose.ui.graphics.Color,
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        AdaptiveMetricChip(
-            icon = Icons.Rounded.Apps,
-            label = stringResource(R.string.target_app_list_targets),
-            value = targets.size.toString(),
-            materialShape = ShapeTokens.CornerLarge,
-        )
-        AdaptiveMetricChip(
-            icon = Icons.Rounded.Category,
-            label = stringResource(R.string.target_app_list_categories),
-            value = categoryCount.toString(),
-            materialShape = ShapeTokens.CornerLarge,
-        )
-    }
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 600.dp)
-            .adaptiveSurfaceBackground(listSurface, ShapeTokens.CornerExtraLarge, listSurface, 16.dp)
-            .adaptiveSurfaceClip(ShapeTokens.CornerExtraLarge, 16.dp),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-    ) {
-        itemsIndexed(targets) { index, target ->
-            DangerousAppsTargetRow(target)
-            if (index < targets.lastIndex) {
-                AdaptiveHorizontalDivider(
-                    materialThickness = 1.dp,
-                    materialColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().heightIn(max = maxListHeight),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+        ) {
+            item(key = "overview-title") {
+                AdaptiveDetailSectionTitle(text = overviewLabel, topPadding = 0.dp)
+            }
+            item(key = "overview-card") {
+                AdaptiveMetricSummaryCard(
+                    metrics = listOf(
+                        DetailMetric(value = targets.size.toString(), label = targetLabel),
+                        DetailMetric(value = categoryCount.toString(), label = categoryLabel),
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun DangerousAppsTargetsMiuixContent(
-    targets: List<DangerousAppsTargetAppModel>,
-    categoryCount: Int,
-) {
-    val groupedTargets = remember(targets) {
-        targets
-            .groupBy { it.category }
-            .entries
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 440.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
-    ) {
-        item(key = "overview-title") {
-            MiuixSectionTitle(
-                text = stringResource(R.string.target_app_list_overview),
-                topPadding = 0.dp,
-            )
-        }
-        item(key = "overview-card") {
-            MiuixMetricSummaryCard(
-                metrics = listOf(
-                    MiuixMetricItem(
-                        value = targets.size.toString(),
-                        label = stringResource(R.string.target_app_list_targets),
-                    ),
-                    MiuixMetricItem(
-                        value = categoryCount.toString(),
-                        label = stringResource(R.string.target_app_list_categories),
-                    ),
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-            )
-        }
-
-        groupedTargets.forEach { (category, categoryTargets) ->
-            item(key = "title:$category") {
-                MiuixSectionTitle(text = category)
-            }
-            item(key = "group:$category") {
-                MiuixTextRowsCard(
-                    rows = categoryTargets.map { target ->
-                        MiuixTextRow(
+            groupedTargets.forEach { (category, categoryTargets) ->
+                item(key = "title:$category") {
+                    AdaptiveDetailSectionTitle(text = category)
+                }
+                adaptiveGroupedTextRows(
+                    keyPrefix = "group:$category",
+                    rows = categoryTargets.mapIndexed { index, target ->
+                        DetailTextRow(
                             title = target.appName,
                             summary = target.packageName,
+                            key = "${target.packageName}:$index",
                         )
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
+                    miuixBottomPadding = 8.dp,
+                    materialBottomPadding = 10.dp,
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun DangerousAppsTargetRow(
-    target: DangerousAppsTargetAppModel,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            WrapSafeText(
-                text = target.appName,
-                modifier = Modifier.weight(1f),
-                style = adaptiveHeadlineStyle(MaterialTheme.typography.titleSmall),
-                color = adaptiveOnSurfaceColor(),
-            )
-            AdaptiveIconLabelChip(
-                icon = Icons.Rounded.Shield,
-                label = target.category,
-                materialShape = ShapeTokens.CornerFull,
-                miuixCornerRadius = 6.dp,
-            )
-        }
-        WrapSafeText(
-            text = target.packageName,
-            style = adaptiveFootnoteStyle(MaterialTheme.typography.bodySmall).copy(fontFamily = FontFamily.Monospace),
-            color = adaptiveSecondaryTextColor(),
-        )
     }
 }
 

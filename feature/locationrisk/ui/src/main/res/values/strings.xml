@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">Cached location diagnostics</string>
+    <string name="location_cache_headline">Inspect cached mock metadata?</string>
+    <string name="location_cache_detail">Off by default. With approximate foreground location permission, reads at most three cached provider fixes per scan. Only mock markers and age buckets enter reports. Coordinates may exist transiently in Android objects but are never read, stored or exported. No new fix, background tracking or network request. Local synthetic checks work without this option.</string>
+    <string name="location_cache_allow">Enable and request permission</string>
+    <string name="location_cache_decline">Keep off</string>
+    <string name="location_cache_granted_headline">Cached diagnostics enabled</string>
+    <string name="location_cache_granted_detail">OS permission and provider availability still apply. Denied access is reported separately. Manage permission below; turn this option off in settings at any time.</string>
+    <string name="location_cache_declined_status">Off</string>
+    <string name="location_cache_declined_headline">Cached diagnostics off</string>
+    <string name="location_cache_declined_detail">Local synthetic checks remain available. You can enable cached metadata later in settings.</string>
+    <string name="location_cache_setting_summary">Optional cached mock markers and age buckets; approximate foreground permission only. No coordinates or active fixes.</string>
+</resources>

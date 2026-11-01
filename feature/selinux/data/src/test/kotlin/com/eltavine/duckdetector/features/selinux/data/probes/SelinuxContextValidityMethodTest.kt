@@ -150,7 +150,7 @@ class SelinuxContextValidityMethodTest {
 
     private fun controlledResults() = listOf(
         attrResult(SelinuxProcAttrCurrentResult.CONTROL_LABEL, SelinuxProcAttrCurrentResult.OUTCOME_CONTROLS_PASSED),
-    ) + listOf("KernelSU", "Magisk", "LSPosed file", "file1", "file2", "domain1", "domain2", "domain3", "file3")
+    ) + listOf("KernelSU", "Magisk", "LSPosed file", "file1", "file2", "domain1", "domain2", "domain3", "file3", "ADB root", "Xposed file")
         .map { attrResult(it, if (it in listOf("KernelSU", "LSPosed file"))
             SelinuxProcAttrCurrentResult.OUTCOME_CONTEXT_RECOGNIZED else SelinuxProcAttrCurrentResult.OUTCOME_NORMAL_EINVAL) }
 

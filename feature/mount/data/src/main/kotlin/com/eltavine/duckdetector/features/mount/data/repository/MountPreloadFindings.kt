@@ -19,52 +19,10 @@ package com.eltavine.duckdetector.features.mount.data.repository
 
 import com.eltavine.duckdetector.capability.earlypreload.data.EarlyMountPreloadResult
 import com.eltavine.duckdetector.capability.earlypreload.data.EarlyMountPreloadSignal
-import com.eltavine.duckdetector.features.mount.data.native.MountNativeSnapshot
 import com.eltavine.duckdetector.features.mount.domain.MountFinding
 import com.eltavine.duckdetector.features.mount.domain.MountFindingGroup
 import com.eltavine.duckdetector.features.mount.domain.MountFindingOrigin
 import com.eltavine.duckdetector.features.mount.domain.MountFindingSeverity
-
-internal fun sanitizePreloadResult(
-    result: EarlyMountPreloadResult,
-    snapshot: MountNativeSnapshot,
-): EarlyMountPreloadResult {
-    if (!result.mountIdGapDetected || snapshot.mountIdLoopholeDetected) {
-        return result
-    }
-
-    val mountIdMessages = result.messagesFor(EarlyMountPreloadSignal.MOUNT_ID_GAP)
-    if (mountIdMessages.isEmpty() || !mountIdMessages.all(::isWeakDataMirrorMountIdGap)) {
-        return result
-    }
-
-    val filteredFindings = result.findings.filterNot { finding ->
-        val type = finding.substringBefore('|')
-        val message = finding.split('|').getOrNull(1).orEmpty()
-        type == EarlyMountPreloadSignal.MOUNT_ID_GAP.key && isWeakDataMirrorMountIdGap(message)
-    }
-
-    return result.copy(
-        detected = false,
-        detectionMethod = "",
-        details = "",
-        mountIdGapDetected = false,
-        findings = filteredFindings,
-    ).normalize()
-}
-
-private fun isWeakDataMirrorMountIdGap(
-    message: String,
-): Boolean {
-    val normalized = message.trim()
-    if (SMALL_DATA_MIRROR_SINGLE_MOUNT_ID_REGEX.matches(normalized)) {
-        return true
-    }
-
-    val match = SMALL_DATA_MIRROR_MULTI_MOUNT_ID_REGEX.matchEntire(normalized) ?: return false
-    val missingCount = match.groupValues.getOrNull(1)?.toIntOrNull() ?: return false
-    return missingCount <= SMALL_DATA_MIRROR_GAP_THRESHOLD
-}
 
 internal fun buildPreloadFindings(result: EarlyMountPreloadResult): List<MountFinding> {
     if (!result.available) {
@@ -102,10 +60,10 @@ internal fun buildPreloadFindings(result: EarlyMountPreloadResult): List<MountFi
             add(
                 MountFinding(
                     id = "early_preload_futile_hide",
-                    label = "Futile hide",
+                    label = "Proc inode timestamps",
                     value = "ctime drift",
                     group = MountFindingGroup.CONSISTENCY,
-                    severity = MountFindingSeverity.DANGER,
+                    severity = MountFindingSeverity.INFO,
                     detail = preloadSignalDetail(
                         result = result,
                         signal = EarlyMountPreloadSignal.FUTILE_HIDE,
@@ -123,13 +81,14 @@ internal fun buildPreloadFindings(result: EarlyMountPreloadResult): List<MountFi
             add(
                 MountFinding(
                     id = "early_preload_mount_id_loophole",
-                    label = "Mount ID loophole",
+                    label = MOUNT_ID_OBSERVATION_LABEL,
                     value = "Startup preload",
                     group = MountFindingGroup.CONSISTENCY,
-                    severity = MountFindingSeverity.DANGER,
+                    severity = MountFindingSeverity.INFO,
                     detail = preloadSignalDetail(
                         result = result,
                         signal = EarlyMountPreloadSignal.MOUNT_ID_GAP,
+                        extras = listOf(MOUNT_ID_OBSERVATION_EXPLANATION),
                     ),
                     detailMonospace = true,
                     origin = MountFindingOrigin.STARTUP_PRELOAD,
@@ -140,10 +99,10 @@ internal fun buildPreloadFindings(result: EarlyMountPreloadResult): List<MountFi
             add(
                 MountFinding(
                     id = "early_preload_minor_dev_gap",
-                    label = "Minor device gap",
+                    label = "Minor device observation",
                     value = "Sequence drift",
                     group = MountFindingGroup.CONSISTENCY,
-                    severity = MountFindingSeverity.WARNING,
+                    severity = MountFindingSeverity.INFO,
                     detail = preloadSignalDetail(
                         result = result,
                         signal = EarlyMountPreloadSignal.MINOR_DEV_GAP,
@@ -157,10 +116,10 @@ internal fun buildPreloadFindings(result: EarlyMountPreloadResult): List<MountFi
             add(
                 MountFinding(
                     id = "early_preload_peer_group_gap",
-                    label = "Peer group gap",
+                    label = "Peer group observation",
                     value = "Startup gap",
                     group = MountFindingGroup.CONSISTENCY,
-                    severity = MountFindingSeverity.WARNING,
+                    severity = MountFindingSeverity.INFO,
                     detail = preloadSignalDetail(
                         result = result,
                         signal = EarlyMountPreloadSignal.PEER_GROUP_GAP,
@@ -178,13 +137,14 @@ internal fun mergePreloadFindings(
     preloadFindings: List<MountFinding>,
 ): List<MountFinding> {
     if (preloadFindings.isEmpty()) {
-        return collapseMountIdFindings(baseFindings)
+        return collapseMountIdFindings(baseFindings.map(::normalizeMountIdObservation))
     }
 
-    val merged = baseFindings.toMutableList()
+    val merged = baseFindings.map(::normalizeMountIdObservation).toMutableList()
     val preloadMountId =
         preloadFindings.firstOrNull { it.id == "early_preload_mount_id_loophole" }
-    val runtimeMountIdFindings = merged.filter { it.label == "Mount ID loophole" }
+            ?.let(::normalizeMountIdObservation)
+    val runtimeMountIdFindings = merged.filter { it.isMountIdObservation() }
 
     if (preloadMountId != null || runtimeMountIdFindings.size > 1) {
         merged.removeAll(runtimeMountIdFindings.toSet())
@@ -199,7 +159,7 @@ internal fun mergePreloadFindings(
 }
 
 private fun collapseMountIdFindings(findings: List<MountFinding>): List<MountFinding> {
-    val mountIdFindings = findings.filter { it.label == "Mount ID loophole" }
+    val mountIdFindings = findings.filter { it.isMountIdObservation() }
     if (mountIdFindings.size <= 1) {
         return findings
     }
@@ -240,15 +200,15 @@ private fun mergeMountIdFinding(
         } else {
             "early_preload_mount_id_loophole"
         },
-        label = "Mount ID loophole",
+        label = MOUNT_ID_OBSERVATION_LABEL,
         value = when {
             runtimeFindings.isNotEmpty() && preloadFinding != null -> "Startup + runtime"
-            runtimeFindings.size > 1 -> "Multiple gaps"
+            runtimeFindings.size > 1 -> "Multiple observations"
             preloadFinding != null -> preloadFinding.value
             else -> runtimeFindings.firstOrNull()?.value ?: "Detected"
         },
         group = MountFindingGroup.CONSISTENCY,
-        severity = MountFindingSeverity.DANGER,
+        severity = MountFindingSeverity.INFO,
         detail = detailParts.joinToString(separator = ". ", postfix = "."),
         detailMonospace = runtimeFindings.any { it.detailMonospace } || preloadFinding?.detailMonospace == true,
         origin = when {
@@ -276,8 +236,25 @@ private fun preloadSignalDetail(
     return parts.joinToString(separator = " | ")
 }
 
-private const val SMALL_DATA_MIRROR_GAP_THRESHOLD = 2
-private val SMALL_DATA_MIRROR_SINGLE_MOUNT_ID_REGEX =
-    Regex("""Missing mount ID \d+ before /data_mirror(?:\b.*)?""")
-private val SMALL_DATA_MIRROR_MULTI_MOUNT_ID_REGEX =
-    Regex("""Missing (\d+) mount IDs before /data_mirror(?:\b.*)?""")
+internal const val MOUNT_ID_OBSERVATION_LABEL = "Mount ID discontinuity"
+private const val MOUNT_ID_OBSERVATION_EXPLANATION =
+    "Mount IDs need not be consecutive. Repeated startup/runtime observations do not establish hidden mounts."
+
+private fun MountFinding.isMountIdObservation(): Boolean =
+    label == MOUNT_ID_OBSERVATION_LABEL || label == "Mount ID loophole"
+
+// Stored/legacy payloads may still carry the former label and DANGER severity.
+private fun normalizeMountIdObservation(finding: MountFinding): MountFinding =
+    if (finding.isMountIdObservation()) {
+        finding.copy(
+            label = MOUNT_ID_OBSERVATION_LABEL,
+            severity = MountFindingSeverity.INFO,
+            detail = if (finding.label == "Mount ID loophole") {
+                listOfNotNull(finding.detail, MOUNT_ID_OBSERVATION_EXPLANATION).joinToString(" | ")
+            } else {
+                finding.detail
+            },
+        )
+    } else {
+        finding
+    }

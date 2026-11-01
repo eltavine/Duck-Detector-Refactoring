@@ -20,12 +20,13 @@ package com.eltavine.duckdetector.features.tee.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eltavine.duckdetector.core.evidence.DetectorId
+import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.scan.DetectorSummary
 import com.eltavine.duckdetector.core.ui.detector.ConsentCard
@@ -74,7 +75,7 @@ internal object TeeDetectorFeature : DetectorFeature {
     )
 
     @Composable
-    override fun rememberSession(): DetectorSession {
+    override fun rememberSession(initialScan: ScanEpoch): DetectorSession {
         val context = LocalContext.current
         val viewModel: TeeViewModel = viewModel(
             factory = remember(context) {
@@ -100,7 +101,7 @@ private class TeeDetectorSession(
 
     @Composable
     override fun Card() {
-        val state by viewModel.uiState.collectAsState()
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
         TeeDetectorCard(
             model = state.cardModel,
             showDetailsDialog = state.showDetailsDialog,

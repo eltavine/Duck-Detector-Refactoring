@@ -75,6 +75,7 @@ import com.eltavine.duckdetector.features.dashboard.presentation.export.ExportHe
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardFindingModel
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardOverviewModel
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardUiState
+import com.eltavine.duckdetector.features.dashboard.presentation.model.ScanHistoryCounts
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -87,11 +88,13 @@ import io.github.xiaotong6666.uihelper.adaptive.adaptiveSecondaryTextColor
 import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 import io.github.xiaotong6666.uihelper.adaptive.adaptiveVerticalScrollFeedback
 import io.github.xiaotong6666.uihelper.adaptive.adaptiveViewportOverscroll
+import io.github.xiaotong6666.uihelper.adaptive.UiContentSpacing
 import kotlinx.coroutines.launch
 
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
+    history: ScanHistoryCounts = ScanHistoryCounts(),
     detectors: List<DetectorSession>,
     deviceProfile: DeviceProfileSession,
     modifier: Modifier = Modifier,
@@ -102,8 +105,14 @@ fun DashboardScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var expansionRequest by remember { mutableStateOf<DashboardExpansionRequest?>(null) }
-    val hostedHorizontalInset = adaptiveValue(material = 16.dp, miuix = 12.dp)
-    val pageSpacing = adaptiveValue(material = 16.dp, miuix = 12.dp)
+    val hostedHorizontalInset = adaptiveValue(
+        material = UiContentSpacing.MaterialHorizontal,
+        miuix = UiContentSpacing.MiuixHorizontal,
+    )
+    val pageSpacing = adaptiveValue(
+        material = UiContentSpacing.DashboardItemGapMaterial,
+        miuix = UiContentSpacing.DashboardItemGapMiuix,
+    )
     val showStandaloneMaterialChrome = adaptiveValue(
         material = scaffoldPadding == null,
         miuix = false,
@@ -181,20 +190,20 @@ fun DashboardScreen(
                 // MIUIX owns the top bar and navigation bar. Their insets must not be re-applied.
                 PaddingValues(
                     start = scaffoldPadding.calculateStartPadding(layoutDirection) + hostedHorizontalInset,
-                    top = scaffoldPadding.calculateTopPadding() + 12.dp,
+                    top = scaffoldPadding.calculateTopPadding() + UiContentSpacing.PageTop,
                     end = scaffoldPadding.calculateEndPadding(layoutDirection) + hostedHorizontalInset,
-                    bottom = scaffoldPadding.calculateBottomPadding() + 16.dp,
+                    bottom = scaffoldPadding.calculateBottomPadding() + UiContentSpacing.DashboardBottom,
                 )
             } else {
                 WindowInsets.safeDrawing
-                    .add(WindowInsets(left = 16.dp, top = 12.dp, right = 16.dp, bottom = 96.dp))
+                    .add(WindowInsets(left = 16.dp, top = UiContentSpacing.PageTop, right = 16.dp, bottom = 96.dp))
                     .asPaddingValues()
             },
         ) {
             // Hosted pages put brand actions in the real app bar. Keep the original
             // inline brand header only for standalone/dashboard preview hosts.
             if (showStandaloneMaterialChrome) {
-                item { BrandHeader() }
+                item { BrandHeader(history = history) }
             }
             item {
                 DashboardSummarySection(

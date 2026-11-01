@@ -143,20 +143,28 @@ Line two 13
   Line three  ]
 
   [Package Changes Since Boot]
-    A long detail line that deliberately exceeds sixty characters in length 29
+    left | right 23
+    • left | right 24 (A long detail line that deliberately exceeds sixty characters in length 25) [Unicode ✓ détail 26; current installation unconfirmed]
 
-  [Context & Inventory]
-    • : left | right 15
-    • Value 16:   Padded value 17  
-    •    :    
+  [Impact]
+    • left | right 27
+        key = value 29
+    • Unicode ✓ détail 30: A long detail line that deliberately exceeds sixty characters in length 31 (Unicode ✓ détail 32)
 
-  [Monitored Package Catalog (3 targets across 3 categories)]
-    •   Padded value 22   (1):
-        Value 20 ()
-    • A long detail line that deliberately exceeds sixty characters in length 25 (1):
-         (key = value 24)
-    • left | right 28 (1):
-        left | right 26 (A long detail line that deliberately exceeds sixty characters in length 27)
+  [Detection methods]
+    • key = value 33: left | right 34
+        key = value 35
+    •   Padded value 36  : key = value 37
+        Line one 38
+        Line two 38
+          Line three
+
+  [Scan summary]
+    • : left | right 15 (Padded value 16)
+    •    
+        Value 19
+    • : Padded value 21
+        key = value 22
 
 --------------------------------------------------------------------------------
   [ℹ INFO] left | right 0
@@ -822,7 +830,7 @@ Line two 47
 Line two 2
 
   Line three  
-  Quick Facts  : PM: left | right 4  |  Targets: A long detail line that deliberately exceeds sixty characters in length 5  |  Hits: Value 6
+  Quick Facts  : Hits: left | right 4  |  Runtime: A long detail line that deliberately exceeds sixty characters in length 5  |  Hits: Value 6
 
   [HMA Alert:    ]
     Summary:   Padded value 8  
@@ -842,26 +850,51 @@ Line two 18
     • Value 27 (left | right 28) [methods: key = value 29, Unicode ✓ détail 30]
 
   [Package Changes Since Boot]
-    Value 43
-    • A long detail line that deliberately exceeds sixty characters in length 44 (key = value 45) [key = value 46; current installation unconfirmed]
-    • Unicode ✓ détail 47 (Line one 48
-Line two 48
+    A long detail line that deliberately exceeds sixty characters in length 49
+    • left | right 50 (Value 51) [left | right 52; current installation unconfirmed]
+    •   Padded value 53   (key = value 54) [key = value 55; current installation unconfirmed]
+    •   Padded value 56   () [Unicode ✓ détail 58; current installation unconfirmed]
 
-  Line three  ) [key = value 49; current installation unconfirmed]
+  [Impact]
+    • A long detail line that deliberately exceeds sixty characters in length 59: Value 60 (Padded value 61)
+    • key = value 62: Line one 63
+Line two 63
 
-  [Context & Inventory]
+  Line three
+    •   Padded value 65  : Value 66
+        left | right 67
+
+  [Detection methods]
+    • left | right 68
+        Line one 70
+        Line two 70
+          Line three
+    • Line one 71
+Line two 71
+
+  Line three  : A long detail line that deliberately exceeds sixty characters in length 72 (Padded value 73)
+    • left | right 74: Unicode ✓ détail 75
+        key = value 76
+
+  [Scan summary]
     • key = value 31: key = value 32
-    • Value 33: key = value 34
-    • A long detail line that deliberately exceeds sixty characters in length 35: Unicode ✓ détail 36
+        key = value 33
+    • A long detail line that deliberately exceeds sixty characters in length 34: Unicode ✓ détail 35 (Unicode ✓ détail 36)
+    • left | right 37: left | right 38
+        Line one 39
+        Line two 39
+          Line three
 
-  [Monitored Package Catalog (2 targets across 2 categories)]
-    • left | right 39 (1):
-        Unicode ✓ détail 37 (left | right 38)
-    •   Padded value 42   (1):
-          Padded value 40   (Line one 41
-Line two 41
+  [Monitored Package Catalog (3 targets across 3 categories)]
+    • A long detail line that deliberately exceeds sixty characters in length 42 (1):
+        Value 40 (left | right 41)
+    • Unicode ✓ détail 45 (1):
+        key = value 43 (key = value 44)
+    • key = value 48 (1):
+        Line one 46
+Line two 46
 
-  Line three  )
+  Line three   (key = value 47)
 
 --------------------------------------------------------------------------------
   [✔ CLEAR] 
@@ -1749,7 +1782,7 @@ Line two 20
   Quick Facts  : PM:   |  Hidden: Line one 5
 Line two 5
 
-  Line three    |  Hidden: key = value 6
+  Line three    |  PM: key = value 6
 
   [HMA Alert: ]
     Summary:    
@@ -1758,44 +1791,48 @@ Line two 5
       • left | right 13 (left | right 14) [methods: ]
 
   [Package Changes Since Boot]
-    key = value 30
-    • Line one 31
-Line two 31
+    Line one 24
+Line two 24
 
-  Line three   (Value 32) [Line one 33
-Line two 33
+  Line three  
+    •     (key = value 26) [  Padded value 27  ; current installation unconfirmed]
+    • Line one 28
+Line two 28
+
+  Line three   (Value 29) [Line one 30
+Line two 30
 
   Line three  ; current installation unconfirmed]
+
+  [Impact]
+    • Unicode ✓ détail 31
+        Unicode ✓ détail 33
     • Line one 34
 Line two 34
 
-  Line three   (Unicode ✓ détail 35) [   ; current installation unconfirmed]
-    • Value 37 (Unicode ✓ détail 38) [Line one 39
-Line two 39
+  Line three  : Line one 35
+Line two 35
 
-  Line three  ; current installation unconfirmed]
+  Line three (Padded value 36)
+    • key = value 37: Value 38
 
-  [Context & Inventory]
+  [Detection methods]
+    • left | right 40: Padded value 41
+        Line one 42
+        Line two 42
+          Line three
+    •    
+        A long detail line that deliberately exceeds sixty characters in length 45
+    • Unicode ✓ détail 46: Unicode ✓ détail 47 (Value 48)
+
+  [Scan summary]
     • Value 15: Unicode ✓ détail 16
-    • Unicode ✓ détail 17: left | right 18
-    • Unicode ✓ détail 19: left | right 20
-
-  [Monitored Package Catalog (3 targets across 3 categories)]
-    • Unicode ✓ détail 23 (1):
-        Value 21 (Unicode ✓ détail 22)
-    • key = value 26 (1):
-        Line one 24
-Line two 24
-
-  Line three   (Line one 25
-Line two 25
-
-  Line three  )
-    •     (1):
-        Line one 27
-Line two 27
-
-  Line three   (left | right 28)
+        left | right 17
+    • Unicode ✓ détail 18: left | right 19 (Value 20)
+    • Unicode ✓ détail 21: Unicode ✓ détail 22
+        Line one 23
+        Line two 23
+          Line three
 
 --------------------------------------------------------------------------------
   [ℹ INFO] left | right 0
@@ -2464,7 +2501,7 @@ Line two 43
 Line two 2
 
   Line three  
-  Quick Facts  : Hits:   |  Hits: Value 5  |  Hits: A long detail line that deliberately exceeds sixty characters in length 6
+  Quick Facts  : PM:   |  Hidden: Value 5  |  Runtime: A long detail line that deliberately exceeds sixty characters in length 6
 
   [HMA Alert: key = value 7]
     Summary: left | right 8
@@ -2486,36 +2523,48 @@ Line two 26
   Line three  ]
 
   [Package Changes Since Boot]
-    A long detail line that deliberately exceeds sixty characters in length 40
-    • Line one 41
-Line two 41
-
-  Line three   (Unicode ✓ détail 42) [; current installation unconfirmed]
-    • Line one 44
+    
+    •     (Line one 44
 Line two 44
 
-  Line three   (   ) [Line one 46
-Line two 46
+  Line three  ) [Value 45; current installation unconfirmed]
+    •   Padded value 46   (  Padded value 47  ) [Value 48; current installation unconfirmed]
+    •  (Value 50) [A long detail line that deliberately exceeds sixty characters in length 51; current installation unconfirmed]
 
-  Line three  ; current installation unconfirmed]
+  [Impact]
+    •    : Value 53 (Padded value 54)
+    • Line one 55
+Line two 55
 
-  [Context & Inventory]
+  Line three  : Value 56 (Value 57)
+
+  [Detection methods]
+    • key = value 58: Line one 59
+Line two 59
+
+  Line three
+        Line one 60
+        Line two 60
+          Line three
+    •    : Unicode ✓ détail 62 (Unicode ✓ détail 63)
+
+  [Scan summary]
     • left | right 27: Unicode ✓ détail 28
-    • Unicode ✓ détail 29: Line one 30
-Line two 30
-
-  Line three  
+        Line one 29
+        Line two 29
+          Line three
+    • A long detail line that deliberately exceeds sixty characters in length 30: key = value 31
 
   [Monitored Package Catalog (3 targets across 3 categories)]
-    •     (1):
-        key = value 31 (Line one 32
-Line two 32
+    • A long detail line that deliberately exceeds sixty characters in length 35 (1):
+        left | right 33 (left | right 34)
+    • A long detail line that deliberately exceeds sixty characters in length 38 (1):
+        A long detail line that deliberately exceeds sixty characters in length 36 (  Padded value 37  )
+    • Unicode ✓ détail 41 (1):
+          Padded value 39   (Line one 40
+Line two 40
 
   Line three  )
-    • left | right 36 (1):
-        Unicode ✓ détail 34 (left | right 35)
-    •   Padded value 39   (1):
-        A long detail line that deliberately exceeds sixty characters in length 37 (A long detail line that deliberately exceeds sixty characters in length 38)
 
 --------------------------------------------------------------------------------
   [✔ CLEAR]   Padded value 0  

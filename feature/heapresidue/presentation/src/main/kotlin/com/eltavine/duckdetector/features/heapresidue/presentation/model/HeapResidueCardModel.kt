@@ -28,6 +28,9 @@ data class HeapResidueCardModel(
     override val summary: String,
     val signalRows: List<HeapResidueDetailRowModel>,
     val scanRows: List<HeapResidueDetailRowModel>,
+    val headerFacts: List<HeapResidueDetailRowModel> = emptyList(),
+    val impactRows: List<HeapResidueDetailRowModel> = emptyList(),
+    val methodRows: List<HeapResidueDetailRowModel> = emptyList(),
 ) : DetectorHeadline
 
 data class HeapResidueDetailRowModel(

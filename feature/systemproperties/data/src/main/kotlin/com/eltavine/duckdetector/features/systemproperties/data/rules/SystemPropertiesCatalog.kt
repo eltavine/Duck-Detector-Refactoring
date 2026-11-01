@@ -17,7 +17,6 @@
 
 package com.eltavine.duckdetector.features.systemproperties.data.rules
 
-import android.os.Build
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertyCategory
 
 data class SystemPropertyRule(
@@ -194,29 +193,17 @@ object SystemPropertiesCatalog {
             dangerousValues = listOf("unencrypted"),
             expectedSafeValue = "encrypted",
         ),
-        // PersistentDataBlockService (frameworks/base) set this property through Android 15 and no
-        // longer does from Android 16, so on 16 and later any value was written by something else.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            SystemPropertyRule(
-                property = "sys.oem_unlock_allowed",
-                description = "OEM unlock allowed",
-                category = SystemPropertyCategory.VERIFIED_BOOT,
-                dangerousValues = listOf("*"),
-            )
-        } else {
-            SystemPropertyRule(
-                property = "sys.oem_unlock_allowed",
-                description = "OEM unlock allowed",
-                category = SystemPropertyCategory.VERIFIED_BOOT,
-                warningValues = listOf("1", "true"),
-                expectedSafeValue = "0",
-            )
-        },
+        // OEM unlock permission and support describe capability, not the bootloader lock state.
+        // Keep their values visible, but do not count them as integrity findings.
+        SystemPropertyRule(
+            property = "sys.oem_unlock_allowed",
+            description = "OEM unlock allowed",
+            category = SystemPropertyCategory.VERIFIED_BOOT,
+        ),
         SystemPropertyRule(
             property = "ro.oem_unlock_supported",
             description = "OEM unlock supported",
             category = SystemPropertyCategory.VERIFIED_BOOT,
-            warningValues = listOf("1", "true"),
         ),
         SystemPropertyRule(
             property = "init.svc.magisk_daemon",

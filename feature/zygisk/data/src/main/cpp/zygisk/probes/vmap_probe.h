@@ -21,6 +21,8 @@
 
 namespace duckdetector::zygisk {
 
+    ProbeResult analyze_executable_maps(const std::vector<MapEntry> &maps);
+
     ProbeResult collect_vmap_probe();
 
 }  // namespace duckdetector::zygisk

@@ -26,4 +26,5 @@ class ConsentToggle(
     val setting: ConsentSetting,
     val checked: Boolean,
     val onCheckedChange: (Boolean) -> Unit,
+    val onManagePermissions: (() -> Unit)? = null,
 )

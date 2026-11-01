@@ -86,7 +86,7 @@ WriteResult write_current(const char *value) {
     if (mode == "target_eperm") return {0, EPERM, -1};
     if (mode == "target_eintr") return {0, EINTR, -1};
     if (!strcmp(value, targets[0].context) && (mode == "recognized" ||
-        (mode == "unstable" && targets_written <= 9))) return {0, EACCES, -1};
+        (mode == "unstable" && targets_written <= static_cast<int>(kTargets)))) return {0, EACCES, -1};
     return {0, EINVAL, -1};
 }
 }
@@ -127,8 +127,8 @@ int main() {
         const bool complete = mode == "stock" || mode == "carrier_plain" || mode == "carrier_secondary" || mode == "carrier_all" || mode == "recognized" ||
             mode == "unstable" || mode == "target_open" || mode == "target_eperm" || mode == "target_eintr";
         assert((result.report.state == State::kComplete) == complete);
-        if (complete) assert(result.report.completed_rounds == 2 && targets_written == 18 &&
-            malformed_written == 4 && stock_written == 4);
+        if (complete) assert(result.report.completed_rounds == kRounds && targets_written == static_cast<int>(kRounds * kTargets) &&
+            malformed_written == static_cast<int>(kRounds * 2) && stock_written == static_cast<int>(kRounds * 2));
         if (mode == "wrong_uid" || mode == "wrong_domain" || mode == "domain_prefix" || mode == "wrong_role" ||
             mode == "level_prefix" || mode == "empty_categories" || mode == "bad_categories")
             assert(result.report.state == State::kUnsupported && targets_written == 0 && !malformed_written && !stock_written);
@@ -150,6 +150,8 @@ int main() {
         assert((payload.find("CONTROLS_PASSED") != std::string::npos) == complete);
         assert((payload.find("CONTEXT_RECOGNIZED") != std::string::npos) == (mode == "recognized"));
         if (mode == "recognized") assert(payload.find("RESULT=KernelSU\tu:r:ksu:s0\tCONTEXT_RECOGNIZED") != std::string::npos);
+        if (complete) assert(payload.find("RESULT=ADB root\tu:r:adbroot:s0\t") != std::string::npos &&
+            payload.find("RESULT=Xposed file\tu:object_r:xposed_file:s0\t") != std::string::npos);
         assert(payload.find("RESULT=KernelSU file\tu:object_r:ksu_file:s0\t") != std::string::npos);
         if (!complete) assert(payload.find("NORMAL_EINVAL") == std::string::npos);
     }

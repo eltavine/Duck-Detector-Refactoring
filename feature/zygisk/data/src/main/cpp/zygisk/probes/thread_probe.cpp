@@ -97,7 +97,7 @@ namespace duckdetector::zygisk {
                                             detail.str(),
                                     });
             result.hit_count = static_cast<int>(suspicious_names.size());
-            result.heuristic_hits = 1;
+            result.heuristic_families.insert(HeuristicFamily::kThreads);
         }
 
         return result;

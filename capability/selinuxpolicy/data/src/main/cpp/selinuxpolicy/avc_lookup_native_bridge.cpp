@@ -78,6 +78,13 @@ namespace {
             << "\nIDENTITY_CHANGED=" << (report.identity_changed ? 1 : 0)
             << "\nCPU=" << report.cpu << "\nCPU_ROW=" << report.cpu_row << "\nCPU_ROWS=" << report.cpu_rows
             << "\nPOSSIBLE_CPUS=" << report.possible_cpus << "\nPAIRS=" << report.pairs
+            << "\nPID=" << report.pid
+            << "\nCPU_MIGRATIONS=" << report.cpu_migrations
+            << "\nTIMING_MEDIANS_VALID=" << (report.timing_medians_available ? 1 : 0)
+            << "\nA_SLOWER=" << report.a_slower
+            << "\nPOSITIVE_BLOCKS=" << report.positive_blocks
+            << "\nNEGATIVE_BLOCKS=" << report.negative_blocks
+            << "\nZERO_BLOCKS=" << report.zero_blocks
             << "\nROUNDS=" << report.rounds << "\nWRITES=" << kWrites
             << "\nBATCH_A=" << join(report.batch_a) << "\nBATCH_B=" << join(report.batch_b)
             << "\nMEDIAN_A_NS=" << report.median_a_ns << "\nMEDIAN_B_NS=" << report.median_b_ns
@@ -95,4 +102,36 @@ Java_com_eltavine_duckdetector_capability_selinuxpolicy_data_SelinuxAvcLookupPro
     try { payload = encode(collect()); }
     catch (...) { payload = "SCHEMA=1\nSTATE=UNAVAILABLE\nFAILURE_REASON=Native AVC lookup collection failed.\n"; }
     return env->NewStringUTF(payload.c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_eltavine_duckdetector_capability_selinuxpolicy_data_SelinuxAvcLookupProbe_nativeCollectParentTiming(
+        JNIEnv *env, jobject) {
+    std::ostringstream out;
+    try {
+        // Validate reachability in an isolated child first. The full 33k-write AVC
+        // workload must NOT precede this parent measurement: it changes the CPU
+        // scheduling/cache state and flips the sign on the physical regression device.
+        ParentTiming parent;
+        const int preflight_error = verify_parent_timing_preflight();
+        if (preflight_error) {
+            parent.protocol = 1;
+            parent.error = preflight_error;
+        } else {
+            parent = collect_parent_timing();
+        }
+        out << "PARENT_ATTEMPTED=1\nPARENT_COMPLETE=" << (parent.complete ? 1 : 0)
+            << "\nPARENT_PROTOCOL=" << parent.protocol
+            << "\nPARENT_POSITIVE_BLOCKS=" << parent.positive_blocks
+            << "\nPARENT_NEGATIVE_BLOCKS=" << parent.negative_blocks
+            << "\nPARENT_ZERO_BLOCKS=" << parent.zero_blocks
+            << "\nPARENT_ERROR=" << parent.error << "\nPARENT_PID=" << parent.pid
+            << "\nPARENT_CPU=" << parent.cpu << "\nPARENT_PAIRS=" << parent.pairs
+            << "\nPARENT_MIGRATIONS=" << parent.migrations << "\nPARENT_A_SLOWER=" << parent.a_slower
+            << "\nPARENT_MEDIANS_VALID=" << (parent.medians_available ? 1 : 0)
+            << "\nPARENT_MEDIAN_A_NS=" << parent.median_a_ns
+            << "\nPARENT_MEDIAN_B_NS=" << parent.median_b_ns
+            << "\nPARENT_MEDIAN_DELTA_NS=" << parent.median_delta_ns << '\n';
+    } catch (...) { out << "PARENT_ATTEMPTED=0\nPARENT_ERROR=5\n"; }
+    return env->NewStringUTF(out.str().c_str());
 }

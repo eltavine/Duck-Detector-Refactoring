@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.adbruntime.presentation
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.report.ReportBlock
 import com.eltavine.duckdetector.core.report.ReportRow
+import com.eltavine.duckdetector.core.report.ReportFact
 import com.eltavine.duckdetector.features.adbruntime.presentation.model.AdbRuntimeCardModel
 import com.eltavine.duckdetector.features.adbruntime.presentation.model.AdbRuntimeDetailRowModel
 
@@ -27,10 +28,12 @@ fun AdbRuntimeCardModel.toDetectorReport(): DetectorReport = DetectorReport(
     title = title,
     verdict = verdict,
     severity = status.severity,
-    quickFacts = emptyList(),
+    quickFacts = headerFacts.map { ReportFact(it.label, it.value) },
     blocks = listOf(
         ReportBlock.Rows("Inconsistencies", signalRows.toReportRows()),
-        ReportBlock.Rows("Sources", scanRows.toReportRows()),
+        ReportBlock.Rows("Impact", impactRows.toReportRows()),
+        ReportBlock.Rows("Detection methods", methodRows.toReportRows()),
+        ReportBlock.Rows("Scan summary", scanRows.toReportRows()),
     ),
 )
 

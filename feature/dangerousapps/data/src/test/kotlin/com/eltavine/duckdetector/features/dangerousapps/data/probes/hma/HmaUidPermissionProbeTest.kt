@@ -25,7 +25,7 @@ import java.lang.reflect.InvocationTargetException
 import kotlin.coroutines.cancellation.CancellationException
 
 class HmaUidPermissionProbeTest {
-    private val caller = HmaUidPermissionCaller(10042, "caller", 36, true, true)
+    private val caller = HmaUidPermissionCaller(10042, "caller", 37, true, true)
     private val permission = HmaUidPermissionPolicy.PERMISSIONS.first()
 
     private open inner class Calls : HmaUidPackageCalls {
@@ -45,14 +45,16 @@ class HmaUidPermissionProbeTest {
         now: () -> Long = { 0L }, budget: Long = 1, limit: Int = 16) =
         HmaUidPermissionProbe(calls, { identity }, now, budget, limit)
 
-    @Test fun `a stopped UID can produce a fresh experimental value discrepancy`() = runTest {
-        val calls = Calls()
-        val result = probe(calls).run(DangerousPackageVisibility.FULL)
-        assertEquals(HmaCheckState.EXPERIMENTAL_ANOMALY, result.state)
-        assertEquals(listOf(10043), result.uids)
-        assertEquals(2, calls.trace.count { it == "packages:10043" })
-        assertEquals(2, calls.trace.count { it == "permission:10043:$permission" })
-        assertEquals(2, calls.trace.count { it == "packages:10042" })
+    @Test fun `Android 15 through 17 compare stopped UIDs with fresh caller controls`() = runTest {
+        for (sdk in 35..37) {
+            val calls = Calls()
+            val result = probe(calls, caller.copy(sdk = sdk)).run(DangerousPackageVisibility.FULL)
+            assertEquals("API $sdk", HmaCheckState.EXPERIMENTAL_ANOMALY, result.state)
+            assertEquals(listOf(10043), result.uids)
+            assertEquals(2, calls.trace.count { it == "packages:10043" })
+            assertEquals(2, calls.trace.count { it == "permission:10043:$permission" })
+            assertEquals(2, calls.trace.count { it == "packages:10042" })
+        }
     }
 
     @Test fun `ordinary package filtering must never start the scan`() = runTest {
@@ -62,7 +64,7 @@ class HmaUidPermissionProbeTest {
     }
 
     @Test fun `unreviewed versions and instant permission definitions are unsupported`() = runTest {
-        for (identity in listOf(caller.copy(sdk = 34), caller.copy(sdk = 37), caller.copy(nonInstantDefinitions = false))) {
+        for (identity in listOf(caller.copy(sdk = 34), caller.copy(sdk = 38), caller.copy(nonInstantDefinitions = false))) {
             val calls = Calls()
             assertEquals(HmaCheckState.UNSUPPORTED, probe(calls, identity).run(DangerousPackageVisibility.FULL).state)
             assertTrue(calls.trace.isEmpty())

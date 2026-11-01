@@ -16,6 +16,7 @@
  */
 
 #include "memory/common/maps_reader.h"
+#include "common/installed_package_path.h"
 
 #include <algorithm>
 #include <cctype>
@@ -279,7 +280,7 @@ namespace duckdetector::memory {
     }
 
     bool is_suspicious_loader_path(const std::string &path) {
-        const std::string lowered = to_lower_ascii(path);
+        const std::string lowered = to_lower_ascii(package_paths::without_install_tokens(path));
         return lowered.find("frida") != std::string::npos ||
                lowered.find("gadget") != std::string::npos ||
                lowered.find("zygisk") != std::string::npos ||

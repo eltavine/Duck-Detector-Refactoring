@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.bootloader.presentation
 import com.eltavine.duckdetector.capability.attestation.domain.TeeTier
 import com.eltavine.duckdetector.capability.attestation.domain.TeeTrustRoot
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderEvidenceMode
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFinding
 import com.eltavine.duckdetector.features.bootloader.domain.BootloaderFindingGroup
@@ -39,6 +40,34 @@ import org.junit.Test
 class BootloaderCardModelMapperTest {
 
     private val mapper = BootloaderCardModelMapper()
+
+    @Test
+    fun `unperformed boot comparison stays informational without an alignment summary`() {
+        val model = mapper.map(report(
+            findings = listOf(BootloaderFinding(
+                id = "boot_consistency_clean",
+                label = "Attested hash vs vbmeta digest",
+                value = "Not compared",
+                group = BootloaderFindingGroup.CONSISTENCY,
+                severity = BootloaderFindingSeverity.INFO,
+                detail = "Attested hash was missing.",
+            )),
+            methods = listOf(BootloaderMethodResult(
+                label = "Boot consistency",
+                summary = "Not compared",
+                outcome = BootloaderMethodOutcome.SUPPORT,
+            )),
+        ))
+
+        assertEquals("Not compared", model.consistencyRows.single().value)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.consistencyRows.single().status)
+        assertEquals("Not compared", model.methodRows.single().value)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.methodRows.single().status)
+        assertEquals(
+            "No unlock or integrity contradiction was observed in the available boot evidence. Individual checks show comparison coverage.",
+            model.summary,
+        )
+    }
 
     @Test
     fun `unknown trust root with zero chain turns trust header and chain summary red`() {

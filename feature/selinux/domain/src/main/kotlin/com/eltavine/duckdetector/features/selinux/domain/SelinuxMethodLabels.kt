@@ -22,10 +22,12 @@ enum class SelinuxOracle(val label: String) {
     CONTEXT_VALIDITY("Context validity oracle"),
     PROC_ATTR_CURRENT_WRITE("app_zygote attr/current write"),
     POLICYLOAD_SEQNO("App-zygote seqno oracle"),
+    DIRTY_SEPOLICY_RAW("DirtySepolicy raw access protocol"),
     SIDTAB_CONSISTENCY("SID-table query consistency"),
     ATTR_CURRENT_TIMING("SELinux Hide attr/current timing (experimental)"),
     APP_ZYGOTE_AVC_LOOKUPS("App Zygote AVC lookup profile (experimental)"),
     STATUS_MMAP_ABI("Status mmap ABI conformance"),
+    APP_ZYGOTE_ATTR_TIMING("App Zygote attr/current timing (experimental)"),
 }
 
 /** The status node mmap/mprotect requests the conformance probe sends; [label] is the report text. */

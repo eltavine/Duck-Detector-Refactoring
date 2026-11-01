@@ -83,7 +83,6 @@ internal fun buildScanRows(report: MountReport): List<MountDetailRowModel> {
                 "${coveragePercent(report)}%",
                 when {
                     report.permissionDenied == 0 -> DetectorStatus.allClear()
-                    report.permissionDenied * 2 >= report.permissionTotal && report.permissionTotal > 0 -> DetectorStatus.warning()
                     else -> DetectorStatus.info(InfoKind.SUPPORT)
                 },
             ),
@@ -145,7 +144,8 @@ internal fun coveragePercent(report: MountReport): Int {
 private fun preloadStateLabel(report: MountReport): String {
     return when {
         !report.earlyPreloadAvailable -> "Unavailable"
-        report.earlyPreloadDetected -> "Detected"
+        hasDangerPreloadEvidence(report) || hasWarningPreloadEvidence(report) -> "Detected"
+        report.earlyPreloadFindingCount > 0 -> "Observation"
         else -> "Clean"
     }
 }
@@ -163,6 +163,7 @@ private fun preloadStatus(report: MountReport): DetectorStatus {
         !report.earlyPreloadAvailable -> DetectorStatus.info(InfoKind.SUPPORT)
         hasDangerPreloadEvidence(report) -> DetectorStatus.danger()
         hasWarningPreloadEvidence(report) -> DetectorStatus.warning()
+        report.earlyPreloadFindingCount > 0 -> DetectorStatus.info(InfoKind.SUPPORT)
         else -> DetectorStatus.allClear()
     }
 }

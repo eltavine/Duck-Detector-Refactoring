@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Clock port so scan timing never reads platform clocks directly. */
@@ -86,6 +85,7 @@ public class ScanCoordinator(
     private val clock: ScanClock,
     scope: CoroutineScope,
     detectors: List<StateFlow<DetectorSummary>>,
+    private val onCompleted: (ScanState) -> Unit = {},
 ) {
     private val mutableState = MutableStateFlow(
         detectors.map { it.value }.let { initial ->
@@ -100,17 +100,27 @@ public class ScanCoordinator(
     public val state: StateFlow<ScanState> = mutableState.asStateFlow()
 
     init {
+        publishCompletion(mutableState.value)
         if (detectors.isNotEmpty()) {
             scope.launch {
                 combine(detectors) { it.toList() }.collect { summaries ->
-                    mutableState.update { current ->
-                        ScanState(
-                            detectors = summaries,
-                            timeline = current.timeline.advance(summaries.any { !it.ready }, clock),
-                        )
-                    }
+                    val previous = mutableState.value
+                    val next = ScanState(
+                        detectors = summaries,
+                        timeline = previous.timeline.advance(summaries.any { !it.ready }, clock),
+                    )
+                    mutableState.value = next
+                    if (previous.timeline.completedAtEpochMillis == null) publishCompletion(next)
                 }
             }
+        }
+    }
+
+    private fun publishCompletion(state: ScanState) {
+        if (state.detectors.isNotEmpty() && !state.isLoading &&
+            state.timeline.completedAtEpochMillis != null
+        ) {
+            onCompleted(state)
         }
     }
 }

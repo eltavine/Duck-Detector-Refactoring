@@ -77,7 +77,8 @@ class TeeRepository(
             val rkp = rkpAnalyzer.analyze(
                 snapshot.rawCertificates,
                 chainStructure,
-                trust.googleRootMatched
+                trust.googleRootMatched,
+                trust.chainSignatureValid,
             )
             val crl = crlStatusService.inspect(snapshot.rawCertificates)
             val native =

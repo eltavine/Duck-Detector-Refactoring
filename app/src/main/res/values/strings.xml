@@ -16,6 +16,9 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="scan_history_issue_title">Scan history requires attention</string>
+    <string name="scan_history_recovered">%1$d damaged history record(s) were excluded. The original file was preserved as %2$s in the private scan-history directory. Valid entries have been restored.</string>
+    <string name="scan_history_failed">Scan history could not be loaded or saved (%1$s). The existing file was not discarded. New history may not be recorded until storage access is restored.</string>
     <string name="navigation_home">Home</string>
     <string name="navigation_settings">Settings</string>
     <string name="duck_logo_description">Duck Detector logo</string>
@@ -42,12 +45,16 @@ limitations under the License.
     <string name="update_download_failed">The update could not be downloaded or verified</string>
     <string name="update_install_permission_required">Allow installs from Duck Detector, then tap Install again</string>
     <string name="update_install_failed">Could not open the package installer</string>
+    <string name="update_install_fallback_copied_opened">Local installation failed. The APK URL was copied and opened in the browser.</string>
+    <string name="update_install_fallback_copied_only">Local installation failed. The APK URL was copied, but no browser could open it.</string>
+    <string name="update_install_fallback_opened_only">Local installation failed. The browser opened the APK URL, but copying failed.</string>
+    <string name="update_install_link_copied">APK download link copied</string>
     <string name="startup_review_label">Startup policy review</string>
     <string name="startup_preparing_title">Preparing startup</string>
     <string name="startup_preparing_detail">Loading agreement state before startup policy review.</string>
     <string name="startup_before_scan_title">Before the scan</string>
     <string name="startup_loading_detail">Preferences and PackageManager visibility are still being loaded. Detector ViewModels stay paused until this completes.</string>
-    <string name="startup_intro_detail">Finish the required choices before detector scans begin. Notifications, Live Update routing, CRL online refresh, and PackageManager visibility are reviewed here in one place. The detector pipeline remains blocked until every required card below is settled.</string>
+    <string name="startup_intro_detail">Review notifications, optional detector permissions and package visibility before scanning. Optional diagnostics can stay off. You can change these choices later in Settings.</string>
     <string name="startup_loading_state">Loading startup state…</string>
     <string name="startup_progress_resolved">%1$d of %2$d startup cards resolved</string>
     <string name="startup_loading_dependencies_title">Loading startup dependencies</string>
@@ -101,4 +108,5 @@ limitations under the License.
     <string name="startup_package_ready_headline">PackageManager inventory looks full.</string>
     <string name="startup_package_ready_detail">Current visible package count: %1$d. Dangerous Apps can use the standard package inventory path.</string>
     <string name="update_apk_unavailable">The downloaded update is unavailable; download it again</string>
+    <string name="detector_manage_permissions">Manage app permissions</string>
 </resources>

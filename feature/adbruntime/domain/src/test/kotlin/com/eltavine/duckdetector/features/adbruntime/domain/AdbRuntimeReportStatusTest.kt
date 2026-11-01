@@ -106,6 +106,57 @@ class AdbRuntimeReportStatusTest {
     }
 
     @Test
+    fun initSocketPresenceContradictsStoppedInit() {
+        val sample = sample(
+            usbEnabled = false,
+            initState = "stopped",
+            initSocket = AdbInitSocketSnapshot(AdbProbeState.OBSERVED, AdbSocketPresence.PRESENT_DENIED),
+        )
+        val report = ready(samples = listOf(sample, sample))
+
+        assertTrue(report.findings().any { it.kind == AdbFindingKind.INIT_STOPPED_WITH_ADB_INIT_SOCKET })
+        assertEquals(DetectorStatus.danger(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun initSocketPresenceWithARunningDaemonStaysActivity() {
+        val sample = sample(
+            usbEnabled = false,
+            initState = "running",
+            initSocket = AdbInitSocketSnapshot(AdbProbeState.OBSERVED, AdbSocketPresence.PRESENT_DENIED),
+        )
+        val report = ready(samples = listOf(sample, sample))
+
+        assertTrue(report.findings().isEmpty())
+        assertEquals(DetectorStatus.warning(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun absentInitSocketWithStoppedDaemonStaysClear() {
+        val sample = sample(
+            usbEnabled = false,
+            initState = "stopped",
+            initSocket = AdbInitSocketSnapshot(AdbProbeState.NOT_OBSERVED, AdbSocketPresence.ABSENT),
+        )
+        val report = ready(samples = listOf(sample, sample))
+
+        assertEquals(DetectorStatus.allClear(), report.toDetectorStatus())
+    }
+
+    @Test
+    fun unobservableInitSocketDoesNotBecomeAbsenceOrActivity() {
+        for (state in listOf(AdbProbeState.PERMISSION_REQUIRED, AdbProbeState.UNAVAILABLE)) {
+            val sample = sample(
+                usbEnabled = false,
+                initState = "stopped",
+                initSocket = AdbInitSocketSnapshot(state),
+            )
+            val report = ready(samples = listOf(sample, sample))
+            assertEquals(DetectorStatus.allClear(), report.toDetectorStatus())
+        }
+    }
+
+    @Test
     fun sysUsbStateAdbIsActivityOnly() {
         val sample = sample(
             usbEnabled = false,
@@ -140,6 +191,7 @@ class AdbRuntimeReportStatusTest {
         sysUsbState: String? = null,
         usbConfigured: Boolean? = false,
         usbFunctions: Set<String> = emptySet(),
+        initSocket: AdbInitSocketSnapshot = AdbInitSocketSnapshot(AdbProbeState.UNAVAILABLE),
     ) = AdbRuntimeSample(
         usbDebuggingEnabled = usbEnabled,
         wirelessDebuggingEnabled = wifiEnabled,
@@ -154,6 +206,7 @@ class AdbRuntimeReportStatusTest {
             configured = usbConfigured,
             functions = usbFunctions,
         ),
+        initSocket = initSocket,
     )
 
     private fun ready(

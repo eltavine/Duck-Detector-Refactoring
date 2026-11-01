@@ -19,11 +19,71 @@ package com.eltavine.duckdetector.features.nativeroot.data.repository
 
 import com.eltavine.duckdetector.features.nativeroot.data.native.NativeRootNativeSnapshot
 import com.eltavine.duckdetector.features.nativeroot.data.native.SusfsProbeOutcome
+import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntProbe
+import com.eltavine.duckdetector.features.nativeroot.data.probes.KernelSuThroneHuntRoundResult
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootMethodOutcome
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NativeRootMethodRowsTest {
+
+    @Test
+    fun `directory events do not enter runtime or signal summaries`() {
+        val result = KernelSuThroneHuntProbe().run(
+            KernelSuThroneHuntRoundResult(
+                available = true,
+                stimulusApplied = true,
+                directoryOpenCount = 3,
+                directoryAccessCount = 3,
+                rawEventCount = 42,
+                detail = "round detail",
+            )
+        )
+        val snapshot = NativeRootNativeSnapshot(available = true)
+        val row = methodRow(snapshot, "ksuThroneHunt", result)
+
+        assertEquals("6 unattributed event(s)", row.summary)
+        assertEquals(NativeRootMethodOutcome.SUPPORT, row.outcome)
+        assertTrue(row.detail.contains("cannot identify KernelSU"))
+        assertTrue(row.detail.contains("raw=42"))
+        for (label in listOf("runtimeArtifacts", "signalSummary")) {
+            val summary = methodRow(snapshot, label, result)
+            assertEquals("Clean", summary.summary)
+            assertEquals(NativeRootMethodOutcome.CLEAN, summary.outcome)
+        }
+    }
+
+    @Test
+    fun `zero directory events remain support instead of clean`() {
+        val result = KernelSuThroneHuntProbe().run(
+            KernelSuThroneHuntRoundResult(available = true, stimulusApplied = true, detail = "ready")
+        )
+        val row = methodRow(NativeRootNativeSnapshot(available = true), "ksuThroneHunt", result)
+
+        assertEquals("No directory events", row.summary)
+        assertEquals(NativeRootMethodOutcome.SUPPORT, row.outcome)
+        assertTrue(row.detail.contains("zero events cannot exclude"))
+    }
+
+    @Test
+    fun `failed stimulus takes precedence over preserved directory counts`() {
+        val result = KernelSuThroneHuntProbe().run(
+            KernelSuThroneHuntRoundResult(
+                available = false,
+                stimulusApplied = false,
+                failureStage = "STIMULUS_FAILED",
+                directoryOpenCount = 3,
+                directoryAccessCount = 3,
+                detail = "partial collection",
+            )
+        )
+        val row = methodRow(NativeRootNativeSnapshot(available = true), "ksuThroneHunt", result)
+
+        assertEquals("STIMULUS_FAILED", row.summary)
+        assertEquals(NativeRootMethodOutcome.SUPPORT, row.outcome)
+        assertTrue(row.detail.contains("open=3 access=3"))
+    }
 
     @Test
     fun `latency probe that never measured is unavailable even when the snapshot is available`() {

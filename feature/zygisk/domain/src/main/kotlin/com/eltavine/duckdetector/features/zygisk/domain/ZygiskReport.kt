@@ -66,6 +66,7 @@ enum class ZygiskMethod(val label: String) {
     MAPS_AND_SMAPS("Maps and smaps"),
     THREADS_AND_FDS("Threads and FDs"),
     SOLIST_ATEXIT_HEAP("Solist, atexit, heap"),
+    ATEXIT_HANDLERS("Exit-handler table"),
 }
 
 data class ZygiskMethodResult(
@@ -91,6 +92,7 @@ data class ZygiskReport(
     val methods: List<ZygiskMethodResult>,
     val references: List<String>,
     val errorMessage: String? = null,
+    val atexitTable: ZygiskAtexitObservation = ZygiskAtexitObservation(),
 ) {
     val strongHitCount: Int
         get() = nativeStrongHitCount + if (fdTrapDetected) 1 else 0
@@ -109,15 +111,18 @@ data class ZygiskReport(
                 !fdTrapDetected &&
                 nativeStrongHitCount == 0 &&
                 heuristicHitCount == 0 &&
-                (!fdTrapAvailable || !nativeAvailable)
+                !atexitTable.hasEvidence &&
+                (!fdTrapAvailable || !nativeAvailable || atexitTable.state != ZygiskAtexitState.COLLECTED)
 
     val fullyClean: Boolean
         get() = stage == ZygiskStage.READY &&
                 !fdTrapDetected &&
                 nativeStrongHitCount == 0 &&
                 heuristicHitCount == 0 &&
+                !atexitTable.hasEvidence &&
                 fdTrapAvailable &&
-                nativeAvailable
+                nativeAvailable &&
+                atexitTable.state == ZygiskAtexitState.COLLECTED
 
     companion object {
         fun loading(): ZygiskReport {

@@ -22,9 +22,8 @@
 
 namespace duckdetector::zygisk {
 
-    ProbeResult collect_vmap_probe() {
+    ProbeResult analyze_executable_maps(const std::vector<MapEntry> &maps) {
         ProbeResult result;
-        const auto maps = read_proc_maps();
         if (maps.empty()) {
             result.available = false;
             return result;
@@ -54,6 +53,7 @@ namespace duckdetector::zygisk {
         }
 
         if (jit_cache_inodes.size() > 1U) {
+            result.heuristic_families.insert(HeuristicFamily::kMapStructure);
             std::ostringstream detail;
             detail << "Executable jit-cache mappings exposed " << jit_cache_inodes.size()
                    << " distinct inodes, which is unusual for a single app process.";
@@ -66,6 +66,11 @@ namespace duckdetector::zygisk {
         }
 
         if (!suspicious_paths.empty()) {
+            // Keep one contribution per map probe. JIT drift supplies non-path
+            // evidence; path-only residue shares its family with the FD probe.
+            if (result.heuristic_families.empty()) {
+                result.heuristic_families.insert(HeuristicFamily::kLoaderPath);
+            }
             std::ostringstream detail;
             detail << "Suspicious executable maps include ";
             for (size_t index = 0; index < suspicious_paths.size() && index < 3U; ++index) {
@@ -87,8 +92,11 @@ namespace duckdetector::zygisk {
         }
 
         result.hit_count = static_cast<int>(result.traces.size());
-        result.heuristic_hits = result.hit_count > 0 ? 1 : 0;
         return result;
+    }
+
+    ProbeResult collect_vmap_probe() {
+        return analyze_executable_maps(read_proc_maps());
     }
 
 }  // namespace duckdetector::zygisk

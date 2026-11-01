@@ -27,12 +27,9 @@
 namespace duckdetector::nativeroot {
     namespace {
 
-        // KernelSU's manager/pkg_observer.c watches /data/system for FS_CREATE|FS_MOVE on
-        // "packages.list" and calls track_throne(false). track_throne then runs
-        // search_manager("/data/app", 2), whose my_actor does filp_open(dirpath, O_RDONLY |
-        // O_NOFOLLOW) followed by iterate_dir() on every package directory inode.
-        // An inotify watch placed on our own package directory therefore observes an
-        // IN_OPEN + IN_ACCESS pair with an empty name that no ordinary app activity produces.
+        // inotify reports activity without the accessor PID/UID. Ordinary system activity can
+        // produce these events too; ACK fsnotify_file() suppresses them for FMODE_NONOTIFY.
+        // Counts are diagnostic only. See the pinned sources in feature/nativeroot/EVIDENCE.md.
         constexpr int kWatchMask = IN_OPEN | IN_ACCESS;
         constexpr int kReadBufferSize = 4096;
 
@@ -74,7 +71,7 @@ namespace duckdetector::nativeroot {
 
         result.watch_installed = true;
         result.watch_descriptor = inotify_fd;
-        result.detail = "Watching " + package_directory + " for throne hunt IN_OPEN/IN_ACCESS.";
+        result.detail = "Watching " + package_directory + " for unattributed directory IN_OPEN/IN_ACCESS.";
         return result;
     }
 
@@ -103,8 +100,8 @@ namespace duckdetector::nativeroot {
                 }
 
                 summary.raw_event_count += 1;
-                // search_manager opens the directory inode itself, so the name field stays empty.
-                // Named events belong to unrelated activity inside the package directory.
+                // An empty name identifies activity on the watched directory itself, not its
+                // accessor. Named child events remain in raw_event_count for diagnostics.
                 if (event->len == 0) {
                     if ((event->mask & IN_OPEN) != 0) {
                         summary.directory_open_count += 1;

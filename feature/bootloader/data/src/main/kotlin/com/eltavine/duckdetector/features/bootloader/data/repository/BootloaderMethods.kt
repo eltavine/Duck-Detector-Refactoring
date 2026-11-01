@@ -96,12 +96,12 @@ internal fun buildMethods(
             label = "Boot consistency",
             summary = when {
                 bootConsistency.hasHardAnomaly -> "Anomaly"
-                bootConsistency.runtimePropsAvailable -> "Aligned"
-                else -> "Partial"
+                bootConsistency.runtimeComparisonPerformed -> "Aligned"
+                else -> "Not compared"
             },
             outcome = when {
                 bootConsistency.hasHardAnomaly -> BootloaderMethodOutcome.DANGER
-                bootConsistency.runtimePropsAvailable -> BootloaderMethodOutcome.CLEAN
+                bootConsistency.runtimeComparisonPerformed -> BootloaderMethodOutcome.CLEAN
                 else -> BootloaderMethodOutcome.SUPPORT
             },
             detail = bootConsistency.detail,

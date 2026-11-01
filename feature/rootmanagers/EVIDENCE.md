@@ -121,3 +121,23 @@ manager reported by more than one detector is not independent evidence when both
 `LauncherApps`, `getPackageInfo` and `getInstalledPackages` all pass through PackageManager and
 `AppsFilter` in system_server, so a filter there hides from all of them at once. Dangerous Apps'
 file-system methods are the independent path.
+
+
+### Optional installer permission-owner observation
+
+Detection-vector credit: [FldBudin](https://github.com/FldBudin) (GitHub), for the
+installer duplicate-permission owner-discovery approach.
+
+- Observable signal: an installer failure names the owner of the fixed candidate KernelSU permission.
+- Producing subsystem: PackageManager global permission registry and InstallPackageHelper.
+- Mechanism: a signed self-update canary reaches the permission conflict check, with a missing
+  permission group as early rejection and a changed shared UID as an independent replacement guard.
+- References and version applicability: [implementation and rejection model](../../docs/research/installer-permission-canary.md); API 33–37 only.
+- Visibility limits: permission names change on rebuild; owners can be unrelated apps; installation
+  authorization, verifier and update ownership can prevent evaluation. Directory mounts can conceal
+  cross-user data even after owner discovery. No profile or execution history is inferred.
+- Result states: disabled, unsupported, unavailable, user action required, throttled, timed out,
+  inconclusive, unexpected success, permission owner observed, permission conflict not observed.
+- Interpretation: informational permission-name evidence, independent of launcher enumeration.
+  Successful directory stats add bounded user/UID coordinates; every errno remains a visibility
+  limitation. Failure never negates owner evidence or establishes manager absence.

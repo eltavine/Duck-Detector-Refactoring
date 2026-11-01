@@ -19,36 +19,10 @@ package com.eltavine.duckdetector.features.dangerousapps.data.repository
 
 import android.content.ComponentName
 import android.content.Intent
-import android.os.Parcel
 import android.provider.Settings
 import android.text.TextUtils
-import com.eltavine.duckdetector.core.platform.HiddenServiceManager
 import java.io.File
 import kotlin.random.Random
-
-internal fun DangerousAppsRepository.detectThanoxIpc(): Boolean {
-    var data: Parcel? = null
-    var reply: Parcel? = null
-    return try {
-        val dropboxBinder = HiddenServiceManager.getService(THANOX_PROXIED_SERVICE).getOrThrow()
-            ?: return false
-
-        data = Parcel.obtain()
-        reply = Parcel.obtain()
-
-        val result = dropboxBinder.transact(THANOX_IPC_TRANS_CODE, data, reply, 0)
-        if (!result) {
-            return false
-        }
-        reply.setDataPosition(0)
-        reply.dataSize() > 0
-    } catch (_: Exception) {
-        false
-    } finally {
-        data?.recycle()
-        reply?.recycle()
-    }
-}
 
 internal fun DangerousAppsRepository.isAccessibilityServiceEnabled(packageName: String): Boolean {
     return try {
@@ -88,8 +62,3 @@ internal fun DangerousAppsRepository.detectSceneBroadcast(): Boolean {
     }
     return detected
 }
-
-internal const val THANOX_PROXIED_SERVICE = "dropbox"
-
-internal val THANOX_IPC_TRANS_CODE =
-    "github.tornaco.android.thanos.core.IPC_TRANS_CODE_THANOS_SERVER".hashCode()

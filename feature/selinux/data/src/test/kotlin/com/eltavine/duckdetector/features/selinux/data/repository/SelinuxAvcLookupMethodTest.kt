@@ -17,6 +17,8 @@
 
 package com.eltavine.duckdetector.features.selinux.data.repository
 
+import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxAvcParentTiming
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxAppZygoteTimingVerdict
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxAvcLookupChildEnd
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxAvcLookupPayload
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxAvcLookupSnapshot
@@ -32,6 +34,40 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SelinuxAvcLookupMethodTest {
+    @Test fun `migration-only strong parent timing raises anomaly from serialized snapshot`() {
+        val sample = SelinuxAvcLookupSnapshot(
+            state = SelinuxAvcLookupState.INCONCLUSIVE,
+            parentTiming = SelinuxAvcParentTiming(
+                attempted = true, complete = false, error = 11,
+                pid = 5354, cpu = 0, pairs = 511, migrations = 1,
+                aSlower = 471, medianANs = 3125, medianBNs = 2552,
+                medianDeltaNs = 573, protocol = 1,
+                positiveBlocks = 15, negativeBlocks = 0, zeroBlocks = 0,
+            ),
+        )
+        val method = buildAppZygoteTimingMethod(sample)
+        assertEquals(SelinuxAppZygoteTimingVerdict.POSITIVE, method.avcLookup!!.timingVerdict)
+        assertEquals(false, method.isSecure)
+        assertNull(buildAvcLookupMethod(sample).isSecure)
+    }
+
+    @Test fun `positive parent timing raises anomaly but leaves AVC evidence informational`() {
+        val sample = SelinuxAvcLookupSnapshot(
+            state = SelinuxAvcLookupState.UNAVAILABLE,
+            parentTiming = SelinuxAvcParentTiming(
+                attempted = true, complete = true, pid = 17, cpu = 2, pairs = 512,
+                aSlower = 400, medianANs = 1000, medianBNs = 900, medianDeltaNs = 100,
+                protocol = 1, positiveBlocks = 14, negativeBlocks = 2,
+            ),
+        )
+        val method = buildAppZygoteTimingMethod(sample)
+        assertEquals(SelinuxOracle.APP_ZYGOTE_ATTR_TIMING, method.oracle)
+        assertEquals(SelinuxAppZygoteTimingVerdict.POSITIVE,
+            method.avcLookup!!.timingVerdict)
+        assertEquals(false, method.isSecure)
+        assertNull(buildAvcLookupMethod(sample).isSecure)
+    }
+
     private val collected = SelinuxAvcLookupSnapshot(
         state = SelinuxAvcLookupState.COLLECTED, step = SelinuxAvcLookupStep.FINISHED,
         cpu = 4, cpuRow = 2, cpuRows = 4, possibleCpus = 4, pairs = 128, rounds = 4, writesPerBatch = 4096,

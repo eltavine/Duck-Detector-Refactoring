@@ -23,10 +23,9 @@ import com.eltavine.duckdetector.core.native.NativeCollectionStatus
 import com.eltavine.duckdetector.features.nativeroot.data.service.ThroneHuntCarrierManager
 import kotlinx.coroutines.delay
 
-// Runs one full oracle round: validates the inherited app_zygote watch, drains whatever the watch
-// collected before the stimulus, applies the zero-permission packages.list rewrite, waits out the
-// Settings coalescing window, then consumes the event stream to see what the KernelSU throne hunt
-// did to our package directory in between.
+// Validates the inherited app_zygote watch, drains baseline activity, applies the package-settings
+// stimulus, waits through the observation window and collects directory activity without accessor
+// attribution. Neither counts nor timing establish that a KernelSU manager scan ran.
 class KernelSuThroneHuntRound(
     context: Context? = null,
     private val carrierManager: ThroneHuntCarrierManager = ThroneHuntCarrierManager(
@@ -81,10 +80,8 @@ class KernelSuThroneHuntRound(
                 )
             }
 
-        // Baseline. The watch starts collecting at app_zygote preload, so the stream already holds
-        // everything that happened before the stimulus - our own startup noise, or an unrelated
-        // packages.list rewrite that kicked off a hunt of its own. Draining it here means the final
-        // drain covers the stimulus window only, and none of that can be read as our result.
+            // Discard pre-stimulus activity collected since preload. Activity in the remaining
+            // window can still be unrelated to the stimulus; draining does not establish causality.
             val baseline = carrierManager.drainEvents(scanStartedAt)
             if (!baseline.collection.isTrustworthy) {
                 return KernelSuThroneHuntRoundResult(

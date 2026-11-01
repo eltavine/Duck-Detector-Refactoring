@@ -25,7 +25,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -36,10 +36,8 @@ internal const val GITHUB_CONTRIBUTORS_ASSET_FILE_NAME = "github_contributors.js
 abstract class GenerateGithubContributorsAssetTask : DefaultTask() {
 
     init {
-        // Only a refreshing run may ignore up-to-date checks. This task hangs off preBuild and
-        // talks to github.com directly, so an unconditional re-run made every build - including
-        // offline and pull-request builds that have no reason to care who the contributors are -
-        // wait on the network. The committed asset is the fallback, matching GenerateTeeCrlAssetTask.
+        // CI refreshes once before assembly; subsequent tasks and offline builds reuse the asset.
+        // Only an explicit refresh bypasses up-to-date checks and reaches the network.
         outputs.upToDateWhen { !refreshEnabled.get() }
     }
 
@@ -49,8 +47,7 @@ abstract class GenerateGithubContributorsAssetTask : DefaultTask() {
     @get:Input
     abstract val endpointUrl: Property<String>
 
-    @get:Optional
-    @get:Input
+    @get:Internal
     abstract val authToken: Property<String>
 
     @get:Input
@@ -100,9 +97,11 @@ abstract class GenerateGithubContributorsAssetTask : DefaultTask() {
         val recorded = readRecordedMetadata(contributorsFile)
         val outcome = fetchWithRetries(
             attempts = attempts,
-            backoffMillis = { attempt -> (300L * attempt).coerceAtMost(1_500L) },
+            backoffMillis = { attempt -> (2_000L * attempt).coerceAtMost(10_000L) },
             warn = { attempt, reason -> logger.warn("GitHub contributors fetch attempt $attempt/$attempts failed: $reason") },
         ) {
+            // GitHub may return 202 with an empty object while statistics are being computed.
+            // Reject it as an incomplete feed and retry before falling back to the local snapshot.
             parseGitHubContributors(http.text(url, githubRequestHeaders(url, token)))
         }
         val remote = when (outcome) {

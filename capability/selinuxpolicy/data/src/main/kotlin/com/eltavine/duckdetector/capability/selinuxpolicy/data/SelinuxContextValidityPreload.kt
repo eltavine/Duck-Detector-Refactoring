@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
 import android.content.pm.ApplicationInfo
 import android.os.Build
+import android.os.SystemClock
 import android.system.Os
 import java.lang.reflect.Method
 
@@ -31,6 +32,7 @@ public class SelinuxContextValidityPreload {
     private val procAttrCurrentProbe = SelinuxProcAttrCurrentProbe()
     private val avcLookupProbe = SelinuxAvcLookupProbe()
     private val policyloadSeqnoProbe = SelinuxPolicyloadSeqnoProbe()
+    private val dirtySepolicyRawProbe = SelinuxDirtySepolicyRawProbe()
 
     /**
      * Captures the carrier evidence in the app zygote. [trace] is called before each step, so an
@@ -40,12 +42,29 @@ public class SelinuxContextValidityPreload {
         appInfo: ApplicationInfo,
         trace: (step: String) -> Unit = {},
         beforeCollection: () -> Unit,
+    ): Unit = preload(
+        appInfo = appInfo,
+        versionCode = 0L,
+        buildRevision = "unknown",
+        trace = trace,
+        beforeCollection = beforeCollection,
+    )
+
+    /** The host build metadata must be captured with the same preload as the evidence payload. */
+    public fun preload(
+        appInfo: ApplicationInfo,
+        versionCode: Long,
+        buildRevision: String,
+        trace: (step: String) -> Unit = {},
+        beforeCollection: () -> Unit,
     ) {
+        val preloadStartedNanos = SystemClock.elapsedRealtimeNanos()
         // Kept outside the try: a finished experiment's kernel side effects outlive a later failure.
         var sidtab = SelinuxSidtabSnapshot()
         var statusAbi = SelinuxStatusAbiSnapshot()
         var procAttrResults: List<SelinuxProcAttrCurrentResult>? = null
         var avcLookup = SelinuxAvcLookupSnapshot()
+        var dirtySepolicyRaw = SelinuxDirtySepolicyRawSnapshot()
         val payload = try {
             beforeCollection()
             val currentUid = Os.getuid()
@@ -79,9 +98,16 @@ public class SelinuxContextValidityPreload {
                 },
                 inspectAvcLookup = {
                     trace("selinux: app zygote AVC lookup child")
-                    avcLookupProbe.inspect().also {
+                    avcLookupProbe.inspect(trace).also {
                         avcLookup = it
                         trace("selinux: AVC lookup state=${it.state} step=${it.step} errno=${it.errno} rounds=${it.rounds}")
+                        val parent = it.parentTiming
+                        trace("selinux: attr timing child pid=${it.pid} cpu=${it.cpu} " +
+                            "pairs=${it.pairs} migrated=${it.cpuMigrations} " +
+                            "delta=${it.medianDeltaNs.takeIf { _ -> it.timingMediansAvailable } ?: "N/A"}; " +
+                            "parent pid=${parent.pid} cpu=${parent.cpu} pairs=${parent.pairs} " +
+                            "migrated=${parent.migrations} delta=${parent.medianDeltaNs ?: "N/A"} " +
+                            "complete=${parent.complete} errno=${parent.error}")
                     }
                 },
                 inspectPolicyloadSeqno = {
@@ -96,7 +122,16 @@ public class SelinuxContextValidityPreload {
                     checkSelinuxAccess(source, target, targetClass, permission)
                 },
             )
-            SelinuxContextValidityPayloadCodec.encode(snapshot)
+            trace("selinux: direct raw access rule replay")
+            val withRaw = collectDirtySepolicyRawSafely(snapshot) {
+                dirtySepolicyRawProbe.inspect(
+                    snapshot, Build.TYPE == "user",
+                    statusHeader = (statusPage as? SelinuxStatusPageResult.Intact)?.header,
+                )
+            }
+            dirtySepolicyRaw = withRaw.dirtySepolicyRaw
+            trace("selinux: raw access state=${dirtySepolicyRaw.state} transactions=${dirtySepolicyRaw.observations.size}")
+            SelinuxContextValidityPayloadCodec.encode(withRaw)
         } catch (throwable: Throwable) {
             fallbackPayload(
                 throwable.message ?: "SELinux app zygote preload failed.",
@@ -104,6 +139,7 @@ public class SelinuxContextValidityPreload {
                 statusAbi,
                 procAttrResults,
                 avcLookup,
+                dirtySepolicyRaw,
             )
         } finally {
             // The access checks above leave libselinux's AVC netlink socket open. Before Android 12,
@@ -114,7 +150,21 @@ public class SelinuxContextValidityPreload {
                 SelinuxContextValidityBridge.closeProcessLocalAvc()
             }
         }
-        SelinuxContextValidityBridge.setPreloadedRawData(payload)
+        SelinuxContextValidityBridge.setPreloadedRawData(
+            SelinuxCarrierProvenanceCodec.attach(
+                payload,
+                SelinuxCarrierProvenance(
+                    preloadPid = Os.getpid(),
+                    appUid = appInfo.uid,
+                    startedNanos = preloadStartedNanos,
+                    apkPath = appInfo.sourceDir.orEmpty(),
+                    splitPaths = appInfo.splitSourceDirs?.toList().orEmpty(),
+                    versionCode = versionCode,
+                    payloadSchemaVersion = SelinuxCarrierBuildMetadata.CURRENT_PAYLOAD_SCHEMA_VERSION,
+                    buildRevision = buildRevision.ifBlank { "unknown" },
+                ),
+            ),
+        )
     }
 
     private fun collectBaseSnapshot(
@@ -260,6 +310,7 @@ public class SelinuxContextValidityPreload {
         statusAbi: SelinuxStatusAbiSnapshot = SelinuxStatusAbiSnapshot(),
         procAttrResults: List<SelinuxProcAttrCurrentResult>? = null,
         avcLookup: SelinuxAvcLookupSnapshot = SelinuxAvcLookupSnapshot(),
+        dirtySepolicyRaw: SelinuxDirtySepolicyRawSnapshot = SelinuxDirtySepolicyRawSnapshot(),
     ): String {
         return SelinuxContextValidityPayloadCodec.encode(fallbackSnapshot(reason).copy(
             sidtab = sidtab,
@@ -267,6 +318,7 @@ public class SelinuxContextValidityPreload {
             procAttrCurrentProbeAttempted = procAttrResults != null,
             procAttrCurrentResults = procAttrResults.orEmpty(),
             avcLookup = avcLookup,
+            dirtySepolicyRaw = dirtySepolicyRaw,
         ))
     }
 

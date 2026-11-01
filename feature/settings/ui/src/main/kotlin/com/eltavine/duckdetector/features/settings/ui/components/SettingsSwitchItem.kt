@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsItemShapes
 
 @Composable
 internal fun SettingsSwitchItem(
@@ -41,12 +42,10 @@ internal fun SettingsSwitchItem(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    index: Int = 0,
-    count: Int = 1,
 ) {
     SettingsItem(
         headline = headline,
-        shapes = settingsItemShapes(index = index, count = count),
+        shapes = NativeSettingsItemShapes(),
         modifier = modifier.semantics {
             role = Role.Switch
             toggleableState = if (checked) ToggleableState.On else ToggleableState.Off

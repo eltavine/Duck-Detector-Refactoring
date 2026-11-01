@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.features.rootmanagers.data.repository
 
 import android.content.Context
+import com.eltavine.duckdetector.features.rootmanagers.data.probes.canary.InstallerCanaryProbe
 import android.os.Process
 import com.eltavine.duckdetector.capability.packageinventory.data.AndroidPackageVisibilityEnvironmentProvider
 import com.eltavine.duckdetector.capability.packageinventory.domain.InstalledPackageVisibility
@@ -46,7 +47,7 @@ class RootManagersRepository(private val context: Context) : DetectorScanner<Roo
 
     override suspend fun scan(): RootManagersReport = withContext(Dispatchers.IO) {
         try {
-            collect(context.applicationContext)
+            collect(context.applicationContext).copy(installerCanary = InstallerCanaryProbe(context.applicationContext).observe())
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (failure: Exception) {

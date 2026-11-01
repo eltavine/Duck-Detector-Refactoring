@@ -73,7 +73,7 @@ open class ZygoteNextLocalProbe {
             if (parsed.mountPoint in ANCHOR_MOUNT_POINTS) {
                 mountIdsByPoint[parsed.mountPoint] = parsed.mountId
             }
-            val labels = markerLabels(line)
+            val labels = markerLabels(parsed)
             if (labels.isNotEmpty()) {
                 markers += ZygoteNextMountMarker(
                     labels = labels,
@@ -118,55 +118,25 @@ open class ZygoteNextLocalProbe {
         )
     }
 
-    private fun markerLabels(line: String): List<String> {
-        val normalized = line.lowercase()
-        return buildList {
-            if (normalized.contains("magisk")) add("Magisk")
-            if (normalized.contains("kernelsu") || containsNamedMarker(normalized, "ksu")) {
-                add("KernelSU")
-            }
-            if (normalized.contains("zygisk")) add("Zygisk")
-            if (containsNamedMarker(normalized, "zn")) add("ZN")
-            if (containsNamedMarker(normalized, "sui")) add("Sui")
-            if (containsNamedMarker(normalized, "lsp", requireEnd = false)) add("LSP")
-            if (containsPathPrefix(normalized, "/data/adb")) {
-                add("data/adb")
-            } else if (containsPathPrefix(normalized, "/adb/modules")) {
-                add("ADB modules")
-            }
-            if (normalized.contains("/debug_ramdisk")) {
-                add(ZygoteNextMountMarker.DEBUG_RAMDISK_LABEL)
-            }
+    private fun markerLabels(entry: ParsedMountInfo): List<String> = buildList {
+        when (entry.source.lowercase()) {
+            "magisk" -> add("Magisk")
+            "ksu", "kernelsu" -> add("KernelSU")
+            "zygisk" -> add("Zygisk")
+            "apatch" -> add("APatch")
+            "magic_mount" -> add("Magic mount")
         }
-    }
+        for (path in listOf(entry.mountRoot, entry.mountPoint, entry.source)) {
+            if (pathIsWithin(path, "/data/adb")) add("data/adb")
+            if (pathIsWithin(path, "/adb/modules")) add("ADB modules")
+            if (listOf("/.magisk", "/sbin/.magisk", "/dev/.magisk", "/debug_ramdisk/.magisk").any { pathIsWithin(path, it) }) add("Magisk")
+            if (pathIsWithin(path, "/.magic_mount")) add("Magic mount")
+            if (pathIsWithin(path, "/debug_ramdisk")) add(ZygoteNextMountMarker.DEBUG_RAMDISK_LABEL)
+        }
+    }.distinct().sorted()
 
-    private fun containsNamedMarker(
-        text: String,
-        marker: String,
-        requireEnd: Boolean = true,
-    ): Boolean {
-        var start = text.indexOf(marker)
-        while (start >= 0) {
-            val end = start + marker.length
-            val startBoundary = start == 0 || !text[start - 1].isLetterOrDigit()
-            val endBoundary = !requireEnd || end == text.length || !text[end].isLetterOrDigit()
-            if (startBoundary && endBoundary) return true
-            start = text.indexOf(marker, start + 1)
-        }
-        return false
-    }
-
-    private fun containsPathPrefix(text: String, path: String): Boolean {
-        var start = text.indexOf(path)
-        while (start >= 0) {
-            val end = start + path.length
-            val endBoundary = end == text.length || text[end] == '/' ||
-                text[end].isWhitespace() || text[end] == ',' || text[end] == ':'
-            if (endBoundary) return true
-            start = text.indexOf(path, start + 1)
-        }
-        return false
-    }
+    private fun pathIsWithin(path: String, prefix: String): Boolean =
+        path == prefix || path.startsWith("$prefix/")
 
     private fun readNamespaceInode(path: String): Long {
         return runCatching {

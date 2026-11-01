@@ -21,6 +21,11 @@
 
 namespace duckdetector::zygisk {
 
-    ProbeResult collect_atexit_probe();
+    struct AtexitProbeResult {
+        ProbeResult signals;
+        AtexitObservation table;
+    };
+
+    AtexitProbeResult collect_atexit_probe();
 
 }  // namespace duckdetector::zygisk

@@ -69,8 +69,8 @@ class ZygiskCardModelMapper {
             ZygiskStage.READY -> when {
                 report.fdTrapDetected -> "Cross-process FD trap is positive"
                 report.nativeStrongHitCount > 0 -> "${report.nativeStrongHitCount} direct runtime signal(s)"
-                report.heuristicHitCount >= 2 -> "${report.heuristicHitCount} heuristic probes converged"
-                report.heuristicHitCount == 1 -> "One heuristic probe needs review"
+                report.heuristicHitCount >= 2 -> "${report.heuristicHitCount} heuristic families converged"
+                report.heuristicHitCount == 1 -> "One heuristic family needs review"
                 report.fullyClean -> "No Zygisk runtime signal"
                 else -> "Zygisk result needs more support"
             }
@@ -88,8 +88,11 @@ class ZygiskCardModelMapper {
                 report.errorMessage ?: "Zygisk detection failed before evidence could be assembled."
 
             ZygiskStage.READY -> when (report.toDetectorStatus()) {
-                DetectorStatus.danger() ->
+                DetectorStatus.danger() -> if (report.fdTrapDetected || report.nativeStrongHitCount > 0) {
                     "FD trap or direct runtime probes exposed evidence consistent with TMP_PATH leakage, specialization tampering, namespace bypass, linker redirection, ptrace attachment, or libc-hook side effects."
+                } else {
+                    "Multiple heuristic families surfaced in the current process. Review the individual findings and benign causes; these observations do not establish Zygisk injection."
+                }
 
                 DetectorStatus.warning() ->
                     "Only heuristic residue surfaced, so this result should be read together with Memory and Mount before treating it as a confirmed Zygisk runtime."
@@ -173,7 +176,7 @@ class ZygiskCardModelMapper {
                     label = "State",
                     value = stateLabel(report),
                     status = report.toDetectorStatus(),
-                    detail = "Balanced policy: FD trap or any direct runtime strong hit is red, one heuristic-only family is yellow, converging heuristic families also escalate to red.",
+                    detail = "FD trap or a direct runtime strong hit is red. One heuristic family is yellow; multiple families escalate to red. Maps and FD loader-path residue count as one family.",
                 ),
                 ZygiskDetailRowModel(
                     label = "Confidence",

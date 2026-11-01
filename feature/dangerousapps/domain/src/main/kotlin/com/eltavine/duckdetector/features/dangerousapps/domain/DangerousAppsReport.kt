@@ -43,7 +43,7 @@ enum class DangerousDetectionMethodKind(
     SPECIAL_PATH("Special path"),
     SCENE_LOOPBACK("Scene loopback"),
     SCENE_DEBUGFS_CONTEXT("Scene debugfs context"),
-    THANOX_IPC("IPC Probe (DROPBOX_SERVICE)"),
+    THANOX_IPC("Thanox runtime IPC"),
     ACCESSIBILITY_SERVICE("Accessibility Service"),
     SCENE_BROADCAST("Scene broadcast"),
 }
@@ -83,6 +83,7 @@ data class DangerousAppsReport(
     val packageChangeHistory: PackageChangeHistory = PackageChangeHistory(
         PackageChangeHistoryState.NOT_COLLECTED,
     ),
+    val thanoxIpc: ThanoxIpcReport = ThanoxIpcReport(ThanoxIpcState.NOT_COLLECTED),
 ) {
     val detectedCount: Int
         get() = findings.size

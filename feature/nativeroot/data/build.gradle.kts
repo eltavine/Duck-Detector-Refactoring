@@ -47,4 +47,23 @@ val kernelPatchLatencyHostTest = tasks.register<Exec>("kernelPatchLatencyHostTes
     commandLine("python3", layout.projectDirectory.file("src/test/native/test_kernelpatch_latency_evidence.py").asFile)
 }
 
-tasks.named("unitTest") { dependsOn(srcuCloseHostTest, kernelPatchLatencyHostTest) }
+val initRcTimingHostTest = tasks.register<Exec>("initRcTimingHostTest") {
+    group = "verification"
+    description = "Verifies init.rc timing controls, resource ownership and injected failure paths."
+    commandLine("python3", layout.projectDirectory.file("src/test/native/test_initrc_timing_probe.py").asFile)
+}
+
+val kernelSuTimingHostTest = tasks.register<Exec>("kernelSuTimingHostTest") {
+    group = "verification"
+    description = "Verifies timing sampler ordering and cleanup using fake syscalls only."
+    commandLine("python3", layout.projectDirectory.file("src/test/native/test_ksu_timing_probe.py").asFile)
+}
+
+tasks.named("unitTest") { dependsOn(srcuCloseHostTest, kernelPatchLatencyHostTest, initRcTimingHostTest, kernelSuTimingHostTest) }
+
+val kernelSuWrapperLeakHostTest by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Verifies wrapper leak controls, reopen budget, failure states and cleanup using fake I/O."
+    commandLine("python3", layout.projectDirectory.file("src/test/native/test_ksu_wrapper_leak_probe.py").asFile)
+}
+tasks.named("unitTest") { dependsOn(kernelSuWrapperLeakHostTest) }

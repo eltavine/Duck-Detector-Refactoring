@@ -12,10 +12,10 @@ The System Properties detector asks whether security-relevant properties describ
 - Producing subsystem: init's property service and the build's property files.
 - Mechanism: user builds set fixed values for these properties; debug builds, unlocked devices and custom ROMs differ.
 - References: system/core init/property_service.cpp; frameworks/base services/core/java/com/android/server/pdb/PersistentDataBlockService.java (sets sys.oem_unlock_allowed at android-15.0.0_r1, no longer at android-16.0.0_r1).
-- Applicability: sys.oem_unlock_allowed is expected only through Android 15; any value from Android 16 was written by something other than AOSP.
+- Applicability: AOSP sets sys.oem_unlock_allowed through Android 15, but no longer sets it from Android 16; a later value may come from a vendor or other writer and is not, by itself, proof of tampering.
 - Visibility limits: properties whose context apps may not read return empty.
 - Result states: danger, warning, info, clean.
-- Interpretation: each rule's severity reflects what the value shows; a custom ROM property is a finding about the build.
+- Interpretation: each rule's severity reflects what the value shows; a custom ROM property is a finding about the build. sys.oem_unlock_allowed and ro.oem_unlock_supported are informational (neutral) on all Android versions: permission/support for unlocking is not evidence that the bootloader is unlocked. Actual lock-state properties and independently detected source inconsistencies retain their existing severity.
 
 ### Source consistency
 

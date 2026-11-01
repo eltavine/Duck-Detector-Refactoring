@@ -35,6 +35,8 @@ dependencies {
     implementation(libs.hiddenapibypass)
     api(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.annotation)
+    implementation(libs.bouncycastle.bcprov)
+    implementation(libs.cbor)
     implementation(libs.soter.core)
     testImplementation(project(":core:evidence"))
 }

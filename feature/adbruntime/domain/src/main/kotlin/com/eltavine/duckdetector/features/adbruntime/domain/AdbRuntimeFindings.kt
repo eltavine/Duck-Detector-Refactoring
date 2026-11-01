@@ -18,9 +18,13 @@
 package com.eltavine.duckdetector.features.adbruntime.domain
 
 /*
- * The only hard contradiction is a protocol-confirmed ADB endpoint against init.svc.adbd. Settings
- * express control intent and USB_STATE / sys.usb.state describe the gadget; AOSP lets both lag the
- * daemon on every release from Android 10 to 17, so neither is compared with init as danger
+ * init records `init.svc.adbd=stopped` only after it unlinks the service socket, and the daemon
+ * closes its JDWP listener when that process dies, so neither socket can outlive the state the
+ * property reports. Each is compared on its own and reported as its own finding
+ * (EVIDENCE.md, "init service socket" and "JDWP control socket").
+ *
+ * Settings express control intent and USB_STATE / sys.usb.state describe the gadget; AOSP lets both
+ * lag the daemon on every release from Android 10 to 17, so neither is compared with init as danger
  * (EVIDENCE.md, "Settings and lifecycle context" and "USB runtime broadcast"). service.adb.root is
  * left to the System Properties detector (EVIDENCE.md, "ADB property context").
  */
@@ -28,18 +32,23 @@ fun AdbRuntimeReport.findings(): List<AdbRuntimeFinding> {
     if (stage != AdbRuntimeStage.READY || samples.size < 2) {
         return emptyList()
     }
-    if (!samples.all { sample -> sample.properties.initAdbdState.isStopped() }) {
+    if (!samples.all { sample -> sample.properties.daemonState == AdbDaemonState.STOPPED }) {
         return emptyList()
     }
-    val endpoint = stableProtocolEndpoint() ?: return emptyList()
-    return listOf(
-        AdbRuntimeFinding(
-            kind = AdbFindingKind.INIT_STOPPED_WITH_ADB_PROTOCOL,
-            severity = AdbFindingSeverity.HIGH,
-            endpoint = endpoint,
-        ),
-    )
+    val endpoint = stableProtocolEndpoint()
+    return buildList {
+        if (endpoint != null) {
+            add(AdbRuntimeFinding(AdbFindingKind.INIT_STOPPED_WITH_ADB_PROTOCOL, AdbFindingSeverity.HIGH, endpoint))
+        }
+        if (samples.all { sample -> sample.initSocket.present == true }) {
+            add(AdbRuntimeFinding(AdbFindingKind.INIT_STOPPED_WITH_ADB_INIT_SOCKET, AdbFindingSeverity.HIGH))
+        }
+        if (samples.all { sample -> sample.jdwpSocket.abstractPresent == true }) {
+            add(AdbRuntimeFinding(AdbFindingKind.INIT_STOPPED_WITH_ADB_JDWP_SOCKET, AdbFindingSeverity.HIGH))
+        }
+    }
 }
+
 
 fun AdbRuntimeReport.isAdbActive(): Boolean {
     if (stage != AdbRuntimeStage.READY) {
@@ -59,14 +68,16 @@ fun AdbRuntimeReport.isAdbActive(): Boolean {
         latest.usbDebuggingEnabled == true &&
         !(platformApiLevel != null &&
             platformApiLevel >= ANDROID_13_API &&
-            latest.properties.testHarnessMode == "1")
+            latest.properties.testHarnessEnabled)
     val wifiSettingActive = settingsUsable && latest.wirelessDebuggingEnabled == true
 
     return usbSettingActive ||
         wifiSettingActive ||
-        latest.properties.initAdbdState.equals("running", ignoreCase = true) ||
+        latest.properties.daemonState == AdbDaemonState.RUNNING ||
+        latest.initSocket.present == true ||
+        latest.jdwpSocket.abstractPresent == true ||
         latest.usb.adbFunctionEnabled ||
-        latest.properties.sysUsbState.containsFunction("adb") ||
+        latest.properties.usbAdbFunctionEnabled == true ||
         latestMdns.localServiceObserved
 }
 
@@ -97,10 +108,5 @@ private fun AdbMdnsSnapshot.confirmedEndpoint(): AdbProtocolEndpoint? {
 
 private fun AdbProtocolEndpoint.isSameListener(other: AdbProtocolEndpoint): Boolean =
     serviceKind == other.serviceKind && address == other.address && port == other.port
-
-private fun String?.isStopped(): Boolean = equals("stopped", ignoreCase = true)
-
-private fun String?.containsFunction(function: String): Boolean =
-    orEmpty().split(',').any { it.trim().equals(function, ignoreCase = true) }
 
 private const val ANDROID_13_API = 33

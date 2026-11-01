@@ -101,6 +101,17 @@ class ZygoteNextLocalProbeTest {
     }
 
     @Test
+    fun `incidental words and source substrings do not identify a root manager`() {
+        val result = probe.parseMountInfo(lines = listOf(
+            "24 1 0:1 / / rw shared:1 - rootfs rootfs rw",
+            "31 24 7:2 / /system/bin/lspci ro - ext4 /dev/block/ksu_storage ro",
+            "32 24 7:3 /data/user/0/example/cache/magisk /vendor/sui ro - ext4 disk ro,comment=zygisk",
+            "33 24 7:4 /data/adb_backup /vendor ro - ext4 /dev/block/dm-2 ro",
+        ))
+        assertTrue(result.markers.isEmpty())
+    }
+
+    @Test
     fun `malformed mount ids do not contribute to id range or entry count`() {
         val result = probe.parseMountInfo(
             lines = listOf(

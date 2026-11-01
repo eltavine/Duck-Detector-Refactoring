@@ -71,6 +71,14 @@ private fun trustItems(artifacts: TeeScanArtifacts): List<TeeEvidenceItem> = bui
         )
     )
     add(fact("RKP", rkpValue(artifacts), rkpDisplayLevel(artifacts), topic = TeeEvidenceTopic.RKP))
+    if (artifacts.rkp.provisioned) {
+        add(fact(
+            "RKP build metadata",
+            rkpBuildMetadataValue(artifacts.rkp),
+            TeeSignalLevel.INFO,
+            topic = TeeEvidenceTopic.RKP,
+        ))
+    }
     add(fact("CRL", crlValue(artifacts), crlSignalLevel(artifacts), topic = TeeEvidenceTopic.CRL))
     add(
         fact(

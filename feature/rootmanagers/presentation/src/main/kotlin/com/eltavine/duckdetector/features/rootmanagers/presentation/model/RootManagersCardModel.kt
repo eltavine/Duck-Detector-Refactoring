@@ -29,6 +29,9 @@ data class RootManagersCardModel(
     val entryRows: List<RootManagersDetailRowModel>,
     val profileRows: List<RootManagersDetailRowModel>,
     val scanRows: List<RootManagersDetailRowModel>,
+    val headerFacts: List<RootManagersDetailRowModel> = emptyList(),
+    val impactRows: List<RootManagersDetailRowModel> = emptyList(),
+    val methodRows: List<RootManagersDetailRowModel> = emptyList(),
 ) : DetectorHeadline
 
 data class RootManagersDetailRowModel(

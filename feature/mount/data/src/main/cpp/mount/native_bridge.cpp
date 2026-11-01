@@ -32,8 +32,16 @@ namespace {
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_eltavine_duckdetector_features_mount_data_native_MountNativeBridge_nativeCollectSnapshot(
         JNIEnv *env,
-        jobject
+        jobject,
+        jstring externalStorageRoot
 ) {
-    const duckdetector::mount::MountSnapshot snapshot = duckdetector::mount::collect_snapshot();
+    std::string root;
+    if (externalStorageRoot != nullptr) {
+        const char *value = env->GetStringUTFChars(externalStorageRoot, nullptr);
+        if (value == nullptr) return nullptr;
+        root = value;
+        env->ReleaseStringUTFChars(externalStorageRoot, value);
+    }
+    const duckdetector::mount::MountSnapshot snapshot = duckdetector::mount::collect_snapshot(root);
     return to_jstring(env, duckdetector::mount::encode_snapshot(snapshot));
 }

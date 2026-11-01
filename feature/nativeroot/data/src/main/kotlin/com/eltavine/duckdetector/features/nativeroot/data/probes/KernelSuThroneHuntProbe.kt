@@ -19,8 +19,6 @@ package com.eltavine.duckdetector.features.nativeroot.data.probes
 
 import com.eltavine.duckdetector.core.native.NativeCollectionStatus
 import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFinding
-import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootFindingSeverity
-import com.eltavine.duckdetector.features.nativeroot.domain.NativeRootGroup
 
 data class KernelSuThroneHuntProbeResult(
     val available: Boolean,
@@ -43,14 +41,10 @@ data class KernelSuThroneHuntProbeResult(
         get() = directoryOpenCount + directoryAccessCount
 }
 
-// KernelSU's pkg_observer watches /data/system for a "packages.list" FS_CREATE|FS_MOVE and then
-// runs track_throne -> search_manager("/data/app", 2). search_manager does filp_open() plus
-// iterate_dir() on every package directory inode, so an inotify watch placed on our own package
-// directory observes a directory IN_OPEN/IN_ACCESS that no ordinary app activity produces.
-//
-// The watch is installed during app_zygote preload and the packages.list rewrite is driven by
-// the main-process stimulus round. Reading the stream consumes it, so this probe only
-// turns the counts the round already collected into findings.
+// inotify_event carries no accessor PID/UID, so counts cannot identify a manager scan.
+// ACK android15-6.6 fsnotify_file() also suppresses file notifications for FMODE_NONOTIFY,
+// as used by SukiSU's manager scanner. See the pinned references in feature/nativeroot/EVIDENCE.md.
+// Keep the already-consumed round as diagnostic data only, including zero-event rounds.
 class KernelSuThroneHuntProbe {
 
     fun run(round: KernelSuThroneHuntRoundResult): KernelSuThroneHuntProbeResult {
@@ -110,35 +104,8 @@ class KernelSuThroneHuntProbe {
             invalidEventCount = round.invalidEventCount,
             baselineHitCount = round.baselineHitCount,
             stimulusDetail = round.stimulusDetail,
-            findings = buildFindings(
-                round.directoryOpenCount,
-                round.directoryAccessCount,
-                detail,
-            ),
+            findings = emptyList(),
             detail = detail,
-        )
-    }
-
-    private fun buildFindings(
-        openCount: Int,
-        accessCount: Int,
-        detail: String,
-    ): List<NativeRootFinding> {
-        // A clean round must not emit a finding, otherwise PACKAGE-group additions would be counted
-        // as runtime hits by the Kotlin layer and turn "no traversal" into a false positive.
-        if (openCount + accessCount == 0) {
-            return emptyList()
-        }
-        return listOf(
-            NativeRootFinding(
-                id = "ksu_throne_hunt",
-                label = "KernelSU throne hunt",
-                value = "open=$openCount access=$accessCount",
-                detail = detail,
-                group = NativeRootGroup.PACKAGE,
-                severity = NativeRootFindingSeverity.DANGER,
-                detailMonospace = true,
-            )
         )
     }
 }

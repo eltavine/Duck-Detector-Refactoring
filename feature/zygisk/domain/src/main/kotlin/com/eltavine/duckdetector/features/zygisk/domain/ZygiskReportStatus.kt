@@ -28,7 +28,7 @@ fun ZygiskReport.toDetectorStatus(): DetectorStatus {
             fdTrapDetected -> DetectorStatus.danger()
             nativeStrongHitCount > 0 -> DetectorStatus.danger()
             heuristicHitCount >= 2 -> DetectorStatus.danger()
-            heuristicHitCount == 1 -> DetectorStatus.warning()
+            heuristicHitCount == 1 || atexitTable.hasEvidence -> DetectorStatus.warning()
             fullyClean -> DetectorStatus.allClear()
             else -> DetectorStatus.info(InfoKind.SUPPORT)
         }

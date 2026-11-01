@@ -36,6 +36,98 @@ class SelinuxAvcLookupPayloadTest {
         assertEquals(collected, SelinuxContextValidityBridge().parse(retained).avcLookup)
     }
 
+    @Test fun `512 paired timing evidence survives the retained native payload`() {
+        val complete = collected.copy(
+            pairs = 512, medianANs = 1093, medianBNs = 937, medianDeltaNs = 156,
+            aSlower = 422, positiveBlocks = 16, negativeBlocks = 0, zeroBlocks = 0, cpuMigrations = 0,
+        )
+        val encoded = SelinuxAvcLookupPayloadCodec.encode(complete)
+        assertTrue(encoded.contains("PAIRS=512"))
+        assertTrue(encoded.contains("POSITIVE_BLOCKS=16"))
+        assertEquals(complete, SelinuxAvcLookupPayloadCodec.decode(encoded))
+        val retained = SelinuxContextValidityPayloadCodec.encode(SelinuxContextValiditySnapshot(avcLookup = complete))
+        assertEquals(complete, SelinuxContextValidityBridge().parse(retained).avcLookup)
+    }
+
+    @Test fun `partial timing medians and independent parent sample survive preload serialization`() {
+        val partial = collected.copy(
+            state = SelinuxAvcLookupState.INCONCLUSIVE, step = SelinuxAvcLookupStep.TIMING,
+            errno = 11, pairs = 511, cpuMigrations = 1, aSlower = 470,
+            positiveBlocks = 15, negativeBlocks = 0, zeroBlocks = 0,
+            medianANs = 1002, medianBNs = 950, medianDeltaNs = 52,
+            timingMediansAvailable = true,
+            parentTiming = SelinuxAvcParentTiming(true, true, 0, 4567, 2, 512, 0, 490, 1003, 951, 52),
+        )
+        val encoded = SelinuxAvcLookupPayloadCodec.encode(partial)
+        assertTrue(encoded.contains("TIMING_MEDIANS_VALID=1"))
+        assertTrue(encoded.contains("PARENT_MEDIAN_DELTA_NS=52"))
+        assertEquals(partial, SelinuxAvcLookupPayloadCodec.decode(encoded))
+        val retained = SelinuxContextValidityPayloadCodec.encode(SelinuxContextValiditySnapshot(avcLookup = partial))
+        assertEquals(partial, SelinuxContextValidityBridge().parse(retained).avcLookup)
+    }
+
+    @Test fun `parent diagnostics are strictly optional and malformed ones never validate a child`() {
+        val valid = "PARENT_ATTEMPTED=1\nPARENT_COMPLETE=1\nPARENT_ERROR=0\nPARENT_PID=17\n" +
+            "PARENT_CPU=0\nPARENT_PAIRS=512\nPARENT_MIGRATIONS=0\nPARENT_A_SLOWER=490\n" +
+            "PARENT_MEDIANS_VALID=1\nPARENT_MEDIAN_A_NS=1000\nPARENT_MEDIAN_B_NS=900\n" +
+            "PARENT_MEDIAN_DELTA_NS=52\n"
+        val parent = SelinuxAvcLookupPayloadCodec.decodeParent(valid)
+        assertTrue(parent.complete)
+        assertEquals(52L, parent.medianDeltaNs)
+        assertEquals(SelinuxAvcParentTiming(),
+            SelinuxAvcLookupPayloadCodec.decodeParent(valid.replace("PARENT_PAIRS=512", "PARENT_PAIRS=511")))
+        assertEquals(SelinuxAvcParentTiming(), SelinuxAvcLookupPayloadCodec.decodeParent("PARENT_ATTEMPTED=1\n"))
+        val child = SelinuxAvcLookupPayloadCodec.decode(nativePayload() + valid)
+        assertEquals(parent, child.parentTiming)
+    }
+
+    @Test fun `completed parent payload is retained when the later AVC child fails`() {
+        val parent = SelinuxAvcParentTiming(
+            attempted = true, complete = true, pid = 17, cpu = 2, pairs = 512,
+            aSlower = 490, medianANs = 1000, medianBNs = 900, medianDeltaNs = 52,
+            protocol = 1, positiveBlocks = 16,
+        )
+        val payload = SelinuxAvcLookupPayloadCodec.encode(collected.copy(parentTiming = parent))
+            .lineSequence().filter { it.startsWith("PARENT_") }.joinToString("\n")
+        for (end in SelinuxAvcLookupChildEnd.entries) {
+            val child = collected.copy(state = SelinuxAvcLookupState.INCONCLUSIVE, childEnd = end)
+            val attached = SelinuxAvcLookupProbe().withParentTiming(child, payload)
+            assertEquals(parent, attached.parentTiming)
+            assertEquals(child, attached.copy(parentTiming = SelinuxAvcParentTiming()))
+            assertEquals(attached, SelinuxAvcLookupPayloadCodec.decode(SelinuxAvcLookupPayloadCodec.encode(attached)))
+        }
+    }
+
+    @Test fun `failed or malformed parent payload does not lose child evidence`() {
+        val payload = "PARENT_ATTEMPTED=1\nPARENT_COMPLETE=0\nPARENT_ERROR=13\nPARENT_PID=17\n" +
+            "PARENT_CPU=2\nPARENT_PAIRS=0\nPARENT_MIGRATIONS=0\nPARENT_A_SLOWER=0\n" +
+            "PARENT_MEDIANS_VALID=0\n"
+        val snapshot = SelinuxAvcLookupProbe().withParentTiming(collected, payload)
+        assertTrue(snapshot.parentTiming.attempted)
+        assertEquals(collected, snapshot.copy(parentTiming = SelinuxAvcParentTiming()))
+        assertEquals(collected, SelinuxAvcLookupProbe().withParentTiming(collected, "invalid"))
+    }
+
+    @Test fun `affinity loss after timing retains all pairs through carrier serialization`() {
+        val snapshot = collected.copy(
+            state = SelinuxAvcLookupState.TIMING_ONLY, step = SelinuxAvcLookupStep.AFFINITY,
+            errno = 18, pairs = 512, rounds = 0, cpuRow = -1, cpuRows = 0, possibleCpus = 0,
+            batchesA = List(4) { 0L }, batchesB = List(4) { 0L },
+        )
+        val native = SelinuxAvcLookupPayloadCodec.encode(snapshot)
+        assertEquals(snapshot, SelinuxAvcLookupPayloadCodec.decode(native))
+        val retained = SelinuxContextValidityPayloadCodec.encode(SelinuxContextValiditySnapshot(avcLookup = snapshot))
+        assertEquals(snapshot, SelinuxContextValidityBridge().parse(retained).avcLookup)
+    }
+
+    @Test fun `timing medians missing from a partial native result are not silently treated as zero`() {
+        val raw = nativePayload(mapOf("STATE" to "INCONCLUSIVE", "STEP" to "TIMING",
+            "PAIRS" to "511", "CPU_MIGRATIONS" to "1", "TIMING_MEDIANS_VALID" to "0"))
+        val snapshot = SelinuxAvcLookupPayloadCodec.decode(raw)
+        assertEquals(SelinuxAvcLookupState.INCONCLUSIVE, snapshot.state)
+        assertEquals(false, snapshot.timingMediansAvailable)
+    }
+
     @Test fun `every outcome keeps its step errno and child record through a round trip`() {
         val zeros = List(4) { 0L }
         listOf(

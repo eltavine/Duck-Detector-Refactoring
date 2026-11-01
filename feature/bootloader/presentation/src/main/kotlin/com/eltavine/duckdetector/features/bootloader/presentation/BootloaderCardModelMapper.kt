@@ -121,7 +121,7 @@ class BootloaderCardModelMapper {
                     "Neither attestation RootOfTrust nor readable boot properties exposed enough data for a confident bootloader verdict."
 
                 else ->
-                    "Attestation and boot properties stayed aligned with a locked, verified boot chain."
+                    "No unlock or integrity contradiction was observed in the available boot evidence. Individual checks show comparison coverage."
             }
         }
     }

@@ -37,13 +37,35 @@ enum class AdbFindingSeverity {
 
 enum class AdbFindingKind {
     INIT_STOPPED_WITH_ADB_PROTOCOL,
+    INIT_STOPPED_WITH_ADB_INIT_SOCKET,
+    INIT_STOPPED_WITH_ADB_JDWP_SOCKET,
+}
+
+enum class AdbDaemonState {
+    RUNNING,
+    STOPPED,
+    OTHER,
 }
 
 data class AdbPropertySnapshot(
     val testHarnessMode: String? = null,
     val initAdbdState: String? = null,
     val sysUsbState: String? = null,
-)
+) {
+    val daemonState: AdbDaemonState?
+        get() = when {
+            initAdbdState == null -> null
+            initAdbdState.equals("running", ignoreCase = true) -> AdbDaemonState.RUNNING
+            initAdbdState.equals("stopped", ignoreCase = true) -> AdbDaemonState.STOPPED
+            else -> AdbDaemonState.OTHER
+        }
+
+    val testHarnessEnabled: Boolean
+        get() = testHarnessMode == "1"
+
+    val usbAdbFunctionEnabled: Boolean?
+        get() = sysUsbState?.split(',')?.any { function -> function.trim().equals("adb", ignoreCase = true) }
+}
 
 data class UsbRuntimeSnapshot(
     val state: AdbProbeState,
@@ -75,12 +97,61 @@ data class AdbProtocolSnapshot(
         get() = state == AdbProbeState.OBSERVED && responseKind != null
 }
 
+/** How init's per-service socket path resolved, as far as this process could observe it. */
+enum class AdbSocketPresence {
+    /** stat() succeeded, so the inode exists and its label allowed the query. */
+    PRESENT,
+
+    /** stat() was refused for the socket inode itself while a sibling control path was absent. */
+    PRESENT_DENIED,
+    ABSENT,
+    UNKNOWN,
+}
+
+/**
+ * init creates one socket per declared `socket` line when a service starts and unlinks it after that
+ * service's process reaps (EVIDENCE.md, "init service socket"). adbd therefore has
+ * /dev/socket/adbd only while its process lives.
+ */
+data class AdbInitSocketSnapshot(
+    val state: AdbProbeState,
+    val presence: AdbSocketPresence = AdbSocketPresence.UNKNOWN,
+    val detail: String? = null,
+) {
+    val present: Boolean?
+        get() = when (presence) {
+            AdbSocketPresence.PRESENT, AdbSocketPresence.PRESENT_DENIED -> true
+            AdbSocketPresence.ABSENT -> false
+            AdbSocketPresence.UNKNOWN -> null
+        }
+}
+
+/**
+ * adbd binds the JDWP control socket `@jdwp-control` itself (packages/modules/adb/libs/adbconnection)
+ * so that a debuggable process can hand adbd the socket a debugger will use; it is a JDWP feature,
+ * not a command channel for adbd. Its presence is liveness evidence that does not depend on init's
+ * socket table (EVIDENCE.md, "JDWP control socket").
+ */
+data class AdbJdwpSocketSnapshot(
+    val abstract: AdbProbeState = AdbProbeState.UNAVAILABLE,
+    val detail: String? = null,
+) {
+    val abstractPresent: Boolean?
+        get() = when (abstract) {
+            AdbProbeState.OBSERVED -> true
+            AdbProbeState.NOT_OBSERVED -> false
+            else -> null
+        }
+}
+
 data class AdbRuntimeSample(
     val usbDebuggingEnabled: Boolean? = null,
     val wirelessDebuggingEnabled: Boolean? = null,
     val debuggingFeaturesRestricted: Boolean? = null,
     val properties: AdbPropertySnapshot = AdbPropertySnapshot(),
     val usb: UsbRuntimeSnapshot = UsbRuntimeSnapshot(AdbProbeState.UNAVAILABLE),
+    val initSocket: AdbInitSocketSnapshot = AdbInitSocketSnapshot(AdbProbeState.UNAVAILABLE),
+    val jdwpSocket: AdbJdwpSocketSnapshot = AdbJdwpSocketSnapshot(),
 )
 
 data class AdbMdnsSnapshot(
@@ -106,7 +177,7 @@ data class AdbProtocolEndpoint(
 data class AdbRuntimeFinding(
     val kind: AdbFindingKind,
     val severity: AdbFindingSeverity,
-    val endpoint: AdbProtocolEndpoint,
+    val endpoint: AdbProtocolEndpoint? = null,
 )
 
 /** What one ADB runtime scan observed, before the domain layer correlates the sources. */

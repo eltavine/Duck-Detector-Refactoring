@@ -21,6 +21,8 @@
 
 namespace duckdetector::zygisk {
 
+    ProbeResult analyze_fd_targets(const std::vector<std::string> &targets);
+
     ProbeResult collect_fd_probe();
 
 }  // namespace duckdetector::zygisk

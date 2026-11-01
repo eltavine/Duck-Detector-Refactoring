@@ -23,6 +23,10 @@ limitations under the License.
 
     <application>
         <service
+            android:name="com.eltavine.duckdetector.features.nativeroot.data.service.KernelSuTimingCarrierService"
+            android:exported="false"
+            android:process=":ksu_timing" />
+        <service
             android:name="com.eltavine.duckdetector.features.nativeroot.data.service.SrcuTimingCarrierService"
             android:exported="false"
             android:process=":srcu_timing" />

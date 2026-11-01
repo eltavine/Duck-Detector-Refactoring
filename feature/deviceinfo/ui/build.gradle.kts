@@ -33,6 +33,7 @@ dependencies {
     api(project(":feature:deviceinfo:presentation"))
     api(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.material.icons.extended)
     api(libs.androidx.material3)
     implementation(libs.androidx.ui)

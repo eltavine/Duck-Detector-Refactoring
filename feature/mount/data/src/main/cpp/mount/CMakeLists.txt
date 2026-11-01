@@ -1,4 +1,5 @@
 duckdetector_native_unit(duckdetector_mount
+    anonymous_device_probe.cpp
     detect_filesystems.cpp
     detect_mount_tables.cpp
     detect_paths.cpp

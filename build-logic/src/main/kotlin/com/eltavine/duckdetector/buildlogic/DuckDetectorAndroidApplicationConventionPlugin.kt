@@ -23,7 +23,6 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
-private const val VERSION_CODE_BASE = 300
 private const val isAlphaVersion = false
 
 class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
@@ -53,7 +52,7 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
         val versionCode = providers.of(GitCommitCountValueSource::class.java) {
             parameters.repositoryRoot.set(rootDir.absolutePath)
         }.map { commitCount ->
-            VERSION_CODE_BASE + commitCount
+            DUCK_DETECTOR_VERSION_CODE_BASE + commitCount
         }
         val appVersion = appVersion(buildHash)
 
@@ -80,6 +79,8 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
                 targetSdk = requiredIntGradleProperty("duckdetector.android.targetSdk")
                 this.versionCode = versionCode.get()
                 this.versionName = appVersion.versionName.get()
+                manifestPlaceholders["duckDetectorVersionCode"] = versionCode.get().toString()
+                manifestPlaceholders["duckDetectorBuildHash"] = buildHash.get()
                 buildConfigField("String", "BUILD_TIME_UTC", "\"${buildTimeUtc.get()}\"")
                 buildConfigField("String", "BUILD_HASH", "\"${buildHash.get()}\"")
                 buildConfigField("String", "BUILD_CHANNEL", "\"${appVersion.channel.get().id}\"")

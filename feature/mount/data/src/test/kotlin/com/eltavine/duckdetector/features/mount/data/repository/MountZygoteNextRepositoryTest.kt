@@ -199,13 +199,13 @@ class MountZygoteNextRepositoryTest {
             report.zygoteNext.namespaceAssessment,
         )
         assertEquals(
-            MountMethodOutcome.WARNING,
+            MountMethodOutcome.SUPPORT,
             report.methods.single { it.label == "Zygote next mount view" }.outcome,
         )
     }
 
     @Test
-    fun `private isolated root is a namespace anomaly`() = runBlocking {
+    fun `private isolated root is a namespace observation`() = runBlocking {
         val report = repository(
             nativeSnapshot = cleanSnapshot(),
             zygoteNextResult = readyResult().copy(
@@ -217,9 +217,9 @@ class MountZygoteNextRepositoryTest {
             MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY,
             report.zygoteNext.namespaceAssessment,
         )
-        assertEquals(1, report.warningSignalCount)
+        assertEquals(0, report.warningSignalCount)
         assertEquals(
-            MountMethodOutcome.WARNING,
+            MountMethodOutcome.SUPPORT,
             report.methods.single { it.label == "Zygote next mount view" }.outcome,
         )
     }

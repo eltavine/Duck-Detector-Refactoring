@@ -80,6 +80,7 @@ enum class NativeRootMethod(val label: String) {
     TEMP_ROOT_ARTIFACTS("tempRootArtifacts"),
     NATIVE_LIBRARY("nativeLibrary"),
     SIGNAL_SUMMARY("signalSummary"),
+    KSU_WRAPPER_REFERENCE_LEAK("ksuWrapperReferenceLeak"),
 }
 
 data class NativeRootMethodResult(
@@ -170,6 +171,9 @@ data class NativeRootReport(
     val ksuThroneHuntStimulusDetail: String = "",
     val ksuThroneHuntDiagnosticDetail: String = "",
     val srcuTiming: SrcuTimingObservation = SrcuTimingObservation(),
+    val initRcTiming: InitRcTimingObservation = InitRcTimingObservation(),
+    val kernelSuTiming: KernelSuTimingObservation = KernelSuTimingObservation(),
+    val wrapperLeak: KernelSuWrapperLeakObservation = KernelSuWrapperLeakObservation(),
 ) {
     val directFindings: List<NativeRootFinding>
         get() = findings.filter { it.group == NativeRootGroup.SYSCALL || it.group == NativeRootGroup.SIDE_CHANNEL }
@@ -195,7 +199,9 @@ data class NativeRootReport(
 
     val warningFindingCount: Int
         get() = findings.count { it.severity == NativeRootFindingSeverity.WARNING } +
-            if (srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY) 1 else 0
+            (if (srcuTiming.analysis.verdict == SrcuTimingVerdict.REPEATABLE_DELAY) 1 else 0) +
+            (if (kernelSuTiming.verdict == KernelSuTimingVerdict.REPEATED_PATTERN) 1 else 0) +
+            (if (wrapperLeak.verdict == WrapperLeakVerdict.REPEATED_GROWTH) 1 else 0)
 
     val hasDangerFindings: Boolean
         get() = dangerFindingCount > 0
@@ -203,13 +209,13 @@ data class NativeRootReport(
     val hasWarningFindings: Boolean
         get() = warningFindingCount > 0
 
-    // The throne hunt traversal opens the package directory inode before iterating it, so a
-    // directory-level IN_OPEN/IN_ACCESS pair is the detectable surface.
+    // Raw directory event count; inotify cannot identify the accessor or establish root.
     val ksuThroneHuntHitCount: Int
         get() = ksuThroneHuntOpenCount + ksuThroneHuntAccessCount
 
+    @Deprecated("Directory events cannot identify KernelSU; inspect the diagnostic counters instead.")
     val ksuThroneHuntDetected: Boolean
-        get() = ksuThroneHuntStimulusApplied && ksuThroneHuntHitCount > 0
+        get() = false
 
     val detectedFamilies: List<String>
         get() = buildList {

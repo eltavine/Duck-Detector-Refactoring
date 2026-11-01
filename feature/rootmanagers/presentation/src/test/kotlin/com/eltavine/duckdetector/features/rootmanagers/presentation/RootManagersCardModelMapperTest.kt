@@ -153,6 +153,35 @@ class RootManagersCardModelMapperTest {
         assertEquals("Partially evaluated", model.verdict)
     }
 
+    @Test
+    fun `overview and matched profiles preserve strong concealed and weak evidence`() {
+        val strong = mapper.map(report(listOf(entry(RootManagerConfidence.HIGH))))
+        assertEquals(DetectorStatus.warning(), strong.headerFacts.single { it.label == "Matches" }.status)
+        assertEquals(DetectorStatus.warning(), strong.profileRows.single { it.label == "user 0" }.status)
+        assertEquals(4, strong.toDetectorReport().quickFacts.size)
+        assertTrue(strong.methodRows.isNotEmpty())
+        assertTrue(strong.impactRows.single().detail.orEmpty().contains("does not establish root"))
+        val concealed = mapper.map(report(listOf(entry(RootManagerConfidence.HIGH, hidesLauncherIcon = true))))
+        assertEquals(DetectorStatus.danger(), concealed.headerFacts.single { it.label == "Concealed" }.status)
+        val weak = mapper.map(report(listOf(entry(RootManagerConfidence.LOW))))
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), weak.headerFacts.single { it.label == "Matches" }.status)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), weak.profileRows.single { it.label == "user 0" }.status)
+    }
+
+    @Test
+    fun `unavailable overview does not present zero matches as all clear`() {
+        val model = mapper.map(RootManagersReport.unavailable("denied"))
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.headerFacts.single { it.label == "Matches" }.status)
+        assertEquals(DetectorStatus.info(InfoKind.ERROR), model.methodRows.single { it.label == "Launcher enumeration" }.status)
+    }
+
+    @Test
+    fun `failed overview preserves the error kind for each unmeasured fact`() {
+        val model = mapper.map(RootManagersReport.failed("enumeration failed"))
+        assertEquals(4, model.headerFacts.size)
+        assertTrue(model.headerFacts.all { it.value == "Unavailable" && it.status == DetectorStatus.info(InfoKind.ERROR) })
+    }
+
     private fun report(
         entries: List<RootManagerEntry>,
         profileScans: List<RootManagersProfileScan> = listOf(searched(0, 40), searched(10, 12)),

@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">缓存定位诊断</string>
+    <string name="location_cache_headline">检查缓存位置的模拟标记？</string>
+    <string name="location_cache_detail">默认关闭。取得前台大致位置权限后，每次扫描最多读取三个提供程序的缓存。报告只保留模拟标记和时间范围。Android 对象中可能临时包含坐标，但不会读取、存储或导出坐标。不发起新定位、后台跟踪或网络请求。关闭此项仍可执行本地合成对象校验。</string>
+    <string name="location_cache_allow">启用并申请权限</string>
+    <string name="location_cache_decline">保持关闭</string>
+    <string name="location_cache_granted_headline">已启用缓存诊断</string>
+    <string name="location_cache_granted_detail">仍受系统权限和提供程序可用性限制；访问被拒绝时单独报告。可通过下方入口管理权限，随时在设置中关闭此项。</string>
+    <string name="location_cache_declined_status">已关闭</string>
+    <string name="location_cache_declined_headline">缓存诊断已关闭</string>
+    <string name="location_cache_declined_detail">本地合成对象校验仍然可用。稍后可在设置中启用缓存元数据检查。</string>
+    <string name="location_cache_setting_summary">可选检查缓存模拟标记和时间范围；仅需前台大致位置权限。不记录坐标、不主动定位。</string>
+</resources>

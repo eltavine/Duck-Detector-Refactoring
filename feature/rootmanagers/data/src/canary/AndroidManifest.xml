@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="@APPLICATION_ID@" android:versionCode="@VERSION_CODE@"
+    android:sharedUserId="android.uid.system">
+    <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="@TARGET_SDK@"/>
+    <permission android:name="me.weishu.kernelsu.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:protectionLevel="signature"
+        android:permissionGroup="@APPLICATION_ID@.installer_canary.missing"/>
+    <application android:hasCode="false" android:allowBackup="false"/>
+</manifest>

@@ -22,6 +22,7 @@ import android.os.Build
 import android.os.SystemClock
 import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.core.evidence.FailureName
+import com.eltavine.duckdetector.features.adbruntime.domain.AdbDaemonState
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbProbeState
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeReport
 import com.eltavine.duckdetector.features.adbruntime.domain.AdbRuntimeSample
@@ -81,18 +82,22 @@ class AdbRuntimeRepository(
             mdnsSamples = mdnsSamples,
             probed = probed,
             unavailableReason = if (probed) null else {
-                "Settings, USB state, properties and mDNS were all unavailable from this app process."
+                "Settings, USB state, properties, socket probes and mDNS were all unavailable from this app process."
             },
         )
     }
 
     private fun AdbRuntimeSample.initStopped(): Boolean =
-        properties.initAdbdState.equals("stopped", ignoreCase = true)
+        properties.daemonState == AdbDaemonState.STOPPED
 
     private fun AdbRuntimeSample.hasObservableSource(): Boolean =
         properties.initAdbdState != null ||
             usb.state == AdbProbeState.OBSERVED ||
             usb.state == AdbProbeState.NOT_OBSERVED ||
+            initSocket.state == AdbProbeState.OBSERVED ||
+            initSocket.state == AdbProbeState.NOT_OBSERVED ||
+            jdwpSocket.abstract == AdbProbeState.OBSERVED ||
+            jdwpSocket.abstract == AdbProbeState.NOT_OBSERVED ||
             usbDebuggingEnabled != null ||
             wirelessDebuggingEnabled != null
 

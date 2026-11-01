@@ -29,6 +29,7 @@ enum class RootManagersOutcome {
     CONCEALED_MANAGER,
     MANAGER_FOUND,
     WEAK_MATCH,
+    PERMISSION_ANCHOR,
     ENUMERATION_UNAVAILABLE,
     PROFILES_NOT_ENUMERATED,
 
@@ -43,6 +44,7 @@ fun RootManagersReport.outcome(): RootManagersOutcome = when (stage) {
     RootManagersStage.READY -> when {
         entries.any { it.concealed } -> RootManagersOutcome.CONCEALED_MANAGER
         entries.any { it.confidence != RootManagerConfidence.LOW } -> RootManagersOutcome.MANAGER_FOUND
+        installerCanary.state == InstallerCanaryState.PERMISSION_OWNER_OBSERVED -> RootManagersOutcome.PERMISSION_ANCHOR
         entries.isNotEmpty() -> RootManagersOutcome.WEAK_MATCH
         enumerationState == RootManagersEnumerationState.UNAVAILABLE -> RootManagersOutcome.ENUMERATION_UNAVAILABLE
         enumerationState == RootManagersEnumerationState.UNDECIDABLE -> RootManagersOutcome.PROFILES_NOT_ENUMERATED
@@ -62,7 +64,7 @@ fun RootManagersReport.toDetectorStatus(): DetectorStatus = when (outcome()) {
     RootManagersOutcome.FAILED -> DetectorStatus.info(InfoKind.ERROR)
     RootManagersOutcome.CONCEALED_MANAGER -> DetectorStatus.danger()
     RootManagersOutcome.MANAGER_FOUND -> DetectorStatus.warning()
-    RootManagersOutcome.WEAK_MATCH -> DetectorStatus.info(InfoKind.SUPPORT)
+    RootManagersOutcome.WEAK_MATCH, RootManagersOutcome.PERMISSION_ANCHOR -> DetectorStatus.info(InfoKind.SUPPORT)
     RootManagersOutcome.ENUMERATION_UNAVAILABLE -> DetectorStatus.info(InfoKind.ERROR)
     RootManagersOutcome.PROFILES_NOT_ENUMERATED -> DetectorStatus.info(InfoKind.SUPPORT)
     RootManagersOutcome.PARTIAL -> DetectorStatus.info(InfoKind.SUPPORT)

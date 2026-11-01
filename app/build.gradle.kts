@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import com.eltavine.duckdetector.buildlogic.installer.registerInstallerCanaryAssets
 import com.eltavine.duckdetector.buildlogic.detectorModules
 import com.eltavine.duckdetector.buildlogic.generateDetectorCards
 
@@ -29,7 +30,17 @@ android {
     defaultConfig {
         applicationId = "com.eltavine.duckdetector"
     }
+
+    // This fixture needs the app's assembled native library; its source stays with the feature.
+    sourceSets.getByName("androidTest").kotlin.srcDir(
+        rootProject.file("feature/zygisk/data/src/deviceTest/kotlin"),
+    )
 }
+
+registerInstallerCanaryAssets(
+    rootProject.file("feature/rootmanagers/data/src/canary/AndroidManifest.xml"),
+    "rootmanagers/installer-canary.apk",
+)
 
 // Every detector's dashboard card, discovered like the ui modules the application depends on.
 generateDetectorCards(packageName = "com.eltavine.duckdetector.ui")
@@ -64,17 +75,31 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.material)
+    constraints {
+        implementation(libs.androidx.tracing)
+    }
     testImplementation(project(":core:report"))
     testImplementation(project(":feature:deviceinfo:presentation"))
     testImplementation(libs.bundles.test.unit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(project(":core:report"))
+    androidTestImplementation(project(":core:platform"))
+    androidTestImplementation(project(":feature:selinux:data"))
+    androidTestImplementation(project(":feature:nativeroot:data"))
+    androidTestImplementation(project(":feature:selinux:domain"))
+    androidTestImplementation(project(":feature:rootmanagers:data"))
+    androidTestImplementation(project(":feature:rootmanagers:domain"))
+    androidTestImplementation(project(":feature:zygisk:data"))
+    androidTestImplementation(project(":feature:zygisk:domain"))
+    androidTestImplementation(project(":core:native"))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.tracing)
     debugImplementation(libs.androidx.ui.tooling)
 }

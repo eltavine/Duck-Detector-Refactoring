@@ -49,6 +49,7 @@ data class RootManagersReport(
     val entries: List<RootManagerEntry> = emptyList(),
     val coverage: RootManagersCoverage = RootManagersCoverage(),
     val issues: List<String> = emptyList(),
+    val installerCanary: InstallerCanaryObservation = InstallerCanaryObservation(),
 ) {
     /** Profiles the enumeration actually read; a denied or empty profile is recorded but not counted. */
     val profilesSearched: Int
@@ -71,7 +72,8 @@ data class RootManagersReport(
             profileScans.all { scan -> scan.state == ProfileScanState.SEARCHED } &&
             coverage.callerSelfObserved != false &&
             coverage.packageVisibility == InstalledPackageVisibility.FULL &&
-            !coverage.certificatesUnavailable
+            !coverage.certificatesUnavailable &&
+            (installerCanary.state == InstallerCanaryState.DISABLED || installerCanary.evaluated)
 
     companion object {
         fun loading(): RootManagersReport = RootManagersReport(

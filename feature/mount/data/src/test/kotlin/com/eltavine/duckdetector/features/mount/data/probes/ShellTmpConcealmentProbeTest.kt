@@ -27,7 +27,7 @@ class ShellTmpConcealmentProbeTest {
     private val probe = ShellTmpConcealmentProbe()
 
     @Test
-    fun `dedicated mount is danger`() {
+    fun `dedicated mount is review evidence without root attribution`() {
         val result = probe.evaluate(
             ShellTmpObservation(
                 parentAccessible = true,
@@ -46,12 +46,12 @@ class ShellTmpConcealmentProbeTest {
             ),
         )
 
-        assertTrue(result.hasDanger)
+        assertTrue(result.hasWarning)
         assertTrue(result.findings.any { it.label == "Shell tmp dedicated mount" })
     }
 
     @Test
-    fun `missing tmp under visible parent is warning`() {
+    fun `missing tmp under visible parent is informational`() {
         val result = probe.evaluate(
             ShellTmpObservation(
                 parentAccessible = true,
@@ -64,15 +64,15 @@ class ShellTmpConcealmentProbeTest {
             ),
         )
 
-        assertTrue(result.hasWarning)
+        assertTrue(!result.hasDanger && !result.hasWarning)
         assertEquals(
-            MountFindingSeverity.WARNING,
+            MountFindingSeverity.INFO,
             result.findings.single { it.label == "Shell tmp view" }.severity
         )
     }
 
     @Test
-    fun `java hidden while stat accessible is danger`() {
+    fun `non atomic API differences are observations`() {
         val result = probe.evaluate(
             ShellTmpObservation(
                 parentAccessible = true,
@@ -85,8 +85,21 @@ class ShellTmpConcealmentProbeTest {
             ),
         )
 
-        assertTrue(result.hasDanger)
+        assertTrue(!result.hasDanger && !result.hasWarning)
         assertTrue(result.findings.any { it.label == "Shell tmp API mismatch" })
+    }
+
+    @Test
+    fun `denial and collection error cannot establish shell tmp concealment`() {
+        for (access in listOf(ShellTmpAccessState.DENIED, ShellTmpAccessState.ERROR)) {
+            val result = probe.evaluate(ShellTmpObservation(
+                parentAccessible = true, accessState = access,
+                javaExists = false, javaDirectory = false, javaCanRead = false, javaListable = false,
+                dedicatedMounts = emptyList(), mountInfoReadable = false,
+            ))
+            assertTrue(!result.hasDanger && !result.hasWarning)
+            assertEquals(access != ShellTmpAccessState.ERROR, result.available)
+        }
     }
 
     @Test

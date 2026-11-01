@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <queries>
+        <package android:name="com.github.metacubex.clash.meta" />
+        <package android:name="com.github.metacubex.clash.alpha" />
+        <package android:name="com.github.metacubex.clash" />
+        <package android:name="com.getsurfboard" />
+        <package android:name="com.follow.clash" />
+        <package android:name="io.nekohasekai.sfa" />
+        <package android:name="com.v2ray.ang" />
+        <package android:name="com.v2ray.ang.fdroid" />
+        <package android:name="moe.nb4a" />
+        <package android:name="app.hiddify.com" />
+    </queries>
+</manifest>

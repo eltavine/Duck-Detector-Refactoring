@@ -40,6 +40,7 @@ class PackageChangeHistoryPresentationTest {
         hiddenFromPackageManager = emptyList(),
         probesRan = emptyList(),
         packageChangeHistory = history,
+        thanoxIpc = ThanoxIpcReport(ThanoxIpcState.NOT_OBSERVED),
     )
     private fun matchedHistory() = PackageChangeHistory(
         PackageChangeHistoryState.AVAILABLE, listOf(target), 42,

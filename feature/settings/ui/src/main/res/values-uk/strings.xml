@@ -16,6 +16,13 @@ limitations under the License.
 -->
 
 <resources>
+    <string name="settings_important_title">Важливо</string>
+    <string name="settings_important_why">Навіщо потрібен Duck Detector?</string>
+    <string name="settings_important_intro">Duck Detector — це інструмент перевірки середовища пристроїв Android, подібний до Momo.</string>
+    <string name="settings_important_context">Надмірна стурбованість тим, чи є середовище пристрою «нормальним», може бути зайвою. Проте деякі застосунки й сервіси справді ставляться до користувачів по-різному залежно від цілісності пристрою, системного середовища та інших сигналів ризику.</string>
+    <string name="settings_important_consequences">Це може означати додаткову перевірку особи, обмеження функцій, відмову в обслуговуванні або непрозорі заходи контролю ризиків. Ви можете не отримати чіткого повідомлення або не знати, чому до вашого пристрою ставляться інакше.</string>
+    <string name="settings_important_goal">Duck Detector прагне зробити видимими ці зазвичай непрозорі сигнали про середовище пристрою.</string>
+    <string name="settings_important_evidence">Ми надаємо результати діагностики та підтверджувальні докази, а не вирішуємо за сторонні застосунки, чи слід довіряти вашому пристрою.</string>
     <string name="author_wall_title">Учасники</string>
     <string name="author_wall_hint">Перетягуйте для переміщення · Змінюйте масштаб двома пальцями · Торкніться для подробиць</string>
     <string name="author_wordmark_hint">Збільшіть двома пальцями, щоб роздивитися літери з імен учасників</string>

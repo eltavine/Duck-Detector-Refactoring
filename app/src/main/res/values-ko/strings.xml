@@ -95,5 +95,9 @@ limitations under the License.
     <string name="update_download_failed">업데이트를 다운로드하거나 검증할 수 없습니다</string>
     <string name="update_install_permission_required">Duck Detector의 앱 설치를 허용한 후 설치를 다시 누르세요</string>
     <string name="update_install_failed">설치 프로그램을 열 수 없습니다</string>
+    <string name="update_install_fallback_copied_opened">로컬 설치에 실패했습니다. APK URL을 복사하고 브라우저에서 열었습니다.</string>
+    <string name="update_install_fallback_copied_only">로컬 설치에 실패했습니다. APK URL을 복사했지만 브라우저를 열 수 없습니다.</string>
+    <string name="update_install_fallback_opened_only">로컬 설치에 실패했습니다. 브라우저에서 APK URL을 열었지만 복사하지 못했습니다.</string>
+    <string name="update_install_link_copied">APK 다운로드 링크를 복사했습니다</string>
     <string name="update_apk_unavailable">다운로드한 업데이트 파일을 사용할 수 없습니다. 다시 다운로드하세요</string>
 </resources>

@@ -98,7 +98,9 @@ ProbeResult collect_solist_probe() {
     }
 
     result.hit_count = static_cast<int>(result.traces.size());
-    result.heuristic_hits = result.hit_count > 0 ? 1 : 0;
+    if (result.hit_count > 0) {
+        result.heuristic_families.insert(HeuristicFamily::kSolist);
+    }
     return result;
 }
 

@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.heapresidue.presentation
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.report.ReportBlock
 import com.eltavine.duckdetector.core.report.ReportRow
+import com.eltavine.duckdetector.core.report.ReportFact
 import com.eltavine.duckdetector.features.heapresidue.presentation.model.HeapResidueCardModel
 import com.eltavine.duckdetector.features.heapresidue.presentation.model.HeapResidueDetailRowModel
 
@@ -27,10 +28,12 @@ fun HeapResidueCardModel.toDetectorReport(): DetectorReport = DetectorReport(
     title = title,
     verdict = verdict,
     severity = status.severity,
-    quickFacts = emptyList(),
+    quickFacts = headerFacts.map { ReportFact(it.label, it.value) },
     blocks = listOf(
         ReportBlock.Rows("Signals", signalRows.toReportRows()),
-        ReportBlock.Rows("Scan", scanRows.toReportRows()),
+        ReportBlock.Rows("Impact", impactRows.toReportRows()),
+        ReportBlock.Rows("Detection methods", methodRows.toReportRows()),
+        ReportBlock.Rows("Scan summary", scanRows.toReportRows()),
     ),
 )
 

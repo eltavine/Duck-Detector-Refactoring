@@ -189,7 +189,7 @@ namespace duckdetector::mount::detail {
 
     bool parse_mount_info_line(const std::string &line, MountInfoEntry &entry);
 
-    std::vector<MountInfoEntry> parse_mount_info(const std::string &raw);
+    std::vector<MountInfoEntry> parse_mount_info(const std::string &raw, bool *complete = nullptr);
 
     void add_finding(
             MountSnapshot &snapshot,

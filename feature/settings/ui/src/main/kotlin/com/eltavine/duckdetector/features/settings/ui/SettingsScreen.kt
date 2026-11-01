@@ -44,13 +44,16 @@ import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUi
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.ui.components.AboutSection
 import com.eltavine.duckdetector.features.settings.ui.components.ConsentSettingItem
+import com.eltavine.duckdetector.features.settings.ui.components.ConsentPermissionButton
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorNameWordmark
 import com.eltavine.duckdetector.features.settings.ui.components.ContributorsSection
+import com.eltavine.duckdetector.features.settings.ui.components.ImportantSection
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsGroup
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsSection
 import com.eltavine.duckdetector.features.settings.ui.components.SettingsSwitchItem
 import com.eltavine.duckdetector.features.settings.ui.components.UiStyleSettingItem
 import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
+import io.github.xiaotong6666.uihelper.adaptive.NativeSettingsSegmentedGroup
 import io.github.xiaotong6666.uihelper.mode.LocalUiMode
 import io.github.xiaotong6666.uihelper.mode.UiMode
 
@@ -153,14 +156,18 @@ private fun SettingsPage(
                 }
 
                 if (consentToggles.isNotEmpty()) {
+                    val managePermissions = consentToggles.firstNotNullOfOrNull { it.onManagePermissions }
                     SettingsSection(title = stringResource(R.string.settings_section_detection)) {
-                        SettingsGroup {
-                            consentToggles.forEachIndexed { index, toggle ->
-                                ConsentSettingItem(
-                                    toggle = toggle,
-                                    index = index,
-                                    count = consentToggles.size,
-                                )
+                        NativeSettingsSegmentedGroup {
+                            consentToggles.forEach { toggle ->
+                                item(key = toggle.setting.title) {
+                                    ConsentSettingItem(toggle = toggle)
+                                }
+                            }
+                            managePermissions?.let {
+                                item(key = "manage-permissions") {
+                                    ConsentPermissionButton(onClick = it)
+                                }
                             }
                         }
                     }
@@ -177,6 +184,8 @@ private fun SettingsPage(
                         )
                     }
                 }
+
+                ImportantSection()
 
                 AboutSection(
                     uiState = uiState,

@@ -93,7 +93,10 @@ namespace duckdetector::memory {
         }
 
         bool should_compare_map_entry(const MapEntry &entry) {
-            if (entry.path.empty()) {
+            // ART's anonymous VMA debug labels may embed shortened file paths.
+            // They are not ELF object names; mapping and signal probes own
+            // executable anonymous-memory checks independently of this comparison.
+            if (entry.path.empty() || entry.path.front() == '[') {
                 return false;
             }
             const std::string lowered = to_lower_ascii(entry.path);

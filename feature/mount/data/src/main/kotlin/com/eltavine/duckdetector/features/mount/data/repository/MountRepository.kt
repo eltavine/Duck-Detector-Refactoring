@@ -72,10 +72,7 @@ class MountRepository(
                 zygoteNext = zygoteNext,
             )
         }
-        val preloadResult = sanitizePreloadResult(
-            result = preloadResultProvider(),
-            snapshot = snapshot,
-        )
+        val preloadResult = preloadResultProvider()
         val shellTmpResult = shellTmpConcealmentProbe.run()
         if (!snapshot.available) {
             return buildFailedReport(
@@ -87,7 +84,7 @@ class MountRepository(
 
         val findings = buildFindings(snapshot, preloadResult, shellTmpResult, zygoteNext)
         val impacts = buildImpacts(snapshot, findings)
-        val methods = buildMethods(snapshot, preloadResult, shellTmpResult, zygoteNext)
+        val methods = buildMethods(snapshot, preloadResult, shellTmpResult, zygoteNext, findings)
 
         return MountReport(
             stage = MountStage.READY,
@@ -104,6 +101,7 @@ class MountRepository(
             mountEntryCount = snapshot.mountEntryCount,
             mountInfoEntryCount = snapshot.mountInfoEntryCount,
             mapLineCount = snapshot.mapLineCount,
+            anonymousDeviceState = snapshot.anonymousDeviceState,
             earlyPreloadAvailable = preloadResult.available,
             earlyPreloadDetected = preloadResult.detected,
             earlyPreloadContextValid = preloadResult.isContextValid,
@@ -164,26 +162,26 @@ class MountRepository(
                     ),
                 )
             }
-            if (snapshot.systemRwDetected || snapshot.overlayMountDetected || snapshot.bindMountDetected || snapshot.dmVerityBypassDetected) {
+            if (snapshot.systemRwDetected || snapshot.overlayMountDetected || snapshot.loopDeviceDetected) {
                 add(
                     MountImpact(
-                        text = "Writable or overlaid system partitions weaken stock verified-boot expectations and often indicate systemless or direct partition modification.",
-                        severity = MountFindingSeverity.DANGER,
+                        text = "Writable, overlaid, or loop-backed system mounts were observed. Development remounts can produce these records; they do not identify a root manager or establish verified-boot state.",
+                        severity = MountFindingSeverity.WARNING,
                     ),
                 )
             }
-            if (snapshot.mountIdLoopholeDetected || snapshot.inconsistentMountDetected || snapshot.statxMntIdMismatch || snapshot.statxMountRootAnomaly) {
+            if (snapshot.inconsistentMountDetected || snapshot.statxMntIdMismatch || snapshot.statxMountRootAnomaly) {
                 add(
                     MountImpact(
-                        text = "Mount-info and statx contradictions are harder to explain away than a single suspicious path because different kernel-visible mount views disagree.",
-                        severity = MountFindingSeverity.DANGER,
+                        text = "Filesystem and statx observations were collected at separate times and may resolve different paths or covering mounts. These observations do not establish mount hiding.",
+                        severity = MountFindingSeverity.INFO,
                     ),
                 )
             }
             if (findings.any { it.severity == MountFindingSeverity.WARNING } && none { it.severity == MountFindingSeverity.DANGER }) {
                 add(
                     MountImpact(
-                        text = "The mount layer is not clean enough to ignore, but the current evidence is weaker than a direct root-managed overlay or writable-system hit.",
+                        text = "Review the listed mount properties in the context of this device and build; a warning alone does not establish root.",
                         severity = MountFindingSeverity.WARNING,
                     ),
                 )

@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.rootmanagers.presentation
 import com.eltavine.duckdetector.core.report.DetectorReport
 import com.eltavine.duckdetector.core.report.ReportBlock
 import com.eltavine.duckdetector.core.report.ReportRow
+import com.eltavine.duckdetector.core.report.ReportFact
 import com.eltavine.duckdetector.features.rootmanagers.presentation.model.RootManagersCardModel
 import com.eltavine.duckdetector.features.rootmanagers.presentation.model.RootManagersDetailRowModel
 
@@ -27,11 +28,13 @@ fun RootManagersCardModel.toDetectorReport(): DetectorReport = DetectorReport(
     title = title,
     verdict = verdict,
     severity = status.severity,
-    quickFacts = emptyList(),
+    quickFacts = headerFacts.map { ReportFact(it.label, it.value) },
     blocks = listOf(
         ReportBlock.Rows("Matched root managers", entryRows.toReportRows()),
         ReportBlock.Rows("Profiles", profileRows.toReportRows()),
-        ReportBlock.Rows("Scan", scanRows.toReportRows()),
+        ReportBlock.Rows("Impact", impactRows.toReportRows()),
+        ReportBlock.Rows("Detection methods", methodRows.toReportRows()),
+        ReportBlock.Rows("Scan summary", scanRows.toReportRows()),
     ),
 )
 

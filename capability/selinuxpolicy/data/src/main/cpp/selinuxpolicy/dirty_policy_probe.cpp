@@ -191,6 +191,32 @@ namespace duckdetector::selinux::detail {
         append_access_note(snapshot, "untrusted_app -> xposed_data read", xposed_data_file_read);
         append_access_note(snapshot, "zygote -> adb_data_file search", zygote_adb_data_search);
 
+        struct ExtraRule {
+            const char *name;
+            const char *source;
+            const char *target;
+            const char *clazz;
+            const char *permission;
+        };
+        const ExtraRule extra_rules[] = {
+                {"rootfs -> tmpfs associate", "u:object_r:rootfs:s0", "u:object_r:tmpfs:s0", "filesystem", "associate"},
+                {"kernel -> tmpfs fifo open", "u:r:kernel:s0", "u:object_r:tmpfs:s0", "fifo_file", "open"},
+                {"kernel -> adb_data_file read", "u:r:kernel:s0", "u:object_r:adb_data_file:s0", "file", "read"},
+                {"system_server -> apk_data_file execute", "u:r:system_server:s0", "u:object_r:apk_data_file:s0", "file", "execute"},
+                {"dex2oat -> dex2oat_exec execute_no_trans", "u:r:dex2oat:s0", "u:object_r:dex2oat_exec:s0", "file", "execute_no_trans"},
+        };
+        for (const auto &rule: extra_rules) {
+            const auto result = check_access_rule_pair(
+                    symbols, rule.source, rule.target, rule.clazz, rule.permission, auditdata
+            );
+            // Optional 2.2 rules must not invalidate the pre-existing oracle's trust.
+            // Each extra edge is published only when its own pair is stable.
+            if (const auto allowed = pair_allowed_value(result); allowed.has_value()) {
+                snapshot.additional_rules[rule.name] = *allowed;
+            }
+            append_access_note(snapshot, rule.name, result);
+        }
+
         if (!snapshot.stable) {
             snapshot.failure_reason = "Dirty policy oracle repeated inconsistently.";
         } else if (!snapshot.controls_passed) {

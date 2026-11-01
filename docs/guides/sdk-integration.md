@@ -43,7 +43,7 @@ dependencies {
 }
 ```
 
-The AAR's manifest brings in the SDK's services, the MIME group Native Root's throne-hunt stimulus flips, and the app zygote preload; `soter-core` brings the SOTER keystore permission, library and package query. Native Root also contributes a permission tree for its disabled-by-default timing experiment; the SDK declares no requested permissions; see [Permissions](#permissions).
+The AAR's manifest brings in the SDK's services, the MIME group Native Root's throne-hunt stimulus flips, and the app zygote preload; `soter-core` brings the SOTER keystore permission, library and package query. Native Root also contributes a permission tree for its disabled-by-default timing experiment. Network Risk contributes network-state permission, and Location Risk contributes approximate location permission for optional cached metadata; see [Permissions](#permissions).
 
 ## Scan
 
@@ -136,10 +136,12 @@ The sampler's renderer runs as an isolated service of your package, so ActivityM
 
 ## Permissions
 
-The SDK declares no requested permissions, so the host decides what its process may observe. The app declares these for detection:
+The SDK declares `ACCESS_NETWORK_STATE` for Network Risk and `ACCESS_COARSE_LOCATION` for Location Risk's optional cached metadata. It never opens a permission dialog: the host owns consent, runtime permission requests and the foreground lifecycle. A host that does not use cached location diagnostics can remove this declaration with `<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />` in its manifest. Local synthetic Location checks still run without it. The app uses these permissions for detection:
 
 | Permission | Used by | Without it |
 |---|---|---|
+| `ACCESS_COARSE_LOCATION` | Location Risk's explicitly enabled GPS/network/passive cache metadata reads; also declared by the SDK | Cache access reports permission-limited; local synthetic checks still run. Android 10 GPS/passive caches require fine permission and remain permission-limited with coarse alone |
+| `ACCESS_NETWORK_STATE` | Network Risk's active-network and link metadata; declared by the SDK | Network observations remain permission-limited rather than indicating an absent VPN or proxy |
 | `QUERY_ALL_PACKAGES` | The package inventory behind Custom ROM, Dangerous Apps, LSPosed, Native Root and Virtualization | Android's package visibility filtering applies, and the inventory records that the permission was not requested |
 | `USE_BIOMETRIC`, `USE_FINGERPRINT` | TEE's biometric and SOTER environment checks, which call `BiometricManager.canAuthenticate` | That call requires `USE_BIOMETRIC` |
 | `INTERNET`, `ACCESS_NETWORK_STATE` | TEE's online refresh of Google's attestation revocation list | TEE cannot refresh the list online |
@@ -148,15 +150,20 @@ The SDK declares no requested permissions, so the host decides what its process 
 
 `DuckDetector.packageVisibility(context)` reports whether this process sees the full package list, a filtered one or an unreadable one, with the number of visible packages, so a host can tell before it reads the package-based results whether filtering bounds them.
 
-The SDK declares two `<queries>` entries, which the manifest merger adds to the host. TEE's entry for `com.tencent.soter.soterserver` lets the SOTER environment check tell a missing service from one that package visibility filtering hides. Root Managers' `MAIN`/`LAUNCHER` intent is broad: it makes every app with a launcher activity visible to the host, so that a renamed root manager is still listed. A host that does not want that visibility can drop it with `tools:node="remove"` on the same `<intent>`, at the cost of hiding renamed managers from the launcher enumeration. Either way, a host without `QUERY_ALL_PACKAGES` has filtered package visibility, so Root Managers reports an empty result as partially evaluated rather than clean. Root Managers keeps only matched apps and counts, never the identities of the other apps it checked.
+The SDK declares three `<queries>` entries, which the manifest merger adds to the host. TEE's entry for `com.tencent.soter.soterserver` lets the SOTER environment check tell a missing service from one that package visibility filtering hides. Location Risk's exact `com.vincenthzr.locationspoofer` entry supplies installation context with unverified identity; it does not establish module activity. Root Managers' `MAIN`/`LAUNCHER` intent is broad: it makes every app with a launcher activity visible to the host, so that a renamed root manager is still listed. A host that does not want that visibility can drop it with `tools:node="remove"` on the same `<intent>`, at the cost of hiding renamed managers from the launcher enumeration. Either way, a host without `QUERY_ALL_PACKAGES` has filtered package visibility, so Root Managers reports an empty result as partially evaluated rather than clean. Root Managers keeps only matched apps and counts, never the identities of the other apps it checked.
 
-The online revocation refresh also needs the user's consent, which the SDK never asks for itself. Every detector lists the choices it needs in `consents`; TEE declares `TeeRevocationNetworkConsent`; Native Root declares `NativeRootSrcuTimingConsent` for an active local experiment. Read the current answer from `decisions(context)`, record the user's with `decide(context, granted)`, and scan again. Until the user allows it, TEE checks revocation against the bundled snapshot and says so in its report.
+The online revocation refresh also needs the user's consent, which the SDK never asks for itself. Every detector lists the choices it needs in `consents`; TEE declares `TeeRevocationNetworkConsent`; Native Root declares `NativeRootSrcuTimingConsent` for an active local experiment; Location Risk declares `LocationCacheConsent` for cached metadata. Read the current answer from `decisions(context)`, record the user's with `decide(context, granted)`, and scan again. Until the user allows it, TEE checks revocation against the bundled snapshot and says so in its report.
 
 ```kotlin
 val consents = DuckDetector.detectors.flatMap { it.consents }   // what the host should ask the user
 TeeRevocationNetworkConsent.decide(context, granted = true)      // then scan again
 // Only after explaining the active experiment and obtaining an explicit choice:
 NativeRootSrcuTimingConsent.decide(context, granted = true)
+// After explaining cached metadata access and receiving an explicit choice:
+LocationCacheConsent.decide(context, granted = true)
+// Request ACCESS_COARSE_LOCATION from an activity, then scan again after the result.
 ```
+
+Location Risk's cache access is off until this consent is granted. Saved consent does not grant Android permission: denial or revocation remains permission-limited. The host should scan while in the foreground, rescan after a permission change, and leave the cache option off when it is unnecessary. Each scan reads at most three cached fixes and retains only mock markers and age buckets; it does not read coordinates, request a new fix, track in the background or send location data. Location hardware and network location features are optional in the merged manifest. Removing the permission declaration keeps this optional path unavailable unless the host already has another suitable grant. See [the evidence and applicability record](../../feature/locationrisk/EVIDENCE.md).
 
 Native Root's timing experiment stays disabled until its consent is granted. It temporarily adds and removes one signature-protected dynamic permission under `${applicationId}.duckdetector.srcu`, using the merged non-exported `:srcu_timing` service. Do not override that service to run in the main process. The supported trigger is limited to API 31–34 and reviewed kernel families; OEM differences can still make it inconclusive. The watchdog bounds host waiting, but older modified kernels have a known lock-inversion risk that it cannot recover. Timing is supporting contention evidence and does not identify KernelSU. Failure and unconfirmed cleanup remain visible in the report. See [the source, lifecycle and validation record](../../feature/nativeroot/SRCU_TIMING.md) before exposing this consent in a host UI. Removing the permission tree from the merged manifest makes the stimulus unavailable.

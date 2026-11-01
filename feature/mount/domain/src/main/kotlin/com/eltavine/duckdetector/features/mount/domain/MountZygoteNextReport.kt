@@ -90,13 +90,10 @@ data class MountZygoteNextReport(
         }
 
     /**
-     * AOSP init makes the root mount shared before creating its bootstrap/default namespaces.
-     * Classic zygote clones that view and recursively changes its root to slave, while zygote_next
-     * and its native descendants only fork and retain init's default namespace. The kernel assigns
-     * fresh mount IDs while cloning a namespace. The init-derived view should therefore retain a
-     * lower root/minimum ID and lower IDs at several stable mountpoint anchors than a later
-     * classic-app clone. Its maximum ID is not used: init can receive new mounts long after boot.
-     * IDs can be reused, so this is corroborating evidence rather than proof by itself.
+     * Describes similarity to the reference launch layout, not namespace ancestry or root.
+     * Mount IDs are reusable allocation identifiers rather than timestamps. A relative ID
+     * ordering can neither prove nor contradict init lineage; layout differences remain
+     * informational and direct root-managed records are evaluated independently.
      */
     val namespaceAssessment: MountZygoteNextNamespaceAssessment
         get() {
@@ -109,7 +106,7 @@ data class MountZygoteNextReport(
             if (!mountEvidenceAvailable) {
                 return MountZygoteNextNamespaceAssessment.UNVERIFIED
             }
-            if (propagationContradictsInitSignature || anchorChronologyContradicted) {
+            if (propagationContradictsInitSignature) {
                 return MountZygoteNextNamespaceAssessment.INCONSISTENT
             }
             if (isolatedRootIsPrivate) {
@@ -136,9 +133,9 @@ data class MountZygoteNextReport(
                     "more common anchor IDs plus its root/minimum IDs are older. This is a " +
                     "likely signature, not proof of namespace lineage."
 
-                MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY -> return "The native isolated route is valid, but its root is private/slave instead of the stock shared init-managed view."
+                MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY -> return "The native isolated route has a private/slave root. Namespace policy can vary by build; this alone does not establish root or hiding."
 
-                MountZygoteNextNamespaceAssessment.INCONSISTENT -> return "Propagation fields or mount-ID anchor chronology contradict the init-managed signature."
+                MountZygoteNextNamespaceAssessment.INCONSISTENT -> return "Propagation or relative reusable mount IDs differ from the reference signature. This does not establish an integrity violation or namespace ancestry."
 
                 MountZygoteNextNamespaceAssessment.UNVERIFIED -> Unit
             }
@@ -218,9 +215,6 @@ data class MountZygoteNextReport(
 
     private val anchorChronologySupported: Boolean
         get() = anchorPairs.size >= MIN_ANCHOR_PAIRS && olderAnchorCount * 3 >= anchorPairs.size * 2
-
-    private val anchorChronologyContradicted: Boolean
-        get() = anchorPairs.size >= MIN_ANCHOR_PAIRS && olderAnchorCount * 3 < anchorPairs.size
 
     private val isolatedRootIsPrivate: Boolean
         get() = isolatedRootMountId > 0L &&

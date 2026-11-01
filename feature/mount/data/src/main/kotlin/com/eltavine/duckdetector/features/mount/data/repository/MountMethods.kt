@@ -20,6 +20,11 @@ package com.eltavine.duckdetector.features.mount.data.repository
 import com.eltavine.duckdetector.capability.earlypreload.data.EarlyMountPreloadResult
 import com.eltavine.duckdetector.features.mount.data.native.MountNativeSnapshot
 import com.eltavine.duckdetector.features.mount.data.probes.ShellTmpConcealmentProbeResult
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
+import com.eltavine.duckdetector.features.mount.domain.MountFinding
+import com.eltavine.duckdetector.features.mount.domain.MountFindingGroup
+import com.eltavine.duckdetector.features.mount.domain.MountFindingOrigin
+import com.eltavine.duckdetector.features.mount.domain.MountFindingSeverity
 import com.eltavine.duckdetector.features.mount.domain.MountMethodOutcome
 import com.eltavine.duckdetector.features.mount.domain.MountMethodResult
 import com.eltavine.duckdetector.features.mount.domain.MountZygoteNextExposure
@@ -32,30 +37,22 @@ internal fun buildMethods(
     preloadResult: EarlyMountPreloadResult,
     shellTmpResult: ShellTmpConcealmentProbeResult,
     zygoteNext: MountZygoteNextReport,
+    findings: List<MountFinding>,
 ): List<MountMethodResult> {
-    val pathDanger = listOf(
-        snapshot.dataAdbDetected,
-        snapshot.debugRamdiskDetected,
-        snapshot.hybridMountDetected,
-        snapshot.metaHybridMountDetected,
-    ).count { it }
-    val mountsDanger = listOf(
-        snapshot.magiskMountDetected,
-        snapshot.systemRwDetected,
-        snapshot.overlayMountDetected,
-        snapshot.ksuOverlayDetected,
-        snapshot.loopDeviceDetected,
-        snapshot.dmVerityBypassDetected,
-    ).count { it }
-    val infoDanger = listOf(
-        snapshot.inconsistentMountDetected,
-        snapshot.mountIdLoopholeDetected,
-        snapshot.statxMntIdMismatch,
-        snapshot.bindMountDetected,
-        snapshot.mountOptionsAnomaly,
-    ).count { it }
+    val pathDanger = if (snapshot.dataAdbDetected) 1 else 0
+    val mountsDanger = listOf(snapshot.magiskMountDetected, snapshot.ksuOverlayDetected, snapshot.rootMountArtifactDetected).count { it }
+    val mountsWarning = listOf(snapshot.systemRwDetected, snapshot.overlayMountDetected, snapshot.loopDeviceDetected).count { it }
+    val infoDanger = findings.count {
+        it.origin != MountFindingOrigin.STARTUP_PRELOAD &&
+            it.group == MountFindingGroup.CONSISTENCY && it.severity == MountFindingSeverity.DANGER
+    }
+    val pathObserved = snapshot.findings.any { it.group == "ARTIFACTS" && it.severity == "INFO" }
+    val infoObserved = snapshot.findings.any { it.group == "CONSISTENCY" && it.severity == "INFO" } || listOf(
+        snapshot.inconsistentMountDetected, snapshot.statxMntIdMismatch, snapshot.bindMountDetected,
+        snapshot.mountOptionsAnomaly, snapshot.mountIdLoopholeDetected,
+        snapshot.mountPropagationAnomaly, snapshot.namespaceAnomalyDetected,
+    ).any { it }
     val fsWarning = listOf(
-        snapshot.overlayfsKernelSupport,
         snapshot.systemFsTypeAnomaly,
         snapshot.tmpfsSizeAnomaly,
         snapshot.suspiciousTmpfsDetected,
@@ -68,28 +65,44 @@ internal fun buildMethods(
                 !preloadResult.available -> "Unavailable"
                 preloadResult.hasDangerSignal -> "${preloadResult.findingCount} hit(s)"
                 preloadResult.hasWarningSignal -> "${preloadResult.findingCount} signal(s)"
+                preloadResult.findingCount > 0 -> "Observation"
                 else -> "Clean"
             },
             outcome = when {
                 !preloadResult.available -> MountMethodOutcome.SUPPORT
                 preloadResult.hasDangerSignal -> MountMethodOutcome.DANGER
                 preloadResult.hasWarningSignal -> MountMethodOutcome.WARNING
+                preloadResult.findingCount > 0 -> MountMethodOutcome.SUPPORT
                 else -> MountMethodOutcome.CLEAN
             },
             detail = "Transparent NativeActivity launcher runs early namespace and mount checks before MainActivity starts.",
         ),
         buildZygoteNextMethod(zygoteNext),
         MountMethodResult(
+            label = "Anonymous device minors",
+            summary = snapshot.anonymousDeviceState.summary,
+            outcome = if (snapshot.anonymousDeviceState == MountAnonymousDeviceState.NO_GAPS) {
+                MountMethodOutcome.CLEAN
+            } else {
+                MountMethodOutcome.SUPPORT
+            },
+            detail = snapshot.anonymousDeviceDetail.ifBlank {
+                "Anonymous-device observations were not collected by the native layer."
+            },
+        ),
+        MountMethodResult(
             label = "Path probes",
             summary = when {
                 pathDanger > 0 -> "$pathDanger hit(s)"
-                snapshot.busyboxDetected -> "Busybox"
+                pathObserved || snapshot.busyboxDetected || snapshot.debugRamdiskDetected || snapshot.hybridMountDetected || snapshot.metaHybridMountDetected -> "Observation"
+                snapshot.permissionDenied > 0 -> "Partial"
                 snapshot.permissionTotal > 0 -> "Clean"
                 else -> "Partial"
             },
             outcome = when {
                 pathDanger > 0 -> MountMethodOutcome.DANGER
-                snapshot.busyboxDetected -> MountMethodOutcome.WARNING
+                pathObserved || snapshot.busyboxDetected || snapshot.debugRamdiskDetected || snapshot.hybridMountDetected || snapshot.metaHybridMountDetected -> MountMethodOutcome.SUPPORT
+                snapshot.permissionDenied > 0 -> MountMethodOutcome.SUPPORT
                 snapshot.permissionTotal > 0 -> MountMethodOutcome.CLEAN
                 else -> MountMethodOutcome.SUPPORT
             },
@@ -101,12 +114,14 @@ internal fun buildMethods(
                 !shellTmpResult.available -> "Unavailable"
                 shellTmpResult.hasDanger -> "${shellTmpResult.findings.size} hit(s)"
                 shellTmpResult.hasWarning -> "${shellTmpResult.findings.size} signal(s)"
+                shellTmpResult.findings.isNotEmpty() -> "Observation"
                 else -> "Clean"
             },
             outcome = when {
                 !shellTmpResult.available -> MountMethodOutcome.SUPPORT
                 shellTmpResult.hasDanger -> MountMethodOutcome.DANGER
                 shellTmpResult.hasWarning -> MountMethodOutcome.WARNING
+                shellTmpResult.findings.isNotEmpty() -> MountMethodOutcome.SUPPORT
                 else -> MountMethodOutcome.CLEAN
             },
             detail = "Checks whether /data/local/tmp is selectively hidden or remapped compared with its parent and with /proc/self/mountinfo. ${shellTmpResult.detail}",
@@ -116,14 +131,18 @@ internal fun buildMethods(
             summary = when {
                 !snapshot.mountsReadable -> "Unavailable"
                 mountsDanger > 0 -> "$mountsDanger hit(s)"
+                mountsWarning > 0 -> "$mountsWarning review item(s)"
+                snapshot.dmVerityBypassDetected || snapshot.findings.any { it.group == "RUNTIME" && it.severity == "INFO" } -> "Source observed"
                 else -> "Clean"
             },
             outcome = when {
                 !snapshot.mountsReadable -> MountMethodOutcome.SUPPORT
                 mountsDanger > 0 -> MountMethodOutcome.DANGER
+                mountsWarning > 0 -> MountMethodOutcome.WARNING
+                snapshot.dmVerityBypassDetected || snapshot.findings.any { it.group == "RUNTIME" && it.severity == "INFO" } -> MountMethodOutcome.SUPPORT
                 else -> MountMethodOutcome.CLEAN
             },
-            detail = "Runtime mount table scan for Magisk paths, writable system partitions, overlays, loop devices, and dm-verity bypass patterns.",
+            detail = "Runtime mount table scan for Magisk paths, writable system partitions, overlays, loop devices, and observed source paths.",
         ),
         MountMethodResult(
             label = "/proc/self/maps",
@@ -144,13 +163,13 @@ internal fun buildMethods(
             summary = when {
                 !snapshot.mountInfoReadable -> "Unavailable"
                 infoDanger > 0 -> "$infoDanger hit(s)"
-                snapshot.mountPropagationAnomaly || snapshot.namespaceAnomalyDetected -> "Review"
+                infoObserved -> "Observation"
                 else -> "Clean"
             },
             outcome = when {
                 !snapshot.mountInfoReadable -> MountMethodOutcome.SUPPORT
                 infoDanger > 0 -> MountMethodOutcome.DANGER
-                snapshot.mountPropagationAnomaly || snapshot.namespaceAnomalyDetected -> MountMethodOutcome.WARNING
+                infoObserved -> MountMethodOutcome.SUPPORT
                 else -> MountMethodOutcome.CLEAN
             },
             detail = "Mountinfo root-field, propagation, mount-ID, and namespace-consistency checks.",
@@ -161,11 +180,13 @@ internal fun buildMethods(
                 !snapshot.filesystemsReadable && !snapshot.mountsReadable -> "Partial"
                 snapshot.systemFsTypeAnomaly -> "Overlayfs system"
                 fsWarning > 0 -> "$fsWarning signal(s)"
+                snapshot.overlayfsKernelSupport -> "Support present"
                 else -> "Clean"
             },
             outcome = when {
-                snapshot.systemFsTypeAnomaly -> MountMethodOutcome.DANGER
+                snapshot.systemFsTypeAnomaly -> MountMethodOutcome.WARNING
                 fsWarning > 0 -> MountMethodOutcome.WARNING
+                snapshot.overlayfsKernelSupport -> MountMethodOutcome.SUPPORT
                 !snapshot.filesystemsReadable && !snapshot.mountsReadable -> MountMethodOutcome.SUPPORT
                 else -> MountMethodOutcome.CLEAN
             },
@@ -174,18 +195,19 @@ internal fun buildMethods(
         MountMethodResult(
             label = "statx cross-check",
             summary = when {
-                !snapshot.statxSupported -> "Unsupported"
-                snapshot.statxMntIdMismatch || snapshot.statxMountRootAnomaly -> "Anomaly"
+                !snapshot.statxSupported -> "Unavailable"
+                !snapshot.mountInfoReadable -> "Partial"
+                snapshot.statxMntIdMismatch || snapshot.statxMountRootAnomaly -> "Observation"
                 snapshot.statxMountRootAttribute -> "Mount root"
                 else -> "Clean"
             },
             outcome = when {
-                !snapshot.statxSupported -> MountMethodOutcome.SUPPORT
-                snapshot.statxMntIdMismatch || snapshot.statxMountRootAnomaly -> MountMethodOutcome.DANGER
-                snapshot.statxMountRootAttribute -> MountMethodOutcome.WARNING
+                !snapshot.statxSupported || !snapshot.mountInfoReadable -> MountMethodOutcome.SUPPORT
+                snapshot.statxMntIdMismatch || snapshot.statxMountRootAnomaly -> MountMethodOutcome.SUPPORT
+                snapshot.statxMountRootAttribute -> MountMethodOutcome.SUPPORT
                 else -> MountMethodOutcome.CLEAN
             },
-            detail = "Mount-ID and mount-root cross-checks using statx where the kernel exposes those fields.",
+            detail = "Reports returned statx mount-ID and mount-root fields. Missing fields or syscall errors limit coverage; non-atomic differences do not establish tampering.",
         ),
     )
 }
@@ -204,10 +226,10 @@ internal fun buildZygoteNextMethod(
                     "ROOT_MOUNT_EXPOSURE: ${zygoteNext.dangerousMarkers.size} root mount(s)"
 
                 zygoteNext.namespaceAssessment == MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY ->
-                    "Private namespace anomaly"
+                    "Namespace observation"
 
                 zygoteNext.namespaceAssessment == MountZygoteNextNamespaceAssessment.INCONSISTENT ->
-                    "Evidence inconsistent"
+                    "Namespace observation"
 
                 !zygoteNext.hasInitNamespaceCoverage -> "Coverage unverified"
                 else -> "Clean"
@@ -221,7 +243,7 @@ internal fun buildZygoteNextMethod(
             MountZygoteNextState.READY -> when {
                 zygoteNext.leakDetected -> MountMethodOutcome.DANGER
                 zygoteNext.namespaceAssessment == MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY ||
-                    zygoteNext.namespaceAssessment == MountZygoteNextNamespaceAssessment.INCONSISTENT -> MountMethodOutcome.WARNING
+                    zygoteNext.namespaceAssessment == MountZygoteNextNamespaceAssessment.INCONSISTENT -> MountMethodOutcome.SUPPORT
 
                 !zygoteNext.hasInitNamespaceCoverage -> MountMethodOutcome.SUPPORT
                 else -> MountMethodOutcome.CLEAN

@@ -23,11 +23,36 @@ import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import com.eltavine.duckdetector.features.mount.domain.MountAnonymousDeviceState
 import org.junit.Test
 
 class MountNativeBridgeTest {
 
     private val bridge = MountNativeBridge()
+
+    @Test
+    fun `anonymous device payload preserves coverage states and details`() {
+        for (state in MountAnonymousDeviceState.entries) {
+            val parsed = bridge.parse("AVAILABLE=1\nANON_DEVICE_STATE=${state.name}\nANON_DEVICE_DETAIL=Window 0:30..0:100; gap 0:32")
+            assertEquals(state, parsed.anonymousDeviceState)
+            assertTrue(parsed.anonymousDeviceDetail.contains("gap 0:32"))
+        }
+        assertEquals(MountAnonymousDeviceState.NOT_COLLECTED,
+            bridge.parse("AVAILABLE=1").anonymousDeviceState)
+        assertEquals(MountAnonymousDeviceState.NOT_COLLECTED,
+            bridge.parse("AVAILABLE=1\nANON_DEVICE_STATE=FUTURE_STATE").anonymousDeviceState)
+    }
+
+    @Test
+    fun `missing anonymous device evidence cannot become a successful no-gap observation`() {
+        for (detail in listOf("", "\nANON_DEVICE_DETAIL=   ")) {
+            val snapshot = bridge.parse("AVAILABLE=1\nANON_DEVICE_STATE=NO_GAPS$detail\nMAGISK_MOUNT=1")
+            assertEquals(MountAnonymousDeviceState.UNAVAILABLE, snapshot.anonymousDeviceState)
+            assertTrue(snapshot.anonymousDeviceDetail.isNotBlank())
+            assertTrue(snapshot.available)
+            assertTrue(snapshot.magiskMountDetected)
+        }
+    }
 
     @Test
     fun `parse reads readability flags and counters`() {
@@ -37,6 +62,7 @@ class MountNativeBridgeTest {
             MOUNTS_READABLE=1
             MOUNTINFO_READABLE=1
             MAPS_READABLE=0
+            ROOT_MOUNT_ARTIFACT=1
             STATX_SUPPORTED=true
             PERMISSION_TOTAL=12
             PERMISSION_DENIED=3
@@ -48,6 +74,8 @@ class MountNativeBridgeTest {
         assertTrue(snapshot.available)
         assertTrue(snapshot.mountsReadable)
         assertFalse(snapshot.mapsReadable)
+        assertTrue(snapshot.rootMountArtifactDetected)
+        assertFalse(snapshot.magiskMountDetected)
         assertTrue(snapshot.statxSupported)
         assertEquals(12, snapshot.permissionTotal)
         assertEquals(3, snapshot.permissionDenied)

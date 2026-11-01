@@ -22,11 +22,13 @@ The Bootloader detector asks whether the bootloader is locked and verified boot 
 - Observable signal: whether the attested verifiedBootHash matches ro.boot.vbmeta.digest, and whether the hash or key is all zeros.
 - Producing subsystem: AVB in the bootloader, which computes the vbmeta digest, and init, which exposes it.
 - Mechanism: on a genuine device both views carry the same vbmeta digest.
-- References: hardware/interfaces KeyCreationResult.aidl (verifiedBootHash is a SHA-256 digest of the verified images); system/core init/property_service.cpp (androidboot.* to ro.boot.*).
-- Applicability: skipped when the attested state is Failed or Unverified, where AOSP does not guarantee the other fields.
-- Visibility limits: an empty runtime digest leaves the comparison unperformed.
+- References: [Android RootOfTrust fields and boot-state semantics](https://source.android.com/docs/security/features/keystore/attestation#rootoftrust_fields); hardware/interfaces KeyCreationResult.aidl; system/core init/property_service.cpp (androidboot.* to ro.boot.*).
+- Applicability: comparison requires a Verified or SelfSigned attested state. Failed provides no guarantees about the other RootOfTrust fields; Unverified allows an all-zero verifiedBootKey and does not establish a chain of trust. Unknown states are not compared.
+- Visibility limits: a missing RootOfTrust, missing attested hash, unreadable property or empty runtime digest leaves the comparison unperformed. A readable property alone cannot establish alignment. An empty readable digest with a usable attested hash in a comparable state retains the existing missing-digest anomaly.
 - Result states: aligned, mismatch, missing, not compared.
-- Interpretation: a contradiction between the two views is danger.
+- Interpretation: a contradiction between the two views is danger. Only a completed runtime comparison without a hard anomaly is Aligned / SAFE in findings and Aligned / CLEAN in the method summary. All other non-anomalous results are Not compared / INFO (SUPPORT in the method summary), matching the TEE report's use of runtimeComparisonPerformed. Existing mismatch, missing-digest and zero-value anomaly findings take precedence.
+- Presentation: the card summary describes the absence of observed contradictions and directs readers to individual checks for coverage. It does not assert that attestation and properties were aligned when their digest comparison was unavailable.
+- Validation: `./gradlew :feature:bootloader:data:unitTest :feature:bootloader:presentation:unitTest :capability:attestation:data:unitTest :feature:tee:data:unitTest`. Regression cases cover a readable property without a comparison, unavailable properties, completed comparisons and each hard anomaly. Probe-to-method cases cover missing roots and hashes, Unverified, Failed and unknown states, plus actual matched and mismatched digests. Probe tests also cover unavailable properties and SelfSigned. Presentation tests retain informational rows and avoid an unconditional alignment claim in the summary.
 
 ### VBMeta digest of empty input
 

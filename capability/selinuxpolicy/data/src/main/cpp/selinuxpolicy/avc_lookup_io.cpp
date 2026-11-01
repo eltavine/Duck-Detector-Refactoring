@@ -58,12 +58,15 @@ namespace duckdetector::selinux::avc_lookup {
 
     int now_ns(uint64_t &value) {
         timespec time{};
-        if (clock_gettime(CLOCK_MONOTONIC, &time) != 0) return errno;
+        // Keep write timings on a raw monotonic clock, without NTP rate adjustments.
+        if (clock_gettime(CLOCK_MONOTONIC_RAW, &time) != 0) return errno;
         value = static_cast<uint64_t>(time.tv_sec) * 1000000000ULL + static_cast<uint64_t>(time.tv_nsec);
         return 0;
     }
 
 #if defined(__linux__)
+    int current_cpu() { return sched_getcpu(); }
+
     int pin_to_allowed_cpu(int &cpu) {
         cpu = -1;
         cpu_set_t allowed;
@@ -92,6 +95,8 @@ namespace duckdetector::selinux::avc_lookup {
         return running == cpu && CPU_COUNT(&current) == 1 && CPU_ISSET(cpu, &current) ? 0 : EXDEV;
     }
 #else
+    int current_cpu() { errno = ENOSYS; return -1; }
+
     // The counters are per CPU on Linux; other hosts build this adapter only for its tests.
     int pin_to_allowed_cpu(int &cpu) {
         cpu = -1;

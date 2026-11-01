@@ -16,6 +16,7 @@
  */
 
 #include "mount/detector_core.h"
+#include "common/mount_artifact_markers.h"
 #include "mount/detector_internal.h"
 #include <android/log.h>
 #include <fcntl.h>
@@ -69,11 +70,13 @@ namespace duckdetector::mount::detail {
             const AccessResult access = check_access(path, false, snapshot);
             if (access == AccessResult::Exists) {
                 snapshot.busyboxDetected = true;
+                const bool rootPath = common::mount_path_is_within(path, "/data/adb");
+                snapshot.dataAdbDetected |= rootPath;
                 add_finding(
                         snapshot,
                         dedupe,
                         "ARTIFACTS",
-                        "WARNING",
+                        rootPath ? "DANGER" : "INFO",
                         "Busybox binary",
                         "Present",
                         path
@@ -164,15 +167,15 @@ namespace duckdetector::mount::detail {
         static const std::array<DebugSpec, 4> kSpecs = {{
                                                                 {"/debug_ramdisk/adb_debug.prop",
                                                                  "adb_debug.prop", false,
-                                                                 "DANGER"},
+                                                                 "INFO"},
                                                                 {"/debug_ramdisk/userdebug_plat_sepolicy.cil",
                                                                  "userdebug sepolicy", false,
-                                                                 "DANGER"},
+                                                                 "INFO"},
                                                                 {"/debug_ramdisk/force_debuggable",
                                                                  "force_debuggable", false,
-                                                                 "DANGER"},
+                                                                 "INFO"},
                                                                 {"/debug_ramdisk/force_adb",
-                                                                 "force_adb", false, "DANGER"},
+                                                                 "force_adb", false, "INFO"},
                                                         }};
 
         for (const DebugSpec &spec: kSpecs) {
@@ -218,16 +221,13 @@ namespace duckdetector::mount::detail {
 
         for (const HybridSpec &spec: kSpecs) {
             if (check_access(spec.path, spec.isDirectory, snapshot) == AccessResult::Exists) {
-                if (spec.metaHybrid) {
-                    snapshot.metaHybridMountDetected = true;
-                } else {
-                    snapshot.hybridMountDetected = true;
-                }
+                const bool rootPath = common::mount_path_is_within(spec.path, "/data/adb");
+                snapshot.dataAdbDetected |= rootPath;
                 add_finding(
                         snapshot,
                         dedupe,
                         "ARTIFACTS",
-                        "DANGER",
+                        rootPath ? "DANGER" : "INFO",
                         spec.label,
                         "Present",
                         spec.path

@@ -16,6 +16,8 @@
  */
 
 #include "mount/detector_core.h"
+#include "common/mount_id_observation.h"
+#include "common/mount_artifact_markers.h"
 #include "mount/detector_internal.h"
 #include <android/log.h>
 #include <fcntl.h>
@@ -61,17 +63,19 @@ namespace duckdetector::mount::detail {
             const std::string lowerFs = lowercase_copy(entry.fsType);
             const std::string lowerOptions = lowercase_copy(entry.options);
 
-            if (lowerSource.find(".magisk") != std::string::npos ||
-                lowerTarget.find(".magisk") != std::string::npos ||
-                lowerTarget.find("/data/adb/modules") != std::string::npos ||
-                lowerSource.find("magisk/mirror") != std::string::npos) {
-                snapshot.magiskMountDetected = true;
+            const auto artifactLabels = common::mount_artifact_labels("", entry.target, entry.source);
+            const auto hasLabel = [&](const std::string &label) {
+                return std::find(artifactLabels.begin(), artifactLabels.end(), label) != artifactLabels.end();
+            };
+            if (hasLabel("Magisk") || hasLabel("data/adb") || hasLabel("ADB modules")) {
+                snapshot.magiskMountDetected |= hasLabel("Magisk");
+                snapshot.rootMountArtifactDetected = true;
                 add_finding(
                         snapshot,
                         dedupe,
                         "ARTIFACTS",
                         "DANGER",
-                        "Magisk mounts",
+                        hasLabel("Magisk") ? "Magisk mounts" : "Root mount artifact",
                         entry.target,
                         entry.source + " -> " + entry.target + " (" + entry.fsType + ")"
                 );
@@ -85,7 +89,7 @@ namespace duckdetector::mount::detail {
                             snapshot,
                             dedupe,
                             "RUNTIME",
-                            "DANGER",
+                            "WARNING",
                             "System RW",
                             entry.target,
                             "Mount options: " + entry.options
@@ -99,7 +103,7 @@ namespace duckdetector::mount::detail {
                             snapshot,
                             dedupe,
                             "RUNTIME",
-                            "DANGER",
+                            "WARNING",
                             "Overlay mount",
                             entry.target,
                             entry.source + " -> " + entry.target + " (" + entry.fsType + ")"
@@ -114,7 +118,7 @@ namespace duckdetector::mount::detail {
                             snapshot,
                             dedupe,
                             "RUNTIME",
-                            "DANGER",
+                            "WARNING",
                             "Loop device mount",
                             entry.target,
                             entry.source + " -> " + entry.target
@@ -125,15 +129,15 @@ namespace duckdetector::mount::detail {
                     lowerSource.find("/dev/block/dm-") == std::string::npos &&
                     lowerFs != "overlay" &&
                     lowerFs != "overlayfs") {
-                    snapshot.dmVerityBypassDetected = true;
+
                     add_finding(
                             snapshot,
                             dedupe,
                             "RUNTIME",
-                            "WARNING",
-                            "Direct block mount",
+                            "INFO",
+                            "Mount source",
                             entry.target,
-                            "Expected dm-verity mapper source, got " + entry.source
+                            "Source=" + entry.source + ". A source pathname does not establish dm-verity state."
                     );
                 }
             }
@@ -141,46 +145,39 @@ namespace duckdetector::mount::detail {
             if (lowerFs == "tmpfs" &&
                 (lowerTarget == "/sbin" || lowerTarget == "/.magisk" ||
                  lowerTarget == "/patch_hw" || lowerTarget == "/dev/meta_hybird_mnt")) {
-                snapshot.suspiciousTmpfsDetected = true;
-                snapshot.tmpfsSizeAnomaly = true;
                 add_finding(
                         snapshot,
                         dedupe,
                         "FILESYSTEM",
-                        "WARNING",
-                        "Suspicious tmpfs",
+                        "INFO",
+                        "Tmpfs mount",
                         entry.target,
                         entry.source + " -> " + entry.target + " (" + entry.options + ")"
                 );
             }
 
-            if (lowerSource.find("ksu") != std::string::npos ||
-                lowerSource.find("kernelsu") != std::string::npos ||
-                lowerSource.find("magic_mount") != std::string::npos ||
-                lowerOptions.find("workdir=/data/adb") != std::string::npos) {
-                snapshot.ksuOverlayDetected = true;
+            if (hasLabel("KernelSU") || hasLabel("APatch") || hasLabel("Magic mount")) {
+                snapshot.ksuOverlayDetected |= hasLabel("KernelSU");
+                snapshot.rootMountArtifactDetected = true;
                 add_finding(
                         snapshot,
                         dedupe,
                         "ARTIFACTS",
                         "DANGER",
-                        "KernelSU or magic-mount overlay",
+                        "Root manager mount source",
                         entry.target,
                         entry.source + " -> " + entry.target
                 );
             }
 
-            if (lowerSource.find("meta-hybrid") != std::string::npos ||
-                lowerSource.find("meta_hybird") != std::string::npos ||
-                lowerSource.find("magic_mount") != std::string::npos ||
-                lowerTarget.find(".magic_mount") != std::string::npos) {
+            if (hasLabel("Magic mount")) {
                 snapshot.metaHybridMountDetected = true;
                 add_finding(
                         snapshot,
                         dedupe,
                         "ARTIFACTS",
                         "DANGER",
-                        "Meta-Hybrid or magic mount",
+                        "Magic-mount source",
                         entry.target,
                         entry.source + " -> " + entry.target
                 );
@@ -196,26 +193,27 @@ namespace duckdetector::mount::detail {
         snapshot.mountInfoReadable = !entries.empty();
         snapshot.mountInfoEntryCount = static_cast<int>(entries.size());
 
-        int dataDataMountId = -1;
-
-        for (size_t index = 0; index < entries.size(); ++index) {
-            const MountInfoEntry &entry = entries[index];
+        for (const MountInfoEntry &entry: entries) {
+            auto rootLabels = common::mount_artifact_labels(entry.root, entry.target, entry.source);
+            rootLabels.erase(std::remove(rootLabels.begin(), rootLabels.end(), "debug_ramdisk"), rootLabels.end());
+            if (!rootLabels.empty()) {
+                add_finding(
+                        snapshot, dedupe, "CONSISTENCY", "DANGER", "Root mount artifact",
+                        entry.target, "root=" + entry.root + ", source=" + entry.source
+                );
+            }
             const std::string optionalJoined = join_optional_fields(entry.optionalFields);
             const std::string lowerOptional = lowercase_copy(optionalJoined);
             const std::string lowerSuper = lowercase_copy(entry.superOptions);
 
-            if (entry.target == "/data/data") {
-                dataDataMountId = entry.id;
-            }
-
             if (is_system_partition(entry.target) && entry.root != "/") {
-                snapshot.bindMountDetected = true;
+
                 add_finding(
                         snapshot,
                         dedupe,
                         "CONSISTENCY",
-                        "DANGER",
-                        "Bind mount root",
+                        "INFO",
+                        "Mount root subset",
                         entry.target,
                         "root=" + entry.root + ", source=" + entry.source
                 );
@@ -226,13 +224,13 @@ namespace duckdetector::mount::detail {
                  lowerSuper.find("fscontext=") != std::string::npos ||
                  lowerSuper.find("defcontext=") != std::string::npos ||
                  lowerSuper.find("rootcontext=") != std::string::npos)) {
-                snapshot.mountOptionsAnomaly = true;
+
                 add_finding(
                         snapshot,
                         dedupe,
                         "CONSISTENCY",
-                        "DANGER",
-                        "SELinux mount override",
+                        "INFO",
+                        "SELinux mount context",
                         entry.target,
                         entry.superOptions
                 );
@@ -241,12 +239,12 @@ namespace duckdetector::mount::detail {
             if (entry.target == "/" && lowerOptional.find("shared:") == std::string::npos &&
                 lowerOptional.find("master:") == std::string::npos &&
                 lowerOptional.find("unbindable") == std::string::npos) {
-                snapshot.mountPropagationAnomaly = true;
+
                 add_finding(
                         snapshot,
                         dedupe,
                         "CONSISTENCY",
-                        "WARNING",
+                        "INFO",
                         "Root mount propagation",
                         "Private",
                         optionalJoined.empty()
@@ -254,83 +252,39 @@ namespace duckdetector::mount::detail {
                         : optionalJoined
                 );
             }
+        }
 
-            if (entry.target == "/apex/com.android.art" && index + 1 < entries.size() &&
-                entries[index + 1].id > entry.id + 1) {
-                snapshot.mountIdLoopholeDetected = true;
-                add_finding(
-                        snapshot,
-                        dedupe,
-                        "CONSISTENCY",
-                        "DANGER",
-                        "Mount ID loophole",
-                        "Gap after ART",
-                        "Expected next ID " + std::to_string(entry.id + 1) + ", got " +
-                        std::to_string(entries[index + 1].id)
-                );
-            }
-
-            if (entry.target == "/data_mirror" && index > 0) {
-                const MountInfoEntry &previous = entries[index - 1];
-                if (previous.id + 1 != entry.id &&
-                    previous.target.find("/data/user") == std::string::npos) {
-                    snapshot.mountIdLoopholeDetected = true;
-                    add_finding(
-                            snapshot,
-                            dedupe,
-                            "CONSISTENCY",
-                            "DANGER",
-                            "Mount ID loophole",
-                            "Gap before /data_mirror",
-                            "Previous mount " + previous.target + " has ID " +
-                            std::to_string(previous.id)
-                    );
-                }
-            }
+        const auto observations = common::observe_mount_id_discontinuities(entries);
+        snapshot.mountIdLoopholeDetected = !observations.empty();
+        for (const auto &observation: observations) {
+            add_finding(
+                    snapshot,
+                    dedupe,
+                    "CONSISTENCY",
+                    "INFO",
+                    "Mount ID discontinuity",
+                    "Observed",
+                    observation.detail()
+            );
         }
 
 #ifdef __NR_statx
         snapshot.statxSupported = is_statx_supported();
 
-        if (snapshot.statxSupported && dataDataMountId > 0) {
-            struct statx stx{};
-            const int statxResult = static_cast<int>(
-                    syscall(__NR_statx, AT_FDCWD, "/data/data", AT_NO_AUTOMOUNT,
-                            STATX_BASIC_STATS | kStatxMountIdMask, &stx)
-            );
-            if (statxResult == 0 && (stx.stx_mask & kStatxMountIdMask) != 0 &&
-                stx.stx_mnt_id != static_cast<std::uint64_t>(dataDataMountId)) {
-                snapshot.statxMntIdMismatch = true;
-                add_finding(
-                        snapshot,
-                        dedupe,
-                        "CONSISTENCY",
-                        "DANGER",
-                        "statx mount ID mismatch",
-                        "/data/data",
-                        "mountinfo=" + std::to_string(dataDataMountId) + ", statx=" +
-                        std::to_string(static_cast<unsigned long long>(stx.stx_mnt_id))
-                );
-            }
-        }
-
         struct StatxCheck {
             const char *path;
             const char *label;
         };
-        static const std::array<StatxCheck, 3> kChecks = {{
+        static const std::array<StatxCheck, 4> kChecks = {{
+                                                                  {"/data/data", "App data"},
                                                                   {"/system/bin", "System bin"},
                                                                   {"/system/lib64",
                                                                    "System lib64"},
                                                                   {"/vendor/bin", "Vendor bin"},
                                                           }};
 
-        std::map<std::string, int> mountIds;
-        for (const MountInfoEntry &entry: entries) {
-            mountIds[entry.target] = entry.id;
-        }
-
         if (snapshot.statxSupported) {
+            bool mountIdReturned = false;
             for (const StatxCheck &check: kChecks) {
                 struct statx stx{};
                 const int statxResult = static_cast<int>(
@@ -341,6 +295,7 @@ namespace duckdetector::mount::detail {
                     continue;
                 }
 
+                mountIdReturned = true;
                 const bool mountRootFlagKnown =
                         (stx.stx_attributes_mask & kStatxMountRootMask) != 0;
                 const bool isMountRoot =
@@ -351,31 +306,31 @@ namespace duckdetector::mount::detail {
                             snapshot,
                             dedupe,
                             "CONSISTENCY",
-                            "WARNING",
+                            "INFO",
                             "statx mount root",
                             check.path,
                             std::string(check.label) +
-                            " unexpectedly reports mount-root attributes."
+                            " reports the VFS mount-root attribute; this is not an integrity violation."
                     );
                 }
 
-                const auto mountIdIt = mountIds.find(check.path);
-                if (mountIdIt != mountIds.end() &&
-                    static_cast<unsigned long long>(stx.stx_mnt_id) !=
-                    static_cast<unsigned long long>(mountIdIt->second)) {
-                    snapshot.statxMountRootAnomaly = true;
+                // statx follows symlinks and resolves the active covering mount. A literal
+                // mountpoint row (including a covered/stacked mount) is not its expected ID.
+                const bool visibleId = std::any_of(entries.begin(), entries.end(), [&](const auto &entry) {
+                    return static_cast<std::uint64_t>(entry.id) == stx.stx_mnt_id;
+                });
+                if (!visibleId && !entries.empty()) {
+                    snapshot.statxMntIdMismatch = true;
                     add_finding(
-                            snapshot,
-                            dedupe,
-                            "CONSISTENCY",
-                            "DANGER",
-                            "statx mount cross-check",
-                            check.path,
-                            "mountinfo=" + std::to_string(mountIdIt->second) + ", statx=" +
-                            std::to_string(static_cast<unsigned long long>(stx.stx_mnt_id))
+                            snapshot, dedupe, "CONSISTENCY", "INFO",
+                            "statx mount ID observation", check.path,
+                            "statx=" + std::to_string(stx.stx_mnt_id) +
+                            " was not in the earlier mountinfo capture. The captures are not atomic; "
+                            "mount changes or incomplete visibility must be excluded before inferring tampering."
                     );
                 }
             }
+            snapshot.statxSupported = mountIdReturned;
         }
 #else
         snapshot.statxSupported = false;

@@ -41,7 +41,7 @@ limitations under the License.
     <string name="startup_preparing_title">正在准备启动</string>
     <string name="startup_before_scan_title">扫描之前</string>
     <string name="startup_loading_detail">偏好设置和 PackageManager 可见性仍在加载中。在此完成前，检测器 ViewModel 会保持暂停。</string>
-    <string name="startup_intro_detail">请在检测开始前完成必需选择。通知、Live Update 路由、CRL 在线刷新以及 PackageManager 可见性会在这里统一检查。在下方所有必需卡片都处理完成前，检测流程会一直阻塞。</string>
+    <string name="startup_intro_detail">扫描前可在此查看通知、检测功能的可选权限和软件包可见性。可选诊断可以保持关闭，之后可在设置中修改。</string>
     <string name="startup_loading_state">正在加载启动状态…</string>
     <string name="startup_progress_resolved">已完成 %1$d / %2$d 个启动卡片</string>
     <string name="startup_loading_dependencies_title">正在加载启动依赖</string>
@@ -99,5 +99,10 @@ limitations under the License.
     <string name="update_download_failed">无法下载或验证更新</string>
     <string name="update_install_permission_required">请允许 Duck Detector 安装应用，然后再次点击“安装”</string>
     <string name="update_install_failed">无法打开安装程序</string>
+    <string name="update_install_fallback_copied_opened">本地安装失败，已复制 APK 下载链接并在浏览器中打开。</string>
+    <string name="update_install_fallback_copied_only">本地安装失败，已复制 APK 下载链接，但无法打开浏览器。</string>
+    <string name="update_install_fallback_opened_only">本地安装失败，已在浏览器中打开 APK 下载链接，但复制失败。</string>
+    <string name="update_install_link_copied">已复制 APK 下载链接</string>
     <string name="update_apk_unavailable">下载的更新文件已失效，请重新下载</string>
+    <string name="detector_manage_permissions">管理应用权限</string>
 </resources>

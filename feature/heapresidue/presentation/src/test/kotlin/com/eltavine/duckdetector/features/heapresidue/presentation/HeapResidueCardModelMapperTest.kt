@@ -18,6 +18,8 @@
 package com.eltavine.duckdetector.features.heapresidue.presentation
 
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
+import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.heapresidue.domain.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -51,5 +53,44 @@ class HeapResidueCardModelMapperTest {
         assertEquals("Newer than audited", row(HeapResidueRelease.NEWER)?.value)
         assertEquals("Pre-release build", row(HeapResidueRelease.PRERELEASE)?.value)
         assertNull(row(HeapResidueRelease.UNKNOWN))
+    }
+    @Test fun overviewAndMethodsKeepNegativeHistoricalCoverageInformational() {
+        val model = HeapResidueCardModelMapper().map(HeapResidueReport(HeapResidueStage.READY,
+            HeapResidueOutcome.NOT_OBSERVED, candidateCount = 12, bytesRead = 1024))
+        assertEquals(4, model.headerFacts.size)
+        assertEquals("12", model.headerFacts.single { it.label == "Arguments" }.value)
+        assertEquals("Unknown", model.headerFacts.single { it.label == "Coverage" }.value)
+        assertTrue((model.headerFacts + model.methodRows + model.impactRows).all {
+            it.status == DetectorStatus.info(InfoKind.SUPPORT)
+        })
+        assertEquals(4, model.toDetectorReport().quickFacts.size)
+    }
+    @Test fun unavailableAndUnsupportedDoNotShowMeasuredZeroesInOverview() {
+        val mapper = HeapResidueCardModelMapper()
+        val failed = mapper.map(HeapResidueReport.failed("dump failed"))
+        assertEquals("Unavailable", failed.headerFacts.single { it.label == "Traces" }.value)
+        assertTrue(failed.headerFacts.filter { it.label != "Coverage" }.all { it.status == DetectorStatus.info(InfoKind.ERROR) })
+        assertEquals(DetectorStatus.info(InfoKind.ERROR), failed.methodRows.first().status)
+        val unsupported = mapper.map(HeapResidueReport(HeapResidueStage.READY, HeapResidueOutcome.UNSUPPORTED))
+        assertEquals("Unsupported", unsupported.methodRows.first().value)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), unsupported.methodRows.first().status)
+    }
+
+    @Test fun inconclusiveMatchingDoesNotReadAsZeroTargetTraces() {
+        val model = HeapResidueCardModelMapper().map(HeapResidueReport(HeapResidueStage.READY,
+            HeapResidueOutcome.INCONCLUSIVE, candidateCount = 0, bytesRead = 1024))
+        assertEquals("Inconclusive", model.headerFacts.single { it.label == "Traces" }.value)
+        assertEquals("Inconclusive", model.methodRows.single { it.label == "Startup argument matching" }.value)
+        assertEquals("Snapshot collected", model.methodRows.single { it.label == "Isolated ART heap capture" }.value)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.status)
+    }
+    @Test fun unattemptedAndFailedReportsDoNotClaimANegativeSnapshot() {
+        val mapper = HeapResidueCardModelMapper()
+        val pending = mapper.map(HeapResidueReport(HeapResidueStage.READY))
+        assertEquals("Not evaluated", pending.verdict)
+        assertTrue(pending.summary.contains("No snapshot evaluation"))
+        val failed = mapper.map(HeapResidueReport(HeapResidueStage.FAILED, errorMessage = "Capture failed"))
+        assertEquals("Probe unavailable", failed.verdict)
+        assertEquals("Capture failed", failed.summary)
     }
 }

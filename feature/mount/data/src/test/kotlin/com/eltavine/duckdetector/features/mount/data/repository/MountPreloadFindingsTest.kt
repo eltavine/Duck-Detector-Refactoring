@@ -22,6 +22,7 @@ import com.eltavine.duckdetector.features.mount.domain.MountFindingGroup
 import com.eltavine.duckdetector.features.mount.domain.MountFindingOrigin
 import com.eltavine.duckdetector.features.mount.domain.MountFindingSeverity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MountPreloadFindingsTest {
@@ -30,6 +31,7 @@ class MountPreloadFindingsTest {
     fun `a startup mount id gap alone keeps its startup origin`() {
         val merged = mergePreloadFindings(emptyList(), listOf(startupMountIdGap))
 
+        assertEquals(listOf(MountFindingSeverity.INFO), merged.map { it.severity })
         assertEquals(listOf(MountFindingOrigin.STARTUP_PRELOAD), merged.map { it.origin })
     }
 
@@ -37,6 +39,7 @@ class MountPreloadFindingsTest {
     fun `a startup mount id gap merged with a runtime one is seen by both captures`() {
         val merged = mergePreloadFindings(listOf(runtimeMountIdGap), listOf(startupMountIdGap))
 
+        assertEquals(listOf(MountFindingSeverity.INFO), merged.map { it.severity })
         assertEquals(listOf(MountFindingOrigin.STARTUP_AND_RUNTIME), merged.map { it.origin })
     }
 
@@ -44,7 +47,21 @@ class MountPreloadFindingsTest {
     fun `runtime mount id gaps collapsed without a startup capture stay runtime`() {
         val merged = mergePreloadFindings(listOf(runtimeMountIdGap, runtimeMountIdGap.copy(value = "2")), emptyList())
 
+        assertEquals(listOf(MountFindingSeverity.INFO), merged.map { it.severity })
         assertEquals(listOf(MountFindingOrigin.RUNTIME), merged.map { it.origin })
+    }
+
+    @Test
+    fun `legacy and current runtime labels collapse without upgrading repeated observations`() {
+        val merged = mergePreloadFindings(
+            listOf(runtimeMountIdGap, runtimeMountIdGap.copy(label = MOUNT_ID_OBSERVATION_LABEL)),
+            listOf(startupMountIdGap),
+        )
+
+        assertEquals(1, merged.size)
+        assertEquals(MountFindingSeverity.INFO, merged.single().severity)
+        assertEquals(MOUNT_ID_OBSERVATION_LABEL, merged.single().label)
+        assertTrue(merged.single().detail.orEmpty().contains("do not establish hidden mounts"))
     }
 
     private val startupMountIdGap = MountFinding(

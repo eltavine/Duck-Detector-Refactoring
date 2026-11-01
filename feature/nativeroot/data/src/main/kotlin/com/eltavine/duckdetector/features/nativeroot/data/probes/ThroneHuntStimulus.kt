@@ -79,10 +79,9 @@ class ThroneHuntStimulus(
         // IllegalArgumentException("Unknown MIME group ... for package ...").
         const val MIME_GROUP = "duckdetector-throne-hunt"
 
-        // WRITE_SETTINGS_DELAY in PackageManagerService is 10 s, and scheduleWriteSettings() guards
-        // with hasMessages() so an already-pending write is never re-armed. The rewrite therefore
-        // cannot land later than 10 s after the stimulus, which makes this a hard upper bound rather
-        // than a guess; the allowance covers search_manager walking /data/app afterwards.
+        // The reviewed PackageManagerService schedules settings writes with a 10 s delay.
+        // Queueing and I/O can extend it, so this observation window is not a completion guarantee
+        // or evidence that a manager scan ran. Retain the legacy allowance without attribution.
         const val SETTINGS_WRITE_DELAY_MS = 10_000L
         const val SEARCH_MANAGER_ALLOWANCE_MS = 3_000L
         const val SETTINGS_WRITE_WINDOW_MS = SETTINGS_WRITE_DELAY_MS + SEARCH_MANAGER_ALLOWANCE_MS

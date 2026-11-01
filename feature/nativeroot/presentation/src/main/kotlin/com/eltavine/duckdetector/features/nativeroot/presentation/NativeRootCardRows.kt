@@ -176,7 +176,7 @@ internal fun buildMethodRows(report: NativeRootReport): List<NativeRootDetailRow
             "Failed"
         )
 
-        NativeRootStage.READY -> report.methods.map { result ->
+        NativeRootStage.READY -> (report.methods + wrapperLeakMethod(report.wrapperLeak)).map { result ->
             NativeRootDetailRowModel(
                 label = result.label,
                 value = result.summary,
@@ -189,7 +189,7 @@ internal fun buildMethodRows(report: NativeRootReport): List<NativeRootDetailRow
                 },
                 detailMonospace = true,
             )
-        } + srcuTimingRow(report.srcuTiming)
+        } + srcuTimingRow(report.srcuTiming) + initRcTimingRow(report.initRcTiming) + kernelSuTimingRow(report.kernelSuTiming)
     }
 }
 
@@ -237,6 +237,9 @@ internal fun buildThroneHuntDiagnostics(report: NativeRootReport): String {
     // 这份文本仍然有用。
     return buildString {
         appendLine("NativeRoot ksuThroneHunt diagnostic")
+        appendLine("interpretation=diagnostic_only")
+        appendLine("accessorAttribution=unverified")
+        appendLine("Zero events cannot exclude a manager scan or KernelSU.")
         appendLine("available=${report.ksuThroneHuntAvailable}")
         appendLine("collectionOutcome=${report.ksuThroneHuntCollectionOutcome}")
         appendLine("collectionDetail=${report.ksuThroneHuntCollectionDetail}")

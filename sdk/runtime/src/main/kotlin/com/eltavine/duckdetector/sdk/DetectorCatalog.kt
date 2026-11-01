@@ -24,10 +24,12 @@ import com.eltavine.duckdetector.features.customrom.detector.CustomRomDetector
 import com.eltavine.duckdetector.features.dangerousapps.detector.DangerousAppsDetector
 import com.eltavine.duckdetector.features.heapresidue.detector.HeapResidueDetector
 import com.eltavine.duckdetector.features.kernelcheck.detector.KernelCheckDetector
+import com.eltavine.duckdetector.features.locationrisk.detector.LocationRiskDetector
 import com.eltavine.duckdetector.features.lsposed.detector.LSPosedDetector
 import com.eltavine.duckdetector.features.memory.detector.MemoryDetector
 import com.eltavine.duckdetector.features.mount.detector.MountDetector
 import com.eltavine.duckdetector.features.nativeroot.detector.NativeRootDetector
+import com.eltavine.duckdetector.features.networkrisk.detector.NetworkRiskDetector
 import com.eltavine.duckdetector.features.playintegrityfix.detector.PlayIntegrityFixDetector
 import com.eltavine.duckdetector.features.rootmanagers.detector.RootManagersDetector
 import com.eltavine.duckdetector.features.selinux.detector.SelinuxDetector
@@ -54,10 +56,12 @@ public object DetectorCatalog {
         DangerousAppsDetector,
         HeapResidueDetector,
         KernelCheckDetector,
+        LocationRiskDetector,
         LSPosedDetector,
         MemoryDetector,
         MountDetector,
         NativeRootDetector,
+        NetworkRiskDetector,
         PlayIntegrityFixDetector,
         RootManagersDetector,
         SelinuxDetector,

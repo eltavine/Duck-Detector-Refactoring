@@ -201,6 +201,10 @@ internal object SelinuxContextValidityPayloadCodec {
             snapshot.dirtyPolicyNotes.forEach { note ->
                 append("DIRTY_POLICY_NOTE=").append(escapeValue(note)).append('\n')
             }
+            snapshot.dirtyPolicyAdditionalRules.forEach { (name, allowed) ->
+                append("DIRTY_POLICY_EXTRA_RULE=")
+                    .append(escapeValue("$name|${if (allowed) 1 else 0}")).append('\n')
+            }
             append("JAVA_DIRTY_POLICY_AVAILABLE=")
                 .append(if (snapshot.javaDirtyPolicyAvailable) '1' else '0')
                 .append('\n')
@@ -323,6 +327,10 @@ internal object SelinuxContextValidityPayloadCodec {
             snapshot.javaDirtyPolicyNotes.forEach { note ->
                 append("JAVA_DIRTY_POLICY_NOTE=").append(escapeValue(note)).append('\n')
             }
+            snapshot.javaDirtyPolicyAdditionalRules.forEach { (name, allowed) ->
+                append("JAVA_DIRTY_POLICY_EXTRA_RULE=")
+                    .append(escapeValue("$name|${if (allowed) 1 else 0}")).append('\n')
+            }
             append("POLICYLOAD_SEQNO_AVAILABLE=")
                 .append(if (snapshot.policyloadSeqnoAvailable) '1' else '0')
                 .append('\n')
@@ -353,6 +361,9 @@ internal object SelinuxContextValidityPayloadCodec {
             snapshot.policyloadSeqnoNotes.forEach { note ->
                 append("POLICYLOAD_SEQNO_NOTE=").append(escapeValue(note)).append('\n')
             }
+            append("DIRTY_SEPOLICY_RAW=")
+                .append(escapeValue(SelinuxDirtySepolicyRawCodec.encode(snapshot.dirtySepolicyRaw)))
+                .append('\n')
             append("PROC_ATTR_CURRENT_PROBE_ATTEMPTED=")
                 .append(if (snapshot.procAttrCurrentProbeAttempted) '1' else '0')
                 .append('\n')

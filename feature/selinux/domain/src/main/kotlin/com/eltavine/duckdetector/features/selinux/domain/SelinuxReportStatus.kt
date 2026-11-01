@@ -43,12 +43,18 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 // 约 1 微秒的 A/B 时序差异，并验证了拒绝前的额外解析路径。
                 // DANGER 表示强异常证据，不代表仅凭侧信道就能在所有设备上确认 KernelSU 或 Root。
                 methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } -> DetectorStatus.danger()
+                methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
+                    it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE } -> DetectorStatus.danger()
+                methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.dirtySepolicyDanger } -> DetectorStatus.danger()
                 procAttrCurrent?.isSecure == false -> DetectorStatus.warning()
                 dirtyPolicyHit != null -> DetectorStatus.warning()
+                methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.isSecure == false } -> DetectorStatus.warning()
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
                 // After the trusted oracle and carrier checks; before the info-level coverage state, which would mask it.
                 sidtabReading(this)?.verdict == SelinuxSidtabVerdict.DISCREPANCY_OBSERVED -> DetectorStatus.warning()
-                appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)
+                // DirtySepolicy treats an App Zygote service that cannot start or connect as a
+                // warning. This is a failed detection environment, not proof of SELinux tampering.
+                appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED -> DetectorStatus.warning()
                 contextValidity?.contextValidity?.verdict == SelinuxContextValidityVerdict.SELF_TEST_FAILED -> DetectorStatus.warning()
                 contextValidity?.contextValidity?.verdict == SelinuxContextValidityVerdict.AMBIGUOUS -> DetectorStatus.warning()
                 policyAnalysis?.weakness == SelinuxPolicyWeakness.SEVERE ||
@@ -60,7 +66,16 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
             }
 
             SelinuxMode.PERMISSIVE, SelinuxMode.DISABLED -> DetectorStatus.danger()
-            SelinuxMode.UNKNOWN -> DetectorStatus.info(InfoKind.ERROR)
+            SelinuxMode.UNKNOWN -> if (methods.any {
+                it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.dirtySepolicyDanger
+            }) {
+                DetectorStatus.danger()
+            } else if (appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ||
+                methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.isSecure == false }) {
+                DetectorStatus.warning()
+            } else {
+                DetectorStatus.info(InfoKind.ERROR)
+            }
         }
     }
 }

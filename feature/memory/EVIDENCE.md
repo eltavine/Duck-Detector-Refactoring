@@ -38,3 +38,13 @@ The Memory detector asks whether this process's own code and mappings show signs
 - Visibility limits: legitimate crash reporters install handlers too, which is why only suspicious targets count.
 - Result states: detected, review, clean.
 - Interpretation: handlers in anonymous or loader-suspicious memory are review or danger by target.
+
+## Installed package path keywords
+
+- Observable signal: framework names in mapping and signal-handler paths.
+- Producing subsystem: PackageManager assigns installation directories; ART and the linker expose paths containing those directories.
+- Reference: [PackageManagerServiceUtils.getNextCodePath](https://android.googlesource.com/platform/frameworks/base/+/d1b7893669c02d6dc95c75133fa01eedc1d9fec6/services/core/java/com/android/server/pm/PackageManagerServiceUtils.java) creates `/data/app/~~<random>/<package>-<random>` with URL-safe Base64 encodings of 16 random bytes. Older layouts omit the first random directory; adopted storage uses `/mnt/expand/<volume>/app/`.
+- Interpretation: those installation tokens carry no framework identity. Keyword classification removes only structurally recognized tokens, retaining package names, library filenames, restricted directories, deleted suffixes and the original evidence path. ART labels embedding the installed path use the same parsing. This is not a package allowlist or an integrity guarantee.
+- Regression: issue #400's `com.google.android.webview-EhjSUe61CRiru01kMjxgJw==` contains `Riru` only in its installation token. The APK, ART and VDEX paths must not become suspicious loader candidates on that basis. Real module names such as `libriru.so` still count.
+- Anonymous VMA labels are not compared as ELF object filenames, including the shortened `[anon:dalvik-/data/app/~~ZRBshrwX...bview-EhjSUe61CRiru01kMjxgJw==/oat/arm64/base.art]` from the report. [ART MemMap::SetDebugName](https://android.googlesource.com/platform/art/+/refs/heads/main/libartbase/base/mem_map.cc) assigns `dalvik-` debug names through `PR_SET_VMA_ANON_NAME`; [Bionic do_dl_iterate_phdr](https://android.googlesource.com/platform/bionic/+/refs/heads/main/linker/linker.cpp) enumerates linker objects. A label mismatch is not module hiding. Anonymous executable mapping and signal-handler checks remain separate and unchanged.
+- Verification: `python3 core/native/src/test/python/test_installed_package_path.py` and `python3 feature/memory/data/src/test/python/test_loader_path_host_native.py`. Host fixtures exercise the production classifier and signal probe with synthetic mappings and an empty loader inventory; they do not reproduce a particular OEM's WebView build.

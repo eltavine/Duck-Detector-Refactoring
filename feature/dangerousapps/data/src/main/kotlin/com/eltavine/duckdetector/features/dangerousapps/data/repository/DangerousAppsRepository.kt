@@ -27,6 +27,7 @@ import com.eltavine.duckdetector.features.dangerousapps.data.probes.OpenApkFdPac
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.PackageChangeHistoryProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.SceneDebugfsContextProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.SceneLoopbackProbe
+import com.eltavine.duckdetector.features.dangerousapps.data.probes.ThanoxIpcProbe
 import com.eltavine.duckdetector.features.dangerousapps.data.probes.hma.HmaBehaviorProbe
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppFinding
 import com.eltavine.duckdetector.features.dangerousapps.domain.DangerousAppTarget
@@ -52,6 +53,7 @@ class DangerousAppsRepository(
     private val sceneLoopbackProbe: SceneLoopbackProbe = SceneLoopbackProbe(),
     private val hmaBehaviorProbe: HmaBehaviorProbe = HmaBehaviorProbe(context),
     private val packageChangeHistoryProbe: PackageChangeHistoryProbe = PackageChangeHistoryProbe(context),
+    private val thanoxIpcProbe: ThanoxIpcProbe = ThanoxIpcProbe(),
 ) : DetectorScanner<DangerousAppsReport> {
     override suspend fun scan(): DangerousAppsReport = withContext(Dispatchers.IO) {
         runCatching { scanInternal() }
@@ -185,13 +187,7 @@ class DangerousAppsRepository(
             }
         }
 
-        if (detectThanoxIpc()) {
-            appendMethod(
-                detectedApps = detectedApps,
-                packageName = THANOX_PACKAGE,
-                method = DangerousDetectionMethod(DangerousDetectionMethodKind.THANOX_IPC),
-            )
-        }
+        val thanoxIpc = thanoxIpcProbe.run()
 
         if (isAccessibilityServiceEnabled(SCENE_PACKAGE)) {
             appendMethod(
@@ -247,14 +243,7 @@ class DangerousAppsRepository(
         }
 
         val findings = buildFindings(detectedApps)
-        val hiddenFromPackageManager = if (packageVisibility == DangerousPackageVisibility.FULL) {
-            findings.filter { finding ->
-                finding.target.packageName !in installedPackages &&
-                        finding.methods.any { it.kind != DangerousDetectionMethodKind.PACKAGE_MANAGER && it.hmaEligible }
-            }
-        } else {
-            emptyList()
-        }
+        val hiddenFromPackageManager = hiddenPackageFindings(findings, installedPackages, packageVisibility)
 
         val behaviorChecks = hmaBehaviorProbe.run(
             packages = targets.map { it.packageName }.filter { it !in installedPackages },
@@ -275,6 +264,7 @@ class DangerousAppsRepository(
             issues = issues,
             behaviorChecks = behaviorChecks,
             packageChangeHistory = packageChangeHistory,
+            thanoxIpc = thanoxIpc,
         )
     }
 
@@ -345,7 +335,6 @@ class DangerousAppsRepository(
     )
 
     companion object {
-        private const val THANOX_PACKAGE = "github.tornaco.android.thanos"
         private const val SCENE_PACKAGE = "com.omarea.vtools"
     }
 }

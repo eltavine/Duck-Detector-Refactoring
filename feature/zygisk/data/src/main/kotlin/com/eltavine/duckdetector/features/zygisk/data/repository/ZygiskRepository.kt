@@ -34,6 +34,7 @@ import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignal
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalGroup
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskSignalSeverity
 import com.eltavine.duckdetector.features.zygisk.domain.ZygiskStage
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitState
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 import kotlinx.coroutines.withContext
@@ -76,6 +77,7 @@ class ZygiskRepository(
             fdTrapAvailable = fdTrap.available,
             fdTrapDetected = fdTrap.detected,
             nativeAvailable = snapshot.available,
+            atexitTable = snapshot.atexitTable,
             heapAvailable = snapshot.heapAvailable,
             nativeStrongHitCount = snapshot.strongHitCount,
             heuristicHitCount = snapshot.heuristicHitCount,
@@ -130,7 +132,7 @@ class ZygiskRepository(
         val heuristicFamilies = listOf(
             snapshot.solistHitCount,
             snapshot.vmapHitCount,
-            snapshot.atexitHitCount,
+            maxOf(snapshot.atexitHitCount, if (snapshot.atexitTable.hasEvidence) 1 else 0),
             snapshot.smapsHitCount,
             snapshot.heapHitCount,
             snapshot.threadHitCount,
@@ -158,13 +160,13 @@ class ZygiskRepository(
                 method = ZygiskMethod.NATIVE_SNAPSHOT,
                 summary = when {
                     !snapshot.available -> "Unavailable"
-                    snapshot.strongHitCount > 0 || snapshot.heuristicHitCount > 0 -> "Signals captured"
+                    snapshot.strongHitCount > 0 || snapshot.heuristicHitCount > 0 || snapshot.atexitTable.hasEvidence -> "Signals captured"
                     else -> "Clean"
                 },
                 outcome = when {
                     !snapshot.available -> ZygiskMethodOutcome.SUPPORT
                     snapshot.strongHitCount > 0 -> ZygiskMethodOutcome.DETECTED
-                    snapshot.heuristicHitCount > 0 -> ZygiskMethodOutcome.WARNING
+                    snapshot.heuristicHitCount > 0 || snapshot.atexitTable.hasEvidence -> ZygiskMethodOutcome.WARNING
                     else -> ZygiskMethodOutcome.CLEAN
                 },
                 detail = "Collects linker, namespace, maps, smaps, thread, fd, and heap traces from the current app process.",
@@ -211,6 +213,19 @@ class ZygiskRepository(
                     else -> ZygiskMethodOutcome.CLEAN
                 },
                 detail = "Correlates TracerPid, suspicious thread names, and open descriptor targets that frequently survive runtime tampering stacks.",
+            ),
+            ZygiskMethodResult(
+                method = ZygiskMethod.ATEXIT_HANDLERS,
+                summary = if (snapshot.atexitTable.hasEvidence) "Residue observed" else snapshot.atexitTable.state.label,
+                outcome = when {
+                    snapshot.atexitTable.hasEvidence -> ZygiskMethodOutcome.WARNING
+                    snapshot.atexitTable.state == ZygiskAtexitState.COLLECTED -> ZygiskMethodOutcome.CLEAN
+                    else -> ZygiskMethodOutcome.SUPPORT
+                },
+                detail = snapshot.atexitTable.detail + " Entries: ${snapshot.atexitTable.entries}; " +
+                    "cleared: ${snapshot.atexitTable.nullEntries}; runtime-adjacent gaps: ${snapshot.atexitTable.anchoredGaps}; " +
+                    "anonymous callbacks: ${snapshot.atexitTable.anonymousCallbacks}. " +
+                    "These observations do not identify an injection framework or version.",
             ),
             ZygiskMethodResult(
                 method = ZygiskMethod.SOLIST_ATEXIT_HEAP,

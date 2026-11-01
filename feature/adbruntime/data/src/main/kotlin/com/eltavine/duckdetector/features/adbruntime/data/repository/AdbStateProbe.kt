@@ -32,14 +32,20 @@ import com.eltavine.duckdetector.features.adbruntime.domain.UsbRuntimeSnapshot
 internal class AdbStateProbe(
     private val context: Context,
     private val propertyReads: SystemPropertyReadUtils = SystemPropertyReadUtils(),
+    private val jdwpSocketProbe: AdbJdwpSocketProbe = AdbJdwpSocketProbe(),
 ) {
-    fun collect(): AdbRuntimeSample = AdbRuntimeSample(
-        usbDebuggingEnabled = readGlobalBoolean(ADB_ENABLED),
-        wirelessDebuggingEnabled = readGlobalBoolean(ADB_WIFI_ENABLED),
-        debuggingFeaturesRestricted = readDebuggingRestriction(),
-        properties = readProperties(),
-        usb = readUsbState(),
-    )
+    fun collect(): AdbRuntimeSample {
+        val initSocket = AdbInitSocketProbe.read()
+        return AdbRuntimeSample(
+            usbDebuggingEnabled = readGlobalBoolean(ADB_ENABLED),
+            wirelessDebuggingEnabled = readGlobalBoolean(ADB_WIFI_ENABLED),
+            debuggingFeaturesRestricted = readDebuggingRestriction(),
+            properties = readProperties(),
+            usb = readUsbState(),
+            initSocket = initSocket,
+            jdwpSocket = jdwpSocketProbe.probe(),
+        )
+    }
 
     private fun readGlobalBoolean(name: String): Boolean? = runCatching {
         Settings.Global.getString(context.contentResolver, name)?.trim()?.let { value ->

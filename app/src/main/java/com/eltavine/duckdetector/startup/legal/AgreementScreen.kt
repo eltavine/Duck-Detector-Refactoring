@@ -76,6 +76,7 @@ import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTypography
 import com.eltavine.duckdetector.features.dashboard.ui.DashboardTopBarBrandIcon
+import com.eltavine.duckdetector.features.dashboard.presentation.model.ScanHistoryCounts
 import com.eltavine.duckdetector.startup.StartupHeroGlyph
 import com.eltavine.duckdetector.ui.shell.StartupMiuixTopBar
 import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
@@ -95,6 +96,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun AgreementScreen(
     onAgree: () -> Unit,
+    history: ScanHistoryCounts = ScanHistoryCounts(),
     modifier: Modifier = Modifier,
 ) {
     var countdown by remember { mutableIntStateOf(30) }
@@ -154,6 +156,7 @@ fun AgreementScreen(
                     StartupMiuixTopBar(
                         title = stringResource(R.string.user_agreement),
                         scrollBehavior = scrollBehavior,
+                        history = history,
                     )
                 },
                 bottomBar = {
@@ -198,7 +201,7 @@ fun AgreementScreen(
                     LargeFlexibleTopAppBar(
                         title = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                DashboardTopBarBrandIcon()
+                                DashboardTopBarBrandIcon(history)
                                 Spacer(modifier = Modifier.size(10.dp))
                                 Text(text = stringResource(R.string.user_agreement))
                             }

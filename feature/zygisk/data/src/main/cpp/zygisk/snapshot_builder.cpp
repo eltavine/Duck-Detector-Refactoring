@@ -16,6 +16,7 @@
  */
 
 #include "zygisk/snapshot_builder.h"
+#include "zygisk/heuristic_evidence.h"
 
 #include "zygisk/probes/atexit_probe.h"
 #include "zygisk/probes/environment_probe.h"
@@ -37,7 +38,6 @@ namespace duckdetector::zygisk {
                 const ProbeResult &probe
         ) {
             snapshot.strong_hits += probe.strong_hits;
-            snapshot.heuristic_hits += probe.heuristic_hits;
             snapshot.traces.insert(snapshot.traces.end(), probe.traces.begin(), probe.traces.end());
         }
 
@@ -68,7 +68,8 @@ namespace duckdetector::zygisk {
 
         snapshot.solist_hits = solist.hit_count;
         snapshot.vmap_hits = vmap.hit_count;
-        snapshot.atexit_hits = atexit.hit_count;
+        snapshot.atexit_hits = atexit.signals.hit_count;
+        snapshot.atexit_table = atexit.table;
         snapshot.smaps_hits = smaps.hit_count;
         snapshot.namespace_hits = namespace_probe.hit_count;
         snapshot.linker_hook_hits = linker_hook.hit_count;
@@ -79,13 +80,18 @@ namespace duckdetector::zygisk {
         merge_probe(snapshot, solist);
         merge_probe(snapshot, environment);
         merge_probe(snapshot, vmap);
-        merge_probe(snapshot, atexit);
+        merge_probe(snapshot, atexit.signals);
         merge_probe(snapshot, smaps);
         merge_probe(snapshot, namespace_probe);
         merge_probe(snapshot, linker_hook);
         merge_probe(snapshot, heap);
         merge_probe(snapshot, threads);
         merge_probe(snapshot, fd);
+        // Different procfs views of loader-path residue are one heuristic family.
+        snapshot.heuristic_hits = count_heuristic_families({
+                &solist, &environment, &vmap, &atexit.signals, &smaps,
+                &namespace_probe, &linker_hook, &heap, &threads, &fd,
+        });
 
         return snapshot;
     }

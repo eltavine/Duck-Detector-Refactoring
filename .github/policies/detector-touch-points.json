@@ -30,6 +30,31 @@
       "path": "samples/sdk-consumer/src/main/kotlin/com/eltavine/duckdetector/sample/ScanActivity.kt",
       "detectors": ["su"],
       "reason": "Shows a consumer using one detector's typed object through the SDK."
+    },
+    {
+      "path": "app/build.gradle.kts",
+      "detectors": ["nativeroot", "rootmanagers", "selinux", "zygisk"],
+      "reason": "The composition root signs and packages the feature-owned installer-canary manifest with the host application key; host instrumentation needs the feature data and domain test dependencies. App Zygote lifecycle instrumentation holds the feature-owned ThroneHunt carrier while exercising SELinux preload recovery, so the native-root data dependency is test-only. The feature-owned exit-handler device fixture is assembled into the host instrumentation APK to exercise its actual native runtime with an ordinary app UID."
+    },
+    {
+      "path": "app/src/androidTest/java/com/eltavine/duckdetector/InstallerCanaryRuntimeTest.kt",
+      "detectors": ["rootmanagers"],
+      "reason": "Exercises the signed canary against the actual installed application, whose application ID, signing key, asset and version are required for self-update semantics."
+    },
+    {
+      "path": "app/src/androidTest/java/com/eltavine/duckdetector/AppZygoteTimingRuntimeTest.kt",
+      "detectors": ["selinux"],
+      "reason": "Opt-in integration coverage needs the actual installed host and its SDK App Zygote preload; assertions remain test-only and the generic detector smoke test stays independent."
+    },
+    {
+      "path": "app/src/androidTest/java/com/eltavine/duckdetector/DirtySepolicyRawRuntimeTest.kt",
+      "detectors": ["selinux"],
+      "reason": "Runtime instrumentation verifies SELinux Raw and DirtySepolicy compatibility inside the installed host's App Zygote preload; the dependency is test-only and cannot run equivalently in a standalone feature module."
+    },
+    {
+      "path": "app/src/androidTest/java/com/eltavine/duckdetector/AppZygoteLifecycleRuntimeTest.kt",
+      "detectors": ["nativeroot", "selinux"],
+      "reason": "The lifecycle regression test deliberately holds the feature-owned ThroneHunt App-Zygote child alive while verifying SELinux stale-preload recovery. Both detector integrations are instrumentation-only and are required to reproduce the real cross-carrier lifecycle race."
     }
   ]
 }

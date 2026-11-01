@@ -16,6 +16,7 @@
  */
 
 #include "zygisk/common/codec.h"
+#include "zygisk/probes/atexit/table.h"
 
 #include <sstream>
 
@@ -71,6 +72,13 @@ namespace duckdetector::zygisk {
         output << "SOLIST_HITS=" << snapshot.solist_hits << '\n';
         output << "VMAP_HITS=" << snapshot.vmap_hits << '\n';
         output << "ATEXIT_HITS=" << snapshot.atexit_hits << '\n';
+        output << "ATEXIT_TABLE_STATE=" << atexit::state_name(snapshot.atexit_table.state) << '\n';
+        output << "ATEXIT_TABLE_DUMPABLE=" << snapshot.atexit_table.dumpable << '\n';
+        output << "ATEXIT_TABLE_ENTRIES=" << snapshot.atexit_table.entries << '\n';
+        output << "ATEXIT_TABLE_NULLS=" << snapshot.atexit_table.null_entries << '\n';
+        output << "ATEXIT_TABLE_GAPS=" << snapshot.atexit_table.anchored_gaps << '\n';
+        output << "ATEXIT_TABLE_CALLBACKS=" << snapshot.atexit_table.anonymous_callbacks << '\n';
+        output << "ATEXIT_TABLE_DETAIL=" << escape_value(snapshot.atexit_table.detail) << '\n';
         output << "SMAPS_HITS=" << snapshot.smaps_hits << '\n';
         output << "NAMESPACE_HITS=" << snapshot.namespace_hits << '\n';
         output << "LINKER_HOOK_HITS=" << snapshot.linker_hook_hits << '\n';

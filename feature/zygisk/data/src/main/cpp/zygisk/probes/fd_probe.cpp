@@ -18,35 +18,17 @@
 #include "zygisk/probes/fd_probe.h"
 
 #include <array>
+#include <cstdio>
 #include <dirent.h>
 #include <sstream>
 #include <unistd.h>
 
 namespace duckdetector::zygisk {
 
-    ProbeResult collect_fd_probe() {
+    ProbeResult analyze_fd_targets(const std::vector<std::string> &targets) {
         ProbeResult result;
-        DIR *directory = opendir("/proc/self/fd");
-        if (directory == nullptr) {
-            result.available = false;
-            return result;
-        }
-
         std::vector<std::string> suspicious_targets;
-        while (const auto *entry = readdir(directory)) {
-            if (entry->d_name[0] == '.') {
-                continue;
-            }
-
-            char proc_path[96] = {};
-            std::snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%s", entry->d_name);
-            std::array<char, 512> target{};
-            const auto length = readlink(proc_path, target.data(), target.size() - 1);
-            if (length <= 0) {
-                continue;
-            }
-            target[static_cast<size_t>(length)] = '\0';
-            const std::string path(target.data());
+        for (const auto &path: targets) {
             const auto lower = lowercase_copy(path);
             const bool is_deleted_so = lower.find("(deleted)") != std::string::npos &&
                                        lower.find(".so") != std::string::npos;
@@ -59,7 +41,6 @@ namespace duckdetector::zygisk {
                 suspicious_targets.push_back(path);
             }
         }
-        closedir(directory);
 
         if (!suspicious_targets.empty()) {
             std::ostringstream detail;
@@ -81,10 +62,37 @@ namespace duckdetector::zygisk {
                                             detail.str(),
                                     });
             result.hit_count = static_cast<int>(suspicious_targets.size());
-            result.heuristic_hits = 1;
+            result.heuristic_families.insert(HeuristicFamily::kLoaderPath);
         }
 
         return result;
+    }
+
+    ProbeResult collect_fd_probe() {
+        ProbeResult result;
+        DIR *directory = opendir("/proc/self/fd");
+        if (directory == nullptr) {
+            result.available = false;
+            return result;
+        }
+
+        std::vector<std::string> targets;
+        while (const auto *entry = readdir(directory)) {
+            if (entry->d_name[0] == '.') {
+                continue;
+            }
+
+            const std::string proc_path = std::string("/proc/self/fd/") + entry->d_name;
+            std::array<char, 512> target{};
+            const auto length = readlink(proc_path.c_str(), target.data(), target.size() - 1);
+            if (length <= 0) {
+                continue;
+            }
+            target[static_cast<size_t>(length)] = '\0';
+            targets.emplace_back(target.data());
+        }
+        closedir(directory);
+        return analyze_fd_targets(targets);
     }
 
 }  // namespace duckdetector::zygisk

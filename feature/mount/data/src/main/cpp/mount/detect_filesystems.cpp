@@ -75,15 +75,14 @@ namespace duckdetector::mount::detail {
                     "self=" + selfNs + ", init=" + initNs
             );
         } else {
-            snapshot.namespaceAnomalyDetected = true;
             add_finding(
                     snapshot,
                     dedupe,
                     "CONSISTENCY",
-                    "WARNING",
+                    "INFO",
                     "Namespace split",
                     "Matches init",
-                    "The app shares the same mount namespace as init, which is unusual for an unprivileged app."
+                    "The visible namespace identities match; identity alone does not establish root or failed isolation."
             );
         }
     }
@@ -132,7 +131,7 @@ namespace duckdetector::mount::detail {
                         snapshot,
                         dedupe,
                         "FILESYSTEM",
-                        "DANGER",
+                        "WARNING",
                         "System filesystem type",
                         check.path,
                         std::string(check.label) + " resolved to overlayfs."
@@ -158,12 +157,11 @@ namespace duckdetector::mount::detail {
 
         for (const MountEntry &entry: mounts) {
             if (lowercase_copy(entry.fsType) == "tmpfs" && entry.target == "/sbin") {
-                snapshot.tmpfsSizeAnomaly = true;
                 add_finding(
                         snapshot,
                         dedupe,
                         "FILESYSTEM",
-                        "WARNING",
+                        "INFO",
                         "Tmpfs mount",
                         entry.target,
                         entry.options
@@ -198,7 +196,7 @@ namespace duckdetector::mount::detail {
                     snapshot,
                     dedupe,
                     "CONSISTENCY",
-                    "DANGER",
+                    "INFO",
                     "Mount consistency",
                     "Filesystem mismatch",
                     "direct=0x" + std::to_string(static_cast<unsigned long>(directFs.f_type)) +
@@ -213,9 +211,10 @@ namespace duckdetector::mount::detail {
             const bool hasSystemOverlay = std::any_of(
                     mounts.begin(),
                     mounts.end(),
-                    [](const MountEntry &entry) {
-                        return (entry.target == "/system" || entry.target == "/system/bin") &&
-                               (entry.fsType == "overlay" || entry.fsType == "overlayfs");
+                    [&](const MountEntry &entry) {
+                        return (entry.fsType == "overlay" || entry.fsType == "overlayfs") &&
+                               (entry.target == "/" || entry.target == resolved.data() ||
+                                starts_with(resolved.data(), entry.target + "/"));
                     }
             );
             if (!hasSystemOverlay) {
@@ -224,10 +223,10 @@ namespace duckdetector::mount::detail {
                         snapshot,
                         dedupe,
                         "CONSISTENCY",
-                        "DANGER",
+                        "INFO",
                         "Mount consistency",
-                        "Hidden overlayfs",
-                        "statfs reported overlayfs for /proc/self/exe, but mount tables did not show a matching system overlay."
+                        "Overlay view observation",
+                        "Executable resolves to overlayfs; the separate mount-table capture did not expose a covering overlay. This does not establish a hidden mount."
                 );
             }
         }

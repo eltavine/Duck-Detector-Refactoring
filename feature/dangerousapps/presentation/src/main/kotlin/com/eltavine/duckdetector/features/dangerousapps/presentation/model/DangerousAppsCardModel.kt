@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.features.dangerousapps.presentation.model
 
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.core.report.DetectorHeadline
 
 data class DangerousAppsCardModel(
@@ -30,9 +31,11 @@ data class DangerousAppsCardModel(
     val headerFacts: List<DangerousAppsHeaderFactModel>,
     val hmaAlert: DangerousAppsHmaAlertModel? = null,
     val packageItems: List<DangerousAppsPackageItemModel>,
-    val context: List<DangerousAppsContextItemModel>,
+    val context: List<DangerousAppsDetailRowModel>,
     val targetApps: List<DangerousAppsTargetAppModel>,
     val packageHistory: DangerousAppsPackageHistoryModel? = null,
+    val impactRows: List<DangerousAppsDetailRowModel> = emptyList(),
+    val methodRows: List<DangerousAppsDetailRowModel> = emptyList(),
 ) : DetectorHeadline {
     /** Rendering-only severity for the Packages section. */
     val packageSectionSeverity: DetectionSeverity?
@@ -50,6 +53,7 @@ data class DangerousAppsCardModel(
 /** The facts in the card's header, in the order the export lists them. */
 enum class DangerousAppsHeaderFact(val label: String) {
     TARGETS("Targets"),
+    RUNTIME("Runtime"),
     PM("PM"),
     HITS("Hits"),
     HIDDEN("Hidden"),
@@ -63,9 +67,11 @@ data class DangerousAppsHeaderFactModel(
     val label: String get() = fact.label
 }
 
-data class DangerousAppsContextItemModel(
+data class DangerousAppsDetailRowModel(
     val label: String,
     val value: String,
+    val status: DetectorStatus = DetectorStatus.info(InfoKind.SUPPORT),
+    val detail: String? = null,
 )
 
 data class DangerousAppsHmaAlertModel(

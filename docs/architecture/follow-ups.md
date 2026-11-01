@@ -1,5 +1,9 @@
 # Architecture follow-ups
 
+## Feature-owned exit-handler device fixture
+
+The exit-handler instrumentation source stays under `feature/zygisk/data/src/deviceTest/kotlin`, while the app's instrumentation source set assembles it with the actual combined native runtime. The reviewed `app/build.gradle.kts` detector-touch-point exception covers test-only source composition and data/domain/native dependencies; production collection and interpretation remain inside the Zygisk feature. This avoids building a second collector whose behavior could diverge from the installed host. Private libc-symbol availability, vendor layouts and 16 KiB-page devices still need coverage beyond the ARM64 Android 16 AVD matrix recorded in the feature evidence.
+
 These are the known gaps and pending checks the module refactor left. Each gap was kept because fixing it would change detector semantics, shipped binaries or component identity, which the refactor was not allowed to do; each check needs a device the refactor did not have. Remove an entry in the same change that resolves it.
 
 ## Text that data layers still read

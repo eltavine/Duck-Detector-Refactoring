@@ -58,7 +58,8 @@ class MountCardModelMapper {
                     "Namespace access",
                     "Shell tmp view",
                     "Mount consistency",
-                    "Mount ID loophole",
+                    "Mount ID discontinuity",
+                    "Anonymous device minors",
                     "Bind mount root"
                 )
             ),

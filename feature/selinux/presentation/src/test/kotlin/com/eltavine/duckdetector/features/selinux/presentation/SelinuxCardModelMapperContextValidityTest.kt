@@ -37,6 +37,25 @@ class SelinuxCardModelMapperContextValidityTest {
     private val mapper = SelinuxCardModelMapper()
 
     @Test
+    fun `DirtySepolicy compatibility error is danger consistently across header summary and row`() {
+        val model = mapper.map(baseReport(SelinuxCheckResult(
+            method = SelinuxOracle.DIRTY_SEPOLICY_RAW.label,
+            status = "DirtySepolicy ERROR",
+            isSecure = false,
+            permissionDenied = false,
+            details = "DirtySepolicy 2.2 compatibility=ERROR | unknown status version: 2",
+            oracle = SelinuxOracle.DIRTY_SEPOLICY_RAW,
+            dirtySepolicyDanger = true,
+        )))
+        assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals("Enforcing with DirtySepolicy anomaly", model.verdict)
+        assertTrue(model.summary.contains("DirtySepolicy 2.2 compatibility"))
+        assertTrue(model.methodRows.any {
+            it.label == SelinuxOracle.DIRTY_SEPOLICY_RAW.label && it.status == DetectorStatus.danger()
+        })
+    }
+
+    @Test
     fun `clean context validity keeps enforcing copy all clear`() {
         val model = mapper.map(
             baseReport(
@@ -165,18 +184,22 @@ class SelinuxCardModelMapperContextValidityTest {
             ),
         )
 
-        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.status)
-        assertEquals("Enforcing with reduced app_zygote coverage", model.verdict)
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals("Enforcing with app_zygote carrier startup failure", model.verdict)
         assertTrue(model.summary.contains("Unavailable: u:r:app_zygote:s0 errno=Permission denied"))
         assertTrue(
             model.impactItems.any {
-                it.text.contains("Unavailable: u:r:app_zygote:s0 errno=Permission denied")
+                it.text.contains("Unavailable: u:r:app_zygote:s0 errno=Permission denied") &&
+                    it.status == DetectorStatus.warning()
             },
         )
+        assertTrue(model.methodRows.any {
+            it.label == SelinuxOracle.CONTEXT_VALIDITY.label && it.status == DetectorStatus.warning()
+        })
     }
 
     @Test
-    fun `unavailable oracle is surfaced as support rather than clean`() {
+    fun `missing app zygote preload is a warning rather than clean or root`() {
         val model = mapper.map(
             baseReport(
                 SelinuxCheckResult(
@@ -191,8 +214,8 @@ class SelinuxCardModelMapperContextValidityTest {
             ),
         )
 
-        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.status)
-        assertEquals("Enforcing with reduced app_zygote coverage", model.verdict)
+        assertEquals(DetectorStatus.warning(), model.status)
+        assertEquals("Enforcing with app_zygote carrier startup failure", model.verdict)
         assertTrue(model.summary.contains("No preloaded data available"))
         assertTrue(
             model.impactItems.any {
@@ -202,6 +225,7 @@ class SelinuxCardModelMapperContextValidityTest {
         assertTrue(
             model.methodRows.any {
                 it.label == SelinuxOracle.CONTEXT_VALIDITY.label &&
+                    it.status == DetectorStatus.warning() &&
                     it.detail?.contains("Evidence source=dedicated app_zygote carrier") == true
             },
         )

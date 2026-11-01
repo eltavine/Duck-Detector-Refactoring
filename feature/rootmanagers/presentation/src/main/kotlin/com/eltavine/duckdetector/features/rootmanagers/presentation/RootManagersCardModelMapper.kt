@@ -19,6 +19,9 @@ package com.eltavine.duckdetector.features.rootmanagers.presentation
 
 import com.eltavine.duckdetector.capability.packageinventory.domain.InstalledPackageVisibility
 import com.eltavine.duckdetector.features.rootmanagers.domain.ProfileScanState
+import com.eltavine.duckdetector.features.rootmanagers.domain.RootManagerConfidence
+import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.rootmanagers.domain.RootManagersOutcome
 import com.eltavine.duckdetector.features.rootmanagers.domain.RootManagersReport
 import com.eltavine.duckdetector.features.rootmanagers.domain.outcome
@@ -38,8 +41,22 @@ class RootManagersCardModelMapper {
             verdict = verdict(outcome),
             summary = summary(report, outcome),
             entryRows = report.entries.map(rows::entryRow),
-            profileRows = report.profileScans.map(rows::profileRow),
+            profileRows = report.profileScans.map { scan ->
+                val matched = report.entries.filter { it.profileUserId == scan.profileUserId }
+                val row = rows.profileRow(scan)
+                if (scan.state != ProfileScanState.SEARCHED || matched.isEmpty()) row else row.copy(
+                    value = "${row.value} · ${matched.size} match(es)",
+                    status = when {
+                        matched.any { it.concealed } -> DetectorStatus.danger()
+                        matched.any { it.confidence != RootManagerConfidence.LOW } -> DetectorStatus.warning()
+                        else -> DetectorStatus.info(InfoKind.SUPPORT)
+                    },
+                )
+            },
             scanRows = rows.scanRows(report),
+            headerFacts = rootManagersHeaderFacts(report),
+            impactRows = rootManagersImpactRows(report),
+            methodRows = rootManagersMethodRows(report),
         )
     }
 
@@ -55,6 +72,7 @@ class RootManagersCardModelMapper {
         RootManagersOutcome.CONCEALED_MANAGER -> "Root manager hiding its icon"
         RootManagersOutcome.MANAGER_FOUND -> "Root manager apps found"
         RootManagersOutcome.WEAK_MATCH -> "Weak root manager match"
+        RootManagersOutcome.PERMISSION_ANCHOR -> "Candidate permission owner observed"
         RootManagersOutcome.ENUMERATION_UNAVAILABLE -> "Launcher enumeration unavailable"
         RootManagersOutcome.PROFILES_NOT_ENUMERATED -> "Profiles not enumerated"
         RootManagersOutcome.PARTIAL -> "Partially evaluated"
@@ -76,6 +94,10 @@ class RootManagersCardModelMapper {
             "Identified ${report.entries.size} root manager app(s) across ${report.profilesSearched} profile(s), " +
                 "${report.entries.count { it.matchedCertificate != null }} by a family kernel's manager key. " +
                 PRESENCE_NOT_ROOT
+
+        RootManagersOutcome.PERMISSION_ANCHOR ->
+            "${report.installerCanary.ownerPackageName} declares the candidate KernelSU permission. " +
+                "This is a permission-name anchor; manager identity, profile and root access are not established by it."
 
         RootManagersOutcome.WEAK_MATCH ->
             "Only weak anchors matched, so these apps are informational, never warnings."

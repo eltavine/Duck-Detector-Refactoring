@@ -32,6 +32,8 @@ public class ConsentCard(
     public val consent: DetectorConsent,
     public val prompt: ConsentPrompt,
     public val setting: ConsentSetting,
+    /** Requested only after explicit opt-in; denial never changes the recorded consent. */
+    public val runtimePermissions: List<String> = emptyList(),
 )
 
 /** The consent's card on the startup policy screen, for each decision the user can have made. */

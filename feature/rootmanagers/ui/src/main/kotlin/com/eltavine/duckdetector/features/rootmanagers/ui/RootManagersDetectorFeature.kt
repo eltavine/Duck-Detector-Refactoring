@@ -23,4 +23,4 @@ import com.eltavine.duckdetector.features.rootmanagers.detector.RootManagersDete
 import com.eltavine.duckdetector.features.rootmanagers.ui.card.RootManagersDetectorCard
 
 /** The Root Managers card on the dashboard. */
-val detectorFeature: DetectorFeature = CardDetectorFeature(RootManagersDetector) { model -> RootManagersDetectorCard(model = model) }
+val detectorFeature: DetectorFeature = CardDetectorFeature(RootManagersDetector, consentCards = listOf(installerCanaryConsentCard)) { model -> RootManagersDetectorCard(model = model) }

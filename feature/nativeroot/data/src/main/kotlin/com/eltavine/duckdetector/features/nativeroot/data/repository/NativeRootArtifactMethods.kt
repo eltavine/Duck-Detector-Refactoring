@@ -81,23 +81,19 @@ internal fun NativeRootMethodEvidence.namespaceAndArtifactMethods(): List<Native
     NativeRootMethodResult(
         method = NativeRootMethod.KSU_THRONE_HUNT,
         summary = when {
-            throneHuntResult.hitCount > 0 -> "${throneHuntResult.hitCount} hit(s)"
-            !throneHuntResult.available -> throneHuntResult.failureStage
             throneHuntResult.watchDenied -> "Watch denied"
-            else -> "Clean"
+            !throneHuntResult.available -> throneHuntResult.failureStage
+            throneHuntResult.hitCount > 0 -> "${throneHuntResult.hitCount} unattributed event(s)"
+            else -> "No directory events"
         },
-        outcome = when {
-            throneHuntResult.hitCount > 0 -> NativeRootMethodOutcome.DETECTED
-            !throneHuntResult.available -> NativeRootMethodOutcome.SUPPORT
-            throneHuntResult.watchDenied -> NativeRootMethodOutcome.SUPPORT
-            else -> NativeRootMethodOutcome.CLEAN
-        },
+        outcome = NativeRootMethodOutcome.SUPPORT,
         detail = buildString {
-            append("Rewrites /data/system/packages.list through the zero-permission setMimeGroup path ")
+            append("Requests a /data/system/packages.list rewrite through the zero-permission setMimeGroup path ")
             append("and watches the app's own /data/app package directory from the app_zygote carrier. ")
-            append("KernelSU's pkg_observer reacts to the packages.list rewrite by running ")
-            append("track_throne -> search_manager(\"/data/app\", 2), which opens and iterates our package ")
-            append("directory inode; that traversal is what the inherited watch reports.\n")
+            append("IN_OPEN/IN_ACCESS events have no accessor PID/UID and cannot identify KernelSU ")
+            append("or search_manager. Event counts and timing do not establish attribution. ")
+            append("FMODE_NONOTIFY can suppress these file notifications, so zero events cannot exclude ")
+            append("a manager scan or KernelSU. These counters are diagnostic only.\n")
             append("collection=")
             append(throneHuntResult.collection.outcome.name)
             append("\nfailureStage=")

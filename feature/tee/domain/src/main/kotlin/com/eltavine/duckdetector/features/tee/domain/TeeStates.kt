@@ -43,6 +43,9 @@ data class TeeRkpState(
     val consistencyIssue: String? = null,
     val abuseLevel: TeeSignalLevel = TeeSignalLevel.INFO,
     val abuseSummary: String? = null,
+    /** CBOR diagnostic notation for key 5; its approval fields have no documented CTS semantics. */
+    val buildMetadata: String? = null,
+    val provisioningInfoIssue: String? = null,
 )
 
 data class TeePatchState(

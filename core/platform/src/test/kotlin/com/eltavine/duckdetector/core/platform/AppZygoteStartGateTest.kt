@@ -19,6 +19,8 @@ package com.eltavine.duckdetector.core.platform
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -26,6 +28,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AppZygoteStartGateTest {
 
     private var now = 0L
@@ -117,6 +120,66 @@ class AppZygoteStartGateTest {
         assertEquals("first", first.await())
         assertEquals("second", second.await())
         assertTrue(secondAttempted)
+    }
+
+    @Test
+    fun `a lease remains active until closed and close is idempotent`() = runTest {
+        val lease = gate.acquireLease()
+
+        assertFalse(gate.awaitNoActiveLeases(timeoutMs = 100L))
+
+        lease.close()
+        lease.close()
+
+        assertTrue(gate.awaitNoActiveLeases(timeoutMs = 100L))
+    }
+
+    @Test
+    fun `a binding failure before Binder attachment releases its lease`() = runTest {
+        val carrierLease = AppZygoteCarrierLease(gate)
+
+        assertFalse(gate.awaitNoActiveLeases(timeoutMs = 100L))
+        carrierLease.bindingFailed()
+
+        assertTrue(gate.awaitNoActiveLeases(timeoutMs = 100L))
+    }
+
+    @Test
+    fun `retirement blocks new binds but lets an existing child release its lease`() = runTest {
+        val existingChild = gate.acquireLease()
+        val retirementEntered = CompletableDeferred<Unit>()
+        val retirement = async {
+            gate.withExclusive {
+                retirementEntered.complete(Unit)
+                assertTrue(gate.awaitNoActiveLeases(timeoutMs = 5_000L))
+                delay(6_000L)
+                gate.admitExclusive(
+                    scanStartedAt = 0L,
+                    refused = { REFUSED },
+                    stoppedBeforeConnecting = { it == STOPPED },
+                ) { "replacement" }
+            }
+        }
+
+        retirementEntered.await()
+        var competingStarts = 0
+        val competing = async {
+            admit(scanStartedAt = 0L) {
+                competingStarts++
+                "competing"
+            }
+        }
+        runCurrent()
+        assertEquals(0, competingStarts)
+        assertFalse(competing.isCompleted)
+
+        // Existing connections do not need the admission lock to finish and release their lease.
+        existingChild.close()
+
+        assertEquals("replacement", retirement.await())
+        assertEquals("competing", competing.await())
+        assertEquals(1, competingStarts)
+        assertTrue(gate.awaitNoActiveLeases(timeoutMs = 100L))
     }
 
     private suspend fun admit(scanStartedAt: Long, attempt: suspend () -> String): String =

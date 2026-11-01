@@ -47,6 +47,11 @@ jobs:
         with:
           cache-read-only: ${{ github.ref_name != github.event.repository.default_branch }}
 
+      - name: Generate contributors JSON and avatars
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./gradlew --stacktrace -Pduckdetector.githubContributors.refresh=true :app:generateGithubContributorsAsset
+
       - name: Validate credentials and prepare release keystore
         id: keystore
         shell: bash
@@ -160,7 +165,6 @@ jobs:
             --stacktrace \
             -Pduckdetector.buildTimeUtc="${build_time_utc}" \
             -Pduckdetector.teeCrl.refresh=true \
-            -Pduckdetector.githubContributors.refresh=true \
             :app:assembleRelease \
             :sdk:aar:assemble
           end_time=$(date +%s)

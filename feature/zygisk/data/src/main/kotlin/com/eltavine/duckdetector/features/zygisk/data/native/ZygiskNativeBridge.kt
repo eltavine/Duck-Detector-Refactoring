@@ -21,6 +21,7 @@ import com.eltavine.duckdetector.core.native.DuckDetectorNativeLibrary
 import com.eltavine.duckdetector.core.native.NativePayloadCodec
 import com.eltavine.duckdetector.core.native.NativePayloadContract
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
+import com.eltavine.duckdetector.features.zygisk.domain.ZygiskAtexitState
 
 class ZygiskNativeBridge(
     private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
@@ -70,6 +71,20 @@ class ZygiskNativeBridge(
                     }
                 }
             }
+        val table = snapshot.atexitTable
+        if (table.state == ZygiskAtexitState.COLLECTED || table.state == ZygiskAtexitState.PARTIAL) {
+            NativePayloadContract.requireKeys(raw,
+                "ATEXIT_TABLE_ENTRIES", "ATEXIT_TABLE_NULLS", "ATEXIT_TABLE_GAPS",
+                "ATEXIT_TABLE_CALLBACKS", "ATEXIT_TABLE_DETAIL",
+            )
+            require(table.state != ZygiskAtexitState.COLLECTED || table.entries > 0) {
+                "Evaluated exit-handler coverage requires a nonempty bounded table."
+            }
+            require(table.nullEntries <= table.entries && table.anchoredGaps <= table.nullEntries / 3 &&
+                table.anonymousCallbacks <= table.entries - table.nullEntries) {
+                "Contradictory exit-handler counts in native payload."
+            }
+        }
         return snapshot.copy(traces = traces)
     }
 
@@ -86,6 +101,26 @@ class ZygiskNativeBridge(
             "SOLIST_HITS" -> copy(solistHitCount = value.toIntOrNull() ?: solistHitCount)
             "VMAP_HITS" -> copy(vmapHitCount = value.toIntOrNull() ?: vmapHitCount)
             "ATEXIT_HITS" -> copy(atexitHitCount = value.toIntOrNull() ?: atexitHitCount)
+            "ATEXIT_TABLE_STATE" -> copy(atexitTable = atexitTable.copy(
+                state = when (value) {
+                    "COLLECTED" -> ZygiskAtexitState.COLLECTED
+                    "UNSUPPORTED" -> ZygiskAtexitState.UNSUPPORTED
+                    "UNAVAILABLE" -> ZygiskAtexitState.UNAVAILABLE
+                    "PERMISSION_DENIED" -> ZygiskAtexitState.PERMISSION_DENIED
+                    "BUSY" -> ZygiskAtexitState.BUSY
+                    "INVALID" -> ZygiskAtexitState.INVALID
+                    "PARTIAL" -> ZygiskAtexitState.PARTIAL
+                    else -> ZygiskAtexitState.NOT_COLLECTED
+                },
+            ))
+            "ATEXIT_TABLE_DUMPABLE" -> copy(atexitTable = atexitTable.copy(
+                dumpable = value.toIntOrNull()?.takeIf { it in 0..2 } ?: -1,
+            ))
+            "ATEXIT_TABLE_ENTRIES" -> copy(atexitTable = atexitTable.copy(entries = value.toCount()))
+            "ATEXIT_TABLE_NULLS" -> copy(atexitTable = atexitTable.copy(nullEntries = value.toCount()))
+            "ATEXIT_TABLE_GAPS" -> copy(atexitTable = atexitTable.copy(anchoredGaps = value.toCount()))
+            "ATEXIT_TABLE_CALLBACKS" -> copy(atexitTable = atexitTable.copy(anonymousCallbacks = value.toCount()))
+            "ATEXIT_TABLE_DETAIL" -> copy(atexitTable = atexitTable.copy(detail = value.decodeValue()))
             "SMAPS_HITS" -> copy(smapsHitCount = value.toIntOrNull() ?: smapsHitCount)
             "NAMESPACE_HITS" -> copy(namespaceHitCount = value.toIntOrNull() ?: namespaceHitCount)
             "LINKER_HOOK_HITS" -> copy(
@@ -100,6 +135,10 @@ class ZygiskNativeBridge(
     }
 
     private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
+
+    private fun String.toCount(): Int = requireNotNull(toIntOrNull()?.takeIf { it >= 0 }) {
+        "Invalid exit-handler count in native payload."
+    }
 
     private fun String.decodeValue(): String = NativePayloadCodec.decodeValue(this)
 

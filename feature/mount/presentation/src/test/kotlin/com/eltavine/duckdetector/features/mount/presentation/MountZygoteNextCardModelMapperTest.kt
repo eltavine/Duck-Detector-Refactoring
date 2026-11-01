@@ -98,23 +98,23 @@ class MountZygoteNextCardModelMapperTest {
     }
 
     @Test
-    fun `private namespace anomaly renders warning`() {
+    fun `private namespace is informational`() {
         val zygoteNext = readyReport().copy(isolatedPropagation = "master:1")
         val row = mapper.map(report(zygoteNext)).procMountViewRows[1]
 
-        assertEquals("Private namespace anomaly", row.value)
-        assertEquals(DetectorStatus.warning(), row.status)
+        assertEquals("Namespace observation", row.value)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), row.status)
         assertTrue(row.detail.orEmpty().contains("private/slave"))
     }
 
     @Test
-    fun `inconsistent namespace evidence renders warning`() {
+    fun `namespace layout differences render as coverage observations`() {
         val zygoteNext = readyReport().copy(mainPropagation = "shared:2 master:1")
         val row = mapper.map(report(zygoteNext)).procMountViewRows[1]
 
-        assertEquals("Evidence inconsistent", row.value)
-        assertEquals(DetectorStatus.warning(), row.status)
-        assertTrue(row.detail.orEmpty().contains("contradict"))
+        assertEquals("Namespace observation", row.value)
+        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), row.status)
+        assertTrue(row.detail.orEmpty().contains("differ from the reference"))
     }
 
     @Test

@@ -184,6 +184,10 @@ namespace {
             output << "DIRTY_POLICY_ZYGOTE_ADB_DATA_SEARCH_ALLOWED="
                    << (*snapshot.dirty_policy.zygote_adb_data_search_allowed ? '1' : '0') << '\n';
         }
+        for (const auto &[name, allowed]: snapshot.dirty_policy.additional_rules) {
+            output << "DIRTY_POLICY_EXTRA_RULE="
+                   << escape_value(name + "|" + (allowed ? "1" : "0")) << '\n';
+        }
         if (!snapshot.dirty_policy.failure_reason.empty()) {
             output << "DIRTY_POLICY_FAILURE_REASON="
                    << escape_value(snapshot.dirty_policy.failure_reason) << '\n';

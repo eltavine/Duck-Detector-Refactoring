@@ -19,9 +19,14 @@ package com.eltavine.duckdetector.ui
 
 import android.Manifest
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,8 +38,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.eltavine.duckdetector.R
 import com.eltavine.duckdetector.notifications.ScanNotificationPermissions
 import com.eltavine.duckdetector.notifications.preferences.ScanNotificationConsentStore
 import com.eltavine.duckdetector.notifications.preferences.ScanNotificationPrefs
@@ -57,6 +64,9 @@ import com.eltavine.duckdetector.ui.shell.StartupPolicyScreen
 import com.eltavine.duckdetector.ui.shell.combineConsentDecisions
 import com.eltavine.duckdetector.ui.shell.resolveStartupGateState
 import com.eltavine.duckdetector.ui.shell.shouldCreateDetectorViewModels
+import com.eltavine.duckdetector.ui.scan.history.ScanHistoryJournal
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.launch
 import io.github.xiaotong6666.uihelper.mode.UiMode
 
@@ -73,8 +83,22 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
         return
     }
 
+    val onDecideDetectorConsent = rememberConsentDecisionHandler()
     val context = LocalContext.current
     val appContext = context.applicationContext
+    val scanHistoryJournal = remember(appContext) {
+        AppScanHistory.get(File(appContext.noBackupFilesDir, "scan-history/records.bin"))
+    }
+    val scanHistory by scanHistoryJournal.counts.collectAsStateWithLifecycle()
+    val historyIssue by scanHistoryJournal.issue.collectAsStateWithLifecycle()
+    var dismissedHistoryIssue by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(scanHistoryJournal) {
+        try {
+            scanHistoryJournal.load()
+        } catch (error: IOException) {
+            Log.e("ScanHistory", "Failed to load history at startup", error)
+        }
+    }
     val agreementStore = remember(appContext) { AgreementAcceptanceStore.getInstance(appContext) }
     val notificationConsentStore = remember(appContext) {
         ScanNotificationConsentStore.getInstance(appContext)
@@ -238,6 +262,7 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
 
                 !agreementAccepted -> {
                     AgreementScreen(
+                        history = scanHistory,
                         onAgree = {
                             scope.launch {
                                 agreementStore.accept()
@@ -249,6 +274,7 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
 
                 startupPoliciesReady -> {
                     AppReadyShell(
+                        history = scanHistoryJournal,
                         destination = destination,
                         onSelectDestination = { selected -> destination = selected },
                         onUiModeChange = onUiModeChange,
@@ -259,6 +285,7 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
 
                 else -> {
                     StartupPolicyScreen(
+                        history = scanHistory,
                         gateState = gateState,
                         notificationPrefs = notificationPrefs,
                         notificationPermissionState = notificationPermissionState,
@@ -299,11 +326,7 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
                                 notificationConsentStore.markLiveUpdatesPrompted()
                             }
                         },
-                        onDecideConsent = { consentCard, granted ->
-                            scope.launch {
-                                consentCard.consent.decide(appContext, granted)
-                            }
-                        },
+                        onDecideConsent = onDecideDetectorConsent,
                         onAcknowledgePackageVisibility = {
                             scope.launch {
                                 packageVisibilityReviewStore.acknowledgeRestrictedInventory()
@@ -321,6 +344,42 @@ fun DuckDetectorApp(onUiModeChange: (UiMode) -> Unit) {
             if (agreementAccepted && startupPoliciesReady) {
                 AlphaBuildBanner()
             }
+
+            val issue = historyIssue
+            val issueId = issue?.toString()
+            if (issue != null && issueId != dismissedHistoryIssue) {
+                AlertDialog(
+                    onDismissRequest = { dismissedHistoryIssue = issueId },
+                    title = { Text(stringResource(R.string.scan_history_issue_title)) },
+                    text = {
+                        Text(
+                            when (issue) {
+                                is ScanHistoryJournal.Issue.Recovered -> stringResource(
+                                    R.string.scan_history_recovered,
+                                    issue.discardedRecords,
+                                    issue.backupName,
+                                )
+                                is ScanHistoryJournal.Issue.Failed -> stringResource(
+                                    R.string.scan_history_failed,
+                                    issue.reason,
+                                )
+                            },
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { dismissedHistoryIssue = issueId }) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    },
+                )
+            }
         }
     }
+}
+
+private object AppScanHistory {
+    private var instance: ScanHistoryJournal? = null
+
+    @Synchronized
+    fun get(file: File): ScanHistoryJournal = instance ?: ScanHistoryJournal(file).also { instance = it }
 }

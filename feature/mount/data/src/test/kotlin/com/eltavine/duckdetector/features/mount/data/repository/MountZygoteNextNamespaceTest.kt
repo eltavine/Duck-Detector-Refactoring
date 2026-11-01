@@ -29,7 +29,7 @@ import org.junit.Test
 class MountZygoteNextNamespaceTest {
 
     @Test
-    fun `contradictory anchor chronology is inconsistent`() = runBlocking {
+    fun `reused anchor ids do not contradict namespace ancestry`() = runBlocking {
         val base = readyResult()
         val report = repository(
             nativeSnapshot = cleanSnapshot(),
@@ -41,10 +41,10 @@ class MountZygoteNextNamespaceTest {
         ).scan()
 
         assertEquals(
-            MountZygoteNextNamespaceAssessment.INCONSISTENT,
+            MountZygoteNextNamespaceAssessment.UNVERIFIED,
             report.zygoteNext.namespaceAssessment,
         )
-        assertEquals(MountMethodOutcome.WARNING, report.methods.single {
+        assertEquals(MountMethodOutcome.SUPPORT, report.methods.single {
             it.label == "Zygote next mount view"
         }.outcome)
     }
@@ -135,7 +135,7 @@ class MountZygoteNextNamespaceTest {
     }
 
     @Test
-    fun `private namespace warning survives unavailable native snapshot`() = runBlocking {
+    fun `private namespace observation survives unavailable native snapshot`() = runBlocking {
         val base = readyResult()
         val report = repository(
             nativeSnapshot = MountNativeSnapshot(available = false),
@@ -145,19 +145,19 @@ class MountZygoteNextNamespaceTest {
         ).scan()
 
         assertEquals(MountStage.FAILED, report.stage)
-        assertEquals(1, report.warningSignalCount)
+        assertEquals(0, report.warningSignalCount)
         assertEquals(
-            MountZygoteNextNamespaceAssessment.PRIVATE_ANOMALY.name,
-            report.warningFindings.single { it.id == "zygote_next_namespace_anomaly" }.value,
+            "Coverage unverified",
+            report.findings.single { it.id == "zygote_next_namespace_anomaly" }.value,
         )
         assertEquals(
-            MountMethodOutcome.WARNING,
+            MountMethodOutcome.SUPPORT,
             report.methods.single { it.label == "Zygote next mount view" }.outcome,
         )
     }
 
     @Test
-    fun `inconsistent namespace warning survives thrown native failure`() = runBlocking {
+    fun `namespace difference observation survives thrown native failure`() = runBlocking {
         val base = readyResult()
         val report = repository(
             nativeSnapshot = cleanSnapshot(),
@@ -168,13 +168,13 @@ class MountZygoteNextNamespaceTest {
         ).scan()
 
         assertEquals(MountStage.FAILED, report.stage)
-        assertEquals(1, report.warningSignalCount)
+        assertEquals(0, report.warningSignalCount)
         assertEquals(
-            MountZygoteNextNamespaceAssessment.INCONSISTENT.name,
-            report.warningFindings.single { it.id == "zygote_next_namespace_anomaly" }.value,
+            "Coverage unverified",
+            report.findings.single { it.id == "zygote_next_namespace_anomaly" }.value,
         )
         assertEquals(
-            MountMethodOutcome.WARNING,
+            MountMethodOutcome.SUPPORT,
             report.methods.single { it.label == "Zygote next mount view" }.outcome,
         )
     }

@@ -18,7 +18,11 @@
 package com.eltavine.duckdetector.features.dangerousapps.presentation
 
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
+import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.evidence.InfoKind
+import com.eltavine.duckdetector.core.report.ReportBlock
 import com.eltavine.duckdetector.features.dangerousapps.domain.*
+import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsHeaderFact
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,7 +38,7 @@ class HmaBehaviorPresentationTest {
             "No visible package association.", uids = listOf(10042))))
         assertEquals(DetectionSeverity.WARNING, model.status.severity)
         assertEquals(null, model.hmaAlert)
-        assertTrue(model.context.any { it.value.contains("10042") })
+        assertTrue(model.methodRows.any { it.detail.orEmpty().contains("10042") })
         assertEquals("Platform behavior mismatch observed", model.verdict)
     }
 
@@ -46,15 +50,15 @@ class HmaBehaviorPresentationTest {
         assertEquals(null, model.hmaAlert)
         assertEquals("Platform behavior mismatch observed", model.verdict)
         assertTrue(model.summary.contains("seccomp getpriority"))
-        assertTrue(model.context.any {
-            it.label == HmaCheckKind.SECCOMP_UID_FILTER.label && it.value.contains("EBUSY")
+        assertTrue(model.methodRows.any {
+            it.label == HmaCheckKind.SECCOMP_UID_FILTER.label && it.detail.orEmpty().contains("EBUSY")
         })
     }
 
     @Test fun `unavailable checks remain visible without raising a mismatch warning`() {
         val model = DangerousAppsCardModelMapper().map(report(HmaBehaviorCheck(
             HmaCheckKind.BROADCAST_RESULT_TO, HmaCheckState.UNAVAILABLE, "Service unavailable.")))
-        assertTrue(model.context.any { it.value.contains("Unavailable") })
+        assertTrue(model.methodRows.any { it.value.contains("Unavailable") })
         assertEquals(DetectionSeverity.INFO, model.status.severity)
         assertEquals("Behavior checks incomplete", model.verdict)
     }
@@ -66,7 +70,7 @@ class HmaBehaviorPresentationTest {
         assertEquals(DetectionSeverity.WARNING, model.status.severity)
         assertEquals(null, model.hmaAlert)
         assertEquals("Repeated callback timeout asymmetry", model.verdict)
-        assertTrue(model.context.any { it.value.contains("lower confidence") })
+        assertTrue(model.methodRows.any { it.value.contains("lower confidence") })
         assertTrue(model.summary.contains("lower-confidence"))
     }
 
@@ -87,6 +91,50 @@ class HmaBehaviorPresentationTest {
         assertEquals(null, model.hmaAlert)
         assertEquals(0, result.hiddenCount)
         assertEquals("Experimental UID discrepancy observed", model.verdict)
-        assertTrue(model.context.any { it.value.contains("RECEIVE_BOOT_COMPLETED") })
+        assertTrue(model.methodRows.any { it.detail.orEmpty().contains("RECEIVE_BOOT_COMPLETED") })
+    }
+    @Test fun `behavior row severity keeps mismatch timing failure and experimental scope distinct`() {
+        for (state in HmaCheckState.entries) {
+            val model = DangerousAppsCardModelMapper().map(report(HmaBehaviorCheck(
+                HmaCheckKind.UID_TASK_VISIBILITY, state, "Measured scope", uids = listOf(10042))))
+            val row = model.methodRows.single { it.label == HmaCheckKind.UID_TASK_VISIBILITY.label }
+            val expected = when (state) {
+                HmaCheckState.INCONSISTENT, HmaCheckState.TIMING_ANOMALY -> DetectorStatus.warning()
+                HmaCheckState.CONSISTENT -> DetectorStatus.allClear()
+                HmaCheckState.UNAVAILABLE -> DetectorStatus.info(InfoKind.ERROR)
+                else -> DetectorStatus.info(InfoKind.SUPPORT)
+            }
+            assertEquals(state.name, expected, row.status)
+            assertTrue(row.detail.orEmpty().contains("10042"))
+            val exported = model.toDetectorReport().blocks.filterIsInstance<ReportBlock.Rows>()
+                .single { it.title == "Detection methods" }.rows.single { it.label == row.label }
+            assertEquals(row.detail, exported.detail)
+        }
+    }
+    @Test fun `storage and inventory warnings remain visible without package hits`() {
+        val source = report(HmaBehaviorCheck(HmaCheckKind.PACKAGE_INFO_EXCEPTION, HmaCheckState.CONSISTENT, "Control passed"))
+            .copy(suspiciousSharedStorageDenied = true, suspiciousLowPmInventory = true)
+        val model = DangerousAppsCardModelMapper().map(source)
+        assertTrue(model.packageItems.isEmpty())
+        assertEquals(DetectorStatus.warning(), model.context.single { it.label == "Shared storage baseline" }.status)
+        assertEquals(DetectorStatus.warning(), model.context.single { it.label == "PackageManager" }.status)
+    }
+
+    @Test fun `missing behavior families do not become a completed runtime check`() {
+        val mapper = DangerousAppsCardModelMapper()
+        val base = report(HmaBehaviorCheck(HmaCheckKind.PACKAGE_INFO_EXCEPTION,
+            HmaCheckState.CONSISTENT, "Control passed"))
+            .copy(thanoxIpc = ThanoxIpcReport(ThanoxIpcState.NOT_OBSERVED))
+        for (checks in listOf(emptyList(), base.behaviorChecks)) {
+            val fact = mapper.map(base.copy(behaviorChecks = checks)).headerFacts
+                .single { it.fact == DangerousAppsHeaderFact.RUNTIME }
+            assertEquals("Incomplete", fact.value)
+            assertEquals(DetectorStatus.info(InfoKind.SUPPORT), fact.status)
+        }
+        val complete = mapper.map(base.copy(behaviorChecks = HmaCheckKind.entries.map {
+            HmaBehaviorCheck(it, HmaCheckState.CONSISTENT, "Control passed")
+        })).headerFacts.single { it.fact == DangerousAppsHeaderFact.RUNTIME }
+        assertEquals("0 signal(s)", complete.value)
+        assertEquals(DetectorStatus.allClear(), complete.status)
     }
 }

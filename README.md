@@ -31,6 +31,17 @@
   <a href="README.md">English</a> &nbsp; <a href="README_ZH.md">简体中文</a>
 </p>
 
+> [!IMPORTANT]
+> **Why Duck Detector?**
+>
+> Duck Detector is an Android device environment inspection tool similar to Momo.
+>
+> While obsessing over whether a device environment is "normal" can be excessive, some apps and services do treat users differently based on device integrity, the system environment, and other risk signals.
+>
+> This may involve additional identity verification, feature restrictions, denial of service, or opaque risk controls. You might not receive a clear notification or know why your device is being treated differently.
+>
+> **Duck Detector aims to make these otherwise opaque device-environment signals visible.** We provide diagnostic findings and supporting evidence rather than deciding on behalf of third-party apps whether your device should be trusted.
+
 # Overview
 
 DuckDetector collects and correlates security-relevant evidence on an Android device. It looks for boot-state changes, root and SU artifacts, runtime injection or hooking, mount namespace anomalies, modified system properties, suspicious applications, KeyStore and attestation inconsistencies, and signs of virtualization.
@@ -65,13 +76,17 @@ Current feature areas, each linked to its evidence record, which explains what t
 
 Dangerous Apps also compares controlled broadcast/package-query behavior, kernel UID task visibility and seccomp user-notification interference with getpriority queries, based on the report supplied by frknkrc44. Exception and callback-semantic mismatches are supporting warnings. Repeated callback timeouts require interleaved caller controls and remain lower-confidence timing evidence; limited visibility and incomplete scans retain explicit coverage states. See the [HMA behavior evidence](./feature/dangerousapps/EVIDENCE.md#hma-behavior-checks) for version limits and attribution.
 
-Android 15/16 additionally collect an informational, experimental comparison of non-instant UID permissions with fresh package associations. It does not identify a hiding module and does not require the target process to run. UID association rechecks bypass Java client caches.
+Android 15–17 additionally collect an informational, experimental comparison of non-instant UID permissions with fresh package associations. It does not identify a hiding module and does not require the target process to run. UID association rechecks bypass Java client caches.
 
 The SELinux area also retains an app-zygote SID-table query/registration experiment. Repeated discrepancies are supporting warnings; synchronized policy hiding can leave no discrepancy. Controlled privileged-context writes run in a disposable child with malformed/stock controls; recognition and ordinary-app timing are supporting warnings, an app-zygote AVC lookup-count profile is informational only, and negative observations cannot exclude hidden policy. Access failures and incomplete experiments remain explicit coverage states. See the [SELinux evidence record](./feature/selinux/EVIDENCE.md) for source references and device-validation limits.
 
-`Play Integrity Fix` refers to local indicators associated with integrity-spoofing modifications; DuckDetector does not return an official Google Play Integrity API verdict. The TEE area evaluates Android KeyStore and attestation evidence, including certificate chains, security levels, revocation data, and selected KeyMint, StrongBox, and Soter behavior where supported.
+`Play Integrity Fix` refers to local indicators associated with integrity-spoofing modifications; DuckDetector does not return an official Google Play Integrity API verdict. The TEE area evaluates Android KeyStore and attestation evidence, including certificate chains, security levels, revocation data, and selected KeyMint, StrongBox, and Soter behavior where supported. RKP build metadata is displayed as informational certificate metadata; its approval values do not determine CTS status, including on RKP V3.
 
 Native Root also offers an optional [fsnotify SRCU timing experiment](feature/nativeroot/SRCU_TIMING.md), disabled by default. It requires an explicit choice, uses a temporary private dynamic permission on supported Android 12–14 systems, and reports repeatable contention as supporting evidence. Its thresholds await device calibration; it does not identify KernelSU, and its private-process deadline cannot recover a blocked kernel.
+
+On arm64, Native Root also collects an experimental [init.rc hook timing contrast](feature/nativeroot/INIT_RC_TIMING.md) using private same-metadata files and a dedicated worker. Results remain supporting evidence, preserve failures and raw samples, and do not identify or exclude KernelSU; physical-device calibration is outstanding.
+
+Native Root also collects supporting [KernelSU prctl timing evidence](feature/nativeroot/KERNELSU_TIMING.md) on eligible arm64 processes. Each CPU has an independent preflight; syscall outcomes, retries, histogram support and CPU eligibility remain visible. A complete non-match requires every present CPU; excluded or changing CPUs leave coverage partial. Timing cannot confirm or exclude KernelSU or root.
 
 Supporting modules provide the dashboard, device information, settings, update checks, notifications, license information, and common UI infrastructure.
 
@@ -81,6 +96,7 @@ Supporting modules provide the dashboard, device information, settings, update c
 - **Early native capture:** a transparent `NativeActivity` runs before `MainActivity` and records early mount and virtualization evidence.
 - **Native probes:** the shared native library performs checks that require direct system calls, `/proc` inspection, timing measurements, linker/runtime visibility, or architecture-specific assembly.
 - **Process separation:** selected Zygisk, Mount, Native Root, virtualization, SELinux, LSPosed, and TEE checks run in dedicated or isolated services so evidence can be compared across process boundaries.
+- **Exit-handler evidence:** Zygisk checks libc callback mappings and ordered cleared-handler runs from the ordinary app process, with explicit coverage limits and heuristic findings rather than framework identification.
 - **Evidence correlation:** the dashboard reports individual findings and coverage states instead of treating one heuristic as conclusive.
 
 # Compatibility

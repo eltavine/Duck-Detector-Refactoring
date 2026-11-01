@@ -152,6 +152,7 @@ internal fun consentPolicyCard(
     prompt: ConsentPrompt,
     decision: ConsentDecision,
     onDecide: (granted: Boolean) -> Unit,
+    onManagePermissions: (() -> Unit)? = null,
 ): StartupPolicyCardUi {
     return when (decision) {
         ConsentDecision.UNDECIDED -> StartupPolicyCardUi(
@@ -174,6 +175,8 @@ internal fun consentPolicyCard(
             statusLabel = stringResource(R.string.startup_status_ready),
             headline = stringResource(prompt.grantedHeadline),
             detail = stringResource(prompt.grantedDetail),
+            primaryActionLabel = onManagePermissions?.let { stringResource(R.string.detector_manage_permissions) },
+            onPrimaryAction = onManagePermissions,
             tone = StartupPolicyTone.READY,
             requiresAction = false,
         )

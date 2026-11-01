@@ -162,6 +162,12 @@
       "may_include": [
         "common"
       ]
+    },
+    "adbruntime": {
+      "path": "adbruntime",
+      "owner": ":feature:adbruntime:data",
+      "target": "duckdetector_adbruntime",
+      "may_include": []
     }
   },
   "include_exceptions": [

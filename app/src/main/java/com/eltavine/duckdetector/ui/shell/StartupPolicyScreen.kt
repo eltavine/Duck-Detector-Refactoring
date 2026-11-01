@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.eltavine.duckdetector.ui.rememberAppPermissionSettings
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -69,6 +70,7 @@ import com.eltavine.duckdetector.core.detector.ConsentId
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.components.DuckIcon
 import com.eltavine.duckdetector.features.dashboard.ui.DashboardTopBarBrandIcon
+import com.eltavine.duckdetector.features.dashboard.presentation.model.ScanHistoryCounts
 import com.eltavine.duckdetector.notifications.ScanNotificationPermissionState
 import com.eltavine.duckdetector.notifications.preferences.ScanNotificationPrefs
 import com.eltavine.duckdetector.sdk.PackageVisibility
@@ -96,6 +98,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun StartupPolicyScreen(
+    history: ScanHistoryCounts,
     gateState: StartupGateState,
     notificationPrefs: ScanNotificationPrefs?,
     notificationPermissionState: ScanNotificationPermissionState,
@@ -113,6 +116,7 @@ internal fun StartupPolicyScreen(
     onUiModeChange: (UiMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val openPermissionSettings = rememberAppPermissionSettings()
     val uiMode = LocalUiMode.current
     val cards = if (
         gateState == StartupGateState.LOADING ||
@@ -138,6 +142,7 @@ internal fun StartupPolicyScreen(
         ) + consentCards.map { consentCard ->
             consentPolicyCard(
                 prompt = consentCard.card.prompt,
+                onManagePermissions = if (consentCard.card.runtimePermissions.isEmpty()) null else openPermissionSettings,
                 decision = consentDecisions.getValue(consentCard.consent.id),
                 onDecide = { granted -> onDecideConsent(consentCard, granted) },
             )
@@ -167,6 +172,7 @@ internal fun StartupPolicyScreen(
                     StartupMiuixTopBar(
                         title = stringResource(R.string.startup_review_label),
                         scrollBehavior = scrollBehavior,
+                        history = history,
                     )
                 },
             ) { innerPadding ->
@@ -218,7 +224,7 @@ internal fun StartupPolicyScreen(
                     LargeFlexibleTopAppBar(
                         title = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                DashboardTopBarBrandIcon()
+                                DashboardTopBarBrandIcon(history)
                                 Spacer(modifier = Modifier.size(10.dp))
                                 Text(text = stringResource(R.string.startup_review_label))
                             }

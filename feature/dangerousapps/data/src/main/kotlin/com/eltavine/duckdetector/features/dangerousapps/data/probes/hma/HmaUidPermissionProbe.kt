@@ -70,9 +70,9 @@ internal class HmaUidPermissionProbe(
         } catch (failure: LinkageError) {
             return failed(failure)
         }
-        if (identity.sdk !in 35..36 || identity.uid % 100000 !in 10000..19999 || !identity.nonInstantDefinitions) {
+        if (identity.sdk !in 35..37 || identity.uid % 100000 !in 10000..19999 || !identity.nonInstantDefinitions) {
             return HmaBehaviorCheck(kind, HmaCheckState.UNSUPPORTED,
-                "Requires reviewed Android 15/16 permission semantics, an ordinary caller UID and non-instant permission definitions.")
+                "Requires reviewed Android 15–17 permission semantics, an ordinary caller UID and non-instant permission definitions.")
         }
         val firstUid = identity.uid / 100000 * 100000 + 10000
         var checked = 0

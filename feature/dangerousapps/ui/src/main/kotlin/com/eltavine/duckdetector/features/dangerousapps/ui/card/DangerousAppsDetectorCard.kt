@@ -18,13 +18,15 @@
 package com.eltavine.duckdetector.features.dangerousapps.ui.card
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.CrisisAlert
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.runtime.Composable
@@ -34,19 +36,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import com.eltavine.duckdetector.core.ui.components.ContextLine
+import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.DetectorActionButton
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
+import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
 import com.eltavine.duckdetector.core.ui.components.DetectorFact
 import com.eltavine.duckdetector.core.ui.components.DetectorFactPair
+import com.eltavine.duckdetector.core.ui.components.DetectorHairline
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorSectionGroup
+import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.toSectionSeverity
-import com.eltavine.duckdetector.core.ui.model.ContextItemModel
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsCardModel
+import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsDetailRowModel
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsHeaderFact
 import com.eltavine.duckdetector.features.dangerousapps.presentation.model.DangerousAppsHeaderFactModel
 import com.eltavine.duckdetector.features.dangerousapps.ui.DangerousAppsTargetsDialog
@@ -95,6 +99,7 @@ internal fun DangerousAppsDetectorCard(
         DetectorSectionGroup {
             item {
                 DetectorSectionFrame(
+                    stateKey = "dangerousapps.packages",
                     title = stringResource(R.string.dangerousapps_section_packages),
                     icon = Icons.Rounded.Shield,
                     severity = model.packageSectionSeverity?.toSectionSeverity(),
@@ -105,6 +110,7 @@ internal fun DangerousAppsDetectorCard(
             model.packageHistory?.let { history ->
                 item {
                     DetectorSectionFrame(
+                        stateKey = "dangerousapps.history",
                         title = stringResource(R.string.dangerousapps_section_package_history),
                         icon = Icons.Rounded.Search,
                     ) {
@@ -112,18 +118,32 @@ internal fun DangerousAppsDetectorCard(
                     }
                 }
             }
-            item {
-                DetectorSectionFrame(
-                    title = stringResource(R.string.dangerousapps_section_context),
+            item(visible = model.impactRows.isNotEmpty()) {
+                DangerousAppsDetailSection(
+                    sectionKey = "dangerousapps.impact",
+                    title = stringResource(R.string.dangerousapps_section_impact),
+                    icon = Icons.Rounded.CrisisAlert,
+                    rows = model.impactRows,
+                    showDivider = model.methodRows.isNotEmpty() || model.context.isNotEmpty(),
+                )
+            }
+            item(visible = model.methodRows.isNotEmpty()) {
+                DangerousAppsDetailSection(
+                    sectionKey = "dangerousapps.methods",
+                    title = stringResource(R.string.dangerousapps_section_detection_methods),
                     icon = Icons.Rounded.Search,
+                    rows = model.methodRows,
+                    showDivider = model.context.isNotEmpty(),
+                )
+            }
+            item(visible = model.context.isNotEmpty()) {
+                DangerousAppsDetailSection(
+                    sectionKey = "dangerousapps.scan",
+                    title = stringResource(R.string.dangerousapps_section_context),
+                    icon = Icons.Rounded.Info,
+                    rows = model.context,
                     showDivider = false,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        model.context.forEach { contextItem ->
-                            ContextLine(item = ContextItemModel(label = contextItem.label, value = contextItem.value))
-                        }
-                    }
-                }
+                )
             }
         }
     }
@@ -133,7 +153,8 @@ internal fun DangerousAppsDetectorCard(
 private fun DangerousAppsOverview(
     model: DangerousAppsCardModel,
 ) {
-    val targets = model.headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.TARGETS } ?: return
+    val runtime = model.headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.RUNTIME }
+        ?: model.headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.TARGETS } ?: return
     val packageManager = model.headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.PM } ?: return
     val hits = model.headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.HITS } ?: return
     val hidden = model.headerFacts.firstOrNull { it.fact == DangerousAppsHeaderFact.HIDDEN } ?: return
@@ -144,7 +165,7 @@ private fun DangerousAppsOverview(
         verticalAlignment = Alignment.Top,
     ) {
         DangerousAppsFactPairCard(
-            primary = targets,
+            primary = runtime,
             secondary = packageManager,
             modifier = Modifier.weight(1f),
         )
@@ -171,3 +192,30 @@ private fun DangerousAppsFactPairCard(
 
 private fun DangerousAppsHeaderFactModel.asDetectorFact() =
     DetectorFact(label = label, value = value, status = status)
+
+@Composable
+private fun DangerousAppsDetailSection(
+    sectionKey: String,
+    title: String,
+    icon: ImageVector,
+    rows: List<DangerousAppsDetailRowModel>,
+    showDivider: Boolean,
+) {
+    DetectorSectionFrame(
+        stateKey = sectionKey,
+        title = title,
+        icon = icon,
+        severity = highestSectionSeverity(rows.map { it.status }),
+        showDivider = showDivider,
+    ) {
+        rows.forEachIndexed { index, row ->
+            DetectorDetailRowBlock(
+                label = row.label,
+                value = row.value,
+                status = row.status,
+                detail = row.detail,
+            )
+            if (index < rows.lastIndex) DetectorHairline()
+        }
+    }
+}

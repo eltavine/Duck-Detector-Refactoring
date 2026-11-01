@@ -26,9 +26,9 @@ class GitHubContributorsTest {
 
     private val feed = """
         [
-          {"total": 5, "weeks": [{"a": 1, "d": 1}], "author": {"login": "bob", "path": "/bob", "avatar": "https://a/b?s=60&v=4"}},
-          {"total": 9, "weeks": [], "author": {"login": "amy", "avatar": "https://a/a"}},
-          {"total": 5, "weeks": [{"a": 10, "d": 0}], "author": {"login": "Cid", "path": "/Cid"}}
+          {"total": 5, "weeks": [{"a": 1, "d": 1}], "author": {"login": "bob", "html_url": "https://github.com/bob", "avatar_url": "https://a/b?s=60&v=4"}},
+          {"total": 9, "weeks": [], "author": {"login": "amy", "avatar_url": "https://a/a"}},
+          {"total": 5, "weeks": [{"a": 10, "d": 0}], "author": {"login": "Cid", "html_url": "https://github.com/Cid"}}
         ]
     """
 
@@ -42,7 +42,19 @@ class GitHubContributorsTest {
     }
 
     @Test
-    fun `profile urls come from the author path, avatars are requested at 512 pixels`() {
+    fun `contributors beyond the first thirty are all retained`() {
+        val feed = (1..45).joinToString(prefix = "[", postfix = "]") { index ->
+            """{"total": $index, "author": {"login": "contributor$index"}}"""
+        }
+
+        val contributors = parseGitHubContributors(feed)
+
+        assertEquals(45, contributors.size)
+        assertEquals((45 downTo 1).map { "contributor$it" }, contributors.map { it.login })
+    }
+
+    @Test
+    fun `profile urls come from REST fields, avatars are requested at 512 pixels`() {
         val byLogin = parseGitHubContributors(feed).associateBy { it.login }
 
         assertEquals("https://github.com/bob", byLogin.getValue("bob").profileUrl)
@@ -60,14 +72,35 @@ class GitHubContributorsTest {
     }
 
     @Test
-    fun `the contributors page and avatars get different headers, and a token authorises both`() {
-        val page = githubRequestHeaders(GITHUB_CONTRIBUTORS_API_URL, token = "secret")
-        val avatar = githubRequestHeaders("https://avatars.githubusercontent.com/u/1", token = " ")
+    fun `credentials only authorise HTTPS requests to the API origin`() {
+        val api = githubRequestHeaders(GITHUB_CONTRIBUTORS_API_URL, token = "secret")
 
-        assertEquals("application/json", page["Accept"])
-        assertEquals("Bearer secret", page["Authorization"])
-        assertEquals("application/vnd.github+json", avatar["Accept"])
-        assertEquals("2022-11-28", avatar["X-GitHub-Api-Version"])
-        assertEquals(null, avatar["Authorization"])
+        assertEquals("Bearer secret", api["Authorization"])
+        assertEquals("application/vnd.github+json", api["Accept"])
+        assertEquals("2022-11-28", api["X-GitHub-Api-Version"])
+        listOf(
+            "https://avatars.githubusercontent.com/u/1",
+            "https://example.com/api.github.com",
+            "http://api.github.com/repos/o/r/stats/contributors",
+            "https://api.github.com:8443/repos/o/r/stats/contributors",
+        ).forEach { url ->
+            assertEquals(url, null, githubRequestHeaders(url, token = "secret")["Authorization"])
+        }
+        assertEquals(null, githubRequestHeaders(GITHUB_CONTRIBUTORS_API_URL, token = " ")["Authorization"])
+    }
+
+    @Test
+    fun `pending statistics are retried before accepting the contributor snapshot`() {
+        var requests = 0
+        val outcome = fetchWithRetries(
+            attempts = 3,
+            backoffMillis = { 0L },
+            warn = { _, _ -> },
+        ) {
+            parseGitHubContributors(if (++requests < 3) "{}" else feed)
+        }
+
+        assertEquals(3, requests)
+        assertEquals(listOf("amy", "Cid", "bob"), (outcome as FetchOutcome.Fetched).value.map { it.login })
     }
 }

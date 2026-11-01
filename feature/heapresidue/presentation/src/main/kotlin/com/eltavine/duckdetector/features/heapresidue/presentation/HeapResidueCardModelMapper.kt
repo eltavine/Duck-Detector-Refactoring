@@ -36,6 +36,8 @@ class HeapResidueCardModelMapper {
         status = report.toDetectorStatus(), verdict = verdict(report),
         summary = when {
             report.stage == HeapResidueStage.LOADING -> "Capturing a fresh isolated-process heap."
+            report.stage == HeapResidueStage.FAILED -> report.errorMessage ?: "The isolated heap probe failed before evaluation completed."
+            report.outcome == HeapResidueOutcome.NOT_EVALUATED -> "No snapshot evaluation has completed. Historical coverage is unknown."
             report.outcome == HeapResidueOutcome.UNSUPPORTED -> "This release predates the audited Android 12 to 17 baselines and is unsupported."
             report.outcome == HeapResidueOutcome.UNAVAILABLE -> "The isolated heap probe was unavailable. No absence conclusion is possible."
             report.outcome == HeapResidueOutcome.INCONCLUSIVE -> "The snapshot could not establish usable startup argument evidence. Coverage is unknown."
@@ -51,10 +53,14 @@ class HeapResidueCardModelMapper {
                 } } + ". These are correlated strings from one snapshot, not independent evidence.")
         },
         scanRows = scanRows(report),
+        headerFacts = heapResidueHeaderFacts(report),
+        impactRows = heapResidueImpactRows(report),
+        methodRows = heapResidueMethodRows(report),
     )
 
     private fun verdict(report: HeapResidueReport): String = when {
         report.stage == HeapResidueStage.LOADING -> "Scanning"
+        report.stage == HeapResidueStage.FAILED -> "Probe unavailable"
         else -> when (report.outcome) {
             HeapResidueOutcome.NOT_EVALUATED -> "Not evaluated"
             HeapResidueOutcome.UNSUPPORTED -> "Unsupported"

@@ -20,6 +20,9 @@ package com.eltavine.duckdetector.features.systemproperties.data.repository
 import com.eltavine.duckdetector.capability.systemproperties.domain.PropAreaFinding
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertiesNativeSnapshot
 import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySeverity
+import com.eltavine.duckdetector.capability.systemproperties.domain.SystemPropertySource
+import com.eltavine.duckdetector.capability.systemproperties.domain.MultiSourcePropertyRead
+import com.eltavine.duckdetector.features.systemproperties.data.rules.SystemPropertiesCatalog
 import com.eltavine.duckdetector.features.systemproperties.domain.SystemPropertiesMethodOutcome
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -28,6 +31,33 @@ import org.junit.Test
 class SystemPropertiesRepositoryTest {
 
     private val repository = SystemPropertiesRepository()
+
+    @Test
+    fun `OEM unlock capability remains informational while an unlocked bootloader is dangerous`() {
+        for (property in listOf("sys.oem_unlock_allowed", "ro.oem_unlock_supported")) {
+            val rule = SystemPropertiesCatalog.rules.single { it.property == property }
+            for (value in listOf("0", "1", "false", "true", "unexpected")) {
+                val read = MultiSourcePropertyRead(
+                    property = property,
+                    category = rule.category,
+                    preferredValue = value,
+                    preferredSource = SystemPropertySource.GETPROP,
+                    sourceValues = mapOf(SystemPropertySource.GETPROP to value),
+                )
+                assertEquals(SystemPropertySeverity.NEUTRAL, repository.buildRuleSignal(rule, read).severity)
+            }
+        }
+
+        val unlockedRule = SystemPropertiesCatalog.rules.single { it.property == "ro.boot.flash.locked" }
+        val unlockedRead = MultiSourcePropertyRead(
+            property = unlockedRule.property,
+            category = unlockedRule.category,
+            preferredValue = "0",
+            preferredSource = SystemPropertySource.GETPROP,
+            sourceValues = mapOf(SystemPropertySource.GETPROP to "0"),
+        )
+        assertEquals(SystemPropertySeverity.DANGER, repository.buildRuleSignal(unlockedRule, unlockedRead).severity)
+    }
 
     @Test
     fun `adbd config prop hole maps to danger`() {

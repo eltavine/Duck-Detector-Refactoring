@@ -182,7 +182,7 @@ jobs:
 
       - name: Set up Android build toolchain
         id: toolchain
-        uses: $/.github/actions/setup-android-build
+        uses: ./.github/actions/setup-android-build
         with:
           # Tag builds restore the cache but do not write it back: GitHub scopes a cache entry to
           # the ref that created it, so an entry written from refs/tags/v* can never be read by
@@ -284,6 +284,11 @@ jobs:
           echo "sha256=${expected_sha256}" >> "$GITHUB_OUTPUT"
           echo "signer_name=${signer_name}" >> "$GITHUB_OUTPUT"
 
+      - name: Generate contributors JSON and avatars
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./gradlew --stacktrace -Pduckdetector.githubContributors.refresh=true :app:generateGithubContributorsAsset
+
       - name: Build release APK and SDK AAR
         id: build
         shell: bash
@@ -305,7 +310,6 @@ jobs:
             -Pduckdetector.releaseTag="${TAG_NAME}" \
             -Pduckdetector.buildTimeUtc="${build_time_utc}" \
             -Pduckdetector.teeCrl.refresh=true \
-            -Pduckdetector.githubContributors.refresh=true \
             :app:assembleRelease \
             :sdk:aar:assemble
           end_time=$(date +%s)

@@ -17,6 +17,7 @@
 
 #include "memory/detectors/signal_detector.h"
 
+#include "common/installed_package_path.h"
 #include "memory/common/maps_reader.h"
 
 #include <signal.h>
@@ -82,7 +83,7 @@ namespace duckdetector::memory {
 
             const auto entry = find_entry_for_address(maps, handler);
             const std::string path = entry ? entry->path : "[unmapped]";
-            const std::string lowered = to_lower_ascii(path);
+            const std::string lowered = to_lower_ascii(package_paths::without_install_tokens(path));
             std::ostringstream detail;
             detail << signal_name(signum) << " handler @ 0x" << std::hex << handler << " in "
                    << path;
@@ -97,7 +98,7 @@ namespace duckdetector::memory {
                 continue;
             }
 
-            if (is_suspicious_loader_path(lowered) || lowered.find("frida") != std::string::npos) {
+            if (is_suspicious_loader_path(path)) {
                 signals.suspicious_handler = true;
                 signals.frida_named_handler =
                         signals.frida_named_handler || lowered.find("frida") != std::string::npos;

@@ -30,4 +30,5 @@ dependencies {
     api(project(":core:native"))
     api(project(":feature:mount:domain"))
     implementation(libs.kotlinx.coroutines.android)
+    testImplementation(project(":core:evidence"))
 }

@@ -21,6 +21,7 @@ import com.eltavine.duckdetector.capability.attestation.data.BootConsistencyResu
 import com.eltavine.duckdetector.features.tee.data.verification.certificate.ChainStructureResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCertificateSecurityLevelResult
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
+import com.eltavine.duckdetector.features.tee.domain.TeeSignalLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,6 +29,21 @@ import org.junit.Test
 class TeeReportReducerBootTest {
 
     private val reducer = TeeReportReducer()
+
+    @Test
+    fun `readable runtime properties without comparison remain informational`() {
+        val report = reducer.reduce(baseArtifacts(bootConsistency = BootConsistencyResult(
+            runtimePropsAvailable = true,
+            runtimeVbmetaDigest = "aabb",
+            runtimeComparisonPerformed = false,
+        )))
+
+        assertEquals(TeeSignalLevel.INFO, report.signals.single { it.label == "Boot" }.level)
+        val row = report.sections.single { it.title == "Attestation" }.items
+            .single { it.title == "Boot consistency" }
+        assertEquals(TeeSignalLevel.INFO, row.level)
+        assertTrue(row.body.startsWith("State only"))
+    }
 
     @Test
     fun `pure certificate top level and metadata security levels render as separate checks`() {

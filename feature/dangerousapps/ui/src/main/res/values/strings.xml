@@ -25,7 +25,9 @@ limitations under the License.
     <string name="target_app_list_overview">Overview</string>
 
     <string name="dangerousapps_section_packages">Packages</string>
-    <string name="dangerousapps_section_context">Context</string>
+    <string name="dangerousapps_section_context" translatable="false">Scan summary</string>
     <string name="dangerousapps_section_package_history">Package changes since boot</string>
     <string name="dangerousapps_no_package_hits">No package hits</string>
+    <string name="dangerousapps_section_impact" translatable="false">Impact</string>
+    <string name="dangerousapps_section_detection_methods" translatable="false">Detection methods</string>
 </resources>

@@ -54,7 +54,7 @@ internal fun Project.registerGeneratedAssets() {
             maxAttempts.set(
                 providers.gradleProperty("duckdetector.githubContributors.maxAttempts")
                     .map(String::toInt)
-                    .orElse(4)
+                    .orElse(6)
             )
             connectTimeoutMillis.set(
                 providers.gradleProperty("duckdetector.githubContributors.connectTimeoutMillis")

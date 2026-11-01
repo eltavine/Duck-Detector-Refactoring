@@ -17,11 +17,14 @@
 
 #pragma once
 
+#include "common/installed_package_path.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -51,14 +54,39 @@ namespace duckdetector::zygisk {
         std::string detail;
     };
 
+    enum class HeuristicFamily {
+        kLoaderPath,
+        kMapStructure,
+        kSolist,
+        kAtexit,
+        kDirtySystemCode,
+        kThreads,
+        kHeapEntropy,
+    };
+
     struct ProbeResult {
         bool available = true;
         bool supported = true;
         int hit_count = 0;
         int strong_hits = 0;
-        int heuristic_hits = 0;
+        std::set<HeuristicFamily> heuristic_families;
         int numeric_value = 0;
         std::vector<Trace> traces;
+    };
+
+    enum class AtexitTableState {
+        kNotCollected, kCollected, kUnsupported, kUnavailable, kPermissionDenied,
+        kBusy, kInvalid, kPartial,
+    };
+
+    struct AtexitObservation {
+        AtexitTableState state = AtexitTableState::kNotCollected;
+        int dumpable = -1;
+        size_t entries = 0;
+        size_t null_entries = 0;
+        size_t anchored_gaps = 0;
+        size_t anonymous_callbacks = 0;
+        std::string detail;
     };
 
     struct Snapshot {
@@ -76,6 +104,7 @@ namespace duckdetector::zygisk {
         int heap_hits = 0;
         int thread_hits = 0;
         int fd_hits = 0;
+        AtexitObservation atexit_table;
         std::vector<Trace> traces;
     };
 
@@ -84,7 +113,9 @@ namespace duckdetector::zygisk {
         uintptr_t end = 0;
         std::string perms;
         uintptr_t offset = 0;
-        unsigned long inode = 0;
+        uint64_t inode = 0;
+        unsigned int device_major = 0;
+        unsigned int device_minor = 0;
         std::string path;
 
         [[nodiscard]] bool readable() const { return perms.find('r') != std::string::npos; }
@@ -167,20 +198,21 @@ namespace duckdetector::zygisk {
             unsigned long long offset = 0;
             unsigned long long inode = 0;
             char perms[5] = {};
-            char device[32] = {};
+            unsigned int device_major = 0, device_minor = 0;
             int path_offset = 0;
             const int matched = std::sscanf(
                     line.c_str(),
-                    "%llx-%llx %4s %llx %31s %llu %n",
+                    "%llx-%llx %4s %llx %x:%x %llu %n",
                     &start,
                     &end,
                     perms,
                     &offset,
-                    device,
+                    &device_major,
+                    &device_minor,
                     &inode,
                     &path_offset
             );
-            if (matched < 6) {
+            if (matched < 7) {
                 continue;
             }
             MapEntry entry;
@@ -188,7 +220,9 @@ namespace duckdetector::zygisk {
             entry.end = static_cast<uintptr_t>(end);
             entry.perms = perms;
             entry.offset = static_cast<uintptr_t>(offset);
-            entry.inode = static_cast<unsigned long>(inode);
+            entry.inode = static_cast<uint64_t>(inode);
+            entry.device_major = device_major;
+            entry.device_minor = device_minor;
             if (path_offset > 0 && path_offset < static_cast<int>(line.size())) {
                 entry.path = trim_copy(line.substr(static_cast<size_t>(path_offset)));
             }
@@ -218,7 +252,7 @@ namespace duckdetector::zygisk {
     }
 
     inline bool is_suspicious_loader_keyword(const std::string &path) {
-        const auto lower = lowercase_copy(path);
+        const auto lower = lowercase_copy(package_paths::without_install_tokens(path));
         return lower.find("zygisk") != std::string::npos ||
                lower.find("magisk") != std::string::npos ||
                lower.find("riru") != std::string::npos ||

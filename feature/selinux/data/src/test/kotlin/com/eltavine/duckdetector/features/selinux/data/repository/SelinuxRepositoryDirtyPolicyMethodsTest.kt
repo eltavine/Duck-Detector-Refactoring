@@ -78,7 +78,7 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
             ),
         )
 
-        assertEquals(17, methods.size)
+        assertEquals(22, methods.size)
         methods.forEach { method ->
             val rule = requireNotNull(method.policyRule) { method.method }
             assertEquals(method.method, rule.method)
@@ -191,7 +191,7 @@ class SelinuxRepositoryDirtyPolicyMethodsTest {
             ),
         )
 
-        assertEquals(17, methods.size)
+        assertEquals(22, methods.size)
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: system_server execmem" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.any { it.method == "Dirty sepolicy rule: untrusted_app -> lsposed_file read" && it.status == "Allowed" && it.isSecure == false })
         assertTrue(methods.none { it.dirtyPolicyTrusted })

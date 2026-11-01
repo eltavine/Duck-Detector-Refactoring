@@ -64,6 +64,9 @@ internal fun buildVerdict(report: SelinuxReport): String {
     val procAttrCurrent = procAttrCurrentResult(report)
     val policyloadSeqno = policyloadSeqnoResult(report)
     val dirtyPolicyHit = firstTrustedPolicyRuleHit(report)
+    val dirtySepolicyCompatibility = report.methods.firstOrNull {
+        it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.isSecure == false
+    }
     val repeatabilityFailed = contextValidity?.contextValidity?.repeatabilityFailed == true
     val appZygoteCarrierState = contextValiditySupportState(contextValidity)
     return when (report.stage) {
@@ -78,13 +81,16 @@ internal fun buildVerdict(report: SelinuxReport): String {
                 procAttrCurrent?.isSecure == false -> "Enforcing with recognized privileged contexts"
                 report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } ->
                     "Enforcing with SELinux attr/current timing anomaly"
+                report.methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.dirtySepolicyDanger } ->
+                    "Enforcing with DirtySepolicy anomaly"
                 dirtyPolicyHit != null -> trustedPolicyRuleVerdict()
+                dirtySepolicyCompatibility != null -> "Enforcing with DirtySepolicy anomaly"
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
                     "Enforcing with untrusted app_zygote carrier"
                 sidtabReading(report)?.verdict == SelinuxSidtabVerdict.DISCREPANCY_OBSERVED ->
                     "Enforcing with SID-table query discrepancy"
                 appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ->
-                    "Enforcing with reduced app_zygote coverage"
+                    "Enforcing with app_zygote carrier startup failure"
 
                 contextValidity?.contextValidity?.verdict == SelinuxContextValidityVerdict.SELF_TEST_FAILED ->
                     if (repeatabilityFailed) {
@@ -106,7 +112,12 @@ internal fun buildVerdict(report: SelinuxReport): String {
 
             SelinuxMode.PERMISSIVE -> "Permissive"
             SelinuxMode.DISABLED -> "Disabled"
-            SelinuxMode.UNKNOWN -> "Unknown"
+            SelinuxMode.UNKNOWN -> when {
+                dirtySepolicyCompatibility != null -> "SELinux mode unknown with DirtySepolicy anomaly"
+                appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ->
+                    "App Zygote carrier startup failure; SELinux mode unknown"
+                else -> "Unknown"
+            }
         }
     }
 }
@@ -116,6 +127,9 @@ internal fun buildSummary(report: SelinuxReport): String {
     val procAttrCurrent = procAttrCurrentResult(report)
     val policyloadSeqno = policyloadSeqnoResult(report)
     val dirtyPolicyHit = firstTrustedPolicyRuleHit(report)
+    val dirtySepolicyCompatibility = report.methods.firstOrNull {
+        it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.isSecure == false
+    }
     // Coverage states stay in the method row; only a finding belongs in the summary.
     val sidtabDiscrepancy = sidtabReading(report)?.takeIf { it.verdict == SelinuxSidtabVerdict.DISCREPANCY_OBSERVED }
     val repeatabilityFailed = contextValidity?.contextValidity?.repeatabilityFailed == true
@@ -167,6 +181,9 @@ internal fun buildSummary(report: SelinuxReport): String {
                     if (dirtyPolicyHit != null) {
                         add(trustedPolicyRuleSummary(dirtyPolicyHit))
                     }
+                    if (dirtySepolicyCompatibility != null) {
+                        add("DirtySepolicy 2.2 compatibility: ${dirtySepolicyCompatibility.status}. Check its Raw protocol details for the original failure or warning reasons; this is not automatically root attribution.")
+                    }
                     sidtabDiscrepancy?.let { add(sidtabExplanation(it)) }
                     when (report.auditIntegrity?.state) {
                         SelinuxAuditIntegrityState.TAMPERED ->
@@ -213,7 +230,7 @@ internal fun buildSummary(report: SelinuxReport): String {
                                 }
                             AppZygoteCarrierSupportState.FAILED ->
                                 buildString {
-                                    append("The dedicated app_zygote carrier failed before the oracle produced a trusted result, so app_zygote-only SELinux coverage was reduced.")
+                                    append("WARNING: The dedicated app_zygote carrier failed to start or connect, so its SELinux preload checks did not complete. This is a detection-environment failure, not proof of policy tampering.")
                                     contextValidity.details?.let {
                                         append(' ')
                                         append(it)

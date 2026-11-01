@@ -28,6 +28,9 @@ data class AdbRuntimeCardModel(
     override val summary: String,
     val signalRows: List<AdbRuntimeDetailRowModel>,
     val scanRows: List<AdbRuntimeDetailRowModel>,
+    val headerFacts: List<AdbRuntimeDetailRowModel> = emptyList(),
+    val impactRows: List<AdbRuntimeDetailRowModel> = emptyList(),
+    val methodRows: List<AdbRuntimeDetailRowModel> = emptyList(),
 ) : DetectorHeadline
 
 data class AdbRuntimeDetailRowModel(

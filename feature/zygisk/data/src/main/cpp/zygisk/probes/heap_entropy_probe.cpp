@@ -76,7 +76,7 @@ namespace duckdetector::zygisk {
                                             std::to_string(ratio) + ").",
                                     });
             result.hit_count = 1;
-            result.heuristic_hits = 1;
+            result.heuristic_families.insert(HeuristicFamily::kHeapEntropy);
         }
 
         return result;

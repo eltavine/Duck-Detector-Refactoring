@@ -19,6 +19,7 @@ package com.eltavine.duckdetector.features.rootmanagers.detector
 
 import android.content.Context
 import com.eltavine.duckdetector.core.detector.Detector
+import com.eltavine.duckdetector.core.detector.DetectorConsent
 import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.core.detector.DetectorSpecificApi
 import com.eltavine.duckdetector.core.evidence.DetectorId
@@ -39,6 +40,8 @@ import com.eltavine.duckdetector.features.rootmanagers.presentation.toDetectorRe
 @DetectorSpecificApi
 public object RootManagersDetector : Detector<RootManagersReport, RootManagersCardModel> {
     override val id: DetectorId = DetectorId("root_managers")
+
+    override val consents: List<DetectorConsent> = listOf(RootManagersInstallerCanaryConsent)
 
     override fun createScanner(context: Context): DetectorScanner<RootManagersReport> = RootManagersRepository(context)
 

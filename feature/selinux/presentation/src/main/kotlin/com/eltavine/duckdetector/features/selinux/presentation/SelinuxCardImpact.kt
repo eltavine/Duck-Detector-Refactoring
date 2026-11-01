@@ -17,6 +17,7 @@
 
 package com.eltavine.duckdetector.features.selinux.presentation
 
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxAppZygoteTimingVerdict
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.selinux.domain.AppZygoteCarrierSupportState
@@ -179,7 +180,7 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             contextValidity.details ?: "The context validity oracle stayed unavailable.",
             when (appZygoteCarrierState) {
                 AppZygoteCarrierSupportState.UNTRUSTED -> DetectorStatus.warning()
-                AppZygoteCarrierSupportState.FAILED -> DetectorStatus.info(InfoKind.SUPPORT)
+                AppZygoteCarrierSupportState.FAILED -> DetectorStatus.warning()
                 AppZygoteCarrierSupportState.AVAILABLE -> DetectorStatus.info(InfoKind.SUPPORT)
             },
         )
@@ -222,6 +223,16 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
     if (report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false }) {
         items += SelinuxImpactItemModel(
             "Repeatable attr/current timing asymmetry is strong device-side evidence of extra context processing before access denial. This device-dependent side channel alone does not identify a root tool.",
+            DetectorStatus.danger(),
+        )
+    }
+    if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
+            it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE }) {
+        items += SelinuxImpactItemModel(
+            "The App Zygote invalid-context A−B paired median was positive. " +
+                "Stock kernels also take different paths for A and B, and CPU/load can change the sign. " +
+                "This is a strong timing anomaly, not proof of KernelSU or root. " +
+                "The AVC counts share the same measurement carrier.",
             DetectorStatus.danger(),
         )
     }

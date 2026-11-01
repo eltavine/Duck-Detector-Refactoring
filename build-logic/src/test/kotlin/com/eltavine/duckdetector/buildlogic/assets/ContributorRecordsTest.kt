@@ -51,6 +51,23 @@ class ContributorRecordsTest {
     }
 
     @Test
+    fun `more than forty contributors keep metadata without duplicating manual entries`() {
+        val contributors = (1..43).map { remote("contributor$it", it) } +
+            listOf(remote("SakanyaNotBot", 1), remote("sinanb9", 1))
+        val records = contributorRecords(
+            contributors,
+            recorded = mapOf("contributor43" to ContributorMetadata("summary", listOf("security"))),
+        )
+
+        assertEquals(45, records.size)
+        assertEquals(45, records.map { it.login }.distinct().size)
+        val record = records.single { it.login == "contributor43" }
+        assertEquals("summary", record.summaryKey)
+        assertEquals(listOf("security"), record.contributionKeys)
+        assertEquals("无影", records.single { it.login == "SakanyaNotBot" }.name)
+    }
+
+    @Test
     fun `metadata that cannot be read is empty`() {
         val directory = Files.createTempDirectory("contributors").toFile()
         val invalid = directory.resolve("invalid.json").apply { writeText("not json") }
