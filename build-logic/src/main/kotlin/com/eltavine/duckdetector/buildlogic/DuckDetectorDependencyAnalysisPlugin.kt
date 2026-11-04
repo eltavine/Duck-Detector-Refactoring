@@ -50,6 +50,37 @@ class DuckDetectorDependencyAnalysisPlugin : Plugin<Project> {
                     onUnusedDependencies {
                         exclude("junit:junit", "org.json:json", "org.jetbrains.kotlinx:kotlinx-coroutines-test")
                     }
+                    // Dependency Analysis 3.20.1 sometimes treats a test-only coroutine helper
+                    // as a production API/implementation dependency. The test classpath must not
+                    // be promoted into production just to satisfy that advice.
+                    onIncorrectConfiguration {
+                        exclude("org.jetbrains.kotlinx:kotlinx-coroutines-test")
+                    }
+                }
+                // Compose and lifecycle artifacts are intentionally exposed by these UI modules.
+                // The 3.20.1 analyzer can report api -> implementation even when Kotlin public
+                // declarations expose their types (including composable and ViewModel APIs).
+                // Scope exceptions to the existing public-facing dependencies of each module.
+                val intentionallyExportedUiDependencies = mapOf(
+                    ":core:designsystem" to listOf("androidx.compose.material3:material3"),
+                    ":core:navigation" to listOf("androidx.compose.ui:ui"),
+                    ":core:ui" to listOf("androidx.compose.material3:material3"),
+                    ":feature:dashboard:ui" to listOf("androidx.compose.material3:material3"),
+                    ":feature:deviceinfo:ui" to listOf(
+                        "androidx.compose.material3:material3",
+                        "androidx.lifecycle:lifecycle-viewmodel-compose",
+                    ),
+                    ":feature:settings:ui" to listOf("androidx.compose.material3:material3"),
+                    ":feature:tee:ui" to listOf(
+                        "androidx.compose.material3:material3",
+                        "androidx.lifecycle:lifecycle-viewmodel-compose",
+                    ),
+                    ":feature:update:ui" to listOf("androidx.compose.material3:material3"),
+                )
+                intentionallyExportedUiDependencies.forEach { (module, dependencies) ->
+                    project(module) {
+                        onIncorrectConfiguration { exclude(*dependencies.toTypedArray()) }
+                    }
                 }
                 // DetectorId is a value class, so the JVM signatures of Detector erase it, but every
                 // Kotlin caller of Detector.id still needs :core:evidence.
