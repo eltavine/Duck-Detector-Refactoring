@@ -27,6 +27,11 @@
   ],
   "exceptions": [
     {
+      "path": "build-logic/src/main/kotlin/com/eltavine/duckdetector/buildlogic/DuckDetectorDependencyAnalysisPlugin.kt",
+      "detectors": ["tee"],
+      "reason": "Dependency-analysis configuration names the TEE UI Gradle module only to preserve its existing public Compose API configuration; it does not import or access detector implementation code."
+    },
+    {
       "path": "samples/sdk-consumer/src/main/kotlin/com/eltavine/duckdetector/sample/ScanActivity.kt",
       "detectors": ["su"],
       "reason": "Shows a consumer using one detector's typed object through the SDK."
