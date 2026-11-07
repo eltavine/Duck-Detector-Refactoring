@@ -17,10 +17,10 @@
 
 package com.eltavine.duckdetector.features.update.ui
 
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
 import com.eltavine.duckdetector.features.update.domain.UpdateApkDownloader
 import com.eltavine.duckdetector.features.update.domain.UpdateApkInstaller
 import com.eltavine.duckdetector.features.update.domain.UpdateCheckResult
+import com.eltavine.duckdetector.features.update.domain.UpdateChecker
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadProgress
 import com.eltavine.duckdetector.features.update.domain.UpdateDownloadResult
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
@@ -60,7 +60,7 @@ class UpdateViewModelTest {
     fun `automatic check runs once while manual check can run again`() = runTest(dispatcher) {
         var calls = 0
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ ->
+            checker = UpdateChecker { _, _, _ ->
                 calls += 1
                 UpdateCheckResult.Current(testManifest)
             },
@@ -80,7 +80,7 @@ class UpdateViewModelTest {
     @Test
     fun `automatic failure is silent while manual failure is visible`() = runTest(dispatcher) {
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> error("offline") },
+            checker = UpdateChecker { _, _, _ -> error("offline") },
         )
 
         viewModel.checkAutomatically()
@@ -97,7 +97,7 @@ class UpdateViewModelTest {
         var calls = 0
         val available = availableUpdate()
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ ->
+            checker = UpdateChecker { _, _, _ ->
                 calls += 1
                 UpdateCheckResult.Available(available)
             },
@@ -115,7 +115,7 @@ class UpdateViewModelTest {
         assertEquals(1, calls)
 
         val nextProcessViewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(available) },
         )
         nextProcessViewModel.checkAutomatically()
         advanceUntilIdle()
@@ -134,7 +134,7 @@ class UpdateViewModelTest {
     fun `download resolution rechecks an unchanged manifest before opening`() = runTest(dispatcher) {
         val available = availableUpdate()
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(available) },
         )
         viewModel.checkAutomatically()
         advanceUntilIdle()
@@ -152,7 +152,7 @@ class UpdateViewModelTest {
         val proxiedUrl = "https://gh-proxy.com/${testManifest.apk.downloadUrl}"
         var calls = 0
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ ->
+            checker = UpdateChecker { _, _, _ ->
                 calls += 1
                 UpdateCheckResult.Available(
                     if (calls == 1) availableUpdate() else availableUpdate(downloadUrl = proxiedUrl),
@@ -182,7 +182,7 @@ class UpdateViewModelTest {
             )
             var calls = 0
             val viewModel = viewModel(
-                checker = NightlyUpdateChecker { _, _ ->
+                checker = UpdateChecker { _, _, _ ->
                     calls += 1
                     UpdateCheckResult.Available(
                         if (calls == 1) availableUpdate() else availableUpdate(newerManifest),
@@ -205,8 +205,8 @@ class UpdateViewModelTest {
         var downloadedUrl: String? = null
         var installedPath: String? = null
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
-            downloader = UpdateApkDownloader { apk, url, onProgress ->
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(available) },
+            downloader = UpdateApkDownloader { apk, url, _, onProgress ->
                 downloadedUrl = url
                 onProgress(UpdateDownloadProgress(bytesRead = apk.sizeBytes, totalBytes = apk.sizeBytes))
                 UpdateDownloadResult.Ready(apkPath = "/tmp/${apk.name}")
@@ -238,8 +238,8 @@ class UpdateViewModelTest {
     fun `a failed download surfaces a retryable state`() = runTest(dispatcher) {
         val available = availableUpdate()
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
-            downloader = UpdateApkDownloader { _, _, _ -> UpdateDownloadResult.Failed },
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(available) },
+            downloader = UpdateApkDownloader { _, _, _, _ -> UpdateDownloadResult.Failed },
         )
         viewModel.checkAutomatically()
         advanceUntilIdle()
@@ -255,7 +255,7 @@ class UpdateViewModelTest {
     fun `installing without a downloaded apk does nothing`() = runTest(dispatcher) {
         val available = availableUpdate()
         val viewModel = viewModel(
-            checker = NightlyUpdateChecker { _, _ -> UpdateCheckResult.Available(available) },
+            checker = UpdateChecker { _, _, _ -> UpdateCheckResult.Available(available) },
         )
         viewModel.checkAutomatically()
         advanceUntilIdle()

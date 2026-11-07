@@ -17,13 +17,26 @@
 
 package com.eltavine.duckdetector.ui
 
+import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateStatus
+import com.eltavine.duckdetector.features.update.domain.UpdateChannel
 import com.eltavine.duckdetector.features.update.presentation.UpdateCheckStatus
 
 internal fun UpdateCheckStatus.toSettingsUpdateStatus(): SettingsUpdateStatus = when (this) {
     UpdateCheckStatus.IDLE -> SettingsUpdateStatus.IDLE
     UpdateCheckStatus.CHECKING -> SettingsUpdateStatus.CHECKING
     UpdateCheckStatus.CURRENT -> SettingsUpdateStatus.CURRENT
+    UpdateCheckStatus.AHEAD -> SettingsUpdateStatus.AHEAD
     UpdateCheckStatus.AVAILABLE -> SettingsUpdateStatus.AVAILABLE
     UpdateCheckStatus.FAILED -> SettingsUpdateStatus.FAILED
+}
+
+internal fun UpdateChannel.toSettingsUpdateChannel(): SettingsUpdateChannel = when (this) {
+    UpdateChannel.STABLE -> SettingsUpdateChannel.STABLE
+    UpdateChannel.NIGHTLY -> SettingsUpdateChannel.NIGHTLY
+}
+
+internal fun SettingsUpdateChannel.toUpdateChannel(): UpdateChannel = when (this) {
+    SettingsUpdateChannel.STABLE -> UpdateChannel.STABLE
+    SettingsUpdateChannel.NIGHTLY -> UpdateChannel.NIGHTLY
 }

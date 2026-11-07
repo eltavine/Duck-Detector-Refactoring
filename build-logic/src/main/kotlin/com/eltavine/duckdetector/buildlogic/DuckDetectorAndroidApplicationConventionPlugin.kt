@@ -23,8 +23,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
-private const val VERSION_NAME_ZONE_ID = "Asia/Singapore"
-private const val isAlphaVersion = true
+private const val isAlphaVersion = false
 
 class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
@@ -55,12 +54,7 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
         }.map { commitCount ->
             DUCK_DETECTOR_VERSION_CODE_BASE + commitCount
         }
-        val versionNameDate = providers.of(CurrentDateVersionNameValueSource::class.java) {
-            parameters.zoneId.set(VERSION_NAME_ZONE_ID)
-        }
-        val versionName = providers.provider {
-            "${versionNameDate.get()}-${buildHash.get()}"
-        }
+        val appVersion = appVersion(buildHash)
 
         val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH")
         val releaseStorePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
@@ -84,11 +78,12 @@ class DuckDetectorAndroidApplicationConventionPlugin : Plugin<Project> {
             defaultConfig {
                 targetSdk = requiredIntGradleProperty("duckdetector.android.targetSdk")
                 this.versionCode = versionCode.get()
-                this.versionName = versionName.get()
+                this.versionName = appVersion.versionName.get()
                 manifestPlaceholders["duckDetectorVersionCode"] = versionCode.get().toString()
                 manifestPlaceholders["duckDetectorBuildHash"] = buildHash.get()
                 buildConfigField("String", "BUILD_TIME_UTC", "\"${buildTimeUtc.get()}\"")
                 buildConfigField("String", "BUILD_HASH", "\"${buildHash.get()}\"")
+                buildConfigField("String", "BUILD_CHANNEL", "\"${appVersion.channel.get().id}\"")
                 buildConfigField("boolean", "isAlphaVersion", isAlphaVersion.toString())
             }
 

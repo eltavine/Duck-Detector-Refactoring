@@ -105,7 +105,7 @@ abstract class RenameApkTask : DefaultTask() {
     private fun buildApkFileName(builtArtifact: BuiltArtifact): String {
         val apkVersionName = builtArtifact.versionName?.takeIf { it.isNotBlank() } ?: "unknown"
         val shortGitHash = gitHash.get().ifBlank { "unknown" }
-        val versionedName = buildVersionedName(apkVersionName, shortGitHash)
+        val versionedName = apkVersionedName(apkVersionName, shortGitHash)
         return when (builtArtifact.outputType) {
             VariantOutputConfiguration.OutputType.ONE_OF_MANY -> {
                 val filterSuffix = builtArtifact.filters.joinToString("-") { filter ->
@@ -118,21 +118,6 @@ abstract class RenameApkTask : DefaultTask() {
             VariantOutputConfiguration.OutputType.UNIVERSAL -> {
                 "Duck Detector-$versionedName.apk"
             }
-        }
-    }
-
-    private fun buildVersionedName(
-        apkVersionName: String,
-        shortGitHash: String,
-    ): String {
-        val versionNameHashSuffix = apkVersionName.substringAfterLast(
-            delimiter = '-',
-            missingDelimiterValue = "",
-        )
-        return if (versionNameHashSuffix.startsWith(shortGitHash)) {
-            apkVersionName
-        } else {
-            "$apkVersionName-$shortGitHash"
         }
     }
 }

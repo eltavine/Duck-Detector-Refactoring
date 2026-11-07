@@ -10,7 +10,7 @@ The SDK is Duck Detector without its UI: every detector, the native libraries an
 
 This publishes `com.eltavine.duckdetector:duckdetector-sdk:0.0.0-SNAPSHOT` to `sdk/aar/build/repository`; pass `-Pduckdetector.sdk.version=<version>` for another version. Assembling the AAR runs `verifySdkAar`, which fails if a headless module is missing from it or a UI library reaches it.
 
-The [Nightly release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly) also includes a commit-named SDK AAR alongside the APK. That AAR is the fused library file; use the local Maven publication above when you need its POM to resolve external dependencies.
+Every [Stable release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/latest) includes a version-named SDK AAR, such as `duckdetector-sdk-26.10.0.aar`, and the [Nightly release](https://github.com/eltavine/Duck-Detector-Refactoring/releases/tag/nightly) a commit-named one, both alongside the APK. The AAR is the fused library file; use the local Maven publication above when you need its POM to resolve external dependencies.
 
 ## Requirements
 

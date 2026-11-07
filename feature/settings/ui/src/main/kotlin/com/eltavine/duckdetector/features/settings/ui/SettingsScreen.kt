@@ -41,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUiState
+import com.eltavine.duckdetector.features.settings.presentation.model.SettingsUpdateChannel
 import com.eltavine.duckdetector.features.settings.ui.components.AboutSection
 import com.eltavine.duckdetector.features.settings.ui.components.ConsentSettingItem
 import com.eltavine.duckdetector.features.settings.ui.components.ConsentPermissionButton
@@ -60,6 +61,7 @@ import io.github.xiaotong6666.uihelper.mode.UiMode
 fun SettingsScreen(
     uiState: SettingsUiState,
     consentToggles: List<ConsentToggle>,
+    onUpdateChannelChange: (SettingsUpdateChannel) -> Unit,
     onCheckForUpdates: () -> Unit,
     onGitHubAccelerationChange: (Boolean) -> Unit,
     onUiModeChange: (UiMode) -> Unit,
@@ -75,6 +77,7 @@ fun SettingsScreen(
                 uiState = uiState,
                 uiMode = uiMode,
                 consentToggles = consentToggles,
+                onUpdateChannelChange = onUpdateChannelChange,
                 onCheckForUpdates = onCheckForUpdates,
                 onGitHubAccelerationChange = onGitHubAccelerationChange,
                 onUiModeChange = onUiModeChange,
@@ -88,6 +91,7 @@ fun SettingsScreen(
                 uiState = uiState,
                 uiMode = uiMode,
                 consentToggles = consentToggles,
+                onUpdateChannelChange = onUpdateChannelChange,
                 onCheckForUpdates = onCheckForUpdates,
                 onGitHubAccelerationChange = onGitHubAccelerationChange,
                 onUiModeChange = onUiModeChange,
@@ -104,6 +108,7 @@ private fun SettingsPage(
     uiState: SettingsUiState,
     uiMode: UiMode,
     consentToggles: List<ConsentToggle>,
+    onUpdateChannelChange: (SettingsUpdateChannel) -> Unit,
     onCheckForUpdates: () -> Unit,
     onGitHubAccelerationChange: (Boolean) -> Unit,
     onUiModeChange: (UiMode) -> Unit,
@@ -184,6 +189,7 @@ private fun SettingsPage(
 
                 AboutSection(
                     uiState = uiState,
+                    onUpdateChannelChange = onUpdateChannelChange,
                     onCheckForUpdates = onCheckForUpdates,
                     onOpenLicenses = onOpenLicenses,
                 )

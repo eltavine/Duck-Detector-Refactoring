@@ -25,22 +25,22 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.outlined.Home as HomeOutline
 import androidx.compose.material.icons.outlined.Settings as SettingsOutline
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,17 +60,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.detector.ConsentDecision
 import com.eltavine.duckdetector.core.detector.ConsentId
 import android.os.SystemClock
@@ -78,8 +79,6 @@ import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.navigation.DuckNavHost
 import com.eltavine.duckdetector.core.navigation.DuckRoute
 import com.eltavine.duckdetector.core.navigation.rememberDuckRoutes
-import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
-import com.eltavine.duckdetector.core.ui.copyPlainTextToClipboard
 import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.features.dashboard.presentation.model.DashboardUiState
 import com.eltavine.duckdetector.features.dashboard.presentation.model.buildDashboardFindings
@@ -94,26 +93,24 @@ import com.eltavine.duckdetector.features.settings.ui.SettingsScreen
 import com.eltavine.duckdetector.features.settings.ui.licenses.OpenSourceLicensesScreen
 import com.eltavine.duckdetector.features.update.data.GitHubAccelerationStore
 import com.eltavine.duckdetector.features.update.domain.GitHubAcceleration
-import com.eltavine.duckdetector.features.update.domain.AvailableNightlyUpdate
-import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
 import com.eltavine.duckdetector.features.update.presentation.UpdateDownloadState
 import com.eltavine.duckdetector.features.update.presentation.shouldOfferGitHubAcceleration
 import com.eltavine.duckdetector.features.update.ui.GitHubAccelerationDialog
-import com.eltavine.duckdetector.features.update.ui.NightlyUpdateDialog
+import com.eltavine.duckdetector.features.update.ui.UpdateDialog
 import com.eltavine.duckdetector.features.update.ui.UpdateViewModel
 import com.eltavine.duckdetector.notifications.ScanProgressNotificationSnapshot
 import com.eltavine.duckdetector.notifications.ScanProgressNotifier
 import com.eltavine.duckdetector.ui.scan.DetectorScanViewModel
 import com.eltavine.duckdetector.ui.scan.history.ScanHistoryJournal
 import com.eltavine.duckdetector.ui.shell.AppDestination
+import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
+import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 import io.github.xiaotong6666.uihelper.chrome.AdaptiveNavigationShell
 import io.github.xiaotong6666.uihelper.chrome.NavigationShellItem
 import io.github.xiaotong6666.uihelper.chrome.NavigationShellPagerGesturePolicy
-import io.github.xiaotong6666.uihelper.adaptive.WrapSafeText
-import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
-import kotlinx.coroutines.launch
 import io.github.xiaotong6666.uihelper.dialog.rememberRetainedDialogPayload
 import io.github.xiaotong6666.uihelper.mode.UiMode
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun AppReadyShell(
@@ -128,13 +125,6 @@ internal fun AppReadyShell(
     val appContext = context.applicationContext
     val updateOpenFailedMessage = stringResource(R.string.update_open_failed)
     val updateDownloadFailedMessage = stringResource(R.string.update_download_failed)
-    val updateInstallPermissionMessage = stringResource(R.string.update_install_permission_required)
-    val updateApkUnavailableMessage = stringResource(R.string.update_apk_unavailable)
-    val updateInstallFailedMessage = stringResource(R.string.update_install_failed)
-    val fallbackCopiedOpenedMessage = stringResource(R.string.update_install_fallback_copied_opened)
-    val fallbackCopiedOnlyMessage = stringResource(R.string.update_install_fallback_copied_only)
-    val fallbackOpenedOnlyMessage = stringResource(R.string.update_install_fallback_opened_only)
-    val fallbackCopiedConfirmation = stringResource(R.string.update_install_link_copied)
     val scope = rememberCoroutineScope()
     val notifier = remember(appContext) { ScanProgressNotifier(appContext) }
     val updateFactory = remember(context) { updateViewModelFactory(context) }
@@ -198,13 +188,20 @@ internal fun AppReadyShell(
             isLoading = isDashboardLoading,
         )
     }
-    val settingsState = remember(updateUiState.status, gitHubAcceleration) {
+    val settingsState = remember(
+        updateUiState.channel,
+        updateUiState.status,
+        updateUiState.latestVersionName,
+        gitHubAcceleration,
+    ) {
         SettingsUiState(
             versionName = BuildConfig.VERSION_NAME,
             versionCode = BuildConfig.VERSION_CODE,
             buildTimeUtc = BuildConfig.BUILD_TIME_UTC,
             buildHash = BuildConfig.BUILD_HASH,
+            updateChannel = updateUiState.channel.toSettingsUpdateChannel(),
             updateStatus = updateUiState.status.toSettingsUpdateStatus(),
+            latestChannelVersion = updateUiState.latestVersionName,
             gitHubAccelerationEnabled = gitHubAcceleration == GitHubAcceleration.ENABLED,
         )
     }
@@ -309,6 +306,9 @@ internal fun AppReadyShell(
                             uiState = settingsState,
                             consentToggles = consentToggles,
                             onUiModeChange = onUiModeChange,
+                            onUpdateChannelChange = { channel ->
+                                updateViewModel.selectChannel(channel.toUpdateChannel())
+                            },
                             onCheckForUpdates = updateViewModel::onSettingsUpdateAction,
                             onGitHubAccelerationChange = { enabled ->
                                 scope.launch { accelerationStore.setEnabled(enabled) }
@@ -327,7 +327,7 @@ internal fun AppReadyShell(
         )
 
         updateDialogPayload.value?.let { availableUpdate ->
-            NightlyUpdateDialog(
+            UpdateDialog(
                 show = visibleUpdate != null,
                 currentVersionName = BuildConfig.VERSION_NAME,
                 update = availableUpdate,
@@ -335,7 +335,7 @@ internal fun AppReadyShell(
                 onDismiss = updateViewModel::dismissUpdate,
                 onDismissFinished = updateDialogPayload.onDismissFinished,
                 onViewChanges = {
-                    if (!openExternalUri(context, availableUpdate.compareUrl)) {
+                    if (!openExternalUri(context, availableUpdate.changesUrl)) {
                         Toast.makeText(
                             context,
                             updateOpenFailedMessage,
@@ -346,40 +346,11 @@ internal fun AppReadyShell(
                 onConfirm = {
                     when (updateUiState.download) {
                         is UpdateDownloadState.Ready -> {
-                            when (val installResult = updateViewModel.installDownloaded()) {
-                                UpdateInstallResult.PermissionRequired -> Toast.makeText(
-                                    context,
-                                    updateInstallPermissionMessage,
-                                    Toast.LENGTH_LONG,
-                                ).show()
-
-                                UpdateInstallResult.ApkUnavailable,
-                                UpdateInstallResult.Failed -> {
-                                    val fallback = fallbackFromFailedLocalInstall(
-                                        result = installResult,
-                                        downloadUrl = updateUiState.availableUpdate?.downloadUrl,
-                                        copy = { url ->
-                                            copyPlainTextToClipboard(
-                                                context,
-                                                "Duck Detector APK",
-                                                url,
-                                                fallbackCopiedConfirmation,
-                                            )
-                                        },
-                                        open = { url -> openExternalUri(context, url) },
-                                    )
-                                    val message = when {
-                                        fallback?.let { it.copied && it.browserOpened } == true -> fallbackCopiedOpenedMessage
-                                        fallback?.copied == true -> fallbackCopiedOnlyMessage
-                                        fallback?.browserOpened == true -> fallbackOpenedOnlyMessage
-                                        installResult == UpdateInstallResult.ApkUnavailable -> updateApkUnavailableMessage
-                                        else -> updateInstallFailedMessage
-                                    }
-                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                }
-
-                                UpdateInstallResult.Launched -> Unit
-                            }
+                            showUpdateInstallFeedback(
+                                context,
+                                updateViewModel.installDownloaded(),
+                                updateUiState.availableUpdate?.downloadUrl,
+                            )
                         }
 
                         else -> updateViewModel.downloadUpdate()

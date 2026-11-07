@@ -17,8 +17,48 @@
 
 package com.eltavine.duckdetector.ui
 
+import android.content.Context
+import android.widget.Toast
+import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.ui.copyPlainTextToClipboard
+import com.eltavine.duckdetector.core.ui.openExternalUri
 import com.eltavine.duckdetector.features.update.domain.UpdateInstallResult
 import com.eltavine.duckdetector.features.update.domain.httpsUpdateDownloadUrlOrNull
+
+internal fun showUpdateInstallFeedback(
+    context: Context,
+    result: UpdateInstallResult,
+    downloadUrl: String?,
+) {
+    val message = when (result) {
+        UpdateInstallResult.Launched -> return
+        UpdateInstallResult.PermissionRequired -> R.string.update_install_permission_required
+        UpdateInstallResult.ApkUnavailable,
+        UpdateInstallResult.Failed -> {
+            val fallback = fallbackFromFailedLocalInstall(
+                result = result,
+                downloadUrl = downloadUrl,
+                copy = { url ->
+                    copyPlainTextToClipboard(
+                        context,
+                        "Duck Detector APK",
+                        url,
+                        context.getString(R.string.update_install_link_copied),
+                    )
+                },
+                open = { url -> openExternalUri(context, url) },
+            )
+            when {
+                fallback?.let { it.copied && it.browserOpened } == true -> R.string.update_install_fallback_copied_opened
+                fallback?.copied == true -> R.string.update_install_fallback_copied_only
+                fallback?.browserOpened == true -> R.string.update_install_fallback_opened_only
+                result == UpdateInstallResult.ApkUnavailable -> R.string.update_apk_unavailable
+                else -> R.string.update_install_failed
+            }
+        }
+    }
+    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+}
 
 internal data class UpdateInstallFallbackResult(
     val copied: Boolean,

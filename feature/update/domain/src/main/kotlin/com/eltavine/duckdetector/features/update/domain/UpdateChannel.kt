@@ -15,16 +15,25 @@
  * limitations under the License.
  */
 
-package com.eltavine.duckdetector.features.update.data
+package com.eltavine.duckdetector.features.update.domain
 
-import android.content.Context
-import com.eltavine.duckdetector.features.update.domain.NightlyUpdateChecker
-import kotlinx.coroutines.flow.first
+/**
+ * Stable follows the tagged releases and Nightly every change to main. [id] is how update.json and
+ * the build's BUILD_CHANNEL name the channel.
+ */
+enum class UpdateChannel(val id: String) {
+    STABLE("stable"),
+    NIGHTLY("nightly"),
+    ;
 
-fun createNightlyUpdateChecker(appContext: Context): NightlyUpdateChecker {
-    val accelerationStore = GitHubAccelerationStore.getInstance(appContext)
-    return UpdateRepository(
-        cache = UpdateCacheStore.getInstance(appContext),
-        currentRoute = { GitHubRoute.of(accelerationStore.acceleration.first()) },
-    )
+    companion object {
+        fun fromId(id: String): UpdateChannel? = entries.firstOrNull { channel -> channel.id == id }
+    }
+}
+
+/** The channel the user follows. Until they choose one it is the channel their build came from. */
+interface UpdateChannelPreference {
+    suspend fun read(): UpdateChannel
+
+    suspend fun write(channel: UpdateChannel)
 }
