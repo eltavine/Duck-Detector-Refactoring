@@ -26,9 +26,9 @@ limitations under the License.
     <string name="user_agreement_title">使用者協議</string>
     <string name="user_agreement_content" formatted="false">使用 Duck Detector 即表示您同意以下條款：\n\n1. 使用目的\n本應用僅用於教育用途及個人安全評估，幫助使用者了解其本人裝置的安全狀態。\n\n2. 不提供保證\n本應用按「現況」提供，不附帶任何明示或暗示保證。開發者不保證檢測結果的準確性、完整性或可靠性。\n\n3. 使用者責任\n您需自行對本應用的使用方式及由此產生的任何後果負責。\n\n4. 法律遵循\n您同意依照所有適用的地方法律、國家法律及國際法規使用本應用。</string>
     <string name="disclaimer_title">免責聲明</string>
-    <string name="disclaimer_content" formatted="false">重要提示：\n\n1. 檢測侷限性\nDuck Detector 使用多種方法檢測裝置安全狀態，但沒有任何檢測方法能做到 100&#37; 準確。結果應視為提示資訊，而非最終定論。\n\n2. 誤報與漏報\n本應用可能出現誤報或漏報。請務必結合專業安全工具與您自己的核驗進行全面判斷。\n\n3. 免責條款\n對於因使用或無法使用本應用而導致的任何直接、間接、附帶、特殊或後果性損失，Duck Detector 的開發者、貢獻者和散佈者概不承擔責任。\n\n4. 第三方服務\nTEE 吊銷檢查預設使用應用內建快照。如果您允許線上吊銷庫更新，應用可能會存取 Google 的 attestation revocation endpoint。安全掃描本身仍在您的裝置本地執行，檢測結果也不會被刻意上傳為掃描遙測。</string>
+    <string name="disclaimer_content" formatted="false">重要提示：\n\n1. 檢測侷限性\nDuck Detector 使用多種方法檢測裝置安全狀態，但沒有任何檢測方法能做到 100&#37; 準確。結果應視為提示資訊，而非最終定論。\n\n2. 誤報與漏報\n本應用可能出現誤報或漏報。請務必結合專業安全工具與您自己的核驗進行全面判斷。\n\n3. 免責條款\n對於因使用或無法使用本應用而導致的任何直接、間接、附帶、特殊或後果性損失，Duck Detector 的開發者、貢獻者和散佈者概不承擔責任。\n\n4. 第三方服務\nTEE 吊銷檢查預設使用應用內建快照。如果您允許線上吊銷庫更新，應用可能會存取 Google 的 Attestation revocation endpoint。安全掃描本身仍在您的裝置本地執行，檢測結果也不會被刻意上傳為掃描遙測。</string>
     <string name="privacy_notice_title">隱私說明</string>
-    <string name="privacy_notice_content" formatted="false">隱私摘要：安全檢查在您的裝置本地執行，檢測結果不會被刻意上傳為掃描遙測。TEE 吊銷檢查預設使用應用內建快照；如果您允許線上重新整理，應用可能會存取 Google 的 attestation revocation endpoint。完成啟動選項後，應用會在每次冷啟動時存取一次 GitHub，以檢查 Nightly 更新中繼資料。如果您開啟 GitHub 加速，這些請求將改由第三方服務 gh-proxy.com 轉送。</string>
+    <string name="privacy_notice_content" formatted="false">隱私摘要：安全檢查在您的裝置本地執行，檢測結果不會被刻意上傳為掃描遙測。TEE 吊銷檢查預設使用應用內建快照；如果您允許線上重新整理，應用可能會存取 Google 的 Attestation revocation endpoint。完成啟動選項後，應用會在每次冷啟動時存取一次 GitHub，以檢查 Nightly 更新中繼資料。如果您開啟 GitHub 加速，這些請求將改由第三方服務 gh-proxy.com 轉送。</string>
     <string name="timer_elapsed">已等待 30 秒</string>
     <string name="timer_waiting">請等待 %1$d 秒</string>
     <string name="fully_reviewed">已完整閱讀</string>
@@ -100,4 +100,27 @@ limitations under the License.
     <string name="update_install_fallback_opened_only">本機安裝失敗，已在瀏覽器中開啟 APK 下載連結，但複製失敗。</string>
     <string name="update_install_link_copied">已複製 APK 下載連結</string>
     <string name="update_apk_unavailable">下載的更新檔案已失效，請重新下載</string>
+    <string name="scan_history_issue_title">掃描歷史記錄需要處理</string>
+    <string name="scan_history_recovered">已排除 %1$d 條損壞的歷史記錄。原始檔案已保留在私人掃描歷史目錄中，檔名為 %2$s。有效記錄已恢復。</string>
+    <string name="scan_history_failed">無法載入或儲存掃描歷史記錄（%1$s）。現有檔案未被丟棄。在儲存空間存取恢復前，可能無法記錄新的歷史記錄。</string>
+    <string name="startup_preparing_detail">正在載入用戶協議狀態，以便檢查啓動策略。</string>
+    <string name="startup_ui_style_title">介面風格</string>
+    <string name="startup_ui_style_detail">選擇 Duck Detector 使用的介面引擎。之後可在設定中切換。</string>
+    <string name="startup_ui_style_material">Material 3</string>
+    <string name="startup_ui_style_miuix">MIUIX</string>
+    <string name="detector_manage_permissions">管理應用程式權限</string>
+    <string name="dashboard_info_card">資訊卡片</string>
+    <string name="dashboard_system_time">系統時間</string>
+    <string name="dashboard_additional">其他資訊</string>
+    <string name="dashboard_detectors">偵測器</string>
+    <string name="card_action_view_details">查看詳情</string>
+    <string name="card_action_review_evidence">查看證據</string>
+    <string name="card_action_certificate_chain">憑證鏈</string>
+    <string name="device_blacklist_toast">不支援 HUAWEI 裝置。</string>
+    <string name="device_blacklist_title">不支援的裝置</string>
+    <string name="device_blacklist_message">目前的封鎖清單已禁止 %1$s 裝置使用。</string>
+    <string name="device_blacklist_close">Duck Detector 即將關閉。</string>
+    <string name="notification_scan_progress_channel_name">掃描進度</string>
+    <string name="notification_scan_progress_channel_description">Duck Detector 的整體掃描進度及儀表板最終判定。</string>
+    <string name="notification_scanning_title">正在掃描 %1$d/%2$d</string>
 </resources>

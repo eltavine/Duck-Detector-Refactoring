@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">點選以匯出完整報告</string>
+    <string name="dashboard_report_saved">報告已儲存</string>
+    <string name="dashboard_report_save_failed">儲存失敗：%1$s</string>
+    <string name="dashboard_report_save_failed_unknown">儲存失敗</string>
+    <string name="dashboard_build_time_utc">構建時間（UTC）· %1$s</string>
+    <string name="dashboard_loading_title">正在執行本機檢查</string>
+    <string name="dashboard_loading_summary">偵測器卡片完成證據收集後，將顯示儀表板摘要。</string>
+    <string name="dashboard_severity_high">高</string>
+    <string name="dashboard_severity_medium">中</string>
+    <string name="dashboard_severity_check">檢查</string>
+    <string name="dashboard_severity_clear">未發現異常</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">安全性概覽</string>
+    <string name="dashboard_scan_completed_title">掃描時間：%1$s\n總耗時：%2$s</string>
+    <string name="dashboard_duration_ms">%1$s 毫秒</string>
+    <string name="dashboard_duration_seconds">%1$s 秒</string>
+    <string name="dashboard_focus_pair">%1$s 和 %2$s</string>
+    <string name="dashboard_headline_danger">危險</string>
+    <string name="dashboard_headline_warning">警告</string>
+    <string name="dashboard_headline_info">資訊</string>
+    <string name="dashboard_headline_ready">就緒</string>
+    <string name="dashboard_headline_pending">待完成</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">請優先查看 %1$s。</string>
+    <string name="dashboard_summary_warning">接下來請檢查 %1$s。</string>
+    <string name="dashboard_summary_info">需要更多背景資訊，才能判定 %1$s 的結果沒有異常。</string>
+    <string name="dashboard_summary_ready">隨著本機檢查完成，偵測器卡片將逐步顯示。</string>
+    <string name="dashboard_summary_pending">其他模組仍在收集本機證據。</string>
+    <string name="dashboard_summary_ok">可透過下方偵測器卡片查看詳細的本機證據。</string>
+    <string name="dashboard_metric_danger">危險</string>
+    <string name="dashboard_metric_warning">警告</string>
+    <string name="dashboard_metric_ready">就緒</string>
+    <string name="dashboard_metric_pending">待完成</string>
+    <string name="dashboard_finding_scan_status_title">掃描狀態</string>
+    <string name="dashboard_finding_scan_status_headline">正在等待偵測器證據</string>
+    <string name="dashboard_finding_scan_status_detail">模組完成本機證據收集後，偵測器卡片將展開。</string>
+    <string name="dashboard_finding_overview_title">概覽</string>
+    <string name="dashboard_finding_overview_headline">已就緒的模組中沒有需要緊急處理的發現</string>
+    <string name="dashboard_finding_overview_detail">打開下方偵測器卡片，查看詳細的本機證據和輔助檢查。</string>
+</resources>

@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">การวินิจฉัยตำแหน่งที่แคชไว้</string>
+    <string name="location_cache_headline">ตรวจสอบข้อมูลตำแหน่งจำลองที่แคชไว้หรือไม่</string>
+    <string name="location_cache_detail">ปิดไว้ตามค่าเริ่มต้น เมื่อได้รับสิทธิ์ตำแหน่งโดยประมาณขณะใช้แอป จะอ่านข้อมูลตำแหน่งจากผู้ให้บริการที่แคชไว้ได้สูงสุดสามรายการต่อการสแกน รายงานจะมีเฉพาะตัวบ่งชี้ตำแหน่งจำลองและช่วงอายุข้อมูล พิกัดอาจมีอยู่ชั่วคราวในอ็อบเจ็กต์ Android แต่จะไม่ถูกอ่าน จัดเก็บ หรือส่งออก ไม่มีการขอตำแหน่งใหม่ ติดตามเบื้องหลัง หรือร้องขอเครือข่าย การตรวจสอบสังเคราะห์ในเครื่องทำงานได้โดยไม่ต้องใช้ตัวเลือกนี้</string>
+    <string name="location_cache_allow">เปิดใช้และขอสิทธิ์</string>
+    <string name="location_cache_decline">ปิดไว้ต่อไป</string>
+    <string name="location_cache_granted_headline">เปิดใช้การวินิจฉัยข้อมูลแคชแล้ว</string>
+    <string name="location_cache_granted_detail">ยังขึ้นอยู่กับสิทธิ์ของ OS และความพร้อมของผู้ให้บริการตำแหน่ง การปฏิเสธการเข้าถึงจะรายงานแยกต่างหาก จัดการสิทธิ์ด้านล่างหรือปิดตัวเลือกนี้ได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="location_cache_declined_status">ปิด</string>
+    <string name="location_cache_declined_headline">ปิดการวินิจฉัยข้อมูลแคชแล้ว</string>
+    <string name="location_cache_declined_detail">ยังใช้การตรวจสอบสังเคราะห์ในเครื่องได้ คุณสามารถเปิดใช้ข้อมูลเมตาที่แคชไว้ภายหลังในการตั้งค่า</string>
+    <string name="location_cache_setting_summary">ตัวบ่งชี้ตำแหน่งจำลองและช่วงอายุข้อมูลที่แคชไว้เป็นตัวเลือกเสริม ใช้เพียงสิทธิ์ตำแหน่งโดยประมาณขณะใช้แอป ไม่อ่านพิกัดหรือขอตำแหน่งใหม่</string>
+</resources>

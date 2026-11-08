@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">Торкніться, щоб експортувати повний звіт</string>
+    <string name="dashboard_report_saved">Звіт збережено</string>
+    <string name="dashboard_report_save_failed">Помилка збереження: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">Не вдалося зберегти</string>
+    <string name="dashboard_build_time_utc">Час збірки (UTC) · %1$s</string>
+    <string name="dashboard_loading_title">Виконуються локальні перевірки</string>
+    <string name="dashboard_loading_summary">Підсумок панелі з’явиться після завершення збирання доказів картками детекторів.</string>
+    <string name="dashboard_severity_high">Високий</string>
+    <string name="dashboard_severity_medium">Середній</string>
+    <string name="dashboard_severity_check">Перевірка</string>
+    <string name="dashboard_severity_clear">Без тривожних ознак</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">Огляд безпеки</string>
+    <string name="dashboard_scan_completed_title">Проскановано: %1$s\nЗагальний час: %2$s</string>
+    <string name="dashboard_duration_ms">%1$s мс</string>
+    <string name="dashboard_duration_seconds">%1$s с</string>
+    <string name="dashboard_focus_pair">%1$s та %2$s</string>
+    <string name="dashboard_headline_danger">Небезпека</string>
+    <string name="dashboard_headline_warning">Попередження</string>
+    <string name="dashboard_headline_info">Інформація</string>
+    <string name="dashboard_headline_ready">Готово</string>
+    <string name="dashboard_headline_pending">Очікування</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">Спочатку перевірте %1$s.</string>
+    <string name="dashboard_summary_warning">Далі перегляньте %1$s.</string>
+    <string name="dashboard_summary_info">Для %1$s потрібен додатковий контекст, перш ніж вважати результати чистими.</string>
+    <string name="dashboard_summary_ready">Картки детекторів заповнюватимуться після завершення локальних перевірок.</string>
+    <string name="dashboard_summary_pending">Інші модулі ще збирають локальні докази.</string>
+    <string name="dashboard_summary_ok">Використовуйте картки детекторів нижче, щоб детально дослідити локальні докази.</string>
+    <string name="dashboard_metric_danger">Небезпека</string>
+    <string name="dashboard_metric_warning">Попередження</string>
+    <string name="dashboard_metric_ready">Готово</string>
+    <string name="dashboard_metric_pending">Очікування</string>
+    <string name="dashboard_finding_scan_status_title">Стан сканування</string>
+    <string name="dashboard_finding_scan_status_headline">Очікування доказів від детекторів</string>
+    <string name="dashboard_finding_scan_status_detail">Картки детекторів розгорнуться після завершення збирання локальних доказів модулями.</string>
+    <string name="dashboard_finding_overview_title">Огляд</string>
+    <string name="dashboard_finding_overview_headline">Немає термінових знахідок у готових модулях</string>
+    <string name="dashboard_finding_overview_detail">Відкрийте картки детекторів нижче, щоб переглянути локальні докази й додаткові перевірки.</string>
+</resources>

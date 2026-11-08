@@ -39,7 +39,10 @@ data class ScanProgressNotificationModel(
 
 class ScanProgressNotificationFormatter {
 
-    fun format(snapshot: ScanProgressNotificationSnapshot): ScanProgressNotificationModel {
+    fun format(
+        snapshot: ScanProgressNotificationSnapshot,
+        scanningTitle: (ready: Int, total: Int) -> String,
+    ): ScanProgressNotificationModel {
         val clampedTotal = snapshot.totalDetectorCount.coerceAtLeast(1)
         val clampedReady = snapshot.readyDetectorCount.coerceIn(0, clampedTotal)
         val progressPercent = ((clampedReady * 100f) / clampedTotal)
@@ -48,7 +51,7 @@ class ScanProgressNotificationFormatter {
         val overview = snapshot.dashboardOverview
         return if (snapshot.scanning) {
             ScanProgressNotificationModel(
-                title = "Scanning $clampedReady/$clampedTotal",
+                title = scanningTitle(clampedReady, clampedTotal),
                 text = "${overview.headline} \u00b7 ${overview.summary}",
                 subText = "Duck Detector",
                 shortCriticalText = "$clampedReady/$clampedTotal",

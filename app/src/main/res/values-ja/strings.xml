@@ -26,9 +26,9 @@ limitations under the License.
     <string name="user_agreement_title">利用規約</string>
     <string name="user_agreement_content" formatted="false">Duck Detector を利用することで、以下の条件に同意したものとみなされます:\n\n1. 利用目的\nこのアプリは教育目的および個人のセキュリティ評価のために設計されており、ユーザーが自分の端末のセキュリティ状態を理解できるよう支援します。\n\n2. 保証の否認\nこのアプリは \"現状のまま\" 提供され、明示または黙示を問わずいかなる保証も行いません。開発者は検出結果の正確性、完全性、信頼性を保証しません。\n\n3. ユーザーの責任\nこのアプリの利用方法およびそれに伴って生じるあらゆる結果については、ユーザー自身が責任を負うものとします。\n\n4. 法令遵守\nユーザーは適用されるすべての地域法、国内法、国際法を遵守してこのアプリを利用することに同意します。</string>
     <string name="disclaimer_title">免責事項</string>
-    <string name="disclaimer_content" formatted="false">重要なお知らせ:\n\n1. 検出の限界\nDuck Detector は端末のセキュリティ状態を検出するために複数の方法を使用しますが、どの方法も 100&#37; 正確ではありません。結果は最終判定ではなく、参考情報として扱ってください。\n\n2. 誤検出と見逃し\nこのアプリは誤検出または見逃しを起こす可能性があります。より包括的な判断のために、専門的なセキュリティツールとご自身の確認を必ず併用してください。\n\n3. 責任の制限\nDuck Detector の開発者、貢献者、および配布者は、このアプリの使用または使用不能によって生じる直接的、間接的、付随的、特別、または結果的損害について責任を負いません。\n\n4. 第三者サービス\nTEE の失効確認は既定でアプリ内蔵スナップショットを使用します。オンライン失効データ更新を許可すると、アプリが Google attestation revocation endpoint に接続する場合があります。セキュリティスキャン自体は引き続き端末上でローカルに実行され、検出結果がスキャンテレメトリとして意図的にアップロードされることはありません。</string>
+    <string name="disclaimer_content" formatted="false">重要なお知らせ:\n\n1. 検出の限界\nDuck Detector は端末のセキュリティ状態を検出するために複数の方法を使用しますが、どの方法も 100&#37; 正確ではありません。結果は最終判定ではなく、参考情報として扱ってください。\n\n2. 誤検出と見逃し\nこのアプリは誤検出または見逃しを起こす可能性があります。より包括的な判断のために、専門的なセキュリティツールとご自身の確認を必ず併用してください。\n\n3. 責任の制限\nDuck Detector の開発者、貢献者、および配布者は、このアプリの使用または使用不能によって生じる直接的、間接的、付随的、特別、または結果的損害について責任を負いません。\n\n4. 第三者サービス\nTEE の失効確認は既定でアプリ内蔵スナップショットを使用します。オンライン失効データ更新を許可すると、アプリが Google Attestation revocation endpoint に接続する場合があります。セキュリティスキャン自体は引き続き端末上でローカルに実行され、検出結果がスキャンテレメトリとして意図的にアップロードされることはありません。</string>
     <string name="privacy_notice_title">プライバシー通知</string>
-    <string name="privacy_notice_content" formatted="false">プライバシー概要: セキュリティチェックは端末上でローカルに実行され、検出結果がスキャンテレメトリとしてアップロードされることはありません。TEE の失効確認は既定で内蔵スナップショットを使用します。起動時の選択完了後、アプリはコールドスタートごとに GitHub へ一度接続し、Nightly 更新メタデータを確認します。GitHub 高速化をオンにすると、これらのリクエストはサードパーティの gh-proxy.com を経由します。</string>
+    <string name="privacy_notice_content" formatted="false">プライバシー概要: セキュリティチェックは端末上でローカルに実行され、検出結果がスキャンテレメトリとしてアップロードされることはありません。TEE の失効確認は既定で内蔵スナップショットを使用します。 オンラインでの失効情報の更新を許可すると、アプリは Google Attestation revocation endpoint に接続する場合があります。起動時の選択完了後、アプリはコールドスタートごとに GitHub へ一度接続し、Nightly 更新メタデータを確認します。GitHub 高速化をオンにすると、これらのリクエストはサードパーティの gh-proxy.com を経由します。</string>
     <string name="timer_elapsed">30 秒経過</string>
     <string name="timer_waiting">%1$d 秒お待ちください</string>
     <string name="fully_reviewed">全文確認済み</string>
@@ -100,4 +100,27 @@ limitations under the License.
     <string name="update_install_fallback_opened_only">ローカルインストールに失敗しました。APK の URL はブラウザで開きましたが、コピーできませんでした。</string>
     <string name="update_install_link_copied">APK のダウンロードリンクをコピーしました</string>
     <string name="update_apk_unavailable">ダウンロードした更新ファイルを利用できません。再ダウンロードしてください</string>
+    <string name="scan_history_issue_title">スキャン履歴に対処が必要です</string>
+    <string name="scan_history_recovered">破損した履歴レコード %1$d 件を除外しました。元のファイルはプライベートなスキャン履歴ディレクトリに %2$s として保存されています。有効なエントリは復元されました。</string>
+    <string name="scan_history_failed">スキャン履歴を読み込み、または保存できませんでした（%1$s）。既存のファイルは削除していません。ストレージへのアクセスが回復するまで、新しい履歴が記録されない可能性があります。</string>
+    <string name="startup_preparing_detail">起動ポリシーを確認する前に、同意の状態を読み込んでいます。</string>
+    <string name="startup_ui_style_title">UI スタイル</string>
+    <string name="startup_ui_style_detail">Duck Detector の UI エンジンを選択します。後から設定で変更できます。</string>
+    <string name="startup_ui_style_material">Material 3</string>
+    <string name="startup_ui_style_miuix">MIUIX</string>
+    <string name="detector_manage_permissions">アプリの権限を管理</string>
+    <string name="dashboard_info_card">情報カード</string>
+    <string name="dashboard_system_time">システム時刻</string>
+    <string name="dashboard_additional">その他</string>
+    <string name="dashboard_detectors">検出項目</string>
+    <string name="card_action_view_details">詳細を表示</string>
+    <string name="card_action_review_evidence">根拠を確認</string>
+    <string name="card_action_certificate_chain">証明書チェーン</string>
+    <string name="device_blacklist_toast">HUAWEI の端末はサポートされていません。</string>
+    <string name="device_blacklist_title">非対応の端末</string>
+    <string name="device_blacklist_message">%1$s の端末は現在のブロックリストにより利用できません。</string>
+    <string name="device_blacklist_close">Duck Detector を終了します。</string>
+    <string name="notification_scan_progress_channel_name">スキャンの進行状況</string>
+    <string name="notification_scan_progress_channel_description">Duck Detector のスキャン全体の進捗とダッシュボードの最終判定。</string>
+    <string name="notification_scanning_title">スキャン中 %1$d/%2$d</string>
 </resources>

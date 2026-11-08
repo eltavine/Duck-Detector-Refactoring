@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">تشخيص الموقع المخزّن مؤقتًا</string>
+    <string name="location_cache_headline">هل تريد فحص بيانات الموقع الوهمي المخزنة مؤقتًا؟</string>
+    <string name="location_cache_detail">معطّل افتراضيًا. عند منح إذن الموقع التقريبي في المقدمة، تُقرأ ثلاثة قياسات موقع مخزنة مؤقتًا كحد أقصى في كل فحص. لا يُدرج في التقارير سوى علامات الموقع الوهمي وفئات عمر البيانات. قد توجد الإحداثيات مؤقتًا داخل كائنات Android، لكنها لا تُقرأ أو تُخزّن أو تُصدّر. لا يوجد طلب لموقع جديد أو تتبع في الخلفية أو اتصال بالشبكة. تعمل الفحوص المحلية الاصطناعية دون هذا الخيار.</string>
+    <string name="location_cache_allow">تفعيل وطلب الإذن</string>
+    <string name="location_cache_decline">إبقاؤه معطّلًا</string>
+    <string name="location_cache_granted_headline">تم تفعيل التشخيص المخزّن مؤقتًا</string>
+    <string name="location_cache_granted_detail">تظل أذونات النظام وتوفّر مزوّد الموقع شروطًا لازمة. يُبلّغ عن رفض الوصول بصورة منفصلة. يمكنك إدارة الإذن أدناه أو تعطيل هذا الخيار من الإعدادات في أي وقت.</string>
+    <string name="location_cache_declined_status">متوقف</string>
+    <string name="location_cache_declined_headline">التشخيص المخزّن مؤقتًا متوقف</string>
+    <string name="location_cache_declined_detail">تظل الفحوص المحلية الاصطناعية متاحة. يمكنك تفعيل البيانات المخزّنة مؤقتًا لاحقًا من الإعدادات.</string>
+    <string name="location_cache_setting_summary">علامات الموقع الوهمي وفئات عمر البيانات المخزّنة مؤقتًا اختيارية؛ يُستخدم إذن الموقع التقريبي في المقدمة فقط، دون إحداثيات أو قياسات موقع جديدة.</string>
+</resources>

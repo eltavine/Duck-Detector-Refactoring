@@ -25,4 +25,11 @@ limitations under the License.
     <string name="srcu_timing_granted">已启用实验性诊断</string>
     <string name="srcu_timing_disabled">已关闭</string>
     <string name="srcu_timing_declined_detail">不会运行可选的时序实验，其他 Native Root 探针继续运行。</string>
+    <string name="nativeroot_section_native_probes">原生探针</string>
+    <string name="nativeroot_section_runtime_artifacts">运行时痕迹</string>
+    <string name="nativeroot_section_kernel_traces">内核痕迹</string>
+    <string name="nativeroot_section_property_residue">属性残留</string>
+    <string name="nativeroot_section_impact">影响</string>
+    <string name="nativeroot_section_detection_methods">检测方法</string>
+    <string name="nativeroot_section_scan_summary">扫描摘要</string>
 </resources>

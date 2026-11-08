@@ -33,4 +33,8 @@ limitations under the License.
     <string name="update_download_progress">กำลังดาวน์โหลด %1$d%%</string>
     <string name="update_download_retry">ลองอีกครั้ง</string>
     <string name="update_install">ติดตั้ง</string>
+    <string name="github_acceleration_dialog_title">เปิดใช้การเร่ง GitHub หรือไม่</string>
+    <string name="github_acceleration_dialog_message">เครือข่ายของคุณอาจเข้าถึง GitHub ได้ยาก Duck Detector สามารถตรวจสอบและดาวน์โหลดอัปเดต Nightly ผ่านบริการเร่งความเร็วของบุคคลที่สาม gh-proxy.com คุณสามารถเปลี่ยนได้ภายหลังในการตั้งค่า</string>
+    <string name="github_acceleration_dialog_enable">เปิดใช้</string>
+    <string name="github_acceleration_dialog_decline">ไม่ใช่ตอนนี้</string>
 </resources>

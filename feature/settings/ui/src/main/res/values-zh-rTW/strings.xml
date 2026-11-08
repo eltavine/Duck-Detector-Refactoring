@@ -80,4 +80,22 @@ limitations under the License.
     <string name="update_status_failed">無法檢查 GitHub，輕觸重試</string>
     <string name="update_status_idle">冷啟動後會檢查 GitHub Main Nightly，輕觸可立即檢查</string>
     <string name="settings_section_appearance">外觀</string>
+    <string name="author_summary_947409161">烏克蘭語翻譯</string>
+    <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
+    <string name="author_summary_coolzyd">核心偵測</string>
+    <string name="author_summary_default">貢獻者</string>
+    <string name="author_summary_hsskyboy">儲存庫修正、核心偵測</string>
+    <string name="author_summary_lingqing">TEE</string>
+    <string name="author_summary_mirin">UI</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">儀表板、危險應用程式和 Zygisk</string>
+    <string name="author_summary_sqmy">Kotlin</string>
+    <string name="author_summary_victor">CI</string>
+    <string name="author_summary_wuying">驗證了針對“KSU throne hunt”行為的偵測方案可行性。</string>
+    <string name="author_summary_zg089">阿拉伯語翻譯</string>
+    <string name="settings_ui_style_title">介面風格</string>
+    <string name="settings_ui_style_description">選擇 Duck Detector 的外觀</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_manage_permissions">管理應用程式權限</string>
 </resources>

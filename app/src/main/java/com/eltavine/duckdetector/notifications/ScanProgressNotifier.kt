@@ -47,7 +47,9 @@ class ScanProgressNotifier(
             return
         }
         createChannelIfNeeded()
-        val formatted = formatter.format(snapshot)
+        val formatted = formatter.format(snapshot) { ready, total ->
+            context.getString(R.string.notification_scanning_title, ready, total)
+        }
         if (snapshot.scanning) {
             NotificationManagerCompat.from(context).cancel(COMPLETION_NOTIFICATION_ID)
             postScanningNotification(permissionState, snapshot, formatted)
@@ -153,16 +155,13 @@ class ScanProgressNotifier(
 
     private fun createChannelIfNeeded() {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) {
-            return
-        }
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "Scan progress",
+                context.getString(R.string.notification_scan_progress_channel_name),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Overall Duck Detector scan progress and final dashboard verdict."
+                description = context.getString(R.string.notification_scan_progress_channel_description)
                 setShowBadge(false)
             },
         )

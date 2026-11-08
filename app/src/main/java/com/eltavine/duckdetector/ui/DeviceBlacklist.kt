@@ -35,6 +35,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.eltavine.duckdetector.R
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import kotlinx.coroutines.delay
@@ -42,7 +44,6 @@ import kotlin.system.exitProcess
 
 internal data class DeviceBlacklistMatch(
     val manufacturer: String,
-    val message: String,
 )
 
 internal object DeviceBlacklist {
@@ -66,7 +67,6 @@ internal object DeviceBlacklist {
         }
         return DeviceBlacklistMatch(
             manufacturer = manufacturer?.takeIf { it.isNotBlank() } ?: "HUAWEI",
-            message = "HUAWEI devices are not supported.",
         )
     }
 }
@@ -78,9 +78,10 @@ internal fun BlockedDeviceScreen(
 ) {
     val context = LocalContext.current
     val activity = context.findActivity()
+    val blockedToast = stringResource(R.string.device_blacklist_toast)
 
-    LaunchedEffect(match.message) {
-        Toast.makeText(context, match.message, Toast.LENGTH_LONG).show()
+    LaunchedEffect(blockedToast) {
+        Toast.makeText(context, blockedToast, Toast.LENGTH_LONG).show()
         delay(1200)
         activity?.finishAffinity()
         Process.killProcess(Process.myPid())
@@ -99,17 +100,17 @@ internal fun BlockedDeviceScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             WrapSafeText(
-                text = "Unsupported device",
+                text = stringResource(R.string.device_blacklist_title),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             WrapSafeText(
-                text = "${match.manufacturer} devices are blocked by the current blacklist.",
+                text = stringResource(R.string.device_blacklist_message, match.manufacturer),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             WrapSafeText(
-                text = "Duck Detector will close now.",
+                text = stringResource(R.string.device_blacklist_close),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

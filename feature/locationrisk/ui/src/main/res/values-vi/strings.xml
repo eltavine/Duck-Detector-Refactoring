@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">Chẩn đoán vị trí lưu trong bộ nhớ đệm</string>
+    <string name="location_cache_headline">Kiểm tra siêu dữ liệu vị trí giả đã lưu trong bộ nhớ đệm?</string>
+    <string name="location_cache_detail">Mặc định tắt. Với quyền vị trí gần đúng khi ứng dụng ở nền trước, mỗi lần quét đọc tối đa ba kết quả vị trí đã lưu của nhà cung cấp. Báo cáo chỉ chứa dấu hiệu vị trí giả và nhóm tuổi dữ liệu. Tọa độ có thể tồn tại tạm thời trong đối tượng Android nhưng không được đọc, lưu hoặc xuất. Không yêu cầu vị trí mới, không theo dõi nền hay gửi yêu cầu mạng. Các phép kiểm tra tổng hợp cục bộ vẫn hoạt động khi tùy chọn này tắt.</string>
+    <string name="location_cache_allow">Bật và yêu cầu quyền</string>
+    <string name="location_cache_decline">Tiếp tục tắt</string>
+    <string name="location_cache_granted_headline">Đã bật chẩn đoán dữ liệu đệm</string>
+    <string name="location_cache_granted_detail">Vẫn phụ thuộc vào quyền hệ điều hành và tính sẵn có của nhà cung cấp vị trí. Việc từ chối truy cập được báo cáo riêng. Quản lý quyền bên dưới hoặc tắt tùy chọn này bất cứ lúc nào trong Cài đặt.</string>
+    <string name="location_cache_declined_status">Tắt</string>
+    <string name="location_cache_declined_headline">Chẩn đoán dữ liệu đệm đang tắt</string>
+    <string name="location_cache_declined_detail">Các phép kiểm tra tổng hợp cục bộ vẫn dùng được. Bạn có thể bật siêu dữ liệu đã lưu sau trong Cài đặt.</string>
+    <string name="location_cache_setting_summary">Dấu hiệu vị trí giả và nhóm tuổi dữ liệu đệm là tùy chọn; chỉ dùng quyền vị trí gần đúng ở nền trước. Không dùng tọa độ hay định vị chủ động.</string>
+</resources>

@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">快取位置診斷</string>
+    <string name="location_cache_headline">檢查快取中的模擬位置中繼資料？</string>
+    <string name="location_cache_detail">預設關閉。獲得前景約略位置權限後，每次掃描最多讀取三個快取的位置提供者結果。報告僅包含模擬位置標記和時間區間。座標可能暫時存在於 Android 對象中，但不會被讀取、儲存或匯出。不會請求新位置、背景追蹤或網路連線。本機合成檢查無需啟用此選項。</string>
+    <string name="location_cache_allow">啟用並要求權限</string>
+    <string name="location_cache_decline">維持關閉</string>
+    <string name="location_cache_granted_headline">已啟用快取診斷</string>
+    <string name="location_cache_granted_detail">仍受系統權限及位置提供者可用性限制。拒絕存取將單獨報告。可在下方管理權限，也可隨時在設定中關閉此選項。</string>
+    <string name="location_cache_declined_status">已關閉</string>
+    <string name="location_cache_declined_headline">快取診斷已關閉</string>
+    <string name="location_cache_declined_detail">本機合成檢查仍可使用。之後可在設定中啟用快取中繼資料。</string>
+    <string name="location_cache_setting_summary">選用的快取模擬位置標記及資料時間區間；僅使用前景約略位置權限。不讀取座標，也不主動定位。</string>
+</resources>

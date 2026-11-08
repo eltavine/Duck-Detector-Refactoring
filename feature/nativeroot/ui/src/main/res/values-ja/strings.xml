@@ -1,0 +1,35 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="native_root_diagnostic_clipboard_label">Native Root 診断の詳細</string>
+    <string name="srcu_timing_title">実験的な fsnotify タイミング測定</string>
+    <string name="srcu_timing_headline">任意のローカルタイミング診断を実行</string>
+    <string name="srcu_timing_detail">対応システムでは、プライベートな動的権限を繰り返し書き換え、watch を閉じるまでの時間を測定します。実行中はパッケージ操作が遅くなる場合があります。既知のロック順序逆転バグがある古いカーネルや改変カーネルでは、強制書き込みによってデッドロックが発生し、端末がフリーズして強制再起動が必要になる可能性があります。専用プロセスのタイムアウトでも防げません。結果は補助的な根拠にすぎず、端末ごとの較正が必要です。</string>
+    <string name="srcu_timing_allow">実験を有効にする</string>
+    <string name="srcu_timing_decline">無効のままにする</string>
+    <string name="srcu_timing_granted">実験的な診断を有効にしました</string>
+    <string name="srcu_timing_disabled">無効</string>
+    <string name="srcu_timing_declined_detail">任意のタイミング実験は実行されません。ほかの Native Root プローブは引き続き動作します。</string>
+    <string name="nativeroot_section_native_probes">ネイティブプローブ</string>
+    <string name="nativeroot_section_runtime_artifacts">実行時の痕跡</string>
+    <string name="nativeroot_section_kernel_traces">カーネルの痕跡</string>
+    <string name="nativeroot_section_property_residue">プロパティの残存情報</string>
+    <string name="nativeroot_section_impact">影響</string>
+    <string name="nativeroot_section_detection_methods">検出方法</string>
+    <string name="nativeroot_section_scan_summary">スキャンの概要</string>
+</resources>

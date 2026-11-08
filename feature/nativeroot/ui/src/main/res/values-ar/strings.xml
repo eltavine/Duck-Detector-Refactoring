@@ -1,0 +1,35 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="native_root_diagnostic_clipboard_label">تفاصيل تشخيص Native Root</string>
+    <string name="srcu_timing_title">قياس توقيت fsnotify التجريبي</string>
+    <string name="srcu_timing_headline">تشغيل تشخيص توقيت محلي اختياري</string>
+    <string name="srcu_timing_detail">في الأنظمة المدعومة، يعيد الاختبار كتابة إذن ديناميكي خاص مرارًا ويقيس الوقت اللازم لإغلاق watch. قد يبطئ عمليات الحزم أثناء التشغيل. في النوى القديمة أو المعدّلة التي تتضمن خللًا معروفًا في انعكاس ترتيب الأقفال، قد تؤدي الكتابة القسرية إلى توقف متبادل، فتتجمد الأجهزة وتحتاج إلى إعادة تشغيل قسرية؛ ولا يمكن لمهلة العملية الخاصة منع ذلك. النتائج أدلة مساعدة فقط وما زالت تتطلب معايرة على الجهاز.</string>
+    <string name="srcu_timing_allow">تفعيل التجربة</string>
+    <string name="srcu_timing_decline">إبقاؤه معطّلًا</string>
+    <string name="srcu_timing_granted">تم تفعيل التشخيص التجريبي</string>
+    <string name="srcu_timing_disabled">معطّل</string>
+    <string name="srcu_timing_declined_detail">لن تُشغّل تجربة التوقيت الاختيارية. ستستمر فحوص Native Root الأخرى.</string>
+    <string name="nativeroot_section_native_probes">فحوص Native</string>
+    <string name="nativeroot_section_runtime_artifacts">آثار وقت التشغيل</string>
+    <string name="nativeroot_section_kernel_traces">آثار النواة</string>
+    <string name="nativeroot_section_property_residue">بقايا الخصائص</string>
+    <string name="nativeroot_section_impact">التأثير</string>
+    <string name="nativeroot_section_detection_methods">طرق الكشف</string>
+    <string name="nativeroot_section_scan_summary">ملخص الفحص</string>
+</resources>

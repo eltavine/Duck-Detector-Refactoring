@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">แตะเพื่อส่งออกรายงานฉบับเต็ม</string>
+    <string name="dashboard_report_saved">บันทึกรายงานแล้ว</string>
+    <string name="dashboard_report_save_failed">บันทึกไม่สำเร็จ: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">บันทึกไม่สำเร็จ</string>
+    <string name="dashboard_build_time_utc">บิลด์ (UTC) · %1$s</string>
+    <string name="dashboard_loading_title">กำลังตรวจสอบในเครื่อง</string>
+    <string name="dashboard_loading_summary">ภาพรวมแดชบอร์ดจะปรากฏเมื่อตัวตรวจจับรวบรวมหลักฐานเสร็จสิ้น</string>
+    <string name="dashboard_severity_high">สูง</string>
+    <string name="dashboard_severity_medium">ปานกลาง</string>
+    <string name="dashboard_severity_check">ตรวจสอบ</string>
+    <string name="dashboard_severity_clear">ไม่พบความผิดปกติ</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">ภาพรวมความปลอดภัย</string>
+    <string name="dashboard_scan_completed_title">สแกนเมื่อ %1$s\nเวลารวม %2$s</string>
+    <string name="dashboard_duration_ms">%1$s มิลลิวินาที</string>
+    <string name="dashboard_duration_seconds">%1$s วินาที</string>
+    <string name="dashboard_focus_pair">%1$s และ %2$s</string>
+    <string name="dashboard_headline_danger">อันตราย</string>
+    <string name="dashboard_headline_warning">คำเตือน</string>
+    <string name="dashboard_headline_info">ข้อมูล</string>
+    <string name="dashboard_headline_ready">พร้อม</string>
+    <string name="dashboard_headline_pending">รอดำเนินการ</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">เริ่มตรวจสอบที่ %1$s</string>
+    <string name="dashboard_summary_warning">จากนั้นตรวจสอบ %1$s</string>
+    <string name="dashboard_summary_info">ต้องมีบริบทเพิ่มเติมเกี่ยวกับ %1$s ก่อนสรุปว่าผลไม่พบความผิดปกติ</string>
+    <string name="dashboard_summary_ready">การ์ดตัวตรวจจับจะปรากฏเมื่อการตรวจสอบในเครื่องเสร็จสิ้น</string>
+    <string name="dashboard_summary_pending">โมดูลอื่นยังคงรวบรวมหลักฐานในเครื่อง</string>
+    <string name="dashboard_summary_ok">ใช้การ์ดตัวตรวจจับด้านล่างเพื่อตรวจสอบหลักฐานในเครื่องโดยละเอียด</string>
+    <string name="dashboard_metric_danger">อันตราย</string>
+    <string name="dashboard_metric_warning">คำเตือน</string>
+    <string name="dashboard_metric_ready">พร้อม</string>
+    <string name="dashboard_metric_pending">รอดำเนินการ</string>
+    <string name="dashboard_finding_scan_status_title">สถานะการสแกน</string>
+    <string name="dashboard_finding_scan_status_headline">กำลังรอหลักฐานจากตัวตรวจจับ</string>
+    <string name="dashboard_finding_scan_status_detail">การ์ดตัวตรวจจับจะขยายเมื่อโมดูลรวบรวมหลักฐานในเครื่องเสร็จสิ้น</string>
+    <string name="dashboard_finding_overview_title">ภาพรวม</string>
+    <string name="dashboard_finding_overview_headline">ไม่พบผลเร่งด่วนในโมดูลที่พร้อมแล้ว</string>
+    <string name="dashboard_finding_overview_detail">เปิดการ์ดตัวตรวจจับด้านล่างเพื่อดูหลักฐานในเครื่องและการตรวจสอบเพิ่มเติม</string>
+</resources>

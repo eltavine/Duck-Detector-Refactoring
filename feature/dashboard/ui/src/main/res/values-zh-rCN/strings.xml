@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">点击导出完整报告</string>
+    <string name="dashboard_report_saved">报告已保存</string>
+    <string name="dashboard_report_save_failed">保存失败：%1$s</string>
+    <string name="dashboard_report_save_failed_unknown">保存失败</string>
+    <string name="dashboard_build_time_utc">构建时间（UTC）· %1$s</string>
+    <string name="dashboard_loading_title">正在执行本地检查</string>
+    <string name="dashboard_loading_summary">检测器卡片完成证据收集后，将显示仪表盘摘要。</string>
+    <string name="dashboard_severity_high">高</string>
+    <string name="dashboard_severity_medium">中</string>
+    <string name="dashboard_severity_check">待检查</string>
+    <string name="dashboard_severity_clear">无异常</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">安全性概览</string>
+    <string name="dashboard_scan_completed_title">扫描时间：%1$s\n总耗时：%2$s</string>
+    <string name="dashboard_duration_ms">%1$s 毫秒</string>
+    <string name="dashboard_duration_seconds">%1$s 秒</string>
+    <string name="dashboard_focus_pair">%1$s 和 %2$s</string>
+    <string name="dashboard_headline_danger">危险</string>
+    <string name="dashboard_headline_warning">警告</string>
+    <string name="dashboard_headline_info">信息</string>
+    <string name="dashboard_headline_ready">就绪</string>
+    <string name="dashboard_headline_pending">待完成</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">请优先查看 %1$s。</string>
+    <string name="dashboard_summary_warning">接下来请检查 %1$s。</string>
+    <string name="dashboard_summary_info">需要更多上下文才能将 %1$s 的结果判定为无异常。</string>
+    <string name="dashboard_summary_ready">随着本地检查完成，检测器卡片将逐步显示。</string>
+    <string name="dashboard_summary_pending">其他模块仍在收集本地证据。</string>
+    <string name="dashboard_summary_ok">可通过下方检测器卡片查看详细的本地证据。</string>
+    <string name="dashboard_metric_danger">危险</string>
+    <string name="dashboard_metric_warning">警告</string>
+    <string name="dashboard_metric_ready">就绪</string>
+    <string name="dashboard_metric_pending">待完成</string>
+    <string name="dashboard_finding_scan_status_title">扫描状态</string>
+    <string name="dashboard_finding_scan_status_headline">正在等待检测器证据</string>
+    <string name="dashboard_finding_scan_status_detail">模块完成本地证据收集后，检测器卡片将展开。</string>
+    <string name="dashboard_finding_overview_title">概览</string>
+    <string name="dashboard_finding_overview_headline">已就绪的模块中没有紧急发现</string>
+    <string name="dashboard_finding_overview_detail">打开下方检测器卡片，查看详细的本地证据和辅助检查。</string>
+</resources>

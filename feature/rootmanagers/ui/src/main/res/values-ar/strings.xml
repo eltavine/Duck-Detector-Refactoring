@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="root_managers_section_matches">مديرو Root المطابقون</string>
+    <string name="root_managers_section_profiles">الملفات التعريفية</string>
+    <string name="root_managers_diagnostic_clipboard_label">تفاصيل تشخيص مديري Root</string>
+    <string name="installer_canary_title">اختبار تجريبي لمالك الإذن</string>
+    <string name="installer_canary_headline">البحث عن اسم إذن متبقٍ لمدير Root</string>
+    <string name="installer_canary_detail">يُجري فحص تثبيت مصممًا ليُرفض. يتطلب وجود تصريح مسبق بالتثبيت وقد يقيّده الجهاز. التطابق يحدد مالك الإذن ولا يثبت وجود صلاحية Root.</string>
+    <string name="installer_canary_allow">تفعيل الفحص الاختياري</string>
+    <string name="installer_canary_decline">إبقاؤه معطّلًا</string>
+    <string name="installer_canary_granted">تم تفعيل فحص التثبيت الاختياري</string>
+    <string name="installer_canary_disabled">معطّل</string>
+    <string name="installer_canary_declined_detail">تظل فحوص الحزم وشهادات التوقيع متاحة.</string>
+    <string name="root_managers_section_scan">ملخص الفحص</string>
+    <string name="root_managers_section_impact">التأثير</string>
+    <string name="root_managers_section_detection_methods">طرق الكشف</string>
+</resources>

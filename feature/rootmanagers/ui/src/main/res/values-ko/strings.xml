@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="root_managers_section_matches">일치하는 Root 관리자</string>
+    <string name="root_managers_section_profiles">프로필</string>
+    <string name="root_managers_diagnostic_clipboard_label">Root 관리자 진단 세부정보</string>
+    <string name="installer_canary_title">실험적 권한 소유자 프로브</string>
+    <string name="installer_canary_headline">Root 관리자 권한 이름이 남아 있는지 확인</string>
+    <string name="installer_canary_detail">거부되도록 설계된 설치 검사를 실행합니다. 기존 설치 권한이 필요하며 기기의 제한을 받을 수 있습니다. 일치 결과는 권한 소유자를 식별할 뿐 Root 접근 권한을 입증하지는 않습니다.</string>
+    <string name="installer_canary_allow">선택적 검사 활성화</string>
+    <string name="installer_canary_decline">비활성화 상태 유지</string>
+    <string name="installer_canary_granted">선택적 설치 검사 활성화됨</string>
+    <string name="installer_canary_disabled">비활성화됨</string>
+    <string name="installer_canary_declined_detail">패키지 및 서명 인증서 검사는 계속 사용할 수 있습니다.</string>
+    <string name="root_managers_section_scan">검사 요약</string>
+    <string name="root_managers_section_impact">영향</string>
+    <string name="root_managers_section_detection_methods">탐지 방법</string>
+</resources>

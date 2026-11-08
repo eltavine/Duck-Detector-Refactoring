@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">Nhấn để xuất báo cáo đầy đủ</string>
+    <string name="dashboard_report_saved">Đã lưu báo cáo</string>
+    <string name="dashboard_report_save_failed">Lưu thất bại: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">Lưu thất bại</string>
+    <string name="dashboard_build_time_utc">Bản dựng (UTC) · %1$s</string>
+    <string name="dashboard_loading_title">Đang chạy kiểm tra cục bộ</string>
+    <string name="dashboard_loading_summary">Phần tóm tắt bảng điều khiển sẽ xuất hiện khi các thẻ phát hiện hoàn tất thu thập bằng chứng.</string>
+    <string name="dashboard_severity_high">Cao</string>
+    <string name="dashboard_severity_medium">Trung bình</string>
+    <string name="dashboard_severity_check">Kiểm tra</string>
+    <string name="dashboard_severity_clear">Không có dấu hiệu bất thường</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">Tổng quan bảo mật</string>
+    <string name="dashboard_scan_completed_title">Quét lúc %1$s\nTổng thời gian %2$s</string>
+    <string name="dashboard_duration_ms">%1$s mili giây</string>
+    <string name="dashboard_duration_seconds">%1$s giây</string>
+    <string name="dashboard_focus_pair">%1$s và %2$s</string>
+    <string name="dashboard_headline_danger">Nguy hiểm</string>
+    <string name="dashboard_headline_warning">Cảnh báo</string>
+    <string name="dashboard_headline_info">Thông tin</string>
+    <string name="dashboard_headline_ready">Sẵn sàng</string>
+    <string name="dashboard_headline_pending">Đang chờ</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">Hãy bắt đầu với %1$s.</string>
+    <string name="dashboard_summary_warning">Tiếp theo hãy xem xét %1$s.</string>
+    <string name="dashboard_summary_info">Cần thêm ngữ cảnh cho %1$s trước khi coi kết quả là không có dấu hiệu bất thường.</string>
+    <string name="dashboard_summary_ready">Các thẻ phát hiện sẽ xuất hiện khi những kiểm tra cục bộ hoàn tất.</string>
+    <string name="dashboard_summary_pending">Các mô-đun khác vẫn đang thu thập bằng chứng cục bộ.</string>
+    <string name="dashboard_summary_ok">Dùng các thẻ phát hiện bên dưới để kiểm tra bằng chứng cục bộ chi tiết.</string>
+    <string name="dashboard_metric_danger">Nguy hiểm</string>
+    <string name="dashboard_metric_warning">Cảnh báo</string>
+    <string name="dashboard_metric_ready">Sẵn sàng</string>
+    <string name="dashboard_metric_pending">Đang chờ</string>
+    <string name="dashboard_finding_scan_status_title">Trạng thái quét</string>
+    <string name="dashboard_finding_scan_status_headline">Đang chờ bằng chứng từ bộ phát hiện</string>
+    <string name="dashboard_finding_scan_status_detail">Các thẻ phát hiện sẽ mở rộng khi các mô-đun thu thập xong bằng chứng cục bộ.</string>
+    <string name="dashboard_finding_overview_title">Tổng quan</string>
+    <string name="dashboard_finding_overview_headline">Không có phát hiện khẩn cấp trong các mô-đun đã sẵn sàng</string>
+    <string name="dashboard_finding_overview_detail">Mở các thẻ phát hiện bên dưới để xem bằng chứng cục bộ chi tiết và kiểm tra bổ sung.</string>
+</resources>

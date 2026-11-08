@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.eltavine.duckdetector.core.ui.R as CoreUiR
 import com.eltavine.duckdetector.core.ui.components.DetectorCardFrame
 import com.eltavine.duckdetector.core.ui.components.DetectorDetailRowBlock
 import com.eltavine.duckdetector.core.ui.components.DetectorFact
@@ -62,7 +64,7 @@ internal fun HeapResidueDetectorCard(
             item(visible = model.signalRows.isNotEmpty()) {
                 HeapResidueRowSection(
                     sectionKey = "heapresidue.signals",
-                    title = "Signals",
+                    title = stringResource(CoreUiR.string.ui_section_signals),
                     icon = Icons.Rounded.Policy,
                     rows = model.signalRows,
                     showDivider = model.impactRows.isNotEmpty() || model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
@@ -71,7 +73,7 @@ internal fun HeapResidueDetectorCard(
             item(visible = model.impactRows.isNotEmpty()) {
                 HeapResidueRowSection(
                     sectionKey = "heapresidue.impact",
-                    title = "Impact",
+                    title = stringResource(CoreUiR.string.ui_section_impact),
                     icon = Icons.Rounded.CrisisAlert,
                     rows = model.impactRows,
                     showDivider = model.methodRows.isNotEmpty() || model.scanRows.isNotEmpty(),
@@ -80,7 +82,7 @@ internal fun HeapResidueDetectorCard(
             item(visible = model.methodRows.isNotEmpty()) {
                 HeapResidueRowSection(
                     sectionKey = "heapresidue.methods",
-                    title = "Detection methods",
+                    title = stringResource(CoreUiR.string.ui_section_detection_methods),
                     icon = Icons.Rounded.Search,
                     rows = model.methodRows,
                     showDivider = model.scanRows.isNotEmpty(),
@@ -89,7 +91,7 @@ internal fun HeapResidueDetectorCard(
             item(visible = model.scanRows.isNotEmpty()) {
                 HeapResidueRowSection(
                     sectionKey = "heapresidue.scan",
-                    title = "Scan summary",
+                    title = stringResource(CoreUiR.string.ui_section_scan_summary),
                     icon = Icons.Rounded.Info,
                     rows = model.scanRows,
                     showDivider = false,

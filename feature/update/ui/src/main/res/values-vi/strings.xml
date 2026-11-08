@@ -33,4 +33,8 @@ limitations under the License.
     <string name="update_download_progress">Đang tải xuống %1$d%%</string>
     <string name="update_download_retry">Thử lại</string>
     <string name="update_install">Cài đặt</string>
+    <string name="github_acceleration_dialog_title">Bật tăng tốc GitHub?</string>
+    <string name="github_acceleration_dialog_message">Mạng của bạn có thể khó truy cập GitHub. Duck Detector có thể kiểm tra và tải bản cập nhật Nightly thông qua dịch vụ tăng tốc bên thứ ba gh-proxy.com. Bạn có thể thay đổi sau trong Cài đặt.</string>
+    <string name="github_acceleration_dialog_enable">Bật</string>
+    <string name="github_acceleration_dialog_decline">Để sau</string>
 </resources>

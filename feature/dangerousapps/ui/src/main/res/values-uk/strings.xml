@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="target_app_list_title">Список цільових застосунків</string>
+    <string name="target_app_list_summary">Застарілий перелік небезпечних застосунків, який зараз використовує цей детектор.</string>
+    <string name="target_app_list_targets">Цілі</string>
+    <string name="target_app_list_categories">Категорії</string>
+    <string name="target_app_list_close">Закрити</string>
+    <string name="target_app_list_view">Переглянути цільові застосунки (%1$d)</string>
+    <string name="target_app_list_overview">Огляд</string>
+    <string name="dangerousapps_section_packages">Пакети</string>
+    <string name="dangerousapps_section_package_history">Зміни пакетів після завантаження</string>
+    <string name="dangerousapps_no_package_hits">Збігів пакетів немає</string>
+    <string name="dangerousapps_section_context">Підсумок сканування</string>
+    <string name="dangerousapps_section_impact">Вплив</string>
+    <string name="dangerousapps_section_detection_methods">Методи виявлення</string>
+</resources>

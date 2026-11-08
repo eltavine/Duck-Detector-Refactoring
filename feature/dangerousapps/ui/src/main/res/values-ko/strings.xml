@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="target_app_list_title">대상 앱 목록</string>
+    <string name="target_app_list_summary">이 탐지기에서 현재 사용하는 기존 위험 앱 목록입니다.</string>
+    <string name="target_app_list_targets">대상</string>
+    <string name="target_app_list_categories">범주</string>
+    <string name="target_app_list_close">닫기</string>
+    <string name="target_app_list_view">대상 앱 보기(%1$d)</string>
+    <string name="target_app_list_overview">개요</string>
+    <string name="dangerousapps_section_packages">패키지</string>
+    <string name="dangerousapps_section_package_history">부팅 이후 패키지 변경 사항</string>
+    <string name="dangerousapps_no_package_hits">일치하는 패키지 없음</string>
+    <string name="dangerousapps_section_context">검사 요약</string>
+    <string name="dangerousapps_section_impact">영향</string>
+    <string name="dangerousapps_section_detection_methods">탐지 방법</string>
+</resources>

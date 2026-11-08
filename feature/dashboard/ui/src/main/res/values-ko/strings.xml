@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">탭하여 전체 보고서 내보내기</string>
+    <string name="dashboard_report_saved">보고서가 저장되었습니다</string>
+    <string name="dashboard_report_save_failed">저장 실패: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">저장 실패</string>
+    <string name="dashboard_build_time_utc">빌드 시각(UTC) · %1$s</string>
+    <string name="dashboard_loading_title">로컬 검사 실행 중</string>
+    <string name="dashboard_loading_summary">탐지기 카드가 근거 수집을 마치면 대시보드 요약이 표시됩니다.</string>
+    <string name="dashboard_severity_high">높음</string>
+    <string name="dashboard_severity_medium">보통</string>
+    <string name="dashboard_severity_check">확인</string>
+    <string name="dashboard_severity_clear">이상 없음</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">보안 개요</string>
+    <string name="dashboard_scan_completed_title">검사 시각: %1$s\n총 소요 시간: %2$s</string>
+    <string name="dashboard_duration_ms">%1$s밀리초</string>
+    <string name="dashboard_duration_seconds">%1$s초</string>
+    <string name="dashboard_focus_pair">%1$s 및 %2$s</string>
+    <string name="dashboard_headline_danger">위험</string>
+    <string name="dashboard_headline_warning">경고</string>
+    <string name="dashboard_headline_info">정보</string>
+    <string name="dashboard_headline_ready">준비됨</string>
+    <string name="dashboard_headline_pending">대기 중</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">%1$s부터 확인하세요.</string>
+    <string name="dashboard_summary_warning">다음으로 %1$s을(를) 검토하세요.</string>
+    <string name="dashboard_summary_info">%1$s을(를) 이상 없음으로 판단하려면 추가 맥락이 필요합니다.</string>
+    <string name="dashboard_summary_ready">로컬 검사가 끝나면 탐지기 카드가 채워집니다.</string>
+    <string name="dashboard_summary_pending">다른 모듈은 아직 로컬 근거를 수집 중입니다.</string>
+    <string name="dashboard_summary_ok">아래 탐지기 카드에서 로컬 근거를 자세히 확인하세요.</string>
+    <string name="dashboard_metric_danger">위험</string>
+    <string name="dashboard_metric_warning">경고</string>
+    <string name="dashboard_metric_ready">준비됨</string>
+    <string name="dashboard_metric_pending">대기 중</string>
+    <string name="dashboard_finding_scan_status_title">검사 상태</string>
+    <string name="dashboard_finding_scan_status_headline">탐지 근거를 기다리는 중</string>
+    <string name="dashboard_finding_scan_status_detail">모듈이 로컬 근거 수집을 완료하면 탐지기 카드가 확장됩니다.</string>
+    <string name="dashboard_finding_overview_title">개요</string>
+    <string name="dashboard_finding_overview_headline">준비된 모듈에서 긴급한 탐지 결과가 없습니다</string>
+    <string name="dashboard_finding_overview_detail">아래 탐지기 카드를 열어 상세한 로컬 근거와 보조 검사를 확인하세요.</string>
+</resources>

@@ -77,4 +77,25 @@ limitations under the License.
     <string name="update_status_failed">GitHub を確認できませんでした。タップして再試行</string>
     <string name="update_status_idle">コールドスタート後に GitHub Main Nightly を確認します。タップして今すぐ確認</string>
     <string name="settings_section_appearance">外観</string>
+    <string name="author_summary_5ec1cff">SELinux と LSPosed の誤検出を発見</string>
+    <string name="author_summary_947409161">ウクライナ語翻訳</string>
+    <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
+    <string name="author_summary_aviraxp">SELinux と LSPosed の誤検出を報告</string>
+    <string name="author_summary_coolzyd">カーネルチェック</string>
+    <string name="author_summary_default">貢献者</string>
+    <string name="author_summary_hsskyboy">リポジトリの修正、カーネルチェック</string>
+    <string name="author_summary_lingqing">TEE</string>
+    <string name="author_summary_mirin">UI</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">ダッシュボード、Dangerous Apps、Zygisk</string>
+    <string name="author_summary_sinanb9">SELinux の App Zygote クラッシュ報告とカーネルトレース</string>
+    <string name="author_summary_sqmy">Kotlin</string>
+    <string name="author_summary_victor">CI</string>
+    <string name="author_summary_wuying">「KSU throne hunt」の動作に関する検出方式の実現可能性を検証。</string>
+    <string name="author_summary_zg089">アラビア語翻訳</string>
+    <string name="settings_ui_style_title">UI スタイル</string>
+    <string name="settings_ui_style_description">Duck Detector の外観を選択</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_manage_permissions">アプリの権限を管理</string>
 </resources>

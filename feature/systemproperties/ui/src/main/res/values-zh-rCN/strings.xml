@@ -1,0 +1,27 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="systemproperties_section_security_runtime">安全与运行时</string>
+    <string name="systemproperties_section_verified_boot">Verified Boot</string>
+    <string name="systemproperties_section_build_profile">构建配置</string>
+    <string name="systemproperties_section_source_consistency">来源一致性</string>
+    <string name="systemproperties_section_cross_check_rules">交叉检查规则</string>
+    <string name="systemproperties_section_device_info">设备信息</string>
+    <string name="systemproperties_section_impact">影响</string>
+    <string name="systemproperties_section_detection_methods">检测方法</string>
+    <string name="systemproperties_section_scan_summary">扫描摘要</string>
+</resources>

@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">タップして完全なレポートをエクスポート</string>
+    <string name="dashboard_report_saved">レポートを保存しました</string>
+    <string name="dashboard_report_save_failed">保存に失敗しました: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">保存に失敗しました</string>
+    <string name="dashboard_build_time_utc">ビルド日時（UTC）· %1$s</string>
+    <string name="dashboard_loading_title">ローカルチェックを実行中</string>
+    <string name="dashboard_loading_summary">検出器カードの根拠収集が完了すると、ダッシュボードの概要が表示されます。</string>
+    <string name="dashboard_severity_high">高</string>
+    <string name="dashboard_severity_medium">中</string>
+    <string name="dashboard_severity_check">確認</string>
+    <string name="dashboard_severity_clear">異常なし</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">セキュリティの概要</string>
+    <string name="dashboard_scan_completed_title">スキャン日時: %1$s\n所要時間: %2$s</string>
+    <string name="dashboard_duration_ms">%1$s ミリ秒</string>
+    <string name="dashboard_duration_seconds">%1$s 秒</string>
+    <string name="dashboard_focus_pair">%1$s と %2$s</string>
+    <string name="dashboard_headline_danger">危険</string>
+    <string name="dashboard_headline_warning">警告</string>
+    <string name="dashboard_headline_info">情報</string>
+    <string name="dashboard_headline_ready">準備完了</string>
+    <string name="dashboard_headline_pending">保留中</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">まず %1$s を確認してください。</string>
+    <string name="dashboard_summary_warning">次に %1$s を確認してください。</string>
+    <string name="dashboard_summary_info">%1$s を異常なしと判断するには、さらに状況を確認する必要があります。</string>
+    <string name="dashboard_summary_ready">ローカルチェックの完了に合わせて検出器カードが表示されます。</string>
+    <string name="dashboard_summary_pending">ほかのモジュールは引き続きローカルの根拠を収集中です。</string>
+    <string name="dashboard_summary_ok">下の検出器カードでローカルの根拠を詳しく確認できます。</string>
+    <string name="dashboard_metric_danger">危険</string>
+    <string name="dashboard_metric_warning">警告</string>
+    <string name="dashboard_metric_ready">準備完了</string>
+    <string name="dashboard_metric_pending">保留中</string>
+    <string name="dashboard_finding_scan_status_title">スキャン状態</string>
+    <string name="dashboard_finding_scan_status_headline">検出器の根拠を待機中</string>
+    <string name="dashboard_finding_scan_status_detail">モジュールの根拠収集が完了すると検出器カードが展開されます。</string>
+    <string name="dashboard_finding_overview_title">概要</string>
+    <string name="dashboard_finding_overview_headline">準備が整ったモジュールに緊急の検出結果はありません</string>
+    <string name="dashboard_finding_overview_detail">下の検出器カードを開いて、詳細なローカルの根拠と追加チェックを確認してください。</string>
+</resources>

@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextStyle
+import com.eltavine.duckdetector.core.ui.presentation.localizeDetectorCopy
 
 /** Compatibility facade; generic implementation lives in uihelper.adaptive. */
 @Composable
@@ -35,12 +36,15 @@ public fun WrapSafeText(
     textAlign: TextAlign? = null,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
-): Unit = io.github.xiaotong6666.uihelper.adaptive.WrapSafeText(
-    text = text,
-    modifier = modifier,
-    style = style,
-    color = color,
-    textAlign = textAlign,
-    maxLines = maxLines,
-    overflow = overflow,
-)
+    localize: Boolean = true,
+): Unit {
+    io.github.xiaotong6666.uihelper.adaptive.WrapSafeText(
+        text = if (localize) localizeDetectorCopy(text) else text,
+        modifier = modifier,
+        style = style,
+        color = color,
+        textAlign = textAlign,
+        maxLines = maxLines,
+        overflow = overflow,
+    )
+}

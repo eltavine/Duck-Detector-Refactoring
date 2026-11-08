@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
+import com.eltavine.duckdetector.core.ui.presentation.localizeDetectorCopy
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
 import io.github.xiaotong6666.uihelper.adaptive.AdaptiveDetailValueRow
 
@@ -41,12 +42,14 @@ public fun DetectorDetailRowBlock(
 ) {
     val appearance = rememberStatusAppearance(status)
     AdaptiveDetailValueRow(
-        label = label,
-        value = value,
+        label = localizeDetectorCopy(label),
+        value = localizeDetectorCopy(value),
         icon = statusIcon ?: appearance.icon,
         iconTint = appearance.iconTint,
         modifier = modifier,
         valueModifier = valueModifier,
+        // Detail text is the detector's original evidence/diagnostic output. Keep it verbatim so
+        // field names, errno values, policy rules, and log fragments remain searchable.
         detail = detail,
         detailMonospace = detailMonospace,
         materialVerticalPadding = verticalPadding,

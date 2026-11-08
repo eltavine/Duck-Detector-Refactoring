@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="target_app_list_title">目標應用程式清單</string>
+    <string name="target_app_list_summary">此偵測器目前使用的舊版危險應用程式清單。</string>
+    <string name="target_app_list_targets">目標</string>
+    <string name="target_app_list_categories">分類</string>
+    <string name="target_app_list_close">關閉</string>
+    <string name="target_app_list_view">查看目標應用程式（%1$d）</string>
+    <string name="target_app_list_overview">概覽</string>
+    <string name="dangerousapps_section_packages">套件</string>
+    <string name="dangerousapps_section_package_history">開機後的套件異動</string>
+    <string name="dangerousapps_no_package_hits">未找到相符套件</string>
+    <string name="dangerousapps_section_context">掃描摘要</string>
+    <string name="dangerousapps_section_impact">影響</string>
+    <string name="dangerousapps_section_detection_methods">偵測方法</string>
+</resources>

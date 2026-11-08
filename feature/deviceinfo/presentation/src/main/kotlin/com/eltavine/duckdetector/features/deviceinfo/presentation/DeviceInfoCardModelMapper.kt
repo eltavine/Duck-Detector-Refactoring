@@ -59,7 +59,7 @@ class DeviceInfoCardModelMapper {
         return when (report.stage) {
             DeviceInfoStage.LOADING -> "Collecting local device profile"
             DeviceInfoStage.FAILED -> "Device profile unavailable"
-            DeviceInfoStage.READY -> "Have a good day"
+            DeviceInfoStage.READY -> "Device profile collected"
         }
     }
 

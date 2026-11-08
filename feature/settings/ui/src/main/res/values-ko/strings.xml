@@ -77,4 +77,25 @@ limitations under the License.
     <string name="update_status_failed">GitHub를 확인하지 못했습니다. 다시 시도하려면 탭하세요</string>
     <string name="update_status_idle">콜드 스타트 후 GitHub Main Nightly를 확인합니다. 지금 확인하려면 탭하세요</string>
     <string name="settings_section_appearance">모양</string>
+    <string name="author_summary_5ec1cff">SELinux 및 LSPosed 오탐 발견</string>
+    <string name="author_summary_947409161">우크라이나어 번역</string>
+    <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
+    <string name="author_summary_aviraxp">SELinux 및 LSPosed 오탐 보고</string>
+    <string name="author_summary_coolzyd">커널 검사</string>
+    <string name="author_summary_default">기여자</string>
+    <string name="author_summary_hsskyboy">저장소 수정 및 커널 검사</string>
+    <string name="author_summary_lingqing">TEE</string>
+    <string name="author_summary_mirin">UI</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">대시보드, Dangerous Apps 및 Zygisk</string>
+    <string name="author_summary_sinanb9">SELinux App Zygote 충돌 보고 및 커널 추적</string>
+    <string name="author_summary_sqmy">Kotlin</string>
+    <string name="author_summary_victor">CI</string>
+    <string name="author_summary_wuying">“KSU throne hunt” 동작에 대한 탐지 방식의 실현 가능성을 검증했습니다.</string>
+    <string name="author_summary_zg089">아랍어 번역</string>
+    <string name="settings_ui_style_title">UI 스타일</string>
+    <string name="settings_ui_style_description">Duck Detector의 외관 선택</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_manage_permissions">앱 권한 관리</string>
 </resources>

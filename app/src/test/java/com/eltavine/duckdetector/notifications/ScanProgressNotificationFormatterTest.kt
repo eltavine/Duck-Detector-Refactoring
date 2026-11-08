@@ -45,6 +45,7 @@ class ScanProgressNotificationFormatterTest {
                 ),
                 scanning = true,
             ),
+            scanningTitle = { ready, total -> "Scanning $ready/$total" },
         )
 
         assertEquals("Scanning 6/15", model.title)
@@ -68,6 +69,7 @@ class ScanProgressNotificationFormatterTest {
                 ),
                 scanning = false,
             ),
+            scanningTitle = { ready, total -> "Scanning $ready/$total" },
         )
 
         assertEquals("OK", model.title)
@@ -96,6 +98,7 @@ class ScanProgressNotificationFormatterTest {
                     ),
                     scanning = false,
                 ),
+                scanningTitle = { ready, total -> "Scanning $ready/$total" },
             )
 
             assertNull(model.shortCriticalText)
@@ -118,6 +121,7 @@ class ScanProgressNotificationFormatterTest {
                 ),
                 scanning = false,
             ),
+            scanningTitle = { ready, total -> "Scanning $ready/$total" },
         )
 
         assertNull(model.subText)

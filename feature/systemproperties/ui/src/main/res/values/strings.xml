@@ -17,7 +17,7 @@ limitations under the License.
 <resources>
 
     <string name="systemproperties_section_security_runtime">Security and runtime</string>
-    <string name="systemproperties_section_verified_boot">Verified boot</string>
+    <string name="systemproperties_section_verified_boot">Verified Boot</string>
     <string name="systemproperties_section_build_profile">Build profile</string>
     <string name="systemproperties_section_source_consistency">Source consistency</string>
     <string name="systemproperties_section_cross_check_rules">Cross-check rules</string>
