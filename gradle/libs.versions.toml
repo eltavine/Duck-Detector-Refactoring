@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.0"
+agp = "9.5.1"
 coreKtx = "1.19.1"
 json = "20260814"
 junit = "4.13.2"
