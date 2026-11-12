@@ -1,0 +1,35 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="native_root_diagnostic_clipboard_label">Native Root 診斷詳情</string>
+    <string name="srcu_timing_title">實驗性 fsnotify 時序偵測</string>
+    <string name="srcu_timing_headline">執行可選的本機時序診斷</string>
+    <string name="srcu_timing_detail">在支援的系統上，此實驗會反覆重寫一項私人動態權限，並測量關閉 watch 所需的時間。執行時可能拖慢套件操作。對於存在已知鎖順序反轉缺陷的舊核心或修改版核心，強制寫入可能使系統死鎖，導致裝置卡死並需要強制重新啟動；私人處理程序的逾時限制也無法防止這種情況。結果僅作為輔助證據，仍需裝置校正。</string>
+    <string name="srcu_timing_allow">啟用實驗</string>
+    <string name="srcu_timing_decline">保持停用</string>
+    <string name="srcu_timing_granted">已啟用實驗性診斷</string>
+    <string name="srcu_timing_disabled">已停用</string>
+    <string name="srcu_timing_declined_detail">不會執行可選時序實驗。其他 Native Root 偵測仍將繼續。</string>
+    <string name="nativeroot_section_native_probes">原生探針</string>
+    <string name="nativeroot_section_runtime_artifacts">執行時痕跡</string>
+    <string name="nativeroot_section_kernel_traces">核心痕跡</string>
+    <string name="nativeroot_section_property_residue">屬性殘留</string>
+    <string name="nativeroot_section_impact">影響</string>
+    <string name="nativeroot_section_detection_methods">偵測方法</string>
+    <string name="nativeroot_section_scan_summary">掃描摘要</string>
+</resources>

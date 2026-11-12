@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">اضغط لتصدير التقرير الكامل</string>
+    <string name="dashboard_report_saved">تم حفظ التقرير</string>
+    <string name="dashboard_report_save_failed">فشل الحفظ: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">فشل الحفظ</string>
+    <string name="dashboard_build_time_utc">البناء (UTC) · %1$s</string>
+    <string name="dashboard_loading_title">جارٍ إجراء الفحوص المحلية</string>
+    <string name="dashboard_loading_summary">سيظهر ملخص لوحة المعلومات بعد انتهاء بطاقات الكشف من جمع الأدلة.</string>
+    <string name="dashboard_severity_high">مرتفع</string>
+    <string name="dashboard_severity_medium">متوسط</string>
+    <string name="dashboard_severity_check">تحقق</string>
+    <string name="dashboard_severity_clear">لا توجد مؤشرات مقلقة</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">نظرة عامة على الأمان</string>
+    <string name="dashboard_scan_completed_title">وقت الفحص: %1$s\nالمدة الإجمالية: %2$s</string>
+    <string name="dashboard_duration_ms">%1$s مللي ثانية</string>
+    <string name="dashboard_duration_seconds">%1$s ثانية</string>
+    <string name="dashboard_focus_pair">%1$s و%2$s</string>
+    <string name="dashboard_headline_danger">خطر</string>
+    <string name="dashboard_headline_warning">تحذير</string>
+    <string name="dashboard_headline_info">معلومات</string>
+    <string name="dashboard_headline_ready">جاهز</string>
+    <string name="dashboard_headline_pending">قيد الانتظار</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">ابدأ بمراجعة %1$s.</string>
+    <string name="dashboard_summary_warning">راجع %1$s بعد ذلك.</string>
+    <string name="dashboard_summary_info">تتطلب نتائج %1$s سياقًا إضافيًا قبل اعتبارها خالية من المؤشرات.</string>
+    <string name="dashboard_summary_ready">ستظهر بطاقات الكشف تدريجيًا عند اكتمال الفحوص المحلية.</string>
+    <string name="dashboard_summary_pending">لا تزال وحدات أخرى تجمع أدلتها المحلية.</string>
+    <string name="dashboard_summary_ok">استخدم بطاقات الكشف أدناه لفحص الأدلة المحلية بالتفصيل.</string>
+    <string name="dashboard_metric_danger">خطر</string>
+    <string name="dashboard_metric_warning">تحذير</string>
+    <string name="dashboard_metric_ready">جاهز</string>
+    <string name="dashboard_metric_pending">قيد الانتظار</string>
+    <string name="dashboard_finding_scan_status_title">حالة الفحص</string>
+    <string name="dashboard_finding_scan_status_headline">انتظار أدلة الكشف</string>
+    <string name="dashboard_finding_scan_status_detail">ستتوسع بطاقات الكشف عند انتهاء الوحدات من جمع الأدلة المحلية.</string>
+    <string name="dashboard_finding_overview_title">نظرة عامة</string>
+    <string name="dashboard_finding_overview_headline">لا توجد نتائج عاجلة في الوحدات الجاهزة</string>
+    <string name="dashboard_finding_overview_detail">افتح بطاقات الكشف أدناه لمراجعة الأدلة المحلية والفحوص الإضافية بالتفصيل.</string>
+</resources>

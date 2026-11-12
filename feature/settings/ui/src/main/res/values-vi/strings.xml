@@ -77,4 +77,25 @@ limitations under the License.
     <string name="update_status_failed">Không thể kiểm tra GitHub; chạm để thử lại</string>
     <string name="update_status_idle">Kiểm tra GitHub Main Nightly sau khi khởi động lạnh; chạm để kiểm tra ngay</string>
     <string name="settings_section_appearance">Giao diện</string>
+    <string name="author_summary_5ec1cff">Phát hiện dương tính giả trong SELinux và LSPosed</string>
+    <string name="author_summary_947409161">Bản dịch tiếng Ukraina</string>
+    <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
+    <string name="author_summary_aviraxp">Báo cáo dương tính giả của SELinux và LSPosed</string>
+    <string name="author_summary_coolzyd">Kiểm tra kernel</string>
+    <string name="author_summary_default">Người đóng góp</string>
+    <string name="author_summary_hsskyboy">Sửa lỗi kho mã và kiểm tra kernel</string>
+    <string name="author_summary_lingqing">TEE</string>
+    <string name="author_summary_mirin">UI</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">Bảng điều khiển, Dangerous Apps và Zygisk</string>
+    <string name="author_summary_sinanb9">Báo cáo sự cố SELinux App Zygote và dấu vết kernel</string>
+    <string name="author_summary_sqmy">Kotlin</string>
+    <string name="author_summary_victor">CI</string>
+    <string name="author_summary_wuying">Đã xác minh tính khả thi của cách phát hiện hành vi “KSU throne hunt”.</string>
+    <string name="author_summary_zg089">Bản dịch tiếng Ả Rập</string>
+    <string name="settings_ui_style_title">Kiểu giao diện</string>
+    <string name="settings_ui_style_description">Chọn giao diện của Duck Detector</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_manage_permissions">Quản lý quyền ứng dụng</string>
 </resources>

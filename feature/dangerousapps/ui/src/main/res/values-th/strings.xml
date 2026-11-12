@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="target_app_list_title">รายการแอปเป้าหมาย</string>
+    <string name="target_app_list_summary">รายการแอปอันตรายแบบเดิมที่ตัวตรวจจับนี้ใช้อยู่ในปัจจุบัน</string>
+    <string name="target_app_list_targets">เป้าหมาย</string>
+    <string name="target_app_list_categories">หมวดหมู่</string>
+    <string name="target_app_list_close">ปิด</string>
+    <string name="target_app_list_view">ดูแอปเป้าหมาย (%1$d)</string>
+    <string name="target_app_list_overview">ภาพรวม</string>
+    <string name="dangerousapps_section_packages">แพ็กเกจ</string>
+    <string name="dangerousapps_section_package_history">การเปลี่ยนแปลงแพ็กเกจนับตั้งแต่บูต</string>
+    <string name="dangerousapps_no_package_hits">ไม่พบแพ็กเกจที่ตรงกัน</string>
+    <string name="dangerousapps_section_context">สรุปการสแกน</string>
+    <string name="dangerousapps_section_impact">ผลกระทบ</string>
+    <string name="dangerousapps_section_detection_methods">วิธีการตรวจจับ</string>
+</resources>

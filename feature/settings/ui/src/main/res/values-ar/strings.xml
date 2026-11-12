@@ -82,4 +82,20 @@ limitations under the License.
     <string name="update_status_failed">تعذر التحقق من GitHub؛ اضغط لإعادة المحاولة</string>
     <string name="update_status_idle">يتم فحص GitHub Main Nightly بعد التشغيل البارد؛ اضغط للفحص الآن</string>
     <string name="settings_section_appearance">المظهر</string>
+    <string name="author_summary_5ec1cff">اكتشاف نتائج إيجابية كاذبة في SELinux وLSPosed</string>
+    <string name="author_summary_947409161">الترجمة الأوكرانية</string>
+    <string name="author_summary_aviraxp">الإبلاغ عن نتائج إيجابية كاذبة في SELinux وLSPosed</string>
+    <string name="author_summary_coolzyd">فحص النواة</string>
+    <string name="author_summary_default">مساهم</string>
+    <string name="author_summary_hsskyboy">إصلاحات المستودع وفحص النواة</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">لوحة المعلومات وDangerous Apps وZygisk</string>
+    <string name="author_summary_sinanb9">تقرير انهيار SELinux App Zygote وآثار النواة</string>
+    <string name="author_summary_wuying">التحقق من قابلية تطبيق طريقة الكشف عن سلوك «KSU throne hunt».</string>
+    <string name="author_summary_zg089">الترجمة العربية</string>
+    <string name="settings_ui_style_title">نمط الواجهة</string>
+    <string name="settings_ui_style_description">اختر مظهر Duck Detector</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_manage_permissions">إدارة أذونات التطبيق</string>
 </resources>

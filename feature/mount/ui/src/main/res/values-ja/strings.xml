@@ -1,0 +1,28 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="mount_diagnostic_clipboard_label">プロセス間マウント表示の詳細</string>
+    <string name="mount_section_isolated_process">分離プロセスのマウント</string>
+    <string name="mount_section_root_artifacts">Root の痕跡</string>
+    <string name="mount_section_runtime_mounts">実行時のマウント</string>
+    <string name="mount_section_filesystem">ファイルシステム</string>
+    <string name="mount_section_namespace_consistency">名前空間と整合性</string>
+    <string name="mount_section_impact">影響</string>
+    <string name="mount_section_detection_methods">検出方法</string>
+    <string name="mount_section_scan_summary">スキャンの概要</string>
+</resources>

@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.core.designsystem.theme.DuckTheme
 import com.eltavine.duckdetector.core.designsystem.theme.MotionTokens
 import com.eltavine.duckdetector.core.ui.R
+import com.eltavine.duckdetector.core.ui.presentation.localizeDetectorCopy
 import io.github.xiaotong6666.uihelper.adaptive.adaptiveValue
 import io.github.xiaotong6666.uihelper.adaptive.AdaptiveContent
 import io.github.xiaotong6666.uihelper.adaptive.AdaptiveExpandableSection
@@ -56,7 +57,7 @@ public fun DetectorSectionFrame(
     val materialShape = LocalAdaptiveSectionGeometry.current
 
     AdaptiveExpandableSection(
-        title = title,
+        title = localizeDetectorCopy(title),
         icon = icon,
         expanded = sectionState.expanded,
         onToggle = sectionState::toggle,

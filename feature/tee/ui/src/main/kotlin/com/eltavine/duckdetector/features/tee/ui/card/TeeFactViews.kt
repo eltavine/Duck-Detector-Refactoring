@@ -65,6 +65,7 @@ import com.eltavine.duckdetector.core.ui.components.highestSectionSeverity
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.copyPlainTextToClipboard
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
+import com.eltavine.duckdetector.core.ui.presentation.localizeDetectorCopy
 import com.eltavine.duckdetector.features.tee.presentation.model.TeeFactGroupModel
 import com.eltavine.duckdetector.features.tee.presentation.model.TeeFactIcon
 import com.eltavine.duckdetector.features.tee.presentation.model.TeeFactRowModel
@@ -132,9 +133,10 @@ internal fun TeeHighlightPill(
             modifier = Modifier.size(15.dp),
         )
         WrapSafeText(
-            text = "${signal.label}: ${signal.value}",
+            text = "${localizeDetectorCopy(signal.label)}: ${signal.value}",
             style = DuckTypography.Caption,
             color = contentColor,
+            localize = false,
         )
     }
 }

@@ -27,6 +27,30 @@
       "reason": "Decodes the native payload's wire format, whose flags are spelt 1 or true."
     },
     {
+      "path": "core/ui/src/main/kotlin/com/eltavine/duckdetector/core/ui/presentation/DetectorCopy.kt",
+      "reason": "Preserves machine-facing diagnostic markers verbatim before localization; these evidence-boundary markers must not be translated."
+    },
+    {
+      "path": "core/ui/src/main/kotlin/com/eltavine/duckdetector/core/ui/presentation/DetectorCopyDangerousAppsLocalizers.kt",
+      "reason": "Parses stable full/scoped inventory tokens in Dangerous Apps summaries so dynamic counts can be rendered with localized resources."
+    },
+    {
+      "path": "core/ui/src/main/kotlin/com/eltavine/duckdetector/core/ui/presentation/DetectorCopyFallback.kt",
+      "reason": "Maps stable detector UI titles, statuses and complete summary sentences to Android resources at the localization boundary; unknown diagnostic text passes through unchanged."
+    },
+    {
+      "path": "core/ui/src/main/kotlin/com/eltavine/duckdetector/core/ui/presentation/DetectorCopyNetworkLocalizers.kt",
+      "reason": "Parses stable network status and row-label tokens emitted by the network presentation model so dynamic counts and routes can be localized."
+    },
+    {
+      "path": "core/ui/src/main/kotlin/com/eltavine/duckdetector/core/ui/presentation/DetectorCopyRuntimeLocalizers.kt",
+      "reason": "Parses stable runtime, Play Integrity, LSPosed, virtualization and signal-noun summaries into localized resources while retaining dynamic values."
+    },
+    {
+      "path": "core/ui/src/main/kotlin/com/eltavine/duckdetector/core/ui/presentation/DetectorCopySystemLocalizers.kt",
+      "reason": "Parses stable system, SELinux, mount, SU, custom-ROM and package-history summary formats to localize UI copy without changing evidence values."
+    },
+    {
       "path": "feature/dashboard/presentation/src/main/kotlin/com/eltavine/duckdetector/features/dashboard/presentation/export/DashboardReportRenderer.kt",
       "reason": "Lays out the text it renders: it skips a detail equal to its headline and puts a short single-line detail beside its value. The choices change layout, not meaning."
     },

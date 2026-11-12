@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="root_managers_section_matches">一致した Root マネージャー</string>
+    <string name="root_managers_section_profiles">プロファイル</string>
+    <string name="root_managers_diagnostic_clipboard_label">Root マネージャー診断の詳細</string>
+    <string name="installer_canary_title">実験的な権限所有者プローブ</string>
+    <string name="installer_canary_headline">Root マネージャーの権限名が残っているか確認</string>
+    <string name="installer_canary_detail">拒否されることを想定したインストールチェックを実行します。既存のインストール許可が必要で、端末側の制限を受ける場合があります。一致しても権限の所有者が判明するだけで、Root アクセスの存在は証明されません。</string>
+    <string name="installer_canary_allow">任意のチェックを有効にする</string>
+    <string name="installer_canary_decline">無効のままにする</string>
+    <string name="installer_canary_granted">任意のインストールチェックを有効にしました</string>
+    <string name="installer_canary_disabled">無効</string>
+    <string name="installer_canary_declined_detail">パッケージと署名証明書のチェックは引き続き利用できます。</string>
+    <string name="root_managers_section_scan">スキャンの概要</string>
+    <string name="root_managers_section_impact">影響</string>
+    <string name="root_managers_section_detection_methods">検出方法</string>
+</resources>

@@ -1,0 +1,35 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="native_root_diagnostic_clipboard_label">Native Root 진단 세부정보</string>
+    <string name="srcu_timing_title">실험적 fsnotify 타이밍 측정</string>
+    <string name="srcu_timing_headline">선택적 로컬 타이밍 진단 실행</string>
+    <string name="srcu_timing_detail">지원되는 시스템에서는 개인용 동적 권한을 반복해서 다시 쓰고 watch를 닫는 데 걸리는 시간을 측정합니다. 실행 중에는 패키지 작업이 느려질 수 있습니다. 알려진 잠금 순서 역전 버그가 있는 오래되거나 수정된 커널에서는 강제 쓰기로 인해 데드락이 발생하여 기기가 멈추고 강제 재시작이 필요할 수 있습니다. 별도 프로세스의 제한 시간으로도 이를 막을 수 없습니다. 결과는 보조 근거일 뿐이며 기기별 보정이 필요합니다.</string>
+    <string name="srcu_timing_allow">실험 활성화</string>
+    <string name="srcu_timing_decline">비활성화 상태 유지</string>
+    <string name="srcu_timing_granted">실험적 진단 활성화됨</string>
+    <string name="srcu_timing_disabled">비활성화됨</string>
+    <string name="srcu_timing_declined_detail">선택적 타이밍 실험은 실행되지 않습니다. 다른 Native Root 프로브는 계속 실행됩니다.</string>
+    <string name="nativeroot_section_native_probes">네이티브 프로브</string>
+    <string name="nativeroot_section_runtime_artifacts">런타임 흔적</string>
+    <string name="nativeroot_section_kernel_traces">커널 흔적</string>
+    <string name="nativeroot_section_property_residue">속성 잔여 정보</string>
+    <string name="nativeroot_section_impact">영향</string>
+    <string name="nativeroot_section_detection_methods">탐지 방법</string>
+    <string name="nativeroot_section_scan_summary">검사 요약</string>
+</resources>

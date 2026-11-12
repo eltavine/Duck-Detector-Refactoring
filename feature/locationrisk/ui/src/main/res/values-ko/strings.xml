@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">캐시된 위치 진단</string>
+    <string name="location_cache_headline">캐시된 모의 위치 메타데이터를 확인할까요?</string>
+    <string name="location_cache_detail">기본적으로 꺼져 있습니다. 포그라운드의 대략적인 위치 권한이 있으면 검사당 최대 3개의 캐시된 위치 제공자 결과를 읽습니다. 보고서에는 모의 위치 표시와 경과 시간 구간만 포함됩니다. 좌표가 Android 객체에 일시적으로 존재할 수 있지만 읽거나 저장하거나 내보내지 않습니다. 새 위치를 요청하거나 백그라운드 추적 또는 네트워크 요청을 하지 않습니다. 로컬 합성 검사는 이 옵션 없이도 실행됩니다.</string>
+    <string name="location_cache_allow">활성화하고 권한 요청</string>
+    <string name="location_cache_decline">꺼진 상태 유지</string>
+    <string name="location_cache_granted_headline">캐시 진단 활성화됨</string>
+    <string name="location_cache_granted_detail">OS 권한과 위치 제공자 사용 가능 여부에 따른 제한은 그대로 적용됩니다. 접근 거부는 별도로 보고됩니다. 아래에서 권한을 관리하거나 언제든 설정에서 이 옵션을 끌 수 있습니다.</string>
+    <string name="location_cache_declined_status">꺼짐</string>
+    <string name="location_cache_declined_headline">캐시 진단이 꺼져 있습니다</string>
+    <string name="location_cache_declined_detail">로컬 합성 검사는 계속 사용할 수 있습니다. 나중에 설정에서 캐시된 메타데이터를 활성화할 수 있습니다.</string>
+    <string name="location_cache_setting_summary">캐시된 모의 위치 표시와 경과 시간 구간을 선택적으로 사용합니다. 포그라운드의 대략적인 위치 권한만 사용하며 좌표나 새 위치 측정값은 가져오지 않습니다.</string>
+</resources>

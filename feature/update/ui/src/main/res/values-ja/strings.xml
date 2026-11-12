@@ -33,4 +33,8 @@ limitations under the License.
     <string name="update_download_progress">ダウンロード中 %1$d%%</string>
     <string name="update_download_retry">再試行</string>
     <string name="update_install">インストール</string>
+    <string name="github_acceleration_dialog_title">GitHub アクセラレーションを有効にしますか？</string>
+    <string name="github_acceleration_dialog_message">お使いのネットワークから GitHub に接続しにくい場合があります。Duck Detector はサードパーティの高速化サービス gh-proxy.com を介して Nightly 更新を確認・ダウンロードできます。この設定は後から変更できます。</string>
+    <string name="github_acceleration_dialog_enable">有効にする</string>
+    <string name="github_acceleration_dialog_decline">今はしない</string>
 </resources>

@@ -77,4 +77,25 @@ limitations under the License.
     <string name="update_status_failed">ตรวจสอบ GitHub ไม่สำเร็จ; แตะเพื่อลองใหม่</string>
     <string name="update_status_idle">ตรวจสอบ GitHub Main Nightly หลัง cold start; แตะเพื่อตรวจตอนนี้</string>
     <string name="settings_section_appearance">รูปลักษณ์</string>
+    <string name="author_summary_5ec1cff">พบผลบวกลวงของ SELinux และ LSPosed</string>
+    <string name="author_summary_947409161">การแปลภาษายูเครน</string>
+    <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
+    <string name="author_summary_aviraxp">รายงานผลบวกลวงของ SELinux และ LSPosed</string>
+    <string name="author_summary_coolzyd">ตรวจสอบเคอร์เนล</string>
+    <string name="author_summary_default">ผู้มีส่วนร่วม</string>
+    <string name="author_summary_hsskyboy">แก้ไขที่เก็บโค้ดและตรวจสอบเคอร์เนล</string>
+    <string name="author_summary_lingqing">TEE</string>
+    <string name="author_summary_mirin">UI</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">แดชบอร์ด Dangerous Apps และ Zygisk</string>
+    <string name="author_summary_sinanb9">รายงานการล่มของ SELinux App Zygote และร่องรอยเคอร์เนล</string>
+    <string name="author_summary_sqmy">Kotlin</string>
+    <string name="author_summary_victor">CI</string>
+    <string name="author_summary_wuying">ตรวจสอบความเป็นไปได้ของวิธีตรวจจับพฤติกรรม “KSU throne hunt”</string>
+    <string name="author_summary_zg089">การแปลภาษาอาหรับ</string>
+    <string name="settings_ui_style_title">รูปแบบ UI</string>
+    <string name="settings_ui_style_description">เลือกรูปลักษณ์ของ Duck Detector</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_manage_permissions">จัดการสิทธิ์ของแอป</string>
 </resources>

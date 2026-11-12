@@ -26,9 +26,9 @@ limitations under the License.
     <string name="user_agreement_title">Thỏa thuận người dùng</string>
     <string name="user_agreement_content" formatted="false">Bằng việc sử dụng Duck Detector, bạn đồng ý với các điều khoản sau:\n\n1. Mục đích sử dụng\nỨng dụng này chỉ được thiết kế cho mục đích giáo dục và đánh giá an toàn cá nhân, giúp người dùng hiểu rõ trạng thái bảo mật của chính thiết bị mình.\n\n2. Không bảo hành\nỨng dụng này được cung cấp theo hiện trạng, không kèm theo bất kỳ bảo đảm rõ ràng hay ngụ ý nào. Nhà phát triển không đảm bảo tính chính xác, đầy đủ hay độ tin cậy của kết quả phát hiện.\n\n3. Trách nhiệm của người dùng\nBạn tự chịu trách nhiệm về cách sử dụng ứng dụng này và mọi hậu quả có thể phát sinh từ việc sử dụng đó.\n\n4. Tuân thủ pháp luật\nBạn đồng ý sử dụng ứng dụng này phù hợp với mọi quy định pháp luật địa phương, quốc gia và quốc tế có liên quan.</string>
     <string name="disclaimer_title">Tuyên bố miễn trừ</string>
-    <string name="disclaimer_content" formatted="false">LƯU Ý QUAN TRỌNG:\n\n1. Giới hạn phát hiện\nDuck Detector sử dụng nhiều phương pháp để đánh giá trạng thái bảo mật của thiết bị, nhưng không có phương pháp nào đạt độ chính xác 100&#37;. Kết quả chỉ nên được xem là dấu hiệu tham khảo, không phải kết luận cuối cùng.\n\n2. Báo động sai và bỏ sót\nỨng dụng có thể tạo ra báo động sai hoặc bỏ sót. Hãy luôn kết hợp công cụ bảo mật chuyên nghiệp và việc tự xác minh của bạn để có đánh giá đầy đủ.\n\n3. Miễn trừ trách nhiệm\nCác nhà phát triển, người đóng góp và bên phân phối Duck Detector sẽ không chịu trách nhiệm đối với mọi thiệt hại trực tiếp, gián tiếp, ngẫu nhiên, đặc biệt hoặc hậu quả phát sinh từ việc sử dụng hoặc không thể sử dụng ứng dụng này.\n\n4. Dịch vụ bên thứ ba\nKiểm tra thu hồi TEE mặc định dùng ảnh chụp tích hợp trong ứng dụng. Nếu bạn cho phép cập nhật dữ liệu thu hồi trực tuyến, ứng dụng có thể truy cập Google attestation revocation endpoint. Bản thân quá trình quét vẫn được thực hiện cục bộ trên thiết bị của bạn, và các kết quả phát hiện không được cố ý tải lên dưới dạng telemetry quét.</string>
+    <string name="disclaimer_content" formatted="false">LƯU Ý QUAN TRỌNG:\n\n1. Giới hạn phát hiện\nDuck Detector sử dụng nhiều phương pháp để đánh giá trạng thái bảo mật của thiết bị, nhưng không có phương pháp nào đạt độ chính xác 100&#37;. Kết quả chỉ nên được xem là dấu hiệu tham khảo, không phải kết luận cuối cùng.\n\n2. Báo động sai và bỏ sót\nỨng dụng có thể tạo ra báo động sai hoặc bỏ sót. Hãy luôn kết hợp công cụ bảo mật chuyên nghiệp và việc tự xác minh của bạn để có đánh giá đầy đủ.\n\n3. Miễn trừ trách nhiệm\nCác nhà phát triển, người đóng góp và bên phân phối Duck Detector sẽ không chịu trách nhiệm đối với mọi thiệt hại trực tiếp, gián tiếp, ngẫu nhiên, đặc biệt hoặc hậu quả phát sinh từ việc sử dụng hoặc không thể sử dụng ứng dụng này.\n\n4. Dịch vụ bên thứ ba\nKiểm tra thu hồi TEE mặc định dùng ảnh chụp tích hợp trong ứng dụng. Nếu bạn cho phép cập nhật dữ liệu thu hồi trực tuyến, ứng dụng có thể truy cập Google Attestation revocation endpoint. Bản thân quá trình quét vẫn được thực hiện cục bộ trên thiết bị của bạn, và các kết quả phát hiện không được cố ý tải lên dưới dạng telemetry quét.</string>
     <string name="privacy_notice_title">Thông báo quyền riêng tư</string>
-    <string name="privacy_notice_content" formatted="false">Tóm tắt quyền riêng tư: các kiểm tra bảo mật chạy cục bộ trên thiết bị và kết quả không được tải lên dưới dạng telemetry. Kiểm tra thu hồi TEE mặc định dùng dữ liệu tích hợp. Sau khi hoàn tất lựa chọn khởi động, ứng dụng kết nối GitHub một lần mỗi lần khởi động lạnh để kiểm tra siêu dữ liệu bản Nightly. Nếu bật Tăng tốc GitHub, các yêu cầu này sẽ đi qua dịch vụ bên thứ ba gh-proxy.com.</string>
+    <string name="privacy_notice_content" formatted="false">Tóm tắt quyền riêng tư: các kiểm tra bảo mật chạy cục bộ trên thiết bị và kết quả không được tải lên dưới dạng telemetry. Kiểm tra thu hồi TEE mặc định dùng dữ liệu tích hợp. Nếu bạn cho phép làm mới dữ liệu thu hồi trực tuyến, ứng dụng có thể kết nối tới Google Attestation revocation endpoint. Sau khi hoàn tất lựa chọn khởi động, ứng dụng kết nối GitHub một lần mỗi lần khởi động lạnh để kiểm tra siêu dữ liệu bản Nightly. Nếu bật Tăng tốc GitHub, các yêu cầu này sẽ đi qua dịch vụ bên thứ ba gh-proxy.com.</string>
     <string name="timer_elapsed">Đã chờ 30 giây</string>
     <string name="timer_waiting">Vui lòng chờ %1$d giây</string>
     <string name="fully_reviewed">Đã xem hết</string>
@@ -100,4 +100,27 @@ limitations under the License.
     <string name="update_install_fallback_opened_only">Cài đặt cục bộ thất bại. Đã mở URL APK bằng trình duyệt nhưng không sao chép được.</string>
     <string name="update_install_link_copied">Đã sao chép liên kết tải APK</string>
     <string name="update_apk_unavailable">Tệp cập nhật đã tải xuống không còn hợp lệ. Hãy tải xuống lại</string>
+    <string name="scan_history_issue_title">Lịch sử quét cần được xem xét</string>
+    <string name="scan_history_recovered">Đã loại trừ %1$d bản ghi lịch sử bị hỏng. Tệp gốc được giữ lại với tên %2$s trong thư mục lịch sử quét riêng tư. Các mục hợp lệ đã được khôi phục.</string>
+    <string name="scan_history_failed">Không thể tải hoặc lưu lịch sử quét (%1$s). Tệp hiện có không bị xóa. Lịch sử mới có thể không được ghi lại cho đến khi quyền truy cập bộ nhớ được khôi phục.</string>
+    <string name="startup_preparing_detail">Đang tải trạng thái chấp thuận trước khi xem xét chính sách khởi động.</string>
+    <string name="startup_ui_style_title">Kiểu giao diện</string>
+    <string name="startup_ui_style_detail">Chọn công cụ giao diện mà Duck Detector sử dụng. Bạn có thể đổi sau trong phần Cài đặt.</string>
+    <string name="startup_ui_style_material">Material 3</string>
+    <string name="startup_ui_style_miuix">MIUIX</string>
+    <string name="detector_manage_permissions">Quản lý quyền ứng dụng</string>
+    <string name="dashboard_info_card">Thẻ thông tin</string>
+    <string name="dashboard_system_time">Thời gian hệ thống</string>
+    <string name="dashboard_additional">Bổ sung</string>
+    <string name="dashboard_detectors">Bộ phát hiện</string>
+    <string name="card_action_view_details">Xem chi tiết</string>
+    <string name="card_action_review_evidence">Xem xét bằng chứng</string>
+    <string name="card_action_certificate_chain">Chuỗi chứng chỉ</string>
+    <string name="device_blacklist_toast">Không hỗ trợ thiết bị HUAWEI.</string>
+    <string name="device_blacklist_title">Thiết bị không được hỗ trợ</string>
+    <string name="device_blacklist_message">Thiết bị %1$s bị chặn theo danh sách hiện tại.</string>
+    <string name="device_blacklist_close">Duck Detector sẽ đóng ngay bây giờ.</string>
+    <string name="notification_scan_progress_channel_name">Tiến trình quét</string>
+    <string name="notification_scan_progress_channel_description">Tiến độ quét tổng thể của Duck Detector và kết luận cuối cùng trên bảng điều khiển.</string>
+    <string name="notification_scanning_title">Đang quét %1$d/%2$d</string>
 </resources>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="root_managers_section_matches">Trình quản lý Root trùng khớp</string>
+    <string name="root_managers_section_profiles">Hồ sơ</string>
+    <string name="root_managers_diagnostic_clipboard_label">Chi tiết chẩn đoán trình quản lý Root</string>
+    <string name="installer_canary_title">Phép dò chủ sở hữu quyền thử nghiệm</string>
+    <string name="installer_canary_headline">Tìm tên quyền còn sót lại của trình quản lý Root</string>
+    <string name="installer_canary_detail">Chạy phép kiểm tra cài đặt được thiết kế để bị từ chối. Cần có quyền cài đặt hiện hữu và có thể bị thiết bị hạn chế. Kết quả trùng khớp chỉ xác định chủ sở hữu quyền, không chứng minh có quyền truy cập Root.</string>
+    <string name="installer_canary_allow">Bật kiểm tra tùy chọn</string>
+    <string name="installer_canary_decline">Tiếp tục tắt</string>
+    <string name="installer_canary_granted">Đã bật kiểm tra cài đặt tùy chọn</string>
+    <string name="installer_canary_disabled">Đã tắt</string>
+    <string name="installer_canary_declined_detail">Vẫn có thể kiểm tra gói và chứng chỉ chữ ký.</string>
+    <string name="root_managers_section_scan">Tóm tắt quét</string>
+    <string name="root_managers_section_impact">Tác động</string>
+    <string name="root_managers_section_detection_methods">Phương pháp phát hiện</string>
+</resources>

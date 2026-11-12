@@ -82,4 +82,20 @@ limitations under the License.
     <string name="update_status_failed">Не вдалося перевірити GitHub; торкніться, щоб повторити</string>
     <string name="update_status_idle">GitHub Main Nightly перевіряється після холодного запуску; торкніться, щоб перевірити зараз</string>
     <string name="settings_section_appearance">Вигляд</string>
+    <string name="author_summary_5ec1cff">Виявлення хибних спрацювань SELinux і LSPosed</string>
+    <string name="author_summary_947409161">Український переклад</string>
+    <string name="author_summary_aviraxp">Звіт про хибні спрацювання SELinux і LSPosed</string>
+    <string name="author_summary_coolzyd">Перевірка ядра</string>
+    <string name="author_summary_default">Учасник проєкту</string>
+    <string name="author_summary_hsskyboy">Виправлення репозиторію, перевірка ядра</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">Панель, Dangerous Apps і Zygisk</string>
+    <string name="author_summary_sinanb9">Звіт про збій SELinux App Zygote та трасування ядра</string>
+    <string name="author_summary_wuying">Перевірено можливість застосування методу виявлення поведінки «KSU throne hunt».</string>
+    <string name="author_summary_zg089">Арабський переклад</string>
+    <string name="settings_ui_style_title">Стиль інтерфейсу</string>
+    <string name="settings_ui_style_description">Виберіть оформлення Duck Detector</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_manage_permissions">Керування дозволами застосунку</string>
 </resources>

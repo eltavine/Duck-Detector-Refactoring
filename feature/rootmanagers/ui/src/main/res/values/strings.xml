@@ -18,7 +18,7 @@ limitations under the License.
 <resources>
     <string name="root_managers_section_matches">Matched root managers</string>
     <string name="root_managers_section_profiles">Profiles</string>
-    <string name="root_managers_section_scan" translatable="false">Scan summary</string>
+    <string name="root_managers_section_scan">Scan summary</string>
     <string name="root_managers_diagnostic_clipboard_label">Root Managers diagnostic detail</string>
 
     <string name="installer_canary_title">Experimental permission-owner probe</string>
@@ -29,6 +29,6 @@ limitations under the License.
     <string name="installer_canary_granted">Optional installation check enabled</string>
     <string name="installer_canary_disabled">Disabled</string>
     <string name="installer_canary_declined_detail">Package and signing-certificate checks remain available.</string>
-    <string name="root_managers_section_impact" translatable="false">Impact</string>
-    <string name="root_managers_section_detection_methods" translatable="false">Detection methods</string>
+    <string name="root_managers_section_impact">Impact</string>
+    <string name="root_managers_section_detection_methods">Detection methods</string>
 </resources>

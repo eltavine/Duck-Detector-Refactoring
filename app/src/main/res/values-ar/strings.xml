@@ -26,9 +26,9 @@ limitations under the License.
     <string name="user_agreement_title">اتفاقية المستخدم</string>
     <string name="user_agreement_content" formatted="false">باستخدام Duck Detector فإنك توافق على الشروط التالية:\n\n1. غرض الاستخدام\nتم تصميم هذا التطبيق لأغراض تعليمية وللتقييم الأمني الشخصي فقط، وهو يساعد المستخدمين على فهم الحالة الأمنية لأجهزتهم الخاصة.\n\n2. عدم وجود ضمان\nيتم توفير هذا التطبيق كما هو دون أي ضمانات صريحة أو ضمنية. لا يضمن المطورون دقة نتائج الكشف أو اكتمالها أو موثوقيتها.\n\n3. مسؤولية المستخدم\nأنت المسؤول وحدك عن كيفية استخدام هذا التطبيق وعن أي عواقب قد تنشأ عن ذلك الاستخدام.\n\n4. الامتثال للقوانين\nتوافق على استخدام هذا التطبيق بما يتوافق مع جميع القوانين واللوائح المحلية والوطنية والدولية المعمول بها.</string>
     <string name="disclaimer_title">إخلاء المسؤولية</string>
-    <string name="disclaimer_content" formatted="false">إشعار مهم:\n\n1. حدود الكشف\nيستخدم Duck Detector عدة أساليب لاكتشاف الحالة الأمنية للجهاز، لكن لا توجد أي طريقة دقيقة بنسبة 100&#37;. يجب التعامل مع النتائج على أنها مؤشرات إرشادية وليست أحكامًا نهائية.\n\n2. الإيجابيات والسلبيات الخاطئة\nقد ينتج التطبيق نتائج إيجابية خاطئة أو يفوّت بعض الحالات. استخدم دائمًا أدوات أمنية احترافية وتحققك الشخصي للحصول على تقييم أشمل.\n\n3. عدم تحمل المسؤولية\nلا يتحمل مطورو Duck Detector أو المساهمون فيه أو موزعوه أي مسؤولية عن أي أضرار مباشرة أو غير مباشرة أو عرضية أو خاصة أو تبعية تنشأ عن استخدام هذا التطبيق أو عدم القدرة على استخدامه.\n\n4. خدمات الجهات الخارجية\nتستخدم فحوصات إبطال TEE افتراضيًا لقطة مدمجة داخل التطبيق. إذا سمحت بتحديث بيانات الإبطال عبر الإنترنت، فقد يتصل التطبيق بـ Google attestation revocation endpoint. تظل عمليات الفحص الأمنية نفسها محلية على جهازك، ولا يتم تحميل نتائج الكاشف عمدًا كقياسات تتبع لعملية الفحص.</string>
+    <string name="disclaimer_content" formatted="false">إشعار مهم:\n\n1. حدود الكشف\nيستخدم Duck Detector عدة أساليب لاكتشاف الحالة الأمنية للجهاز، لكن لا توجد أي طريقة دقيقة بنسبة 100&#37;. يجب التعامل مع النتائج على أنها مؤشرات إرشادية وليست أحكامًا نهائية.\n\n2. الإيجابيات والسلبيات الخاطئة\nقد ينتج التطبيق نتائج إيجابية خاطئة أو يفوّت بعض الحالات. استخدم دائمًا أدوات أمنية احترافية وتحققك الشخصي للحصول على تقييم أشمل.\n\n3. عدم تحمل المسؤولية\nلا يتحمل مطورو Duck Detector أو المساهمون فيه أو موزعوه أي مسؤولية عن أي أضرار مباشرة أو غير مباشرة أو عرضية أو خاصة أو تبعية تنشأ عن استخدام هذا التطبيق أو عدم القدرة على استخدامه.\n\n4. خدمات الجهات الخارجية\nتستخدم فحوصات إبطال TEE افتراضيًا لقطة مدمجة داخل التطبيق. إذا سمحت بتحديث بيانات الإبطال عبر الإنترنت، فقد يتصل التطبيق بـ Google Attestation revocation endpoint. تظل عمليات الفحص الأمنية نفسها محلية على جهازك، ولا يتم تحميل نتائج الكاشف عمدًا كقياسات تتبع لعملية الفحص.</string>
     <string name="privacy_notice_title">إشعار الخصوصية</string>
-    <string name="privacy_notice_content" formatted="false">ملخص الخصوصية: تعمل الفحوصات الأمنية محليًا على جهازك ولا تُرفع نتائج الكشف كبيانات تتبع. تستخدم فحوصات إبطال TEE افتراضيًا لقطة مدمجة. بعد إكمال خيارات بدء التشغيل، يتصل التطبيق بـ GitHub مرة واحدة عند كل تشغيل بارد للتحقق من بيانات تحديث Nightly. إذا فعّلت تسريع GitHub، تمر هذه الطلبات عبر خدمة gh-proxy.com التابعة لجهة خارجية.</string>
+    <string name="privacy_notice_content" formatted="false">ملخص الخصوصية: تعمل الفحوصات الأمنية محليًا على جهازك ولا تُرفع نتائج الكشف كبيانات تتبع. تستخدم فحوصات إبطال TEE افتراضيًا لقطة مدمجة. إذا سمحت بتحديث بيانات الإبطال عبر الإنترنت، فقد يتصل التطبيق بـ Google Attestation revocation endpoint. بعد إكمال خيارات بدء التشغيل، يتصل التطبيق بـ GitHub مرة واحدة عند كل تشغيل بارد للتحقق من بيانات تحديث Nightly. إذا فعّلت تسريع GitHub، تمر هذه الطلبات عبر خدمة gh-proxy.com التابعة لجهة خارجية.</string>
     <string name="timer_elapsed">انقضت 30 ثانية</string>
     <string name="timer_waiting">يرجى الانتظار %1$d ثانية</string>
     <string name="fully_reviewed">تمت المراجعة بالكامل</string>
@@ -100,4 +100,27 @@ limitations under the License.
     <string name="update_install_fallback_opened_only">فشل التثبيت المحلي. فُتح رابط APK في المتصفح، لكن تعذّر نسخه.</string>
     <string name="update_install_link_copied">تم نسخ رابط تنزيل APK</string>
     <string name="update_apk_unavailable">ملف التحديث الذي تم تنزيله غير متاح. أعد تنزيله</string>
+    <string name="scan_history_issue_title">يحتاج سجل الفحص إلى مراجعة</string>
+    <string name="scan_history_recovered">تم استبعاد %1$d من سجلات الفحص التالفة. حُفظ الملف الأصلي باسم %2$s في دليل سجل الفحص الخاص. تمت استعادة الإدخالات السليمة.</string>
+    <string name="scan_history_failed">تعذّر تحميل سجل الفحص أو حفظه (%1$s). لم يُحذف الملف الحالي. قد لا تُسجّل عمليات الفحص الجديدة حتى تُستعاد إمكانية الوصول إلى التخزين.</string>
+    <string name="startup_preparing_detail">جارٍ تحميل حالة الموافقة قبل مراجعة سياسة بدء التشغيل.</string>
+    <string name="startup_ui_style_title">نمط الواجهة</string>
+    <string name="startup_ui_style_detail">اختر محرّك الواجهة الذي يستخدمه Duck Detector. يمكنك تغييره لاحقًا من الإعدادات.</string>
+    <string name="startup_ui_style_material">Material 3</string>
+    <string name="startup_ui_style_miuix">MIUIX</string>
+    <string name="detector_manage_permissions">إدارة أذونات التطبيق</string>
+    <string name="dashboard_info_card">بطاقة المعلومات</string>
+    <string name="dashboard_system_time">وقت النظام</string>
+    <string name="dashboard_additional">معلومات إضافية</string>
+    <string name="dashboard_detectors">أدوات الكشف</string>
+    <string name="card_action_view_details">عرض التفاصيل</string>
+    <string name="card_action_review_evidence">مراجعة الأدلة</string>
+    <string name="card_action_certificate_chain">سلسلة الشهادات</string>
+    <string name="device_blacklist_toast">أجهزة HUAWEI غير مدعومة.</string>
+    <string name="device_blacklist_title">جهاز غير مدعوم</string>
+    <string name="device_blacklist_message">أجهزة %1$s محظورة وفق القائمة الحالية.</string>
+    <string name="device_blacklist_close">سيُغلق Duck Detector الآن.</string>
+    <string name="notification_scan_progress_channel_name">تقدّم الفحص</string>
+    <string name="notification_scan_progress_channel_description">تقدّم فحص Duck Detector الإجمالي والنتيجة النهائية في لوحة المعلومات.</string>
+    <string name="notification_scanning_title">جارٍ الفحص %1$d/%2$d</string>
 </resources>

@@ -26,9 +26,9 @@ limitations under the License.
     <string name="user_agreement_title">ข้อตกลงผู้ใช้</string>
     <string name="user_agreement_content" formatted="false">การใช้งาน Duck Detector ถือว่าคุณยอมรับเงื่อนไขต่อไปนี้:\n\n1. วัตถุประสงค์การใช้งาน\nแอปนี้ออกแบบมาเพื่อการศึกษาและการประเมินความปลอดภัยส่วนบุคคลเท่านั้น โดยช่วยให้ผู้ใช้เข้าใจสถานะความปลอดภัยของอุปกรณ์ตนเอง\n\n2. การไม่รับประกัน\nแอปนี้ให้บริการตามสภาพที่เป็นอยู่ โดยไม่มีการรับประกันใด ๆ ไม่ว่าชัดแจ้งหรือโดยนัย ผู้พัฒนาไม่รับประกันความถูกต้อง ความครบถ้วน หรือความน่าเชื่อถือของผลการตรวจจับ\n\n3. ความรับผิดชอบของผู้ใช้\nคุณต้องรับผิดชอบแต่เพียงผู้เดียวต่อวิธีการใช้งานแอปนี้และผลที่อาจเกิดขึ้นจากการใช้งานนั้น\n\n4. การปฏิบัติตามกฎหมาย\nคุณตกลงที่จะใช้แอปนี้ให้สอดคล้องกับกฎหมายและข้อบังคับระดับท้องถิ่น ระดับประเทศ และระดับสากลที่เกี่ยวข้องทั้งหมด</string>
     <string name="disclaimer_title">ข้อจำกัดความรับผิดชอบ</string>
-    <string name="disclaimer_content" formatted="false">ประกาศสำคัญ:\n\n1. ข้อจำกัดของการตรวจจับ\nDuck Detector ใช้วิธีหลายแบบในการประเมินสถานะความปลอดภัยของอุปกรณ์ แต่ไม่มีวิธีใดที่แม่นยำ 100&#37; ผลลัพธ์ควรถูกมองว่าเป็นสัญญาณประกอบ ไม่ใช่ข้อสรุปสุดท้าย\n\n2. การแจ้งเตือนผิดพลาดและการพลาดตรวจ\nแอปนี้อาจให้ผลลวงหรือพลาดตรวจได้ โปรดใช้ร่วมกับเครื่องมือความปลอดภัยแบบมืออาชีพและการตรวจสอบด้วยตนเองเพื่อการประเมินที่ครบถ้วน\n\n3. การจำกัดความรับผิด\nผู้พัฒนา ผู้มีส่วนร่วม และผู้จัดจำหน่าย Duck Detector จะไม่รับผิดชอบต่อความเสียหายใด ๆ ทั้งโดยตรง โดยอ้อม โดยบังเอิญ เป็นกรณีพิเศษ หรือเป็นผลสืบเนื่องจากการใช้งานหรือการไม่สามารถใช้งานแอปนี้ได้\n\n4. บริการของบุคคลที่สาม\nการตรวจสอบการเพิกถอน TEE ใช้ snapshot ที่ฝังในแอปเป็นค่าเริ่มต้น หากคุณอนุญาตการอัปเดตข้อมูลการเพิกถอนออนไลน์ แอปอาจเชื่อมต่อกับ Google attestation revocation endpoint การสแกนความปลอดภัยยังคงทำงานภายในอุปกรณ์ของคุณ และผลการตรวจจับจะไม่ถูกอัปโหลดเป็น telemetry ของการสแกนโดยเจตนา</string>
+    <string name="disclaimer_content" formatted="false">ประกาศสำคัญ:\n\n1. ข้อจำกัดของการตรวจจับ\nDuck Detector ใช้วิธีหลายแบบในการประเมินสถานะความปลอดภัยของอุปกรณ์ แต่ไม่มีวิธีใดที่แม่นยำ 100&#37; ผลลัพธ์ควรถูกมองว่าเป็นสัญญาณประกอบ ไม่ใช่ข้อสรุปสุดท้าย\n\n2. การแจ้งเตือนผิดพลาดและการพลาดตรวจ\nแอปนี้อาจให้ผลลวงหรือพลาดตรวจได้ โปรดใช้ร่วมกับเครื่องมือความปลอดภัยแบบมืออาชีพและการตรวจสอบด้วยตนเองเพื่อการประเมินที่ครบถ้วน\n\n3. การจำกัดความรับผิด\nผู้พัฒนา ผู้มีส่วนร่วม และผู้จัดจำหน่าย Duck Detector จะไม่รับผิดชอบต่อความเสียหายใด ๆ ทั้งโดยตรง โดยอ้อม โดยบังเอิญ เป็นกรณีพิเศษ หรือเป็นผลสืบเนื่องจากการใช้งานหรือการไม่สามารถใช้งานแอปนี้ได้\n\n4. บริการของบุคคลที่สาม\nการตรวจสอบการเพิกถอน TEE ใช้ snapshot ที่ฝังในแอปเป็นค่าเริ่มต้น หากคุณอนุญาตการอัปเดตข้อมูลการเพิกถอนออนไลน์ แอปอาจเชื่อมต่อกับ Google Attestation revocation endpoint การสแกนความปลอดภัยยังคงทำงานภายในอุปกรณ์ของคุณ และผลการตรวจจับจะไม่ถูกอัปโหลดเป็น telemetry ของการสแกนโดยเจตนา</string>
     <string name="privacy_notice_title">ประกาศความเป็นส่วนตัว</string>
-    <string name="privacy_notice_content" formatted="false">สรุปความเป็นส่วนตัว: การตรวจสอบความปลอดภัยทำงานภายในอุปกรณ์และจะไม่อัปโหลดผลการตรวจจับเป็น telemetry การตรวจสอบการเพิกถอน TEE ใช้ snapshot ในตัวเป็นค่าเริ่มต้น หลังจากตั้งค่าการเริ่มต้นเสร็จ แอปจะเชื่อมต่อ GitHub หนึ่งครั้งต่อการเปิดแบบ cold start เพื่อตรวจสอบข้อมูลอัปเดต Nightly หากเปิดเร่งความเร็ว GitHub คำขอเหล่านี้จะส่งผ่านบริการ gh-proxy.com ของบุคคลที่สาม</string>
+    <string name="privacy_notice_content" formatted="false">สรุปความเป็นส่วนตัว: การตรวจสอบความปลอดภัยทำงานภายในอุปกรณ์และจะไม่อัปโหลดผลการตรวจจับเป็น telemetry การตรวจสอบการเพิกถอน TEE ใช้ snapshot ในตัวเป็นค่าเริ่มต้น หากคุณอนุญาตให้อัปเดตข้อมูลการเพิกถอนออนไลน์ แอปอาจเชื่อมต่อกับ Google Attestation revocation endpoint หลังจากตั้งค่าการเริ่มต้นเสร็จ แอปจะเชื่อมต่อ GitHub หนึ่งครั้งต่อการเปิดแบบ cold start เพื่อตรวจสอบข้อมูลอัปเดต Nightly หากเปิดเร่งความเร็ว GitHub คำขอเหล่านี้จะส่งผ่านบริการ gh-proxy.com ของบุคคลที่สาม</string>
     <string name="timer_elapsed">ครบ 30 วินาที</string>
     <string name="timer_waiting">โปรดรอ %1$d วินาที</string>
     <string name="fully_reviewed">ตรวจครบแล้ว</string>
@@ -100,4 +100,27 @@ limitations under the License.
     <string name="update_install_fallback_opened_only">การติดตั้งในเครื่องล้มเหลว เปิด URL ของ APK ในเบราว์เซอร์แล้ว แต่คัดลอกไม่สำเร็จ</string>
     <string name="update_install_link_copied">คัดลอกลิงก์ดาวน์โหลด APK แล้ว</string>
     <string name="update_apk_unavailable">ไฟล์อัปเดตที่ดาวน์โหลดใช้ไม่ได้ โปรดดาวน์โหลดอีกครั้ง</string>
+    <string name="scan_history_issue_title">ประวัติการสแกนต้องได้รับการตรวจสอบ</string>
+    <string name="scan_history_recovered">ไม่รวมบันทึกประวัติที่เสียหาย %1$d รายการแล้ว ไฟล์ต้นฉบับถูกเก็บไว้ในไดเรกทอรีประวัติการสแกนส่วนตัวในชื่อ %2$s และกู้คืนรายการที่ถูกต้องแล้ว</string>
+    <string name="scan_history_failed">ไม่สามารถโหลดหรือบันทึกประวัติการสแกนได้ (%1$s) ไฟล์เดิมไม่ได้ถูกลบ อาจไม่สามารถบันทึกประวัติใหม่ได้จนกว่าจะเข้าถึงพื้นที่จัดเก็บได้อีกครั้ง</string>
+    <string name="startup_preparing_detail">กำลังโหลดสถานะการยอมรับก่อนตรวจสอบนโยบายเริ่มต้น</string>
+    <string name="startup_ui_style_title">รูปแบบ UI</string>
+    <string name="startup_ui_style_detail">เลือกเอนจิน UI ที่ Duck Detector ใช้ คุณสามารถเปลี่ยนภายหลังได้ในการตั้งค่า</string>
+    <string name="startup_ui_style_material">Material 3</string>
+    <string name="startup_ui_style_miuix">MIUIX</string>
+    <string name="detector_manage_permissions">จัดการสิทธิ์ของแอป</string>
+    <string name="dashboard_info_card">การ์ดข้อมูล</string>
+    <string name="dashboard_system_time">เวลาของระบบ</string>
+    <string name="dashboard_additional">ข้อมูลเพิ่มเติม</string>
+    <string name="dashboard_detectors">ตัวตรวจจับ</string>
+    <string name="card_action_view_details">ดูรายละเอียด</string>
+    <string name="card_action_review_evidence">ตรวจสอบหลักฐาน</string>
+    <string name="card_action_certificate_chain">สายใบรับรอง</string>
+    <string name="device_blacklist_toast">ไม่รองรับอุปกรณ์ HUAWEI</string>
+    <string name="device_blacklist_title">อุปกรณ์ที่ไม่รองรับ</string>
+    <string name="device_blacklist_message">อุปกรณ์ %1$s ถูกบล็อกตามรายการปัจจุบัน</string>
+    <string name="device_blacklist_close">Duck Detector จะปิดตัวลง</string>
+    <string name="notification_scan_progress_channel_name">ความคืบหน้าการสแกน</string>
+    <string name="notification_scan_progress_channel_description">ความคืบหน้าการสแกนทั้งหมดของ Duck Detector และผลการประเมินสุดท้ายบนแดชบอร์ด</string>
+    <string name="notification_scanning_title">กำลังสแกน %1$d/%2$d</string>
 </resources>

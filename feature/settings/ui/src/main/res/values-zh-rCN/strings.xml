@@ -86,4 +86,16 @@ limitations under the License.
     <string name="update_status_idle">冷启动后会检查 GitHub Main Nightly，点按可立即检查</string>
     <string name="settings_section_appearance">外观</string>
     <string name="settings_manage_permissions">管理应用权限</string>
+    <string name="author_summary_947409161">乌克兰语翻译</string>
+    <string name="author_summary_alex">SELinux(C++, Kotlin)</string>
+    <string name="author_summary_coolzyd">内核检测</string>
+    <string name="author_summary_default">贡献者</string>
+    <string name="author_summary_hsskyboy">仓库修复、内核检测</string>
+    <string name="author_summary_lingqing">TEE</string>
+    <string name="author_summary_mirin">UI</string>
+    <string name="author_summary_searchur">仪表盘、危险应用和 Zygisk</string>
+    <string name="author_summary_sqmy">Kotlin</string>
+    <string name="author_summary_victor">CI</string>
+    <string name="author_summary_wuying">验证了针对“KSU throne hunt”行为的检测方案可行性。</string>
+    <string name="author_summary_zg089">阿拉伯语翻译</string>
 </resources>

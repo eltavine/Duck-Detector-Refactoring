@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="root_managers_section_matches">相符的 Root 管理器</string>
+    <string name="root_managers_section_profiles">設定檔</string>
+    <string name="root_managers_diagnostic_clipboard_label">Root 管理器診斷詳情</string>
+    <string name="installer_canary_title">實驗性權限所有者探測</string>
+    <string name="installer_canary_headline">檢查是否殘留 Root 管理器權限名稱</string>
+    <string name="installer_canary_detail">執行一個預期會被拒絕的安裝檢查。需要已有的安裝授權，且可能受到裝置限制。相符結果只能確定權限所有者，不能證明裝置具有 Root 權限。</string>
+    <string name="installer_canary_allow">啟用可選檢查</string>
+    <string name="installer_canary_decline">保持停用</string>
+    <string name="installer_canary_granted">已啟用可選安裝檢查</string>
+    <string name="installer_canary_disabled">已停用</string>
+    <string name="installer_canary_declined_detail">仍可執行套件及簽名憑證檢查。</string>
+    <string name="root_managers_section_scan">掃描摘要</string>
+    <string name="root_managers_section_impact">影響</string>
+    <string name="root_managers_section_detection_methods">偵測方法</string>
+</resources>

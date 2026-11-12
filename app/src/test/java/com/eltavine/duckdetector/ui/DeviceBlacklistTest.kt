@@ -31,7 +31,7 @@ class DeviceBlacklistTest {
         )
 
         requireNotNull(match)
-        assertEquals("HUAWEI devices are not supported.", match.message)
+        assertEquals("HUAWEI", match.manufacturer)
     }
 
     @Test

@@ -227,6 +227,7 @@ private fun TeeDetailsMaterialBody(exportText: String) {
                             fontFamily = FontFamily.Monospace,
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
+                        localize = false,
                     )
                 }
             }

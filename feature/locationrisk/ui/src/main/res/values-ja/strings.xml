@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">キャッシュ済み位置情報の診断</string>
+    <string name="location_cache_headline">キャッシュされた模擬位置情報のメタデータを確認しますか？</string>
+    <string name="location_cache_detail">既定ではオフです。フォアグラウンドでのおおよその位置情報の権限を使用し、1 回のスキャンで最大 3 件のキャッシュ済み位置情報を読み取ります。レポートに含めるのは模擬位置のマーカーと経過時間の区分だけです。Android オブジェクトに座標が一時的に存在しても、読み取り、保存、エクスポートは行いません。新しい位置測定、バックグラウンド追跡、通信は行いません。ローカルの合成チェックはこの設定なしでも使用できます。</string>
+    <string name="location_cache_allow">有効にして権限をリクエスト</string>
+    <string name="location_cache_decline">オフのままにする</string>
+    <string name="location_cache_granted_headline">キャッシュ診断を有効にしました</string>
+    <string name="location_cache_granted_detail">OS の権限と位置情報プロバイダーの利用可能性による制限は残ります。アクセス拒否は個別に報告されます。下で権限を管理し、設定からいつでも無効にできます。</string>
+    <string name="location_cache_declined_status">オフ</string>
+    <string name="location_cache_declined_headline">キャッシュ診断はオフです</string>
+    <string name="location_cache_declined_detail">ローカルの合成チェックは引き続き利用できます。キャッシュされたメタデータは後から設定で有効にできます。</string>
+    <string name="location_cache_setting_summary">キャッシュ済み模擬位置マーカーと経過時間の区分を任意で使用します。フォアグラウンドのおおよその位置情報の権限のみ使用し、座標や新たな位置測定は取得しません。</string>
+</resources>

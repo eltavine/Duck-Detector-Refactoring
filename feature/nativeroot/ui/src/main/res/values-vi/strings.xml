@@ -1,0 +1,35 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="native_root_diagnostic_clipboard_label">Chi tiết chẩn đoán Native Root</string>
+    <string name="srcu_timing_title">Đo thời gian fsnotify thử nghiệm</string>
+    <string name="srcu_timing_headline">Chạy chẩn đoán thời gian cục bộ tùy chọn</string>
+    <string name="srcu_timing_detail">Trên hệ thống được hỗ trợ, thử nghiệm này liên tục ghi lại một quyền động riêng tư và đo thời gian đóng watch. Nó có thể làm chậm thao tác gói khi chạy. Trên kernel cũ hoặc đã chỉnh sửa có lỗi đảo thứ tự khóa đã biết, thao tác ghi cưỡng bức có thể gây deadlock làm thiết bị treo và phải buộc khởi động lại; giới hạn thời gian của tiến trình riêng không ngăn được điều đó. Kết quả chỉ là bằng chứng bổ trợ và cần hiệu chuẩn trên thiết bị.</string>
+    <string name="srcu_timing_allow">Bật thử nghiệm</string>
+    <string name="srcu_timing_decline">Tiếp tục tắt</string>
+    <string name="srcu_timing_granted">Đã bật chẩn đoán thử nghiệm</string>
+    <string name="srcu_timing_disabled">Đã tắt</string>
+    <string name="srcu_timing_declined_detail">Thử nghiệm thời gian tùy chọn sẽ không chạy. Các phép dò Native Root khác vẫn tiếp tục.</string>
+    <string name="nativeroot_section_native_probes">Các phép dò Native</string>
+    <string name="nativeroot_section_runtime_artifacts">Dấu vết lúc chạy</string>
+    <string name="nativeroot_section_kernel_traces">Dấu vết kernel</string>
+    <string name="nativeroot_section_property_residue">Dấu vết thuộc tính</string>
+    <string name="nativeroot_section_impact">Tác động</string>
+    <string name="nativeroot_section_detection_methods">Phương pháp phát hiện</string>
+    <string name="nativeroot_section_scan_summary">Tóm tắt quét</string>
+</resources>
