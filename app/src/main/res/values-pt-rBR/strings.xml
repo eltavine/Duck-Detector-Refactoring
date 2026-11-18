@@ -1,0 +1,119 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="scan_history_issue_title">O histórico de verificações requer atenção</string>
+    <string name="scan_history_recovered">%1$d registro(s) de histórico danificado(s) foram excluídos. O arquivo original foi preservado como %2$s no diretório privado do histórico de verificações. As entradas válidas foram restauradas.</string>
+    <string name="scan_history_failed">Não foi possível carregar ou salvar o histórico de verificações (%1$s). O arquivo existente não foi descartado. Novos registros no histórico podem não ser gravados até que o acesso ao armazenamento seja restaurado.</string>
+    <string name="navigation_home">Início</string>
+    <string name="navigation_settings">Configurações</string>
+    <string name="duck_logo_description">Logotipo do Duck Detector</string>
+    <string name="user_agreement">Termo de Uso</string>
+    <string name="disclaimer">&amp; Aviso Legal</string>
+    <string name="please_read_carefully">Leia com atenção antes de continuar</string>
+    <string name="agreement_risk_title">Lembrete de uso de alto risco</string>
+    <string name="agreement_risk_body_emphasis">Não trate nenhum resultado isolado como uma conclusão legal, de conformidade, de garantia ou de segurança definitiva.</string>
+    <string name="agreement_risk_body_template">O Duck Detector fornece apenas sinais de referência. %1$s Sempre combine a saída do app com verificação manual, evidências da fonte e sua própria avaliação de risco antes de agir.</string>
+    <string name="user_agreement_title">Termo de Uso</string>
+    <string name="user_agreement_content" formatted="false">Ao usar o Duck Detector, você concorda com os seguintes termos:\n\n1. Finalidade de uso\nEste aplicativo foi concebido exclusivamente para fins educacionais e de avaliação de segurança pessoal. Ele ajuda os usuários a compreender o estado de segurança dos próprios dispositivos.\n\n2. Sem garantia\nEste aplicativo é fornecido \"no estado em que se encontra\", sem quaisquer garantias, expressas ou implícitas. Os desenvolvedores não garantem a exatidão, integridade ou confiabilidade dos resultados de detecção.\n\n3. Responsabilidade do usuário\nVocê é o único responsável pela forma como usa este aplicativo e por quaisquer consequências que possam surgir do seu uso.\n\n4. Conformidade com as leis\nVocê concorda em usar este aplicativo em conformidade com todas as leis e regulamentos locais, nacionais e internacionais aplicáveis.</string>
+    <string name="disclaimer_title">Aviso Legal</string>
+    <string name="disclaimer_content" formatted="false">AVISO IMPORTANTE:\n\n1. Limitações da detecção\nO Duck Detector usa vários métodos para detectar o estado de segurança do dispositivo, mas nenhum método de detecção é 100&#37; preciso. Os resultados devem ser considerados indicadores, e não avaliações definitivas.\n\n2. Falsos positivos e falsos negativos\nO aplicativo pode produzir falsos positivos ou falsos negativos. Sempre utilize ferramentas de segurança profissionais e sua própria verificação para uma avaliação abrangente.\n\n3. Isenção de responsabilidade\nOs desenvolvedores, colaboradores e distribuidores do Duck Detector não poderão ser responsabilizados por quaisquer danos diretos, indiretos, incidentais, especiais ou consequenciais decorrentes do uso ou da impossibilidade de uso deste aplicativo.\n\n4. Serviços de terceiros\nAs verificações de revogação do TEE usam um instantâneo integrado por padrão. Se você permitir a atualização de revogação on-line, o app poderá contatar o endpoint de revogação do Google Attestation. As próprias verificações de segurança continuam sendo executadas localmente no seu dispositivo, e os achados dos detectores não são enviados intencionalmente como telemetria de verificação.</string>
+    <string name="privacy_notice_title">Aviso de Privacidade</string>
+    <string name="privacy_notice_content" formatted="false">Resumo de privacidade: as verificações de segurança são executadas localmente no seu dispositivo. Os achados dos detectores não são enviados intencionalmente como telemetria de verificação. As verificações de revogação do TEE usam um instantâneo integrado por padrão; se você permitir a atualização de revogação on-line, o app poderá contatar o endpoint de revogação do Google Attestation. Depois que as escolhas de inicialização forem concluídas, o app contata o GitHub uma vez por inicialização a frio para verificar os metadados de atualização Nightly. Se você ativar a aceleração do GitHub, essas requisições passam pelo serviço de terceiros gh-proxy.com.</string>
+    <string name="timer_elapsed">30 segundos decorridos</string>
+    <string name="timer_waiting">Aguarde %1$ds</string>
+    <string name="fully_reviewed">Totalmente revisado</string>
+    <string name="scroll_to_bottom">Rolar até o fim</string>
+    <string name="i_agree_continue">Concordo &amp; Continuar</string>
+    <string name="complete_all_conditions">Conclua todas as condições</string>
+    <string name="agreement_acknowledgement">Ao continuar, você reconhece que leu e concorda com estes termos.</string>
+    <string name="update_open_failed">Nenhum navegador disponível para abrir o GitHub</string>
+    <string name="update_download_failed">Não foi possível baixar ou verificar a atualização</string>
+    <string name="update_install_permission_required">Permita instalações pelo Duck Detector e toque em Instalar novamente</string>
+    <string name="update_install_failed">Não foi possível abrir o instalador de pacotes</string>
+    <string name="update_install_fallback_copied_opened">A instalação local falhou. A URL do APK foi copiada e aberta no navegador.</string>
+    <string name="update_install_fallback_copied_only">A instalação local falhou. A URL do APK foi copiada, mas nenhum navegador pôde abri-la.</string>
+    <string name="update_install_fallback_opened_only">A instalação local falhou. O navegador abriu a URL do APK, mas a cópia falhou.</string>
+    <string name="update_install_link_copied">Link de download do APK copiado</string>
+    <string name="startup_review_label">Revisão de política de inicialização</string>
+    <string name="startup_preparing_title">Preparando inicialização</string>
+    <string name="startup_preparing_detail">Carregando o estado do termo antes da revisão de política de inicialização.</string>
+    <string name="startup_before_scan_title">Antes da verificação</string>
+    <string name="startup_loading_detail">As preferências e a visibilidade do PackageManager ainda estão sendo carregadas. Os ViewModels dos detectores permanecem pausados até a conclusão.</string>
+    <string name="startup_intro_detail">Revise as notificações, as permissões opcionais dos detectores e a visibilidade de pacotes antes de verificar. Os diagnósticos opcionais podem ficar desativados. Você pode alterar essas escolhas depois em Configurações.</string>
+    <string name="startup_loading_state">Carregando o estado de inicialização…</string>
+    <string name="startup_progress_resolved">%1$d de %2$d cartões de inicialização resolvidos</string>
+    <string name="startup_loading_dependencies_title">Carregando dependências de inicialização</string>
+    <string name="startup_loading_dependencies_detail">Lendo os armazenamentos de consentimento e a visibilidade do PackageManager antes de qualquer detector iniciar.</string>
+    <string name="startup_status_ready">Pronto</string>
+    <string name="startup_status_action_required">Ação necessária</string>
+    <string name="startup_status_skipped">Ignorado</string>
+    <string name="startup_status_unsupported">Não compatível</string>
+    <string name="startup_status_waiting">Aguardando</string>
+    <string name="startup_status_regular">Regular</string>
+    <string name="startup_status_optional">Opcional</string>
+    <string name="startup_status_acknowledged">Reconhecido</string>
+    <string name="startup_status_review_later">Revisar depois</string>
+    <string name="startup_ui_style_title">Estilo da interface</string>
+    <string name="startup_ui_style_detail">Escolha o motor de interface usado pelo Duck Detector. Você pode trocá-lo depois em Configurações.</string>
+    <string name="startup_ui_style_material">Material 3</string>
+    <string name="startup_ui_style_miuix">MIUIX</string>
+    <string name="startup_notifications_title">Notificações</string>
+    <string name="startup_notifications_ready_headline">As notificações de verificação estão ativadas.</string>
+    <string name="startup_notifications_ready_detail">O Duck Detector pode publicar notificações de progresso da verificação enquanto os cartões de detector coletam evidências.</string>
+    <string name="startup_notifications_prompt_headline">Escolha se o progresso da verificação pode publicar notificações.</string>
+    <string name="startup_notifications_prompt_detail_api33">O Android %1$d exige permissão de notificação em tempo de execução. A verificação de inicialização permanece bloqueada até que você a permita ou opte explicitamente por continuar sem ela.</string>
+    <string name="startup_notifications_prompt_detail_legacy">Esta versão do Android não exige um aviso de notificação em tempo de execução, mas a política de inicialização ainda precisa registrar a sua escolha.</string>
+    <string name="startup_notifications_allow">Permitir notificações</string>
+    <string name="startup_notifications_skip">Ignorar</string>
+    <string name="startup_notifications_skipped_headline">As notificações foram ignoradas.</string>
+    <string name="startup_notifications_skipped_detail">O progresso da verificação permanecerá dentro do app até que você conceda a permissão de notificação mais tarde.</string>
+    <string name="startup_live_update_title">Live Update</string>
+    <string name="startup_live_update_unsupported_headline">As notificações contínuas promovidas não estão disponíveis nesta versão do Android.</string>
+    <string name="startup_live_update_unsupported_detail">O Duck Detector usará um caminho de notificação regular quando a permissão de notificação estiver disponível.</string>
+    <string name="startup_live_update_waiting_headline">O Live Update depende do caminho de notificação.</string>
+    <string name="startup_live_update_waiting_detail">Conceda primeiro a permissão de notificação. Se você mantiver as notificações desativadas, este cartão recorrerá apenas ao progresso regular dentro do app.</string>
+    <string name="startup_live_update_ready_headline">As notificações contínuas promovidas estão permitidas.</string>
+    <string name="startup_live_update_ready_detail">Em versões compatíveis do Android, o progresso da verificação pode aparecer pelo caminho mais rico do Live Update.</string>
+    <string name="startup_live_update_prompt_headline">Escolha se deseja usar o caminho Live Update do Android.</string>
+    <string name="startup_live_update_prompt_detail">O Duck Detector pode abrir a página do sistema para notificações contínuas promovidas. Se você ignorar isso, o progresso da verificação recorrerá a uma notificação regular.</string>
+    <string name="startup_live_update_open_settings">Abrir configurações</string>
+    <string name="startup_live_update_use_regular">Usar regular</string>
+    <string name="startup_live_update_regular_headline">As notificações regulares foram selecionadas.</string>
+    <string name="startup_live_update_regular_detail">As notificações contínuas promovidas permanecem desativadas. O progresso da verificação usará o caminho de notificação regular.</string>
+    <string name="startup_package_manager_title">PackageManager</string>
+    <string name="startup_package_restricted_headline">O inventário de pacotes parece restrito ou filtrado.</string>
+    <string name="startup_package_restricted_detail">O PackageManager expôs apenas %1$d pacotes instalados. Os Apps Perigosos e as sondas relacionadas podem subnotificar as ferramentas instaladas sob visibilidade restrita, inventário restrito ou filtragem no estilo HMA.</string>
+    <string name="startup_package_continue_anyway">Continuar mesmo assim</string>
+    <string name="startup_package_ack_headline">A visibilidade restrita do PackageManager foi reconhecida.</string>
+    <string name="startup_package_ack_detail">Contagem atual de pacotes visíveis: %1$d. Os achados de Apps Perigosos podem ser conservadores sob este escopo de inventário.</string>
+    <string name="startup_package_unavailable_headline">Não foi possível verificar o inventário do PackageManager.</string>
+    <string name="startup_package_unavailable_detail">A consulta de inventário falhou ou não incluiu este app. Os resultados de ausência baseados em pacotes serão tratados como inconclusivos.</string>
+    <string name="startup_package_low_inventory_headline">O PackageManager parece completo, mas o inventário visível é incomumente pequeno.</string>
+    <string name="startup_package_low_inventory_detail">Contagem atual de pacotes visíveis: %1$d. A inicialização continuará, mas os Apps Perigosos analisarão esta condição de inventário reduzido como possível evidência de filtragem.</string>
+    <string name="startup_package_ready_headline">O inventário do PackageManager parece completo.</string>
+    <string name="startup_package_ready_detail">Contagem atual de pacotes visíveis: %1$d. Os Apps Perigosos podem usar o caminho padrão de inventário de pacotes.</string>
+    <string name="update_apk_unavailable">A atualização baixada está indisponível; baixe-a novamente</string>
+    <string name="detector_manage_permissions">Gerenciar permissões do app</string>
+    <string name="device_blacklist_toast">Dispositivos HUAWEI não são compatíveis.</string>
+    <string name="device_blacklist_title">Dispositivo não compatível</string>
+    <string name="device_blacklist_message">Dispositivos %1$s estão bloqueados pela lista de bloqueio atual.</string>
+    <string name="device_blacklist_close">O Duck Detector será fechado agora.</string>
+    <string name="notification_scan_progress_channel_name">Progresso da verificação</string>
+    <string name="notification_scan_progress_channel_description">Progresso geral da verificação do Duck Detector e veredito final do painel.</string>
+    <string name="notification_scanning_title">Verificando %1$d/%2$d</string>
+</resources>
