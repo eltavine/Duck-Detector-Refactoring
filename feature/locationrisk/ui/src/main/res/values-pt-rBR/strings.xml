@@ -1,0 +1,13 @@
+<resources>
+    <string name="location_cache_title">Diagnóstico de localização em cache</string>
+    <string name="location_cache_headline">Inspecionar metadados simulados em cache?</string>
+    <string name="location_cache_detail">Desativado por padrão. Com a permissão de localização aproximada em primeiro plano, lê no máximo três posições de provedor em cache por verificação. Apenas marcadores de simulação e faixas de idade entram nos relatórios. As coordenadas podem existir transitoriamente em objetos do Android, mas nunca são lidas, armazenadas ou exportadas. Sem nova posição, rastreamento em segundo plano ou solicitação de rede. As verificações sintéticas locais funcionam sem esta opção.</string>
+    <string name="location_cache_allow">Ativar e solicitar permissão</string>
+    <string name="location_cache_decline">Manter desativado</string>
+    <string name="location_cache_granted_headline">Diagnóstico em cache ativado</string>
+    <string name="location_cache_granted_detail">A permissão do sistema operacional e a disponibilidade do provedor ainda se aplicam. O acesso negado é relatado separadamente. Gerencie a permissão abaixo; desative esta opção nas configurações a qualquer momento.</string>
+    <string name="location_cache_declined_status">Desativado</string>
+    <string name="location_cache_declined_headline">Diagnóstico em cache desativado</string>
+    <string name="location_cache_declined_detail">As verificações sintéticas locais continuam disponíveis. Você pode ativar os metadados em cache mais tarde nas configurações.</string>
+    <string name="location_cache_setting_summary">Marcadores de simulação em cache e faixas de idade opcionais; apenas permissão aproximada em primeiro plano. Sem coordenadas ou posições ativas.</string>
+</resources>
