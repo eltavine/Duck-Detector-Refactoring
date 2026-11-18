@@ -1,0 +1,57 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="dashboard_export_report_hint">Toque para exportar o relatório completo</string>
+    <string name="dashboard_report_saved">Relatório salvo</string>
+    <string name="dashboard_report_save_failed">Falha ao salvar: %1$s</string>
+    <string name="dashboard_report_save_failed_unknown">Falha ao salvar</string>
+    <string name="dashboard_build_time_utc">Build (UTC) · %1$s</string>
+    <string name="dashboard_loading_title">Executando verificações locais</string>
+    <string name="dashboard_loading_summary">O resumo do painel será desbloqueado quando os cartões de detector terminarem de coletar evidências.</string>
+    <string name="dashboard_severity_high">Alto</string>
+    <string name="dashboard_severity_medium">Médio</string>
+    <string name="dashboard_severity_check">Verificar</string>
+    <string name="dashboard_severity_clear">Limpo</string>
+    <string name="dashboard_version_label">%1$s (%2$d)</string>
+    <string name="dashboard_security_overview">Visão geral de segurança</string>
+    <string name="dashboard_scan_completed_title">Verificado às %1$s\nTempo total %2$s</string>
+    <string name="dashboard_duration_ms">%1$sms</string>
+    <string name="dashboard_duration_seconds">%1$ss</string>
+    <string name="dashboard_focus_pair">%1$s e %2$s</string>
+    <string name="dashboard_headline_danger">Perigo</string>
+    <string name="dashboard_headline_warning">Aviso</string>
+    <string name="dashboard_headline_info">Informação</string>
+    <string name="dashboard_headline_ready">Pronto</string>
+    <string name="dashboard_headline_pending">Pendente</string>
+    <string name="dashboard_headline_ok">OK</string>
+    <string name="dashboard_summary_danger">Comece com %1$s.</string>
+    <string name="dashboard_summary_warning">Revise %1$s em seguida.</string>
+    <string name="dashboard_summary_info">%1$s precisam de mais contexto antes de tratar os resultados como limpos.</string>
+    <string name="dashboard_summary_ready">Os cartões de detector serão preenchidos à medida que as verificações locais forem concluídas.</string>
+    <string name="dashboard_summary_pending">Módulos adicionais ainda estão coletando suas evidências locais.</string>
+    <string name="dashboard_summary_ok">Use os cartões de detector abaixo para inspecionar as evidências locais em detalhes.</string>
+    <string name="dashboard_metric_danger">Perigo</string>
+    <string name="dashboard_metric_warning">Aviso</string>
+    <string name="dashboard_metric_ready">Pronto</string>
+    <string name="dashboard_metric_pending">Pendente</string>
+    <string name="dashboard_finding_scan_status_title">Status da verificação</string>
+    <string name="dashboard_finding_scan_status_headline">Aguardando evidências do detector</string>
+    <string name="dashboard_finding_scan_status_detail">Os cartões de detector serão expandidos à medida que os módulos terminarem de coletar evidências locais.</string>
+    <string name="dashboard_finding_overview_title">Visão geral</string>
+    <string name="dashboard_finding_overview_headline">Nenhuma descoberta urgente nos módulos prontos</string>
+    <string name="dashboard_finding_overview_detail">Abra os cartões de detector abaixo para revisar evidências locais detalhadas e verificações secundárias.</string>
+</resources>
