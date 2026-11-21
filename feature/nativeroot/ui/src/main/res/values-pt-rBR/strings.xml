@@ -1,0 +1,36 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="native_root_diagnostic_clipboard_label">Detalhe de diagnóstico do Native Root</string>
+
+    <string name="nativeroot_section_native_probes">Sondas nativas</string>
+    <string name="nativeroot_section_runtime_artifacts">Artefatos de tempo de execução</string>
+    <string name="nativeroot_section_kernel_traces">Rastros do kernel</string>
+    <string name="nativeroot_section_property_residue">Resíduo de propriedades</string>
+    <string name="nativeroot_section_impact">Impacto</string>
+    <string name="nativeroot_section_detection_methods">Métodos de detecção</string>
+    <string name="nativeroot_section_scan_summary">Resumo da verificação</string>
+    <string name="srcu_timing_title">Temporização fsnotify experimental</string>
+    <string name="srcu_timing_headline">Executar um diagnóstico de temporização local opcional</string>
+    <string name="srcu_timing_detail">Em sistemas compatíveis, isto reescreve repetidamente uma permissão dinâmica privada e mede quanto tempo leva para fechar uma observação. Pode tornar as operações de pacotes mais lentas enquanto é executado. Em kernels antigos ou modificados com um bug conhecido de inversão de bloqueio, a escrita forçada pode travar o sistema, então o dispositivo pode congelar e precisar de uma reinicialização forçada; o prazo do processo privado não consegue evitar isso. Os resultados são apenas evidências de apoio e aguardam calibração do dispositivo.</string>
+    <string name="srcu_timing_allow">Ativar experimento</string>
+    <string name="srcu_timing_decline">Manter desativado</string>
+    <string name="srcu_timing_granted">Diagnóstico experimental ativado</string>
+    <string name="srcu_timing_disabled">Desativado</string>
+    <string name="srcu_timing_declined_detail">O experimento de temporização opcional não será executado. As outras sondas do Native Root continuam.</string>
+</resources>

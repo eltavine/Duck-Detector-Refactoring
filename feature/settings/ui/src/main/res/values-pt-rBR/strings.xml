@@ -1,0 +1,101 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="settings_important_title">Importante</string>
+    <string name="settings_important_why">Por que o Duck Detector?</string>
+    <string name="settings_important_intro">O Duck Detector é uma ferramenta de inspeção do ambiente de dispositivos Android semelhante ao Momo.</string>
+    <string name="settings_important_context">Embora obcecar-se com o fato de um ambiente de dispositivo ser \"normal\" possa ser excessivo, alguns apps e serviços de fato tratam os usuários de forma diferente com base na integridade do dispositivo, no ambiente do sistema e em outros sinais de risco.</string>
+    <string name="settings_important_consequences">Isso pode envolver verificação de identidade adicional, restrições de recursos, negação de serviço ou controles de risco opacos. Você pode não receber uma notificação clara nem saber por que seu dispositivo está sendo tratado de forma diferente.</string>
+    <string name="settings_important_goal">O Duck Detector tem como objetivo tornar visíveis esses sinais de ambiente de dispositivo que, de outra forma, seriam opacos.</string>
+    <string name="settings_important_evidence">Fornecemos descobertas de diagnóstico e evidências de apoio, em vez de decidir, em nome de apps de terceiros, se seu dispositivo deve ser confiável.</string>
+    <string name="author_wall_title">Colaboradores</string>
+    <string name="author_wall_hint">Arraste para explorar · Pince para ampliar · Toque para detalhes</string>
+    <string name="author_wordmark_hint">Pince para explorar letras dos nomes dos colaboradores</string>
+    <string name="author_view_details">Ver detalhes</string>
+    <string name="author_view_github">Ver no GitHub</string>
+    <string name="author_details_close">Fechar</string>
+    <string name="about_clipboard_build_hash_line">Hash do build: %1$s</string>
+    <string name="about_clipboard_build_time_line">Horário do build (UTC): %1$s UTC</string>
+    <string name="about_clipboard_label">Informações de build do Duck Detector</string>
+    <string name="about_clipboard_version_line">Versão: %1$s (%2$d)</string>
+    <string name="about_copy_build_info_summary">Copiar versão, horário do build e hash do build</string>
+    <string name="about_copy_toast">Informações de build copiadas</string>
+    <string name="about_label_build_hash">Hash do build</string>
+    <string name="about_label_build_time">Horário do build</string>
+    <string name="about_label_copy_build_info">Copiar informações de build</string>
+    <string name="about_label_email">E-mail</string>
+    <string name="about_label_privacy">Privacidade / Uso de dados</string>
+    <string name="about_label_version">Versão</string>
+    <string name="about_label_website">Site</string>
+    <string name="about_privacy_summary">As verificações são executadas localmente no dispositivo e as descobertas não são enviadas. O app contata o GitHub uma vez por inicialização a frio para obter metadados de atualização Nightly, através do gh-proxy.com enquanto a aceleração do GitHub estiver ativada. A atualização de CRL on-line permanece opcional.</string>
+    <string name="about_subtitle">Links do projeto e metadados de build.</string>
+    <string name="about_title">Sobre</string>
+    <string name="about_value_build_time">%1$s UTC</string>
+    <string name="about_value_version">%1$s (%2$d)</string>
+    <string name="author_summary_5ec1cff">Descoberta de falso-positivo do SELinux e LSPosed</string>
+    <string name="author_summary_947409161">Tradução para ucraniano</string>
+    <string name="author_summary_alex">SELinux (C++, Kotlin)</string>
+    <string name="author_summary_aviraxp">Relatório de falso-positivo do SELinux e LSPosed</string>
+    <string name="author_summary_baka">TEE &amp; Zygisk</string>
+    <string name="author_summary_coolzyd">Kernel Check</string>
+    <string name="author_summary_default">Colaborador</string>
+    <string name="author_summary_eltavine">Contribuiu com UI, C++, ASM e Kotlin.</string>
+    <string name="author_summary_hsskyboy">Correções no repositório, Kernel Check</string>
+    <string name="author_summary_lingqing">TEE</string>
+    <string name="author_summary_mirin">UI</string>
+    <string name="author_summary_qwq233">TEE</string>
+    <string name="author_summary_searchur">Dashboard, Dangerous Apps e Zygisk</string>
+    <string name="author_summary_sinanb9">Relatório de crash do zygote de app do SELinux e rastros do kernel</string>
+    <string name="author_summary_sqmy">Kotlin</string>
+    <string name="author_summary_victor">CI</string>
+    <string name="author_summary_wuying">Verificou a viabilidade do esquema de detecção para o comportamento "KSU throne hunt".</string>
+    <string name="author_summary_wxx">CI (Kotlin)</string>
+    <string name="author_summary_xiaotong">TEE (C++, Kotlin)</string>
+    <string name="author_summary_zg089">Tradução para árabe</string>
+    <string name="github_acceleration_footer">O gh-proxy.com é um serviço de terceiros. Enquanto estiver ativado, as verificações de atualização e os downloads Nightly passam por ele em vez de se conectar diretamente ao GitHub. Ele não consegue retransmitir comparações de commits, então a caixa de diálogo de atualização pode listar apenas o commit mais recente.</string>
+    <string name="github_acceleration_summary">Usar o gh-proxy.com de terceiros para atualizações Nightly; comparações de commits podem ficar indisponíveis, então apenas o commit mais recente pode ser exibido</string>
+    <string name="github_acceleration_title">Aceleração do GitHub</string>
+    <string name="licenses_dialog_close">Fechar</string>
+    <string name="licenses_dialog_home_page">Página inicial</string>
+    <string name="licenses_dialog_no_license_text">Nenhum texto de licença disponível.</string>
+    <string name="licenses_dialog_open">Abrir</string>
+    <string name="licenses_dialog_source_repo">Repositório de código</string>
+    <string name="licenses_dialog_version">Versão %1$s</string>
+    <string name="licenses_entry_subtitle">Explore os projetos de terceiros incluídos e inspecione seus avisos de licença</string>
+    <string name="licenses_entry_title">Bibliotecas de código aberto</string>
+    <string name="licenses_inventory_subtitle">Toque em qualquer dependência para inspecionar o texto da licença e os links do projeto upstream</string>
+    <string name="licenses_inventory_title">Inventário de bibliotecas incluídas</string>
+    <string name="licenses_screen_back">Voltar</string>
+    <string name="licenses_screen_subtitle">Componentes de terceiros incluídos neste build</string>
+    <string name="licenses_screen_title">Licenças de código aberto</string>
+    <string name="settings_section_detection">Opções de detecção</string>
+    <string name="settings_section_network">Rede</string>
+    <string name="settings_section_appearance">Aparência</string>
+    <string name="settings_ui_style_title">Estilo da interface</string>
+    <string name="settings_ui_style_description">Escolha a aparência do Duck Detector</string>
+    <string name="settings_style_miuix">MIUIX</string>
+    <string name="settings_style_material">Material 3</string>
+    <string name="settings_title">Configurações</string>
+    <string name="update_settings_label">Verificar atualizações</string>
+    <string name="update_status_available">Um build Nightly mais recente está disponível, toque para detalhes</string>
+    <string name="update_status_checking">Verificando o GitHub…</string>
+    <string name="update_status_current">Você tem o build Nightly mais recente</string>
+    <string name="update_status_failed">Não foi possível verificar o GitHub, toque para tentar novamente</string>
+    <string name="update_status_idle">Verifica o Main Nightly no GitHub após uma inicialização a frio, toque para verificar agora</string>
+    <string name="settings_manage_permissions">Gerenciar permissões do app</string>
+</resources>

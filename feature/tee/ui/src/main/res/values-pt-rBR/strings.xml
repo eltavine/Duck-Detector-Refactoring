@@ -1,0 +1,71 @@
+<!--
+Copyright 2026 Duck Apps Contributor
+If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+    <string name="tee_diagnostic_clipboard_label">Detalhe de diagnóstico do TEE</string>
+    <string name="tee_revocation_network_title">Atualização on-line de CRL</string>
+    <string name="tee_revocation_network_prompt_headline">Escolha se as verificações de revogação do TEE podem buscar atualizações on-line.</string>
+    <string name="tee_revocation_network_prompt_detail">O Duck Detector sempre verifica o snapshot de revogação integrado. Permitir a rede faz com que ele busque o feed de revogação de Attestation mais recente do Google durante a validação do TEE.</string>
+    <string name="tee_revocation_network_allow">Permitir atualização</string>
+    <string name="tee_revocation_network_decline">Apenas integrado</string>
+    <string name="tee_revocation_network_granted_headline">A atualização on-line de CRL está permitida.</string>
+    <string name="tee_revocation_network_granted_detail">A validação do TEE verifica o snapshot integrado e pode atualizar o feed de revogação de Attestation do Google sempre que as condições de rede permitirem.</string>
+    <string name="tee_revocation_network_declined_status">Local</string>
+    <string name="tee_revocation_network_declined_headline">As verificações de revogação do TEE usam o snapshot integrado.</string>
+    <string name="tee_revocation_network_declined_detail">O Duck Detector não realizará a atualização on-line de CRL até que você a reative nas Configurações. As verificações de revogação integradas permanecem ativas.</string>
+    <string name="tee_revocation_network_setting_title">Permitir atualização on-line de CRL</string>
+    <string name="tee_revocation_network_setting_summary">As verificações de revogação integradas do TEE permanecem ativadas; isto apenas permite buscar os dados de revogação mais recentes do Google</string>
+    <string name="tee_revocation_network_setting_footer">As alterações se aplicam imediatamente ao comportamento de atualização on-line. As verificações de revogação integradas do TEE permanecem ativadas.</string>
+    <string name="tee_dialog_close">Fechar</string>
+
+    <string name="tee_details_title">Detalhes do TEE</string>
+    <string name="tee_details_summary">Exportação estruturada para depuração, compartilhamento e verificação manual.</string>
+    <string name="tee_details_snapshot_title">Snapshot de Attestation atual</string>
+    <string name="tee_details_snapshot_summary">Revise a exportação de Attestation atual para depuração, compartilhamento de evidências e verificação manual.</string>
+    <string name="tee_details_metric_lines">Linhas</string>
+    <string name="tee_details_metric_certificates">Certificados</string>
+    <string name="tee_details_no_export">Nenhuma exportação disponível</string>
+    <string name="tee_details_no_export_summary">Execute o detector novamente após uma passagem completa de Attestation para preencher o relatório bruto do TEE.</string>
+    <string name="tee_details_no_export_summary_short">Execute o detector novamente após uma passagem completa de Attestation.</string>
+    <string name="tee_details_report_body">Corpo do relatório normalizado</string>
+    <string name="tee_details_report_body_summary">Otimizado para inspeção e copiar/colar.</string>
+    <string name="tee_details_report_body_summary_selectable">Texto normalizado selecionável para inspeção e copiar/colar.</string>
+    <string name="tee_details_section_overview">Visão geral</string>
+    <string name="tee_details_section_report">Relatório</string>
+
+    <string name="tee_certificate_chain_title">Cadeia de certificados</string>
+    <string name="tee_certificate_chain_summary">Certificados de Attestation expostos pela verificação atual.</string>
+    <string name="tee_certificate_none_available">Nenhum certificado disponível</string>
+    <string name="tee_certificate_none_available_summary">Esta verificação não expôs uma cadeia de certificados de Attestation válida.</string>
+    <string name="tee_certificate_chain_overview">Visão geral da cadeia</string>
+    <string name="tee_certificate_chain_order">Ordem</string>
+    <string name="tee_certificate_chain_order_leaf_root">Folha → Raiz</string>
+    <string name="tee_certificate_count">%1$s certificados</string>
+    <string name="tee_certificate_leaf">Folha</string>
+    <string name="tee_certificate_root">Raiz</string>
+    <string name="tee_certificate_none">Nenhum</string>
+    <string name="tee_certificate_section_identity">Identidade</string>
+    <string name="tee_certificate_section_crypto">Criptografia</string>
+    <string name="tee_certificate_section_validity">Validade</string>
+    <string name="tee_certificate_field_subject">Assunto</string>
+    <string name="tee_certificate_field_issuer">Emissor</string>
+    <string name="tee_certificate_field_serial_number">Número de série</string>
+    <string name="tee_certificate_field_public_key">Chave pública</string>
+    <string name="tee_certificate_field_signature_algorithm">Algoritmo de assinatura</string>
+    <string name="tee_certificate_field_active_window">Janela ativa</string>
+    <string name="tee_certificate_active_window_value">%1$s a %2$s</string>
+</resources>
