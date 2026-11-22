@@ -61,6 +61,10 @@ internal object SelinuxRawAccess {
 
     /** Like DirtySepolicy's first contextExists step; EINVAL means an invalid context. */
     fun contextNode(context: String): String {
+        if (SelinuxContextValidityBridge.isNativeLibraryLoaded) {
+            return nativeContextNode(context)
+        }
+        // DirtySepolicy also supports the Kotlin-only carrier when JNI is unavailable.
         val fd = try {
             Os.open("/sys/fs/selinux/context", OsConstants.O_WRONLY or OsConstants.O_CLOEXEC, 0)
         } catch (error: ErrnoException) {
@@ -75,4 +79,14 @@ internal object SelinuxRawAccess {
             Os.close(fd)
         }
     }
+
+    fun measureKsuContextTiming(): List<Long> {
+        if (!SelinuxContextValidityBridge.isNativeLibraryLoaded) return emptyList()
+        return runCatching { nativeMeasureKsuContextTiming()?.toList().orEmpty() }
+            .getOrDefault(emptyList())
+    }
+
+    private external fun nativeContextNode(context: String): String
+
+    private external fun nativeMeasureKsuContextTiming(): LongArray?
 }

@@ -17,6 +17,7 @@
 
 #include "tee/common/syscall_facade.h"
 
+#include "common/arm64_counter.h"
 #include "tee/common/local_timer.h"
 #include "tee/common/local_timer_internal.h"
 
@@ -46,11 +47,6 @@ namespace ducktee::common {
         constexpr bool kAsmBackendCompiled = true;
 #else
         constexpr bool kAsmBackendCompiled = false;
-#endif
-
-#if defined(__aarch64__)
-        extern "C" unsigned long long tee_arm64_read_cntvct();
-        extern "C" unsigned long long tee_arm64_read_cntfrq();
 #endif
 
         SyscallCallResult make_unavailable_result() {
@@ -106,7 +102,7 @@ namespace ducktee::common {
             if (out_counter == nullptr) {
                 return false;
             }
-            const auto counter = tee_arm64_read_cntvct();
+            const auto counter = duckdetector::common::arm64_counter::read_ticks();
             if (counter == 0ULL) {
                 return false;
             }
@@ -114,48 +110,12 @@ namespace ducktee::common {
             return true;
         }
 
-        constexpr std::uint64_t kNanosPerSecond = 1'000'000'000ULL;
-
-        /**
-         * CNTFRQ_EL0.ClockFreq is bits [31:0] and the remaining bits are RES0, so the effective
-         * frequency in Hz never exceeds this. Arm ARM D12.1.2 also notes the register is UNKNOWN at
-         * reset and is written by firmware at the highest Exception level rather than populated by
-         * hardware, so its value is not trustworthy on its own and is bounded here before use.
-         */
-        constexpr std::uint64_t kCntfrqClockFreqMask = 0xffff'ffffULL;
-
-        /** Largest whole-second count that still leaves room for a sub-second remainder in 64 bits. */
-        constexpr std::uint64_t kMaxConvertibleSeconds =
-                (UINT64_MAX - (kNanosPerSecond - 1ULL)) / kNanosPerSecond;
-
         std::uint64_t arm64_effective_frequency_hz() {
-            return tee_arm64_read_cntfrq() & kCntfrqClockFreqMask;
+            return duckdetector::common::arm64_counter::frequency_hz();
         }
 
         bool arm64_cntvct_now(std::uint64_t *out_ns) {
-            if (out_ns == nullptr) {
-                return false;
-            }
-            const std::uint64_t frequency = arm64_effective_frequency_hz();
-            std::uint64_t counter = 0;
-            if (frequency == 0ULL || !arm64_cntvct_raw(&counter)) {
-                return false;
-            }
-
-            // Whole seconds are converted separately because counter * kNanosPerSecond overflows 64
-            // bits once the counter passes 2^64/1e9. Arm ARM D12.1.2 fixes the effective frequency at
-            // 1GHz from Armv8.6, where that is roughly 18 seconds of counter uptime, and a typical
-            // Armv8.0-v8.5 counter in the 1-50MHz range reaches it within minutes. Wrapping there
-            // produced absolute timestamps that were nonsense and deltas that broke whenever a
-            // measurement straddled the wrap. After the split the remainder stays below the
-            // frequency, which the mask above bounds to 32 bits, so that multiplication is in range.
-            const std::uint64_t seconds = counter / frequency;
-            const std::uint64_t remainder = counter % frequency;
-            if (seconds > kMaxConvertibleSeconds) {
-                return false;
-            }
-            *out_ns = seconds * kNanosPerSecond + (remainder * kNanosPerSecond) / frequency;
-            return true;
+            return duckdetector::common::arm64_counter::read_time_ns(out_ns);
         }
 #endif
 

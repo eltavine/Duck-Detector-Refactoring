@@ -43,6 +43,8 @@ class SelinuxContextValidityPayloadCodecTest {
             fileNegativeControlRejected = true,
             oracleControlsPassed = true,
             ksuResultsStable = true,
+            ksuTimingBatchDifferencesNs =
+                List(9) { (it - 4) * 1_000_000L } + 900L + List(18) { it.toLong() } + 1_500L,
             queryMethod = "raw selinuxfs write",
             ksuDomainValid = true,
             ksuFileValid = false,
@@ -131,6 +133,7 @@ class SelinuxContextValidityPayloadCodecTest {
         assertTrue(parsed.fileNegativeControlRejected == true)
         assertTrue(parsed.oracleControlsPassed)
         assertTrue(parsed.ksuResultsStable)
+        assertEquals(snapshot.ksuTimingBatchDifferencesNs, parsed.ksuTimingBatchDifferencesNs)
         assertEquals(snapshot.queryMethod, parsed.queryMethod)
         assertTrue(parsed.ksuDomainValid == true)
         assertTrue(parsed.ksuFileValid == false)

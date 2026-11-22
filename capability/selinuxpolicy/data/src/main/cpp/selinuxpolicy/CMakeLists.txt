@@ -3,6 +3,8 @@ duckdetector_native_unit(duckdetector_selinuxpolicy
     context_validity_probe.cpp
     context_validity_symbols.cpp
     context_validity_native_bridge.cpp
+    ksu_types_timing.cpp
+    raw_context_node.cpp
     dirty_policy_probe.cpp
     selinux_status_page_native_bridge.cpp
     sidtab_probe.cpp

@@ -32,6 +32,7 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
 import com.eltavine.duckdetector.features.selinux.domain.contextValidityResult
 import com.eltavine.duckdetector.features.selinux.domain.contextValiditySupportState
 import com.eltavine.duckdetector.features.selinux.domain.firstTrustedPolicyRuleHit
+import com.eltavine.duckdetector.features.selinux.domain.ksuContextTimingDetected
 import com.eltavine.duckdetector.features.selinux.domain.policyloadSeqnoResult
 import com.eltavine.duckdetector.features.selinux.domain.procAttrCurrentResult
 import com.eltavine.duckdetector.features.selinux.presentation.model.SelinuxHeaderFact
@@ -83,6 +84,7 @@ internal fun buildVerdict(report: SelinuxReport): String {
                     "Enforcing with SELinux attr/current timing anomaly"
                 report.methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.dirtySepolicyDanger } ->
                     "Enforcing with DirtySepolicy anomaly"
+                report.ksuContextTimingDetected() -> "Enforcing with KSU context timing anomaly"
                 dirtyPolicyHit != null -> trustedPolicyRuleVerdict()
                 dirtySepolicyCompatibility != null -> "Enforcing with DirtySepolicy anomaly"
                 appZygoteCarrierState == AppZygoteCarrierSupportState.UNTRUSTED ->
@@ -114,6 +116,7 @@ internal fun buildVerdict(report: SelinuxReport): String {
             SelinuxMode.DISABLED -> "Disabled"
             SelinuxMode.UNKNOWN -> when {
                 dirtySepolicyCompatibility != null -> "SELinux mode unknown with DirtySepolicy anomaly"
+                report.ksuContextTimingDetected() -> "SELinux mode unknown with KSU context timing anomaly"
                 appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ->
                     "App Zygote carrier startup failure; SELinux mode unknown"
                 else -> "Unknown"
@@ -162,6 +165,9 @@ internal fun buildSummary(report: SelinuxReport): String {
                         }
                 }
                 val extra = buildList {
+                    if (report.ksuContextTimingDetected()) {
+                        add("KSU and invalid SELinux contexts had different query timings.")
+                    }
                     if (report.paradoxDetected) {
                         add("Permission-denied probes also reinforced the enforcing verdict.")
                     }

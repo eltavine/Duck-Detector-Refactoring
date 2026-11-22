@@ -24,7 +24,9 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityAn
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditIntegrityState
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditNote
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditNoteKind
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
 import org.junit.Assert.assertEquals
@@ -35,6 +37,25 @@ import org.junit.Test
 class SelinuxCardModelMapperTest {
 
     private val mapper = SelinuxCardModelMapper()
+
+    @Test
+    fun `KSU timing count threshold maps to danger in the card and method row`() {
+        val result = SelinuxCheckResult(
+            method = SelinuxOracle.KSU_CONTEXT_TIMING.label,
+            status = "A>B: ksu 10134/13500",
+            isSecure = false,
+            permissionDenied = false,
+            oracle = SelinuxOracle.KSU_CONTEXT_TIMING,
+        )
+        val report = SelinuxReport.loading().copy(
+            stage = SelinuxStage.READY,
+            mode = SelinuxMode.ENFORCING,
+            methods = listOf(result),
+        )
+        val model = mapper.map(report)
+        assertEquals(DetectionSeverity.DANGER, model.status.severity)
+        assertEquals(DetectionSeverity.DANGER, model.methodRows.single().status.severity)
+    }
 
     @Test
     fun `audit exposure maps to warning instead of root claim`() {

@@ -4,6 +4,7 @@ package com.eltavine.duckdetector.capability.selinuxpolicy.data
 import com.eltavine.duckdetector.core.native.NativeLibraryHandle
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -201,6 +202,32 @@ class SelinuxAvcLookupPayloadTest {
         })).inspect()
         assertEquals(SelinuxAvcLookupState.UNAVAILABLE, snapshot.state)
         assertTrue(snapshot.failureReason!!.contains("dlopen failed"))
+    }
+
+    @Test fun `parent timing begins at Linux 5 point 10`() {
+        for (release in listOf("4.19.312", "5.4.300-gki", "5.9.99-android")) {
+            assertFalse(release, isAppZygoteParentTimingKernelEnabled(release))
+        }
+        for (release in listOf("5.10", "5.10.246-android12", "5.10-rc1", "5.11.1", "5.15.190-android13", "6.1.100", "6.10.0", null)) {
+            assertTrue(release, isAppZygoteParentTimingKernelEnabled(release))
+        }
+    }
+
+    @Test fun `older kernels skip parent timing while AVC collection still runs`() {
+        for ((release, expectedCollections) in listOf("5.9.99-android" to 1, "5.10.246-android12" to 2)) {
+            var collections = 0
+            val collector = NativeSnapshotCollector(object : NativeLibraryHandle {
+                override val isLoaded: Boolean get() {
+                    collections++
+                    return false
+                }
+                override val loadFailureDetail = "test library unavailable"
+            })
+            val snapshot = SelinuxAvcLookupProbe(collector, kernelRelease = { release }).inspect()
+            assertEquals(release, expectedCollections, collections)
+            assertEquals(SelinuxAvcLookupState.UNAVAILABLE, snapshot.state)
+            assertFalse(snapshot.parentTiming.attempted)
+        }
     }
 
     @Test fun `a later preload failure keeps a finished experiment`() {

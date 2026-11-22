@@ -24,7 +24,9 @@ import com.eltavine.duckdetector.core.platform.PathState
 import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.platform.PathStat
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.KsuTypesTimingProbe
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValidityCarrierManager
+import com.eltavine.duckdetector.capability.selinuxpolicy.data.isAppZygoteParentTimingKernelEnabled
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxAuditRuntimeProbe
 import com.eltavine.duckdetector.features.selinux.data.probes.buildSelinuxHideTimingMethod
 import com.eltavine.duckdetector.features.selinux.data.native.SelinuxHideTimingNativeBridge
@@ -69,6 +71,7 @@ class SelinuxRepository(
         val auditIntegrity = analyzeAuditIntegrity()
 
         if (filesystemResult.status == FILESYSTEM_NOT_MOUNTED) {
+            methods += KsuTypesTimingProbe.interpret(null)
             return SelinuxReport(
                 stage = SelinuxStage.READY,
                 mode = SelinuxMode.DISABLED,
@@ -101,11 +104,19 @@ class SelinuxRepository(
         val carrierResult = contextValidityProbe.interpret(carrierSnapshot)
         val contextValidityResult = carrierResult
         methods += buildContextValidityMethod(contextValidityResult)
+        methods += KsuTypesTimingProbe.interpret(
+            carrierSnapshot.ksuTimingBatchDifferencesNs.takeIf {
+                carrierSnapshot.available && carrierSnapshot.carrierMatchesExpected &&
+                    carrierSnapshot.probeAttempted
+            },
+        )
         methods += buildPolicyloadSeqnoMethod(contextValidityResult)
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)
         methods += buildAvcLookupMethod(carrierSnapshot.avcLookup)
         methods += buildStatusAbiMethod(carrierSnapshot.statusAbi)
-        methods += buildAppZygoteTimingMethod(carrierSnapshot.avcLookup)
+        if (isAppZygoteParentTimingKernelEnabled()) {
+            methods += buildAppZygoteTimingMethod(carrierSnapshot.avcLookup)
+        }
         methods += buildDirtyPolicyMethods(carrierSnapshot)
         methods += buildDirtyPolicyAccessProtocolMethod(carrierSnapshot)
         methods += buildSidtabMethod(carrierSnapshot.sidtab)

@@ -17,21 +17,40 @@
 
 package com.eltavine.duckdetector.capability.selinuxpolicy.data
 
+import android.system.Os
 import com.eltavine.duckdetector.core.native.NativeSnapshotCollector
+
+private val kernelVersionPrefix = Regex("""^([0-9]+)\.([0-9]+)(?=[.-]|$)""")
+
+private fun currentKernelRelease(): String? = runCatching { Os.uname().release }.getOrNull()
+
+/** The parent timing experiment requires Linux 5.10 or newer. */
+public fun isAppZygoteParentTimingKernelEnabled(kernelRelease: String? = currentKernelRelease()): Boolean {
+    val version = kernelVersionPrefix.find(kernelRelease.orEmpty()) ?: return true
+    val major = version.groupValues[1].toIntOrNull() ?: return true
+    val minor = version.groupValues[2].toIntOrNull() ?: return true
+    return major > 5 || (major == 5 && minor >= 10)
+}
 
 /** Runs an isolated B/A preflight, then the PoC parent timing, before costly AVC collection. */
 internal class SelinuxAvcLookupProbe(
     private val collector: NativeSnapshotCollector = NativeSnapshotCollector.Default,
+    private val kernelRelease: () -> String? = ::currentKernelRelease,
 ) {
     fun inspect(trace: (String) -> Unit = {}): SelinuxAvcLookupSnapshot {
-        // JNI forks a lightweight safety-check child before touching the live carrier.
-        // Running 33k AVC writes first perturbs the scheduler and invalidates PoC parity.
-        trace("AVC lightweight parent timing preflight begin")
-        val earlyParent = collector.collect(
-            readPayload = ::nativeCollectParentTiming,
-            parse = { it },
-            unavailable = { "" },
-        )
+        val earlyParent = if (isAppZygoteParentTimingKernelEnabled(kernelRelease())) {
+            // JNI forks a lightweight safety-check child before touching the live carrier.
+            // Running 33k AVC writes first perturbs the scheduler and invalidates PoC parity.
+            trace("AVC lightweight parent timing preflight begin")
+            collector.collect(
+                readPayload = ::nativeCollectParentTiming,
+                parse = { it },
+                unavailable = { "" },
+            )
+        } else {
+            trace("AVC parent timing skipped on Linux older than 5.10")
+            ""
+        }
         trace("AVC disposable child begin")
         val child = collector.collect(
             readPayload = ::nativeCollectAvcLookup,

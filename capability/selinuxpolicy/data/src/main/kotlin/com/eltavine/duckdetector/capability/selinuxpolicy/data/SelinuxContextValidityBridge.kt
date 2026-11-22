@@ -137,6 +137,8 @@ public open class SelinuxContextValidityBridge(
             "FILE_NEGATIVE_CONTROL_REJECTED" -> copy(fileNegativeControlRejected = value.asNullableBool())
             "ORACLE_CONTROLS_PASSED" -> copy(oracleControlsPassed = value.asBool())
             "KSU_RESULTS_STABLE" -> copy(ksuResultsStable = value.asBool())
+            "KSU_TIMING_BATCH_DIFFERENCES_NS" ->
+                copy(ksuTimingBatchDifferencesNs = value.asTimingBatches())
             "QUERY_METHOD" -> copy(queryMethod = value.decodeValue())
             "KSU_DOMAIN_VALID" -> copy(ksuDomainValid = value.asNullableBool())
             "KSU_FILE_VALID" -> copy(ksuFileValid = value.asNullableBool())
@@ -231,6 +233,9 @@ public open class SelinuxContextValidityBridge(
     }
 
     private fun String.asBool(): Boolean = NativePayloadCodec.decodeFlag(this)
+
+    private fun String.asTimingBatches(): List<Long> =
+        split(',').map { it.toLongOrNull() ?: return emptyList() }
 
     private fun String.asNullableBool(): Boolean? {
         if (isBlank() || equals("unknown", ignoreCase = true)) {
