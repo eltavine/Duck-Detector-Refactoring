@@ -18,7 +18,6 @@ duckdetector_native_unit(duckdetector_tee
 if(ANDROID_ABI STREQUAL "arm64-v8a")
     target_sources(duckdetector_tee PRIVATE
         asm/arm64/syscall_fastpath.S
-        asm/arm64/tee_timer_arm64.S
     )
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_sources(duckdetector_tee PRIVATE

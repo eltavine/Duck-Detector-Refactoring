@@ -39,6 +39,24 @@ The SELinux detector asks whether SELinux is enforcing for this app, whether the
 - Result states: clean, valid root context, unavailable.
 - Interpretation: a valid root-tool context is supporting evidence of a modified policy.
 
+### KSU context query timing
+
+The dedicated app zygote shares DirtySepolicy's write-only selinuxfs `context`
+transaction to compare `u:r:ksu:s0` with the invalid control
+`u:r:duck_detector_invalid:s0`. SELinux and TEE
+share the ARM64 Generic Timer reader. The preload thread attempts to pin
+to CPU 0 and restores its original affinity after sampling. It performs
+32 warmup pairs followed by nine batches of 1,500 pairs,
+with the KSU write immediately followed by the invalid write in each pair.
+The row reports the median and mean per-pair difference and the positive,
+negative and equal pair counts for each batch. The verdict uses the pair counts
+summed across all nine batches. It shows Danger when
+`A>B` exceeds three times the sum of `A<B` and `A=B`.
+The trimmed mean remains visible in the details. Hardware or query failure leaves the
+row unavailable. Scheduling, policy lookup, and cache behavior can affect
+elapsed time. See the [Arm Generic Timer guide](https://developer.arm.com/documentation/102379/latest/)
+and the [AOSP context query implementation](https://android.googlesource.com/platform/external/selinux/+/a273733/libselinux/src/check_context.c).
+
 ### Policy reload and status page
 
 - Observable signal: the app_zygote seqno oracle: the status page's policyload counter against the access oracle's sequence number, and whether reading the status page killed the disposable child that read it.
@@ -138,7 +156,7 @@ and evidence-retention changes; host/JVM tests validate their control flow only.
 - Producing subsystem: App Zygote preload, procfs attr/current, the SELinux LSM context parser and scheduler/clock observations.
 - Mechanism: equal-length invalid-type and newline-prefixed writes exercise different stock paths; an altered dual-policy parser can change their relative cost. EINVAL controls and unchanged parent identity gate all measurements. All 512 valid within-pair same-CPU samples use the paired median sign; migration-only partial observations may be Positive only under the stricter 90%-A-slower safeguard. They do not attribute its cause.
 - References: [ZygotePreload API](https://developer.android.com/reference/android/app/ZygotePreload); ACK [android13-5.15-2025-01_r1 hooks.c](https://android.googlesource.com/kernel/common/+/refs/tags/android13-5.15-2025-01_r1/security/selinux/hooks.c) (`selinux_setprocattr`), and the KernelSU source revision linked below. The stock source converts A before credential allocation but skips conversion for B, so no timing-sign guarantee follows from these paths.
-- Applicability: API >=29, application UID >=10000, app_zygote context with a field-bounded optional MLS category suffix, readable enforcing state and EINVAL controls. Collection changes no affinity; sampled endpoints must match within each pair but may differ between pairs. The cited GKI 5.15 comparison and device measurements do not certify other OEMs, kernel revisions or CPU classes.
+- Applicability: Linux 5.10 or newer, API >=29, application UID >=10000, app_zygote context with a field-bounded optional MLS category suffix, readable enforcing state and EINVAL controls. Kernels older than Linux 5.10 skip the parent timing preflight and sample and omit its report row. Collection changes no affinity; sampled endpoints must match within each pair but may differ between pairs. The cited GKI 5.15 comparison and device measurements do not certify other OEMs, kernel revisions or CPU classes.
 - Visibility limits: scheduling, power state, caching and OEM policy/implementation can change costs. Sampled CPU endpoints cannot observe a migration away and back between reads. The synchronous parent syscall has no interruptible timeout; a successful child preflight cannot prove identical handling in every modified kernel. AVC counters and timing share a carrier and are not independent root evidence.
 - Result states: positive direction, zero baseline, negative direction, inconclusive, unavailable. Positive timing raises a Danger anomaly; missing and legacy parent records cannot become measured negatives. Later child counter failures retain the separate completed parent evidence.
 - Provenance: [GKI 5.15 hooks.c](https://github.com/aosp-mirror/kernel_common/blob/android13-5.15-2025-01_r1/security/selinux/hooks.c#L6542-L6684) first checks PROCESS__SETCURRENT. A fails during the invalid-type SID conversion, while B skips conversion then runs prepare_creds and abort_creds because its SID is zero; [GKI 5.15 cred.c](https://github.com/aosp-mirror/kernel_common/blob/android13-5.15-2025-01_r1/kernel/cred.c#L255-L303) shows allocation, copying and LSM preparation. [KernelSU #3877 / 2697f36f](https://github.com/tiann/KernelSU/blob/2697f36fc8ec10ab73e97ec1724e0f3212116ba2/kernel/feature/selinux_hide.c#L232-L310) retains the early AVC check while [its dual-policy parser](https://github.com/tiann/KernelSU/blob/2697f36fc8ec10ab73e97ec1724e0f3212116ba2/kernel/feature/selinux_hide.c#L603-L768) duplicates the input and resolves both sets of user, role and type symbols. The invalid-type candidate fails before MLS and SID registration.

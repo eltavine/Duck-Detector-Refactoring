@@ -20,6 +20,7 @@ package com.eltavine.duckdetector.features.selinux.domain
 /** The app zygote oracles whose results the report reads beyond their text; [label] is the method each is listed under. */
 enum class SelinuxOracle(val label: String) {
     CONTEXT_VALIDITY("Context validity oracle"),
+    KSU_CONTEXT_TIMING("ksu_types timing with invalid types"),
     PROC_ATTR_CURRENT_WRITE("app_zygote attr/current write"),
     POLICYLOAD_SEQNO("App-zygote seqno oracle"),
     DIRTY_SEPOLICY_RAW("DirtySepolicy raw access protocol"),

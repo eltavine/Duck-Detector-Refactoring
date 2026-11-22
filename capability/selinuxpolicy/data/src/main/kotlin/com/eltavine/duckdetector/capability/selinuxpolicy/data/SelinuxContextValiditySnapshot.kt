@@ -121,6 +121,8 @@ public data class SelinuxContextValiditySnapshot(
     val statusAbi: SelinuxStatusAbiSnapshot = SelinuxStatusAbiSnapshot(),
     val failureReason: String? = null,
     val notes: List<String> = emptyList(),
+    /** KSU batch totals, per-pair median, batch direction counts, and batch size. Older carriers include a file context. */
+    val ksuTimingBatchDifferencesNs: List<Long> = emptyList(),
     /**
      * Why this snapshot is or is not usable. [available] alone cannot distinguish "the probe ran and
      * found nothing" from "the probe never ran", so the reason is carried here. [failureReason] holds

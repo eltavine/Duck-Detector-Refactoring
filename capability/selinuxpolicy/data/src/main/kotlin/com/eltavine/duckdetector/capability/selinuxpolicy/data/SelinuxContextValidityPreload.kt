@@ -131,7 +131,13 @@ public class SelinuxContextValidityPreload {
             }
             dirtySepolicyRaw = withRaw.dirtySepolicyRaw
             trace("selinux: raw access state=${dirtySepolicyRaw.state} transactions=${dirtySepolicyRaw.observations.size}")
-            SelinuxContextValidityPayloadCodec.encode(withRaw)
+            val timing = if (currentUid == appInfo.uid && withRaw.available && withRaw.carrierMatchesExpected) {
+                trace("selinux: KSU raw context timing")
+                SelinuxRawAccess.measureKsuContextTiming()
+            } else {
+                emptyList()
+            }
+            SelinuxContextValidityPayloadCodec.encode(withRaw.copy(ksuTimingBatchDifferencesNs = timing))
         } catch (throwable: Throwable) {
             fallbackPayload(
                 throwable.message ?: "SELinux app zygote preload failed.",

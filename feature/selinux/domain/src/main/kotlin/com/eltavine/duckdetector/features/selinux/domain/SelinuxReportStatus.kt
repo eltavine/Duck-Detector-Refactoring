@@ -46,6 +46,7 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
                     it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE } -> DetectorStatus.danger()
                 methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.dirtySepolicyDanger } -> DetectorStatus.danger()
+                ksuContextTimingDetected() -> DetectorStatus.danger()
                 procAttrCurrent?.isSecure == false -> DetectorStatus.warning()
                 dirtyPolicyHit != null -> DetectorStatus.warning()
                 methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.isSecure == false } -> DetectorStatus.warning()
@@ -66,7 +67,7 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
             }
 
             SelinuxMode.PERMISSIVE, SelinuxMode.DISABLED -> DetectorStatus.danger()
-            SelinuxMode.UNKNOWN -> if (methods.any {
+            SelinuxMode.UNKNOWN -> if (ksuContextTimingDetected() || methods.any {
                 it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.dirtySepolicyDanger
             }) {
                 DetectorStatus.danger()
@@ -79,6 +80,9 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
         }
     }
 }
+
+fun SelinuxReport.ksuContextTimingDetected(): Boolean =
+    methods.any { it.oracle == SelinuxOracle.KSU_CONTEXT_TIMING && it.isSecure == false }
 
 fun contextValidityResult(report: SelinuxReport): SelinuxCheckResult? {
     return report.methods.firstOrNull { it.oracle == SelinuxOracle.CONTEXT_VALIDITY }

@@ -67,6 +67,11 @@ internal object SelinuxContextValidityPayloadCodec {
                 .append('\n')
             append("KSU_RESULTS_STABLE=").append(if (snapshot.ksuResultsStable) '1' else '0')
                 .append('\n')
+            if (snapshot.ksuTimingBatchDifferencesNs.isNotEmpty()) {
+                append("KSU_TIMING_BATCH_DIFFERENCES_NS=")
+                    .append(snapshot.ksuTimingBatchDifferencesNs.joinToString(","))
+                    .append('\n')
+            }
             snapshot.queryMethod.takeIf { it.isNotEmpty() }?.let {
                 append("QUERY_METHOD=").append(escapeValue(it)).append('\n')
             }
