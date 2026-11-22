@@ -23,7 +23,6 @@ import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxAvcLookupS
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupCollection
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupCollectionDetails
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupReading
-import com.eltavine.duckdetector.features.selinux.domain.SelinuxAppZygoteTimingVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxParentTimingReading
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
@@ -48,7 +47,8 @@ internal fun buildAvcLookupMethod(snapshot: SelinuxAvcLookupSnapshot): SelinuxCh
         parentTiming = snapshot.parentTiming.let { parent ->
             SelinuxParentTimingReading(parent.attempted, parent.complete, parent.error, parent.pid, parent.cpu,
                 parent.pairs, parent.migrations, parent.aSlower, parent.medianANs, parent.medianBNs,
-                parent.medianDeltaNs, parent.protocol, parent.positiveBlocks, parent.negativeBlocks, parent.zeroBlocks)
+                parent.medianDeltaNs, parent.protocol, parent.positiveBlocks, parent.negativeBlocks, parent.zeroBlocks,
+                aFaster = parent.aFaster)
         },
         medianANs = snapshot.medianANs,
         medianBNs = snapshot.medianBNs,
@@ -93,9 +93,7 @@ internal fun buildAppZygoteTimingMethod(snapshot: SelinuxAvcLookupSnapshot): Sel
     return SelinuxCheckResult(
         method = SelinuxOracle.APP_ZYGOTE_ATTR_TIMING.label,
         status = verdict.label,
-        // Completed positives and migration-only positives with strong paired
-        // support raise an anomaly. Inconclusive is not a clean pass.
-        isSecure = if (verdict == SelinuxAppZygoteTimingVerdict.POSITIVE) false else null,
+        isSecure = if (verdict.isAnomaly) false else null,
         permissionDenied = reading.collection == SelinuxAvcLookupCollection.PERMISSION_LIMITED,
         oracle = SelinuxOracle.APP_ZYGOTE_ATTR_TIMING,
         avcLookup = reading,

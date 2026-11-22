@@ -51,6 +51,7 @@ static ssize_t parent_write(int fd, const void *ptr, size_t size) {
     }
     int64_t cost = a ? 300 : 200;
     if (mode == "negative") cost = a ? 100 : 200;
+    if (mode == "equal") cost = 200;
     if (mode == "lower_median" && index >= 2 + 2 * kWarmup) {
         const unsigned pair = (index - 2) / 2 - kWarmup;
         cost = a ? (pair % 32 < 16 ? 199 : 300) : 200;
@@ -103,13 +104,17 @@ int main() {
     const auto positive = run("positive");
     assert(positive.protocol == 1 && positive.complete && positive.cpu == 5 && positive.pid == 42);
     assert(positive.pairs == 512 && positive.migrations == 0 && positive.a_slower == 512);
+    assert(positive.a_faster == 0);
     assert(positive.median_delta_ns == 100 && positive.positive_blocks == 16);
     assert(writes == 2 + 2 * (kWarmup + kPairs) && clocks == 2 * writes && closes == 1);
     const auto negative = run("negative");
     assert(negative.complete && negative.median_delta_ns == -100 && negative.negative_blocks == 16);
+    assert(negative.a_slower == 0 && negative.a_faster == 512);
+    const auto equal = run("equal");
+    assert(equal.complete && equal.a_slower == 0 && equal.a_faster == 0 && equal.zero_blocks == 16);
     const auto lower = run("lower_median");
     assert(lower.complete && lower.median_delta_ns == -1 && lower.negative_blocks == 16);
-    assert(lower.a_slower == 256);
+    assert(lower.a_slower == 256 && lower.a_faster == 256);
     const auto moved = run("migration");
     assert(!moved.complete && moved.error == EAGAIN && moved.migrations == 1 && moved.pairs == 511);
     assert(moved.medians_available && moved.median_delta_ns == 100 && closes == 1);

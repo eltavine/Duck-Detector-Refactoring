@@ -21,6 +21,7 @@ package com.eltavine.duckdetector.features.selinux.domain
 enum class SelinuxOracle(val label: String) {
     CONTEXT_VALIDITY("Context validity oracle"),
     KSU_CONTEXT_TIMING("ksu_types timing with invalid types"),
+    KSU_PROC_ATTR_TIMING("ksu_types timing with invalid types (setprocattr)"),
     PROC_ATTR_CURRENT_WRITE("app_zygote attr/current write"),
     POLICYLOAD_SEQNO("App-zygote seqno oracle"),
     DIRTY_SEPOLICY_RAW("DirtySepolicy raw access protocol"),

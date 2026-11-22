@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.selinux.data.probes
 
 import com.eltavine.duckdetector.core.evidence.DetectionSeverity
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
 import com.eltavine.duckdetector.features.selinux.domain.toDetectorStatus
@@ -106,6 +107,42 @@ class KsuTypesTimingProbeTest {
     }
 
     @Test
+    fun `faster ksu writes trigger danger only above three times the other counts`() {
+        val samples = countPayload(domainSlower = 100, domainFaster = 1_125).toMutableList()
+        assertEquals(true, KsuTypesTimingProbe.interpret(samples).isSecure)
+
+        samples[11] += 1L
+        val timing = KsuTypesTimingProbe.interpret(samples)
+        val report = SelinuxReport.loading().copy(
+            stage = SelinuxStage.READY,
+            mode = SelinuxMode.ENFORCING,
+            methods = listOf(timing),
+        )
+
+        assertEquals(false, timing.isSecure)
+        assertEquals("A<B: ksu 10126/13500", timing.status)
+        assertEquals(DetectionSeverity.DANGER, report.toDetectorStatus().severity)
+    }
+
+    @Test
+    fun `setprocattr timing has its own row and the same strict verdict`() {
+        val oracle = SelinuxOracle.KSU_PROC_ATTR_TIMING
+        assertNull(KsuTypesTimingProbe.interpret(null, oracle).isSecure)
+        for ((slower, faster) in listOf(1_125L to 100L, 100L to 1_125L)) {
+            val samples = countPayload(slower, faster).toMutableList()
+            assertEquals(true, KsuTypesTimingProbe.interpret(samples, oracle).isSecure)
+            samples[if (slower > faster) 10 else 11] += 1L
+            val timing = KsuTypesTimingProbe.interpret(samples, oracle)
+            val report = SelinuxReport.loading().copy(
+                stage = SelinuxStage.READY, mode = SelinuxMode.ENFORCING, methods = listOf(timing),
+            )
+            assertEquals("ksu_types timing with invalid types (setprocattr)", timing.method)
+            assertEquals(oracle, timing.oracle)
+            assertEquals(DetectionSeverity.DANGER, report.toDetectorStatus().severity)
+        }
+    }
+
+    @Test
     fun `a single batch exceeding the ratio stays clear when the total is below it`() {
         val samples = countPayload(1_080).toMutableList()
         samples[10] = 1_400L
@@ -133,8 +170,8 @@ class KsuTypesTimingProbeTest {
         assertFalse(timing.details.orEmpty().contains("ksu_file"))
     }
 
-    private fun countPayload(domainSlower: Long): List<Long> =
-        List(9) { 0L } + 0L + List(9) { listOf(domainSlower, 100L) }.flatten() + 1_500L
+    private fun countPayload(domainSlower: Long, domainFaster: Long = 100L): List<Long> =
+        List(9) { 0L } + 0L + List(9) { listOf(domainSlower, domainFaster) }.flatten() + 1_500L
 
     private fun batches(domainNs: Long, fileNs: Long): MutableList<Long> =
         (List(9) { domainNs } + List(9) { fileNs }).toMutableList()

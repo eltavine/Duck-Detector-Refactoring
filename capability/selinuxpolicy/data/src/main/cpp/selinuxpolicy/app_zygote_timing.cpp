@@ -121,7 +121,10 @@ namespace duckdetector::selinux::avc_lookup {
             deltas.push_back(ta.elapsed - tb.elapsed);
         }
         result.pairs = deltas.size();
-        result.a_slower = std::count_if(deltas.begin(), deltas.end(), [](int64_t d) { return d > 0; });
+        for (const int64_t delta : deltas) {
+            if (delta > 0) ++result.a_slower;
+            else if (delta < 0) ++result.a_faster;
+        }
         for (size_t i = 0; i + kBlockPairs <= deltas.size(); i += kBlockPairs) {
             const int64_t block = median({deltas.begin() + i, deltas.begin() + i + kBlockPairs});
             if (block > 0) ++result.positive_blocks;

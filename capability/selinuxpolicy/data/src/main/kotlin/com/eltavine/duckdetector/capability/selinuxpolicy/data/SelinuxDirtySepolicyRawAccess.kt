@@ -80,13 +80,13 @@ internal object SelinuxRawAccess {
         }
     }
 
-    fun measureKsuContextTiming(): List<Long> {
+    fun measureKsuContextTiming(procAttr: Boolean = false): List<Long> {
         if (!SelinuxContextValidityBridge.isNativeLibraryLoaded) return emptyList()
-        return runCatching { nativeMeasureKsuContextTiming()?.toList().orEmpty() }
+        return runCatching { nativeMeasureKsuContextTiming(procAttr)?.toList().orEmpty() }
             .getOrDefault(emptyList())
     }
 
     private external fun nativeContextNode(context: String): String
 
-    private external fun nativeMeasureKsuContextTiming(): LongArray?
+    private external fun nativeMeasureKsuContextTiming(procAttr: Boolean): LongArray?
 }
