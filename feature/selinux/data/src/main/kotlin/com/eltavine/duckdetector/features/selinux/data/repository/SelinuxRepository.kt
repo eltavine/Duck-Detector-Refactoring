@@ -37,6 +37,7 @@ import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditNote
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAuditNoteKind
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxMode
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxReport
 import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxStage
@@ -72,6 +73,7 @@ class SelinuxRepository(
 
         if (filesystemResult.status == FILESYSTEM_NOT_MOUNTED) {
             methods += KsuTypesTimingProbe.interpret(null)
+            methods += KsuTypesTimingProbe.interpret(null, SelinuxOracle.KSU_PROC_ATTR_TIMING)
             return SelinuxReport(
                 stage = SelinuxStage.READY,
                 mode = SelinuxMode.DISABLED,
@@ -104,11 +106,12 @@ class SelinuxRepository(
         val carrierResult = contextValidityProbe.interpret(carrierSnapshot)
         val contextValidityResult = carrierResult
         methods += buildContextValidityMethod(contextValidityResult)
+        val carrierUsable = carrierSnapshot.available && carrierSnapshot.carrierMatchesExpected &&
+            carrierSnapshot.probeAttempted
+        methods += KsuTypesTimingProbe.interpret(carrierSnapshot.ksuTimingBatchDifferencesNs.takeIf { carrierUsable })
         methods += KsuTypesTimingProbe.interpret(
-            carrierSnapshot.ksuTimingBatchDifferencesNs.takeIf {
-                carrierSnapshot.available && carrierSnapshot.carrierMatchesExpected &&
-                    carrierSnapshot.probeAttempted
-            },
+            carrierSnapshot.ksuProcAttrTimingBatchDifferencesNs.takeIf { carrierUsable },
+            SelinuxOracle.KSU_PROC_ATTR_TIMING,
         )
         methods += buildPolicyloadSeqnoMethod(contextValidityResult)
         methods += buildProcAttrCurrentMethod(carrierResult, EvidenceSource.DEDICATED_CARRIER)

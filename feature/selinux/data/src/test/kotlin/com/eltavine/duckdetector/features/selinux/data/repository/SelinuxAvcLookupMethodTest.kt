@@ -43,6 +43,7 @@ class SelinuxAvcLookupMethodTest {
                 aSlower = 471, medianANs = 3125, medianBNs = 2552,
                 medianDeltaNs = 573, protocol = 1,
                 positiveBlocks = 15, negativeBlocks = 0, zeroBlocks = 0,
+                aFaster = 20,
             ),
         )
         val method = buildAppZygoteTimingMethod(sample)
@@ -51,18 +52,18 @@ class SelinuxAvcLookupMethodTest {
         assertNull(buildAvcLookupMethod(sample).isSecure)
     }
 
-    @Test fun `positive parent timing raises anomaly but leaves AVC evidence informational`() {
+    @Test fun `A faster parent timing raises anomaly but leaves AVC evidence informational`() {
         val sample = SelinuxAvcLookupSnapshot(
             state = SelinuxAvcLookupState.UNAVAILABLE,
             parentTiming = SelinuxAvcParentTiming(
                 attempted = true, complete = true, pid = 17, cpu = 2, pairs = 512,
-                aSlower = 400, medianANs = 1000, medianBNs = 900, medianDeltaNs = 100,
-                protocol = 1, positiveBlocks = 14, negativeBlocks = 2,
+                aSlower = 100, medianANs = 900, medianBNs = 1000, medianDeltaNs = -100,
+                protocol = 1, positiveBlocks = 2, negativeBlocks = 14, aFaster = 400,
             ),
         )
         val method = buildAppZygoteTimingMethod(sample)
         assertEquals(SelinuxOracle.APP_ZYGOTE_ATTR_TIMING, method.oracle)
-        assertEquals(SelinuxAppZygoteTimingVerdict.POSITIVE,
+        assertEquals(SelinuxAppZygoteTimingVerdict.NEGATIVE,
             method.avcLookup!!.timingVerdict)
         assertEquals(false, method.isSecure)
         assertNull(buildAvcLookupMethod(sample).isSecure)

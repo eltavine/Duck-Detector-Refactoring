@@ -72,6 +72,11 @@ internal object SelinuxContextValidityPayloadCodec {
                     .append(snapshot.ksuTimingBatchDifferencesNs.joinToString(","))
                     .append('\n')
             }
+            if (snapshot.ksuProcAttrTimingBatchDifferencesNs.isNotEmpty()) {
+                append("KSU_PROC_ATTR_TIMING_BATCH_DIFFERENCES_NS=")
+                    .append(snapshot.ksuProcAttrTimingBatchDifferencesNs.joinToString(","))
+                    .append('\n')
+            }
             snapshot.queryMethod.takeIf { it.isNotEmpty() }?.let {
                 append("QUERY_METHOD=").append(escapeValue(it)).append('\n')
             }

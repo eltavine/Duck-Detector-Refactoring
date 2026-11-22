@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.selinux.data.probes
 
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
+import com.eltavine.duckdetector.features.selinux.domain.hasTimingDirectionImbalance
 
 internal object KsuTypesTimingProbe {
 
@@ -30,10 +31,10 @@ internal object KsuTypesTimingProbe {
     private const val LEGACY_PAIR_COUNT_INDEX = LEGACY_COUNT_OFFSET + 4 * BATCH_COUNT
 
     private data class DirectionCounts(val slower: Long, val faster: Long, val equal: Long) {
-        val exceedsThreshold: Boolean get() = slower > 3 * (faster + equal)
+        val exceedsThreshold: Boolean get() = hasTimingDirectionImbalance(slower, faster, equal)
     }
 
-    fun interpret(differencesNs: List<Long>?): SelinuxCheckResult {
+    fun interpret(differencesNs: List<Long>?, oracle: SelinuxOracle = SelinuxOracle.KSU_CONTEXT_TIMING): SelinuxCheckResult {
         val currentPayload = differencesNs?.size == PAIR_COUNT_INDEX + 1
         val pairCountIndex = if (currentPayload) PAIR_COUNT_INDEX else LEGACY_PAIR_COUNT_INDEX
         val pairsPerBatch = differencesNs?.getOrNull(pairCountIndex) ?: LEGACY_PAIRS_PER_BATCH
@@ -43,12 +44,16 @@ internal object KsuTypesTimingProbe {
             ))
         ) {
             return SelinuxCheckResult(
-                method = SelinuxOracle.KSU_CONTEXT_TIMING.label,
-                oracle = SelinuxOracle.KSU_CONTEXT_TIMING,
+                method = oracle.label,
+                oracle = oracle,
                 status = "Unavailable",
                 isSecure = null,
                 permissionDenied = false,
-                details = "SELinux context timing with the ARM64 hardware counter was unavailable in app zygote.",
+                details = if (oracle == SelinuxOracle.KSU_PROC_ATTR_TIMING) {
+                    "No complete ARM64 timing sample from rejected attr/current writes in the app zygote child."
+                } else {
+                    "SELinux context timing with the ARM64 hardware counter was unavailable in app zygote."
+                },
             )
         }
 
@@ -59,11 +64,15 @@ internal object KsuTypesTimingProbe {
         val total = counts?.let(::sumCounts)
         val medianIndex = if (currentPayload) BATCH_COUNT else LEGACY_MEDIAN_INDEX
         return SelinuxCheckResult(
-            method = SelinuxOracle.KSU_CONTEXT_TIMING.label,
-            oracle = SelinuxOracle.KSU_CONTEXT_TIMING,
+            method = oracle.label,
+            oracle = oracle,
             status = if (total != null) {
                 val totalPairs = BATCH_COUNT * pairsPerBatch
-                "A>B: ksu ${total.slower}/$totalPairs"
+                if (total.faster > total.slower) {
+                    "A<B: ksu ${total.faster}/$totalPairs"
+                } else {
+                    "A>B: ksu ${total.slower}/$totalPairs"
+                }
             } else {
                 "Direction counts unavailable"
             },
@@ -77,7 +86,7 @@ internal object KsuTypesTimingProbe {
                 append("Trimmed per-pair mean: ksu $trimmedNs ns.")
                 if (counts != null && total != null) {
                     appendLine()
-                    appendLine("Danger if count(A>B) > 3 × (count(A<B) + count(A=B)), summed across $BATCH_COUNT batches.")
+                    appendLine("Danger if either direction exceeds 3 × (opposite direction + ties), summed across $BATCH_COUNT batches.")
                     append("ksu totals: A>B ${total.slower}, A<B ${total.faster}, A=B ${total.equal}")
                     appendLine()
                     appendBatchCounts(batches, counts, pairsPerBatch)

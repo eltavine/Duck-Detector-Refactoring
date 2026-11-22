@@ -86,10 +86,14 @@ class SelinuxAvcLookupPayloadTest {
         val parent = SelinuxAvcParentTiming(
             attempted = true, complete = true, pid = 17, cpu = 2, pairs = 512,
             aSlower = 490, medianANs = 1000, medianBNs = 900, medianDeltaNs = 52,
-            protocol = 1, positiveBlocks = 16,
+            protocol = 1, positiveBlocks = 16, aFaster = 12,
         )
         val payload = SelinuxAvcLookupPayloadCodec.encode(collected.copy(parentTiming = parent))
             .lineSequence().filter { it.startsWith("PARENT_") }.joinToString("\n")
+        assertEquals(parent.copy(aFaster = null),
+            SelinuxAvcLookupPayloadCodec.decodeParent(payload.replace("\nPARENT_A_FASTER=12", "")))
+        assertEquals(SelinuxAvcParentTiming(),
+            SelinuxAvcLookupPayloadCodec.decodeParent(payload.replace("PARENT_A_FASTER=12", "PARENT_A_FASTER=23")))
         for (end in SelinuxAvcLookupChildEnd.entries) {
             val child = collected.copy(state = SelinuxAvcLookupState.INCONCLUSIVE, childEnd = end)
             val attached = SelinuxAvcLookupProbe().withParentTiming(child, payload)

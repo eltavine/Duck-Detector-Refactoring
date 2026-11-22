@@ -20,7 +20,6 @@ package com.eltavine.duckdetector.features.selinux.presentation
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupCollection
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupProfile
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxAvcLookupReading
-import com.eltavine.duckdetector.features.selinux.domain.SelinuxAppZygoteTimingVerdict
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
 import com.eltavine.duckdetector.features.selinux.presentation.model.SelinuxDetailRowModel
 import java.util.Locale
@@ -36,6 +35,9 @@ internal fun appZygoteTimingRow(result: SelinuxCheckResult): SelinuxDetailRowMod
     val verdict = reading.timingVerdict
     val medians = reading.timingMediansAvailable
     val parent = reading.parentTiming
+    val parentCounts = parent.aFaster?.let { faster ->
+        "A>B ${parent.aSlower}, A<B $faster, A=B ${parent.pairs - parent.aSlower - faster} (${parent.pairs} pairs)"
+    } ?: "A>B ${parent.aSlower}/${parent.pairs}; full direction counts unavailable"
     fun measured(value: Long): String = if (medians) "$value ns" else "N/A"
     val missingEvidence = reading.details.failureReason?.takeIf {
         reading.collection != SelinuxAvcLookupCollection.COLLECTED &&
@@ -44,29 +46,29 @@ internal fun appZygoteTimingRow(result: SelinuxCheckResult): SelinuxDetailRowMod
     return SelinuxDetailRowModel(
         label = result.method,
         value = verdict.label,
-        status = if (verdict == SelinuxAppZygoteTimingVerdict.POSITIVE) DetectorStatus.danger()
+        status = if (verdict.isAnomaly) DetectorStatus.danger()
             else DetectorStatus.info(InfoKind.SUPPORT),
         detail = (missingEvidence?.let { "Collection failed: $it (AVC child).\n" } ?: "") +
             (if (!parent.attempted) "No parent timing sample was collected; this is not a negative detection.\n" else "") +
             "A=invalid type, B=same-length newline prefix; both must return EINVAL. " +
-            "512 AB/BA pairs, 32 warmups; CLOCK_MONOTONIC_RAW; paired A−B > 0 ns is positive, " +
-            "0 ns is baseline, and < 0 ns is negative. Block counts are diagnostic only. " +
+            "512 AB/BA pairs, 32 warmups; CLOCK_MONOTONIC_RAW. Danger if either direction " +
+            "exceeds 3 × (opposite direction + ties). Medians and block counts are diagnostic. " +
             "Measured in the preload parent without changing CPU affinity. " +
             "CPU switches between completed pairs are allowed. Incomplete measurements are normally " +
-            "inconclusive, except migration-only samples with at least 256 accepted pairs, positive " +
-            "A−B, and at least 90% A-slower pairs. " +
+            "inconclusive, except migration-only samples with at least 256 accepted pairs " +
+            "and at least 90% in either direction. " +
             "One retained preload is one measurement.\n" +
             (if (parent.attempted) "Parent preload (PID=${parent.pid}, entry CPU=${parent.cpu}): " +
                 "A−B=${parent.medianDeltaNs?.let { "$it ns" } ?: "N/A"}; " +
                 "A=${parent.medianANs?.let { "$it ns" } ?: "N/A"}, " +
                 "B=${parent.medianBNs?.let { "$it ns" } ?: "N/A"}; " +
-                "A slower=${parent.aSlower}/${parent.pairs}; " +
+                "$parentCounts; " +
                 "blocks positive/negative/zero=${parent.positiveBlocks}/${parent.negativeBlocks}/${parent.zeroBlocks}; " +
                 "migrations=${parent.migrations}; complete=${parent.complete}; errno=${parent.error}. " +
-                (if (parent.protocol == 1) "This parent sample supplies the timing verdict. "
-                 else "Legacy pinned parent diagnostic; unavailable for PoC classification. ") +
-                (if (!parent.complete && verdict == SelinuxAppZygoteTimingVerdict.POSITIVE)
-                    "Migration-only partial sample met the 90% A-slower criterion. "
+                (if (parent.protocol == 1 && parent.aFaster != null) "The timing verdict uses this parent sample. "
+                 else "Legacy parent timing is diagnostic only. ") +
+                (if (!parent.complete && verdict.isAnomaly)
+                    "Migration-only partial sample met the 90% direction criterion. "
                  else if (!parent.complete) "Partial-sample medians are diagnostic only. " else "")
             else "Parent preload: N/A (not collected). ") +
             "\nPinned child diagnostic (PID=${reading.details.childPid}, CPU=${reading.details.cpu}): " +
