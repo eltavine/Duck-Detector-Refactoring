@@ -44,7 +44,7 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 // DANGER 表示强异常证据，不代表仅凭侧信道就能在所有设备上确认 KernelSU 或 Root。
                 methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } -> DetectorStatus.danger()
                 methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
-                    it.avcLookup?.timingVerdict?.isAnomaly == true } -> DetectorStatus.danger()
+                    it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE } -> DetectorStatus.danger()
                 methods.any { it.oracle == SelinuxOracle.DIRTY_SEPOLICY_RAW && it.dirtySepolicyDanger } -> DetectorStatus.danger()
                 ksuContextTimingDetected() -> DetectorStatus.danger()
                 procAttrCurrent?.isSecure == false -> DetectorStatus.warning()

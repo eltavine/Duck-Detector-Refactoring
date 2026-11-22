@@ -38,18 +38,15 @@ enum class SelinuxAvcLookupCollection(val label: String) {
     INCONCLUSIVE("Inconclusive"),
 }
 
-enum class SelinuxAppZygoteTimingVerdict(val label: String, val isAnomaly: Boolean = false) {
-    POSITIVE("A>B timing count imbalance", isAnomaly = true),
-    NEGATIVE("A<B timing count imbalance", isAnomaly = true),
-    BASELINE("No timing count imbalance"),
+enum class SelinuxAppZygoteTimingVerdict(val label: String) {
+    POSITIVE("Positive A−B timing asymmetry"),
+    NEGATIVE("Negative A−B timing asymmetry"),
+    BASELINE("Zero A−B timing baseline"),
     INCONCLUSIVE("Timing direction inconclusive"),
     UNAVAILABLE("Timing unavailable"),
 }
 
-fun hasTimingDirectionImbalance(slower: Long, faster: Long, equal: Long): Boolean =
-    slower > 3 * (faster + equal) || faster > 3 * (slower + equal)
-
-/** Preload-parent timing without affinity changes. Each accepted pair has matching CPU endpoints. */
+/** Preload-parent timing without affinity changes; complete samples stay on one observed CPU. */
 data class SelinuxParentTimingReading(
     val attempted: Boolean = false,
     val complete: Boolean = false,
@@ -66,7 +63,6 @@ data class SelinuxParentTimingReading(
     val positiveBlocks: Int = 0,
     val negativeBlocks: Int = 0,
     val zeroBlocks: Int = 0,
-    val aFaster: Int? = null,
 )
 
 data class SelinuxAvcLookupCollectionDetails(
@@ -110,15 +106,13 @@ data class SelinuxAvcLookupReading(
     val timingVerdict: SelinuxAppZygoteTimingVerdict
         get() {
             val sample = parentTiming
-            val faster = sample.aFaster
-            if (!sample.attempted || sample.protocol != 1 || faster == null)
+            if (!sample.attempted || sample.protocol != 1)
                 return SelinuxAppZygoteTimingVerdict.UNAVAILABLE
             // The parent has its own preflight and identity checks. A failure in
             // the later AVC child cannot erase an already completed parent sample.
             if (sample.pid <= 0 || sample.cpu < 0 ||
                 sample.pairs !in 1..512 || sample.migrations !in 0..512 ||
                 sample.aSlower !in 0..sample.pairs ||
-                faster !in 0..(sample.pairs - sample.aSlower) ||
                 sample.medianANs == null || sample.medianBNs == null || sample.medianDeltaNs == null ||
                 sample.medianANs < 0 || sample.medianBNs < 0 ||
                 sample.positiveBlocks !in 0..16 || sample.negativeBlocks !in 0..16 || sample.zeroBlocks !in 0..16 ||
@@ -126,19 +120,20 @@ data class SelinuxAvcLookupReading(
                 return SelinuxAppZygoteTimingVerdict.INCONCLUSIVE
             val complete = sample.complete && sample.error == 0 &&
                 sample.pairs == 512 && sample.migrations == 0
-            val slower = sample.aSlower
-            val equal = sample.pairs - slower - faster
-            // Preserve the stronger support requirement when only CPU migration discarded pairs.
+            // Migrations alone may invalidate one or more pairs without changing
+            // the sign of a strong remaining signal. Keep other failures excluded.
             val strongMigrationSignal = !sample.complete && sample.error == 11 &&
                 sample.migrations > 0 && sample.pairs + sample.migrations == 512 &&
-                sample.pairs >= 256 && maxOf(slower, faster) * 10 >= sample.pairs * 9
+                sample.pairs >= 256 && sample.medianDeltaNs > 0 &&
+                sample.aSlower.toLong() * 10 >= sample.pairs.toLong() * 9
             if (!complete && !strongMigrationSignal)
                 return SelinuxAppZygoteTimingVerdict.INCONCLUSIVE
+            // Classification follows the standalone paired-median PoC. Block
+            // counts are diagnostic only for a complete sample.
             return when {
-                !hasTimingDirectionImbalance(slower.toLong(), faster.toLong(), equal.toLong()) ->
-                    SelinuxAppZygoteTimingVerdict.BASELINE
-                slower > faster -> SelinuxAppZygoteTimingVerdict.POSITIVE
-                else -> SelinuxAppZygoteTimingVerdict.NEGATIVE
+                sample.medianDeltaNs > 0 -> SelinuxAppZygoteTimingVerdict.POSITIVE
+                sample.medianDeltaNs < 0 -> SelinuxAppZygoteTimingVerdict.NEGATIVE
+                else -> SelinuxAppZygoteTimingVerdict.BASELINE
             }
         }
     /** Only collected counts determine the lookup profile. */

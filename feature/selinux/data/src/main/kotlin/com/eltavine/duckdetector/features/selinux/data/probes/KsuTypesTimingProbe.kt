@@ -18,7 +18,6 @@ package com.eltavine.duckdetector.features.selinux.data.probes
 
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxOracle
 import com.eltavine.duckdetector.features.selinux.domain.SelinuxCheckResult
-import com.eltavine.duckdetector.features.selinux.domain.hasTimingDirectionImbalance
 
 internal object KsuTypesTimingProbe {
 
@@ -31,7 +30,8 @@ internal object KsuTypesTimingProbe {
     private const val LEGACY_PAIR_COUNT_INDEX = LEGACY_COUNT_OFFSET + 4 * BATCH_COUNT
 
     private data class DirectionCounts(val slower: Long, val faster: Long, val equal: Long) {
-        val exceedsThreshold: Boolean get() = hasTimingDirectionImbalance(slower, faster, equal)
+        val exceedsThreshold: Boolean
+            get() = slower > 3 * (faster + equal) || faster > 3 * (slower + equal)
     }
 
     fun interpret(differencesNs: List<Long>?, oracle: SelinuxOracle = SelinuxOracle.KSU_CONTEXT_TIMING): SelinuxCheckResult {

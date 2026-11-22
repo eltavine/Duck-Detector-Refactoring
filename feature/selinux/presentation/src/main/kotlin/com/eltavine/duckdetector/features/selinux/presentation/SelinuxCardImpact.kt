@@ -17,6 +17,7 @@
 
 package com.eltavine.duckdetector.features.selinux.presentation
 
+import com.eltavine.duckdetector.features.selinux.domain.SelinuxAppZygoteTimingVerdict
 import com.eltavine.duckdetector.core.evidence.DetectorStatus
 import com.eltavine.duckdetector.core.evidence.InfoKind
 import com.eltavine.duckdetector.features.selinux.domain.AppZygoteCarrierSupportState
@@ -226,10 +227,11 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
         )
     }
     if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
-            it.avcLookup?.timingVerdict?.isAnomaly == true }) {
+            it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE }) {
         items += SelinuxImpactItemModel(
-            "The App Zygote invalid-context timing exceeded the paired count threshold in one direction. " +
-                "Stock kernels take different paths for A and B, and CPU load can affect the counts. " +
+            "The App Zygote invalid-context A−B paired median was positive. " +
+                "Stock kernels also take different paths for A and B, and CPU/load can change the sign. " +
+                "This is a strong timing anomaly, not proof of KernelSU or root. " +
                 "The AVC counts share the same measurement carrier.",
             DetectorStatus.danger(),
         )

@@ -79,7 +79,6 @@ namespace duckdetector::selinux::avc_lookup {
         unsigned pairs = 0;
         unsigned migrations = 0;
         unsigned a_slower = 0;
-        unsigned a_faster = 0;
         unsigned positive_blocks = 0;
         unsigned negative_blocks = 0;
         unsigned zero_blocks = 0;

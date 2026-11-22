@@ -52,7 +52,6 @@ public data class SelinuxAvcParentTiming(
     val positiveBlocks: Int = 0,
     val negativeBlocks: Int = 0,
     val zeroBlocks: Int = 0,
-    val aFaster: Int? = null,
 )
 
 /**

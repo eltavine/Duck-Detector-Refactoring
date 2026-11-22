@@ -149,7 +149,6 @@ internal object SelinuxAvcLookupPayloadCodec {
             entry("PARENT_PAIRS", parent.pairs)
             entry("PARENT_MIGRATIONS", parent.migrations)
             entry("PARENT_A_SLOWER", parent.aSlower)
-            parent.aFaster?.let { entry("PARENT_A_FASTER", it) }
             entry("PARENT_MEDIANS_VALID", if (parent.medianDeltaNs != null) 1 else 0)
             entry("PARENT_MEDIAN_A_NS", parent.medianANs)
             entry("PARENT_MEDIAN_B_NS", parent.medianBNs)
@@ -177,9 +176,6 @@ internal object SelinuxAvcLookupPayloadCodec {
         val pairs = int("PARENT_PAIRS", 0, PAIRS) ?: return SelinuxAvcParentTiming()
         val migrations = int("PARENT_MIGRATIONS", 0, PAIRS) ?: return SelinuxAvcParentTiming()
         val slower = int("PARENT_A_SLOWER", 0, pairs) ?: return SelinuxAvcParentTiming()
-        val faster = if ("PARENT_A_FASTER" in fields) {
-            int("PARENT_A_FASTER", 0, pairs - slower) ?: return SelinuxAvcParentTiming()
-        } else null
         val protocol = if ("PARENT_PROTOCOL" in fields)
             int("PARENT_PROTOCOL", 0, 1) ?: return SelinuxAvcParentTiming() else 0
         val positive = if (protocol == 1) int("PARENT_POSITIVE_BLOCKS", 0, 16)
@@ -203,7 +199,7 @@ internal object SelinuxAvcLookupPayloadCodec {
         if (complete && (error != 0 || pairs != PAIRS || migrations != 0 || !haveMedians))
             return SelinuxAvcParentTiming()
         return SelinuxAvcParentTiming(true, complete, error, pid, cpu, pairs, migrations, slower, a, b, delta,
-            protocol, positive, negative, zero, faster)
+            protocol, positive, negative, zero)
     }
 
     // Only collected counts and completed timing are interpreted, so only those records must be whole.

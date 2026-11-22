@@ -17,34 +17,35 @@ class SelinuxAppZygoteTimingPresentationTest {
             it.text.contains("App Zygote invalid-context") })
     }
 
-    @Test fun `positive median and diagnostic blocks with balanced counts stay informational`() {
+    @Test fun `positive median raises Danger regardless of diagnostic block counts`() {
         val model = SelinuxCardModelMapper().map(report(timingResult(53, 9, 2, 310)))
-        assertEquals(DetectorStatus.allClear(), model.status)
-        assertEquals(DetectorStatus.info(InfoKind.SUPPORT), model.methodRows.single().status)
+        assertEquals(DetectorStatus.danger(), model.status)
+        assertEquals(DetectorStatus.danger(), model.methodRows.single().status)
         assertTrue(model.methodRows.single().detail.orEmpty().contains("A−B=53 ns"))
         assertTrue(model.methodRows.single().detail.orEmpty().contains("9/2/5"))
+        assertEquals(DetectorStatus.danger(),
+            SelinuxCardModelMapper().map(report(timingResult(1, 10, 5, 271))).methodRows.single().status)
+        assertEquals(DetectorStatus.danger(),
+            SelinuxCardModelMapper().map(report(timingResult(1, 10, 5, 271))).status)
     }
 
-    @Test fun `only qualifying parent counts raise danger`() {
+    @Test fun `negative parent and incomplete measurements never raise danger`() {
         for (result in listOf(timingResult(-104, 2, 14, 120),
             timingResult(157, 14, 2, 400, pairs = 128))) {
             val model = SelinuxCardModelMapper().map(report(result))
             assertEquals(DetectorStatus.allClear(), model.status)
             assertTrue(model.impactItems.none { it.text.contains("App Zygote invalid-context") })
         }
-        val baseline = SelinuxCardModelMapper().map(report(timingResult(0, 11, 5, 256)))
+        val baseline = SelinuxCardModelMapper().map(report(timingResult(0, 11, 5, 400)))
         assertEquals(DetectorStatus.allClear(), baseline.status)
         assertEquals(SelinuxAppZygoteTimingVerdict.BASELINE.label, baseline.methodRows.single().value)
         val positiveChild = timingResult(364, 15, 1, 397)
         val negativeParent = requireNotNull(positiveChild.avcLookup).let { reading ->
             withReading(positiveChild, reading.copy(parentTiming = reading.parentTiming.copy(
-                medianDeltaNs = -52, positiveBlocks = 0, negativeBlocks = 16, aSlower = 100, aFaster = 400,
+                medianDeltaNs = -52, positiveBlocks = 0, negativeBlocks = 16, aSlower = 100,
             )))
         }
-        val model = SelinuxCardModelMapper().map(report(negativeParent))
-        assertEquals(DetectorStatus.danger(), model.status)
-        assertEquals(DetectorStatus.danger(), model.methodRows.single().status)
-        assertTrue(model.methodRows.single().detail.orEmpty().contains("A>B 100, A<B 400, A=B 12"))
+        assertEquals(DetectorStatus.allClear(), SelinuxCardModelMapper().map(report(negativeParent)).status)
     }
 
     @Test fun `partial migrated samples display diagnostic values but never raise danger`() {
@@ -73,8 +74,8 @@ class SelinuxAppZygoteTimingPresentationTest {
         assertEquals(DetectorStatus.danger(), model.status)
         assertEquals(DetectorStatus.danger(), model.methodRows.single().status)
         assertTrue(model.methodRows.single().detail.orEmpty().contains("A−B=573 ns"))
-        assertTrue(model.methodRows.single().detail.orEmpty().contains("A>B 471, A<B 0, A=B 40"))
-        assertTrue(model.methodRows.single().detail.orEmpty().contains("90% direction criterion"))
+        assertTrue(model.methodRows.single().detail.orEmpty().contains("A slower=471/511"))
+        assertTrue(model.methodRows.single().detail.orEmpty().contains("90% A-slower criterion"))
         val weaker = SelinuxCardModelMapper().map(report(timingResult(573, 15, 0, 459, pairs = 511, migrations = 1)))
         assertEquals(DetectorStatus.allClear(), weaker.status)
         assertEquals(SelinuxAppZygoteTimingVerdict.INCONCLUSIVE.label, weaker.methodRows.single().value)
@@ -116,7 +117,6 @@ class SelinuxAppZygoteTimingPresentationTest {
                 medianDeltaNs = delta, protocol = 1,
                 positiveBlocks = positive, negativeBlocks = negative,
                 zeroBlocks = maxOf(0, pairs / 32 - positive - negative),
-                aFaster = 0,
             ),
             details = SelinuxAvcLookupCollectionDetails(null, 2, null, false, "EXITED", 0, 0, 0,
                 3, -1, 0, 0, "No cache_stats"),

@@ -128,7 +128,6 @@ Java_com_eltavine_duckdetector_capability_selinuxpolicy_data_SelinuxAvcLookupPro
             << "\nPARENT_ERROR=" << parent.error << "\nPARENT_PID=" << parent.pid
             << "\nPARENT_CPU=" << parent.cpu << "\nPARENT_PAIRS=" << parent.pairs
             << "\nPARENT_MIGRATIONS=" << parent.migrations << "\nPARENT_A_SLOWER=" << parent.a_slower
-            << "\nPARENT_A_FASTER=" << parent.a_faster
             << "\nPARENT_MEDIANS_VALID=" << (parent.medians_available ? 1 : 0)
             << "\nPARENT_MEDIAN_A_NS=" << parent.median_a_ns
             << "\nPARENT_MEDIAN_B_NS=" << parent.median_b_ns
