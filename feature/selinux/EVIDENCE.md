@@ -41,33 +41,30 @@ The SELinux detector asks whether SELinux is enforcing for this app, whether the
 
 ### KSU context query timing
 
-The dedicated app zygote shares DirtySepolicy's write-only selinuxfs `context`
-transaction to compare `u:r:ksu:s0` with the invalid control
-`u:r:duck_detector_invalid:s0`. SELinux and TEE
-share the ARM64 Generic Timer reader. The preload thread attempts to pin
-to CPU 0 and restores its original affinity after sampling. It performs
-32 warmup pairs followed by nine batches of 1,500 pairs,
-with the KSU write immediately followed by the invalid write in each pair.
-The row reports the median and mean per-pair difference and the positive,
-negative and equal pair counts for each batch. The verdict uses the pair counts
-summed across all nine batches. It shows Danger when either direction
-(`A>B` or `A<B`) exceeds three times the sum of the opposite direction
-and `A=B`.
-The trimmed mean remains visible in the details. Hardware or query failure leaves the
-row unavailable. Scheduling, policy lookup, and cache behavior can affect
-elapsed time. See the [Arm Generic Timer guide](https://developer.arm.com/documentation/102379/latest/)
-and the [AOSP context query implementation](https://android.googlesource.com/platform/external/selinux/+/a273733/libselinux/src/check_context.c).
-
-The separate setprocattr row compares the same contexts by timing writes to
-`/proc/self/attr/current` in a disposable child of the app zygote.
-It uses the same counter, batches and verdict. The control must return EINVAL;
-the candidate may return EINVAL or EACCES. A successful or short write stops
-sampling in the child. The result requires enforcing mode, an unchanged child
-identity and a complete report. A failure leaves this row unavailable.
-The SELinux handler can reject a context during conversion or deny the
-transition after conversion, so the timing difference can include both paths.
-See [Android common kernel SELinux hooks](https://android.googlesource.com/kernel/common/+/783025351c5fb3bcb4591d8fc61cbbd709aa4bcf/security/selinux/hooks.c)
-and [AOSP app zygote policy](https://android.googlesource.com/platform/system/sepolicy/+/refs/tags/android-15.0.0_r1/private/app_zygote.te).
+- Observable signal: paired elapsed times for `u:r:ksu:s0` and the invalid control
+  `u:r:duck_detector_invalid:s0`, with a separate result row for each interface.
+- Producing subsystem: SELinux context queries through the selinuxfs `context` transaction
+  and SELinux setprocattr writes through `/proc/self/attr/current`.
+- Mechanism: the dedicated app zygote uses DirtySepolicy's write-only selinuxfs transaction
+  and runs the setprocattr measurement in a disposable child. Both measurements use the ARM64
+  Generic Timer reader shared by SELinux and TEE. The sampling thread attempts to pin to CPU 0
+  and restores its affinity afterward. It runs 32 warmup pairs and nine batches of 1,500 pairs,
+  with the KSU write immediately followed by the control write.
+- References: [Arm Generic Timer guide](https://developer.arm.com/documentation/102379/latest/),
+  [AOSP context query implementation](https://android.googlesource.com/platform/external/selinux/+/a273733/libselinux/src/check_context.c),
+  [Android common kernel SELinux hooks](https://android.googlesource.com/kernel/common/+/783025351c5fb3bcb4591d8fc61cbbd709aa4bcf/security/selinux/hooks.c),
+  [AOSP app zygote policy](https://android.googlesource.com/platform/system/sepolicy/+/refs/tags/android-15.0.0_r1/private/app_zygote.te).
+- Applicability: requires the app zygote carrier and a readable ARM64 timer. Setprocattr also
+  requires enforcing mode, unchanged child identity and a complete child report.
+- Visibility limits: the setprocattr control must return EINVAL and the candidate may return
+  EINVAL or EACCES. A successful or short write stops sampling. Scheduling, policy lookup and
+  cache behavior can affect elapsed time. Setprocattr timing can reflect either rejection during
+  context conversion or denial of a transition after conversion.
+- Result states: timing anomaly, threshold not met, or unavailable on hardware, query or child failure.
+- Interpretation: Danger appears when either direction (`A>B` or `A<B`) exceeds three times the
+  sum of the opposite direction and `A=B`, using counts summed across all nine batches. The row
+  also reports the per-pair median and mean, including the trimmed mean in details, and the
+  positive, negative and equal pair counts for each batch.
 
 ### Policy reload and status page
 
