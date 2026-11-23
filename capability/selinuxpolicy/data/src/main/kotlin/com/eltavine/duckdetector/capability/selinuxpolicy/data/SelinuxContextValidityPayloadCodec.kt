@@ -77,6 +77,9 @@ internal object SelinuxContextValidityPayloadCodec {
                     .append(snapshot.ksuProcAttrTimingBatchDifferencesNs.joinToString(","))
                     .append('\n')
             }
+            snapshot.xxksuFdReuseRaw?.let {
+                append("XXKSU_FD_REUSE_RAW=").append(escapeValue(it)).append('\n')
+            }
             snapshot.queryMethod.takeIf { it.isNotEmpty() }?.let {
                 append("QUERY_METHOD=").append(escapeValue(it)).append('\n')
             }

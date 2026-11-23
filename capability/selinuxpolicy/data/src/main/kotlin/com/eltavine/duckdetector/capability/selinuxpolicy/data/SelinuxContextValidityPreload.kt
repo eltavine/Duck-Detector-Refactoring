@@ -141,7 +141,15 @@ public class SelinuxContextValidityPreload {
                     ksuProcAttrTimingBatchDifferencesNs = procAttrTiming,
                 )
             } else withRaw
-            SelinuxContextValidityPayloadCodec.encode(withTiming)
+            // Do not disturb the legacy timing order: this separate, untimed
+            // same-FD experiment runs after the existing oracles, in the parent.
+            val withFdReuse = if (currentUid == appInfo.uid &&
+                withTiming.available && withTiming.carrierMatchesExpected
+            ) {
+                trace("selinux: xxksu same-FD transaction state")
+                withTiming.copy(xxksuFdReuseRaw = SelinuxRawAccess.probeXxksuFdReuse())
+            } else withTiming
+            SelinuxContextValidityPayloadCodec.encode(withFdReuse)
         } catch (throwable: Throwable) {
             fallbackPayload(
                 throwable.message ?: "SELinux app zygote preload failed.",

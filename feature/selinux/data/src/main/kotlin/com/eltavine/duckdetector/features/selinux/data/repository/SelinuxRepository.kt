@@ -25,6 +25,7 @@ import com.eltavine.duckdetector.core.evidence.ScanEpoch
 import com.eltavine.duckdetector.core.platform.PathStat
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxContextValidityProbe
 import com.eltavine.duckdetector.features.selinux.data.probes.KsuTypesTimingProbe
+import com.eltavine.duckdetector.features.selinux.data.probes.XxksuFdReuseProbe
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.SelinuxContextValidityCarrierManager
 import com.eltavine.duckdetector.capability.selinuxpolicy.data.isAppZygoteParentTimingKernelEnabled
 import com.eltavine.duckdetector.features.selinux.data.probes.SelinuxAuditRuntimeProbe
@@ -72,6 +73,7 @@ class SelinuxRepository(
         val auditIntegrity = analyzeAuditIntegrity()
 
         if (filesystemResult.status == FILESYSTEM_NOT_MOUNTED) {
+            methods += XxksuFdReuseProbe.interpret(null)
             methods += KsuTypesTimingProbe.interpret(null)
             methods += KsuTypesTimingProbe.interpret(null, SelinuxOracle.KSU_PROC_ATTR_TIMING)
             return SelinuxReport(
@@ -108,6 +110,7 @@ class SelinuxRepository(
         methods += buildContextValidityMethod(contextValidityResult)
         val carrierUsable = carrierSnapshot.available && carrierSnapshot.carrierMatchesExpected &&
             carrierSnapshot.probeAttempted
+        methods += XxksuFdReuseProbe.interpret(carrierSnapshot.xxksuFdReuseRaw.takeIf { carrierUsable })
         methods += KsuTypesTimingProbe.interpret(carrierSnapshot.ksuTimingBatchDifferencesNs.takeIf { carrierUsable })
         methods += KsuTypesTimingProbe.interpret(
             carrierSnapshot.ksuProcAttrTimingBatchDifferencesNs.takeIf { carrierUsable },

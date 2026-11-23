@@ -226,6 +226,14 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             DetectorStatus.danger(),
         )
     }
+    if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_FD_REUSE && it.isSecure == false }) {
+        items += SelinuxImpactItemModel(
+            "App Zygote observed an xxksu SELinuxFS same-FD early return for a targeted context, " +
+                "while valid and invalid stock transaction controls consumed their FDs. " +
+                "This is a strong implementation-specific state anomaly, not universal proof of root.",
+            DetectorStatus.danger(),
+        )
+    }
     if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
             it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE }) {
         items += SelinuxImpactItemModel(

@@ -39,6 +39,87 @@ The SELinux detector asks whether SELinux is enforcing for this app, whether the
 - Result states: clean, valid root context, unavailable.
 - Interpretation: a valid root-tool context is supporting evidence of a modified policy.
 
+### xxksu SELinuxFS same-FD transaction-state probe
+
+- Observable signal: **one file descriptor**, opened as `O_WRONLY` to
+  `/sys/fs/selinux/context`, accepts a second query after a first query
+  of `u:r:ksu:s0` or `u:object_r:ksu_file:s0` returns `EINVAL`.
+  On the stock `simple_transaction_get()` path, the first write consumes
+  the descriptor even if SELinux subsequently rejects the invalid context:
+  the second query returns `EBUSY` (`16`).
+- Producing subsystem: Android common kernel `fs/libfs.c`
+  `simple_transaction_get()` and SELinux `selinuxfs.c`
+  `selinux_transaction_write()`. The xxksu (backslashxx fork) ARM64
+  `sh_simple_transaction_get()` hook (and generic write-hook fallback)
+  can reject a hidden context with `EINVAL` **before** creating
+  `file->private_data`.
+- Mechanism: stock `selinux_transaction_write()` calls `simple_transaction_get()`
+  before validating the supplied context. The helper records a transaction in
+  `file->private_data`, so a second write on that FD returns `EBUSY` even if
+  the first label was invalid. The observed hide-hook early return instead
+  skips that transaction allocation for a targeted label.
+- References: Android Common Kernel (`kernel/common`) GKI 5.15,
+  [Android common GKI 5.15 libfs](https://github.com/aosp-mirror/kernel_common/blob/android13-5.15-2025-01_r1/fs/libfs.c#L839-L868),
+  [Android common GKI 5.15 SELinuxFS transaction](https://github.com/aosp-mirror/kernel_common/blob/android13-5.15-2025-01_r1/security/selinux/selinuxfs.c#L875-L900),
+  [xxksu ARM64 hook](https://github.com/backslashxx/KernelSU/blob/9a08f36d37b053392c52b112edb951c5a8ec32ff/kernel/feature/selinux_hide_arm64.c),
+  [generic fallback](https://github.com/backslashxx/KernelSU/blob/9a08f36d37b053392c52b112edb951c5a8ec32ff/kernel/feature/selinux_hide.c).
+- Applicability: observed on Android 14 / ARM64 / GKI 5.15 with the specified
+  backslashxx xxksu SELinux Hide implementation. Collected in the
+  **App Zygote parent preload** under its
+  actual UID and full MLS label. It reads its own label and verifies
+  enforcing=1; it does not use root, xxksu commands, change SID,
+  or update policy. It first requires `valid→valid` =
+  `success→EBUSY`, `invalid→invalid` =
+  `EINVAL→EBUSY`, and `invalid→valid` =
+  `EINVAL→EBUSY`. Each pair uses a fresh FD, with no close or reopen
+  **between** the two writes. Unexpected errors, missing carrier or
+  incorrect controls are `unavailable/inconclusive`, never negative.
+- Visibility limits: requires a functioning App Zygote parent with an app UID,
+  verified `app_zygote` context, enforcing SELinux, and write access to
+  `/sys/fs/selinux/context`. A failed open, denied write, missing carrier,
+  unexpected stock transaction control, or a different kernel/hook path
+  cannot establish an absence of hide behavior.
+- Result states: positive for a candidate when `candidate→valid` =
+  `EINVAL→success` **and** `candidate→invalid` =
+  `EINVAL→EINVAL`. Either tested candidate alone establishes a strong
+  positive (Danger) once all stock transaction controls pass, even if
+  the other candidate returns an unfamiliar errno. Native and Kotlin
+  both follow this any-candidate rule; Kotlin verifies the raw writes
+  rather than trusting the native summary text. Stock
+  `EINVAL→EBUSY` and Hide OFF `success→EBUSY` are reported
+  **not observed**, not proof of a secure/rootless device. Unavailable or
+  inconclusive is reported when the carrier, controls, or required write
+  outcomes cannot be verified and no complete positive is established.
+- Real device observation (2026-11-23): Xiaomi 13 (`fuxi`,
+  Android 14, AArch64, GKI 5.15.170), reporting xxksu manager
+  v3.3.1+55 and `selinux_hide` feature ID 4. One initial ON,
+  then OFF→ON→OFF→ON; all five App Zygote PIDs were distinct,
+  all native preflight controls passed, and both candidate contexts
+  switched between `success→EBUSY` (OFF) and
+  `EINVAL→success/EINVAL` (ON). The exact loaded in-kernel commit
+  was not independently attested, and no kprobe was used.
+- Negative comparison (2026-11-24): the owner reported reflashing the same
+  Xiaomi 13 to official KernelSU. The reference probe APK ran an
+  ON→OFF→OFF→ON sequence with four fresh App Zygote parents; all stock
+  transaction controls passed. Both `ksu` and `ksu_file` candidates returned
+  `EINVAL→EBUSY` with Hide ON and `success→EBUSY` with Hide OFF, for both
+  valid and invalid second inputs. Every run reported `NO_BYPASS_OBSERVED`.
+  Official provenance was user-reported; the loaded kernel/module commit
+  was not independently authenticated. These results apply to that phone
+  and tested binary, not all official KernelSU versions. They show that
+  Hide can preserve normal FD transaction consumption; the first-write
+  success/EINVAL difference remains observable under the controlled toggle.
+  Source: reference repository `SelinuxHideAttrProbe` at commit
+  `788e6196984c3d60975f36f1af3f86036cf5cfd8`, with raw results in that
+  repository's `debug-results/fdreuse_20261124_001104_507634.log`.
+- Interpretation: **strong, implementation-specific App Zygote
+  transaction-state anomaly** (Danger) when controls pass. This is
+  not a universal xxksu/root fingerprint; other kernels may
+  implement equivalent early returns, and forks can preserve the
+  transaction semantics. These observations share the SELinuxFS
+  surface with the context validity oracle and are not independent
+  evidence of a separate compromise.
+
 ### KSU context query timing
 
 - Observable signal: paired elapsed times for `u:r:ksu:s0` and the invalid control
