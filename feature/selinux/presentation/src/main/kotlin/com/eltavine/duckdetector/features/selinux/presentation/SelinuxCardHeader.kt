@@ -78,6 +78,8 @@ internal fun buildVerdict(report: SelinuxReport): String {
                 report.auditIntegrity?.state == SelinuxAuditIntegrityState.TAMPERED -> "Enforcing with audit rewrite"
                 contextValidity?.contextValidity?.verdict == SelinuxContextValidityVerdict.KSU_PRESENT ->
                     "Enforcing with KSU context materialized"
+                report.methods.any { it.oracle == SelinuxOracle.XXKSU_FD_REUSE && it.isSecure == false } ->
+                    "Enforcing with xxksu SELinuxFS transaction-state anomaly"
                 policyloadSeqno?.isSecure == false -> "Enforcing with app_zygote seqno split"
                 procAttrCurrent?.isSecure == false -> "Enforcing with recognized privileged contexts"
                 report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } ->
@@ -165,6 +167,9 @@ internal fun buildSummary(report: SelinuxReport): String {
                         }
                 }
                 val extra = buildList {
+                    if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_FD_REUSE && it.isSecure == false }) {
+                        add("The app_zygote carrier observed a same-FD early-return anomaly for a ksu/ksu_file candidate context, matching the behavior reproduced on the tested backslashxx fork.")
+                    }
                     if (report.ksuContextTimingDetected()) {
                         add("KSU and invalid SELinux contexts had different query timings.")
                     }

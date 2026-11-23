@@ -141,6 +141,7 @@ public open class SelinuxContextValidityBridge(
                 copy(ksuTimingBatchDifferencesNs = value.asTimingBatches())
             "KSU_PROC_ATTR_TIMING_BATCH_DIFFERENCES_NS" ->
                 copy(ksuProcAttrTimingBatchDifferencesNs = value.asTimingBatches())
+            "XXKSU_FD_REUSE_RAW" -> copy(xxksuFdReuseRaw = value.decodeValue())
             "QUERY_METHOD" -> copy(queryMethod = value.decodeValue())
             "KSU_DOMAIN_VALID" -> copy(ksuDomainValid = value.asNullableBool())
             "KSU_FILE_VALID" -> copy(ksuFileValid = value.asNullableBool())
