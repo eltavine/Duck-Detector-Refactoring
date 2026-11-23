@@ -37,7 +37,8 @@ namespace {
     constexpr int kBatchCount = 9;
     constexpr int kQueriesPerBatch = 1'500;
     constexpr int kWarmupPairs = 32;
-    constexpr char kInvalidContext[] = "u:r:duck_detector_invalid:s0";
+    constexpr jlong kPairTieThresholdNs = 40;
+    constexpr char kInvalidContext[] = "u:r:inv:s0";
     constexpr char kProcSelfAttrCurrent[] = "/proc/self/attr/current";
     using PairDifferences = std::array<jlong, kBatchCount * kQueriesPerBatch>;
     using duckdetector::selinux::query_raw_context_node;
@@ -82,7 +83,10 @@ namespace {
                 const auto b = sample(kInvalidContext, false);
                 if (!b) return std::nullopt;
                 if (pair >= 0) {
-                    differences[offset + pair] = *a - *b;
+                    const jlong delta_ns = *a - *b;
+                    differences[offset + pair] =
+                            delta_ns > -kPairTieThresholdNs && delta_ns < kPairTieThresholdNs
+                            ? 0 : delta_ns;
                 }
             }
         }
