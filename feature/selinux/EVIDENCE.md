@@ -42,14 +42,15 @@ The SELinux detector asks whether SELinux is enforcing for this app, whether the
 ### KSU context query timing
 
 - Observable signal: paired elapsed times for `u:r:ksu:s0` and the invalid control
-  `u:r:duck_detector_invalid:s0`, with a separate result row for each interface.
+  `u:r:inv:s0`, with a separate result row for each interface.
 - Producing subsystem: SELinux context queries through the selinuxfs `context` transaction
   and SELinux setprocattr writes through `/proc/self/attr/current`.
 - Mechanism: the dedicated app zygote uses DirtySepolicy's write-only selinuxfs transaction
   and runs the setprocattr measurement in a disposable child. Both measurements use the ARM64
   Generic Timer reader shared by SELinux and TEE. The sampling thread attempts to pin to CPU 0
   and restores its affinity afterward. It runs 32 warmup pairs and nine batches of 1,500 pairs,
-  with the KSU write immediately followed by the control write.
+  with the KSU write immediately followed by the control write. Each paired difference with
+  magnitude below 40 ns is set to zero before computing direction counts, means and the median.
 - References: [Arm Generic Timer guide](https://developer.arm.com/documentation/102379/latest/),
   [AOSP context query implementation](https://android.googlesource.com/platform/external/selinux/+/a273733/libselinux/src/check_context.c),
   [Android common kernel SELinux hooks](https://android.googlesource.com/kernel/common/+/783025351c5fb3bcb4591d8fc61cbbd709aa4bcf/security/selinux/hooks.c),
