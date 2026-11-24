@@ -30,6 +30,21 @@ The SELinux policy capability asks the loaded policy questions an ordinary app c
   policies. The native payload alone does not identify KernelSU, and
   hidden-tail effects share the same SELinux Hide mechanism as other
   SELinuxFS probes.
+- Mechanism: native collection submits fresh self-access transactions
+  whose first three tokens do not change, and records whether suffixes
+  ignored by the stock parser alter the result.
+- References: kernel/common security/selinux/selinuxfs.c
+  (sel_write_access), and backslashxx KernelSU
+  kernel/feature/selinux_hide_arm64.c and kernel/feature/selinux_hide.h
+  at 9a02a5c1.
+- Applicability: App Zygote parent with app UID, enforcing SELinux,
+  seccomp mode 2 and permission to query /sys/fs/selinux/access.
+- Visibility limits: a carrier without access permissions or with an
+  unsupported policy/class cannot produce trusted observations.
+- Result states: raw complete or unavailable; the feature classifies
+  positive, no observed split, permission limited and inconclusive outcomes.
+- Interpretation: this capability forwards raw observations without
+  claiming that a rejected ignored tail proves a recognized type or root.
 
 ### Context validity
 

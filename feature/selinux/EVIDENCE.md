@@ -98,6 +98,22 @@ The SELinux detector asks whether SELinux is enforcing for this app, whether the
   separate diagnostic rows but cannot automatically be treated as
   statistically independent root evidence. No negative observation
   proves absence of SELinux Hide.
+- Mechanism: the stock three-token /access parser ignores the fourth
+  field, but the tested Hide scanner matches tracked type names in the
+  complete input buffer before the parser consumes it.
+- References: kernel/common security/selinux/selinuxfs.c
+  (sel_write_access), backslashxx KernelSU kernel/feature/selinux_hide_arm64.c
+  and kernel/feature/selinux_hide.h at 9a02a5c1.
+- Applicability: the enforcing, seccomp-filtered App Zygote parent can
+  open and write /access with its own valid context and process class.
+- Visibility limits: access permissions and scanner implementations
+  differ across devices; missing or inconclusive observations cannot
+  exclude SELinux Hide.
+- Result states: ignored-tail rejection observed (Danger), no rejection
+  observed (informational), inconclusive, permission limited or unavailable.
+- Interpretation: a repeated parser/scanner mismatch is strong evidence
+  of input interposition on the tested implementation, not universal
+  identification of KernelSU or root.
 
 ### xxksu SELinuxFS same-FD transaction-state probe
 
