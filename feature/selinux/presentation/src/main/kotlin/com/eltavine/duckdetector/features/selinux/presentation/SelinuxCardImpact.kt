@@ -234,6 +234,14 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             DetectorStatus.danger(),
         )
     }
+    if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false }) {
+        items += SelinuxImpactItemModel(
+            "App Zygote observed a SELinuxFS /access parser/scanner mismatch: ignored :ksu: and " +
+                ":ksu_file: tails returned EINVAL while equal-length benign tails kept the " +
+                "same access decision. This is implementation-specific evidence, not proof of root.",
+            DetectorStatus.danger(),
+        )
+    }
     if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
             it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE }) {
         items += SelinuxImpactItemModel(

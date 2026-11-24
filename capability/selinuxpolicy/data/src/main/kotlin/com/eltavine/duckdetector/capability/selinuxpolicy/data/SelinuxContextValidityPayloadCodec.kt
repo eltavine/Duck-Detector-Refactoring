@@ -80,6 +80,9 @@ internal object SelinuxContextValidityPayloadCodec {
             snapshot.xxksuFdReuseRaw?.let {
                 append("XXKSU_FD_REUSE_RAW=").append(escapeValue(it)).append('\n')
             }
+            snapshot.xxksuAccessTailRaw?.let {
+                append("XXKSU_ACCESS_TAIL_RAW=").append(escapeValue(it)).append('\n')
+            }
             snapshot.queryMethod.takeIf { it.isNotEmpty() }?.let {
                 append("QUERY_METHOD=").append(escapeValue(it)).append('\n')
             }

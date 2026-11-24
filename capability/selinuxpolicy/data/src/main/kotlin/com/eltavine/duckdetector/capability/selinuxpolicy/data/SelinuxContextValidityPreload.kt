@@ -149,7 +149,15 @@ public class SelinuxContextValidityPreload {
                 trace("selinux: xxksu same-FD transaction state")
                 withTiming.copy(xxksuFdReuseRaw = SelinuxRawAccess.probeXxksuFdReuse())
             } else withTiming
-            SelinuxContextValidityPayloadCodec.encode(withFdReuse)
+            // Independent scanner/parser mismatch; the original timing and
+            // same-FD experiments have already completed at this point.
+            val withAccessTail = if (currentUid == appInfo.uid &&
+                withFdReuse.available && withFdReuse.carrierMatchesExpected
+            ) {
+                trace("selinux: xxksu SELinuxFS access ignored fourth field")
+                withFdReuse.copy(xxksuAccessTailRaw = SelinuxRawAccess.probeXxksuAccessTail())
+            } else withFdReuse
+            SelinuxContextValidityPayloadCodec.encode(withAccessTail)
         } catch (throwable: Throwable) {
             fallbackPayload(
                 throwable.message ?: "SELinux app zygote preload failed.",
