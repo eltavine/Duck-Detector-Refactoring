@@ -115,6 +115,43 @@ The SELinux detector asks whether SELinux is enforcing for this app, whether the
   of input interposition on the tested implementation, not universal
   identification of KernelSU or root.
 
+### xxksu SELinuxFS /context embedded-NUL tail probe
+
+- Observable signal: a valid current App Zygote context followed by an
+  embedded NUL and an equal-length benign suffix succeeds and reads back
+  the same canonical context, while a suffix containing `:ksu:` or
+  `:ksu_file:` after the first NUL returns EINVAL.
+- Producing subsystem: SELinuxFS context transaction and xxksu's
+  length-bounded SELinux Hide type scanner.
+- Mechanism: ACK's `sel_write_context` validates the C-string context
+  before the first NUL, but the tested `ksu_should_destroy_context`
+  examines bytes in the entire copied transaction page and can reject
+  a tracked type token beyond the parser boundary.
+- References: kernel/common `fs/libfs.c`,
+  `security/selinux/selinuxfs.c` (sel_write_context),
+  `security/selinux/ss/services.c` (context parsing), and
+  backslashxx KernelSU `kernel/feature/selinux_hide_arm64.c` and
+  `kernel/feature/selinux_hide.h` at 9a02a5c1.
+- Applicability: SELinux enforcing and an App Zygote preload parent
+  under the app UID, verified MLS context and seccomp mode 2 with
+  permission to open/write/read `/sys/fs/selinux/context`.
+- Visibility limits: missing App Zygote permissions, different context
+  parsers or Hide scanner versions can change this signal. The matched
+  Xiaomi 13 ON/OFF evidence does not establish cross-device coverage.
+  The parent collected /access and /context cases in one run, and both
+  findings share the same scanner; they are not independent root evidence.
+- Result states: four-round hidden suffix EINVAL with all matching
+  benign controls (Danger); all suffixes accepted (informational);
+  permission limited, unavailable or inconclusive.
+- Interpretation: only a complete four-round experiment with a valid
+  baseline, exact canonical replies for the same context, equal-length
+  negative controls, the `:ksuX` partial-match control and both
+  hidden tails returning EINVAL establishes a parser/scanner mismatch.
+  A negative result does not exclude SELinux Hide or other root tools.
+  Controlled ON/OFF raw evidence is in the
+  SelinuxHideAttrProbe 2026-11-24 ignored-tail research record; Duck
+  replays its ON and OFF observations as parser fixtures.
+
 ### xxksu SELinuxFS same-FD transaction-state probe
 
 - Observable signal: **one file descriptor**, opened as `O_WRONLY` to

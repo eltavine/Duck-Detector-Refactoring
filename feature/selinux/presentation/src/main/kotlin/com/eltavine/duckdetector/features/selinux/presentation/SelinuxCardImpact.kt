@@ -242,6 +242,15 @@ internal fun buildImpactItems(report: SelinuxReport): List<SelinuxImpactItemMode
             DetectorStatus.danger(),
         )
     }
+    if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false }) {
+        items += SelinuxImpactItemModel(
+            "App Zygote observed a SELinuxFS /context parser/scanner mismatch: hidden-type " +
+                "tokens after the first NUL returned EINVAL while the same valid context " +
+                "with equal-length benign tails succeeded. This shares the /access Hide scanner " +
+                "mechanism and must not count as independent root evidence.",
+            DetectorStatus.danger(),
+        )
+    }
     if (report.methods.any { it.oracle == SelinuxOracle.APP_ZYGOTE_ATTR_TIMING &&
             it.avcLookup?.timingVerdict == SelinuxAppZygoteTimingVerdict.POSITIVE }) {
         items += SelinuxImpactItemModel(

@@ -82,6 +82,8 @@ internal fun buildVerdict(report: SelinuxReport): String {
                     "Enforcing with xxksu SELinuxFS transaction-state anomaly"
                 report.methods.any { it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false } ->
                     "Enforcing with SELinuxFS /access ignored-tail anomaly"
+                report.methods.any { it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false } ->
+                    "Enforcing with SELinuxFS /context NUL-tail anomaly"
                 policyloadSeqno?.isSecure == false -> "Enforcing with app_zygote seqno split"
                 procAttrCurrent?.isSecure == false -> "Enforcing with recognized privileged contexts"
                 report.methods.any { it.oracle == SelinuxOracle.ATTR_CURRENT_TIMING && it.isSecure == false } ->
@@ -121,6 +123,8 @@ internal fun buildVerdict(report: SelinuxReport): String {
             SelinuxMode.UNKNOWN -> when {
                 report.methods.any { it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false } ->
                     "SELinux mode unknown with SELinuxFS /access ignored-tail anomaly"
+                report.methods.any { it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false } ->
+                    "SELinux mode unknown with SELinuxFS /context NUL-tail anomaly"
                 dirtySepolicyCompatibility != null -> "SELinux mode unknown with DirtySepolicy anomaly"
                 report.ksuContextTimingDetected() -> "SELinux mode unknown with KSU context timing anomaly"
                 appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ->
@@ -168,6 +172,10 @@ internal fun buildSummary(report: SelinuxReport): String {
                                 it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false
                             }) {
                             "SELinux is enforcing, but a SELinuxFS /access ignored-tail anomaly was observed."
+                        } else if (report.methods.any {
+                                it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false
+                            }) {
+                            "SELinux is enforcing, but a SELinuxFS /context NUL-tail anomaly was observed."
                         } else if (sidtabDiscrepancy != null) {
                             "SELinux is enforcing, but the SID-table experiment did not match stock registration behavior."
                         } else {
@@ -180,6 +188,9 @@ internal fun buildSummary(report: SelinuxReport): String {
                     }
                     if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false }) {
                         add("The app_zygote carrier observed EINVAL for :ksu: and :ksu_file: in a SELinuxFS /access field ignored by the stock parser, while equivalent benign tails returned the same access decision. This is an implementation-specific anomaly, not universal proof of root.")
+                    }
+                    if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false }) {
+                        add("The app_zygote carrier observed EINVAL only when hidden-type tokens appeared after the first NUL in a valid SELinuxFS /context request. Equivalent benign tails returned the same canonical context. This shares the scanner mechanism of the /access signal, not an independent root proof.")
                     }
                     if (report.ksuContextTimingDetected()) {
                         add("KSU and invalid SELinux contexts had different query timings.")
@@ -279,6 +290,8 @@ internal fun buildSummary(report: SelinuxReport): String {
             SelinuxMode.UNKNOWN ->
                 if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false }) {
                     "Local probes did not resolve a stable SELinux mode, but the app_zygote carrier observed a SELinuxFS /access ignored-tail anomaly."
+                } else if (report.methods.any { it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false }) {
+                    "Local probes did not resolve a stable SELinux mode, but the app_zygote carrier observed a SELinuxFS /context NUL-tail anomaly."
                 } else {
                     "Local probes did not resolve a stable SELinux mode."
                 }

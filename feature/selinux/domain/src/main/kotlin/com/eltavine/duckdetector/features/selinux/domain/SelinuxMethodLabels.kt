@@ -23,6 +23,7 @@ enum class SelinuxOracle(val label: String) {
     KSU_CONTEXT_TIMING("ksu_types timing with invalid types"),
     XXKSU_FD_REUSE("xxksu SELinuxFS same-FD transaction state"),
     XXKSU_ACCESS_TAIL("xxksu SELinuxFS ignored access tail"),
+    XXKSU_CONTEXT_NUL("xxksu SELinuxFS ignored context NUL tail"),
     KSU_PROC_ATTR_TIMING("ksu_types timing with invalid types (setprocattr)"),
     PROC_ATTR_CURRENT_WRITE("app_zygote attr/current write"),
     POLICYLOAD_SEQNO("App-zygote seqno oracle"),

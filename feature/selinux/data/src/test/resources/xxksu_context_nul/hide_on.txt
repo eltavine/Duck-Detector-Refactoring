@@ -1,0 +1,29 @@
+== xxksu SELinuxFS ignored context NUL tail ==
+access_tail_pid=18489 uid=10743 carrier=u:r:app_zygote:s0:c512,c768 enforcing=1 seccomp=2
+context_nul_prefix=u:r:app_zygote:s0:c512,c768
+context_nul_case=context_base round=0 size=27 open_errno=0 write_ret=27 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_inv round=0 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu round=0 size=34 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_inv_file round=0 size=39 open_errno=0 write_ret=39 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu_file round=0 size=39 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_ksu_partial round=0 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu_partial round=1 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu_file round=1 size=39 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_inv_file round=1 size=39 open_errno=0 write_ret=39 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu round=1 size=34 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_inv round=1 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_base round=1 size=27 open_errno=0 write_ret=27 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_base round=2 size=27 open_errno=0 write_ret=27 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_inv round=2 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu round=2 size=34 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_inv_file round=2 size=39 open_errno=0 write_ret=39 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu_file round=2 size=39 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_ksu_partial round=2 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu_partial round=3 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu_file round=3 size=39 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_inv_file round=3 size=39 open_errno=0 write_ret=39 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_nul_ksu round=3 size=34 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]
+context_nul_case=context_nul_inv round=3 size=34 open_errno=0 write_ret=34 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_case=context_base round=3 size=27 open_errno=0 write_ret=27 write_errno=0 read_ret=28 read_errno=0 response=[u:r:app_zygote:s0:c512,c768]
+context_nul_status=complete
+access_tail_status=complete identity_unchanged=true

@@ -53,9 +53,9 @@ std::string read_text(const char* path) {
     return result;
 }
 
-Observation query(const std::string& input) {
+Observation query(const std::string& input, const char* path = kAccess) {
     Observation r;
-    const int fd = open(kAccess, O_RDWR | O_CLOEXEC);
+    const int fd = open(path, O_RDWR | O_CLOEXEC);
     if (fd < 0) {
         r.open_error = errno;
         return r;
@@ -80,8 +80,9 @@ Observation query(const std::string& input) {
 }
 
 void emit(std::ostringstream& out, const char* name, int round,
-          const std::string& payload, const Observation& r) {
-    out << "access_tail_case=" << name << " round=" << round
+          const std::string& payload, const Observation& r,
+          const char* field = "access_tail_case") {
+    out << field << "=" << name << " round=" << round
         << " size=" << payload.size()
         << " open_errno=" << r.open_error
         << " write_ret=" << r.write_ret
@@ -141,6 +142,29 @@ std::string run() {
             emit(out, c.first, round, c.second, query(c.second));
         }
     }
+    // /context parses a C-string ending at the first NUL. The hooked
+    // SELinux Hide scanner can still inspect the full transaction length.
+    // Preserve this as an independent sub-experiment of the same scanner,
+    // not a second statistically independent root indicator.
+    constexpr char kContext[] = "/sys/fs/selinux/context";
+    const std::vector<std::pair<const char*, std::string>> context_cases = {
+        {"context_base", carrier},
+        {"context_nul_inv", carrier + std::string("\0 :inv:", 7)},
+        {"context_nul_ksu", carrier + std::string("\0 :ksu:", 7)},
+        {"context_nul_inv_file", carrier + std::string("\0 :inv_file:", 12)},
+        {"context_nul_ksu_file", carrier + std::string("\0 :ksu_file:", 12)},
+        {"context_nul_ksu_partial", carrier + std::string("\0 :ksuX", 7)},
+    };
+    out << "context_nul_prefix=" << carrier << '\n';
+    for (int round = 0; round < kRounds; ++round) {
+        for (size_t j = 0; j < context_cases.size(); ++j) {
+            const auto& entry = context_cases[(round & 1) ?
+                context_cases.size() - j - 1 : j];
+            emit(out, entry.first, round, entry.second,
+                 query(entry.second, kContext), "context_nul_case");
+        }
+    }
+    out << "context_nul_status=complete\n";
     const std::string after = read_text(kCurrent);
     out << "access_tail_status=complete identity_unchanged="
         << (after == carrier ? "true" : "false") << '\n';

@@ -35,6 +35,7 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 contextValidity?.contextValidity?.verdict == SelinuxContextValidityVerdict.KSU_PRESENT -> DetectorStatus.danger()
                 methods.any { it.oracle == SelinuxOracle.XXKSU_FD_REUSE && it.isSecure == false } -> DetectorStatus.danger()
                 methods.any { it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false } -> DetectorStatus.danger()
+                methods.any { it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false } -> DetectorStatus.danger()
                 policyloadSeqno?.isSecure == false -> DetectorStatus.danger()
                 methods.any { it.oracle == SelinuxOracle.STATUS_MMAP_ABI && it.isSecure == false } -> DetectorStatus.danger()
                 // EN: Please fucking do NOT downgrade this to WARNING. I reproduced the
@@ -75,6 +76,8 @@ fun SelinuxReport.toDetectorStatus(): DetectorStatus {
                 it.oracle == SelinuxOracle.XXKSU_FD_REUSE && it.isSecure == false
             } || methods.any {
                 it.oracle == SelinuxOracle.XXKSU_ACCESS_TAIL && it.isSecure == false
+            } || methods.any {
+                it.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL && it.isSecure == false
             }) {
                 DetectorStatus.danger()
             } else if (appZygoteCarrierState == AppZygoteCarrierSupportState.FAILED ||

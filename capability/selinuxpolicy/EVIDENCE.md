@@ -46,6 +46,35 @@ The SELinux policy capability asks the loaded policy questions an ordinary app c
 - Interpretation: this capability forwards raw observations without
   claiming that a rejected ignored tail proves a recognized type or root.
 
+### SELinuxFS /context embedded-NUL scanner differential (xxksu)
+
+- Observable signal: the same valid App Zygote context is accepted when
+  suffixed with NUL and benign bytes, but EINVAL is returned for hidden
+  type tokens appended after the first NUL.
+- Producing subsystem: the SELinuxFS context transaction dispatcher
+  and the xxksu SELinux Hide scanner.
+- Mechanism: the native /access collector also issues four alternating
+  rounds of fresh FD /context transactions, with the same current
+  context before the first NUL and equal-length benign/candidate
+  suffixes. It forwards each open/write/read result without deciding
+  whether the observed differences imply a scanner mismatch.
+- References: kernel/common `fs/libfs.c`,
+  `security/selinux/selinuxfs.c` (sel_write_context),
+  `security/selinux/ss/services.c`, and backslashxx KernelSU
+  `kernel/feature/selinux_hide_arm64.c` and
+  `kernel/feature/selinux_hide.h` at 9a02a5c1.
+- Applicability: a verified app_zygote preload parent with the app UID,
+  SELinux enforcing, seccomp mode 2 and direct /context access.
+- Visibility limits: permission failures and stock-parser differences
+  can prevent a comparison. Both /access and /context experiments
+  observe the same scanner and cannot be counted independently.
+- Result states: raw complete or unavailable; the consuming feature
+  separately classifies positive, no difference, inconclusive and
+  permission-limited outcomes.
+- Interpretation: a native error code is raw data, not proof of Root;
+  only the feature's exact-length, canonical-reply and repeated-control
+  checks can establish the implementation-specific anomaly.
+
 ### Context validity
 
 - Observable signal: whether contexts such as u:r:magisk:s0 are valid in the loaded policy.
