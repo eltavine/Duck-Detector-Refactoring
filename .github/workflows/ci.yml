@@ -181,11 +181,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          ./gradlew --stacktrace \
-            :build-logic:test \
-            unitTest \
-            checkPublicApi \
-            :app:assembleDebug
+          # Maven Central can return HTTP 429 to shared Actions runners. Retry only
+          # that transient dependency failure; compilation/test failures still fail.
+          for attempt in 1 2 3; do
+            if ./gradlew --stacktrace \
+              :build-logic:test \
+              unitTest \
+              checkPublicApi \
+              :app:assembleDebug 2>&1 | tee /tmp/duck-ci-gradle.log; then
+              break
+            fi
+            if (( attempt == 3 )) || ! grep -Eq 'Received status code 429|HTTP[^[:space:]]* 429' /tmp/duck-ci-gradle.log; then
+              exit 1
+            fi
+            echo "::warning::Dependency repository returned HTTP 429; retrying after backoff"
+            sleep $((attempt * 45))
+          done
 
       # buildHealth fails when a module declares a dependency its code does not use, uses one it
       # only reaches transitively, or exposes one through the wrong configuration. The reviewed
