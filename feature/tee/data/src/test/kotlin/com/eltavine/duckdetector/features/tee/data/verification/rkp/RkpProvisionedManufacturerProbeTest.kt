@@ -1,92 +1,119 @@
-/*
- * Copyright 2026 Duck Apps Contributor
- * If you have any questions, suggestions, or other inquiries, please email Eltavine <me@eltavine.com>.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+﻿package com.eltavine.duckdetector.features.tee.data.verification.rkp
 
-package com.eltavine.duckdetector.features.tee.data.verification.rkp
-
+import com.eltavine.duckdetector.capability.attestation.data.AttestationSnapshot
+import com.eltavine.duckdetector.capability.attestation.data.AttestedDeviceInfo
+import com.eltavine.duckdetector.capability.attestation.domain.TeeTier
+import com.eltavine.duckdetector.features.tee.domain.TeeRkpState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RkpProvisionedManufacturerProbeTest {
 
     @Test
-    fun `matching manufacturers are clean`() {
+    fun `authenticated RKP manufacturer is compared with attestation and property values`() {
+        var requestedProperty: String? = null
+        val probe = RkpProvisionedManufacturerProbe(
+            readAttestationManufacturer = { Result.success("Samsung") },
+            readProperty = { key ->
+                requestedProperty = key
+                Result.success("samsung")
+            },
+        )
+
+        val result = probe.inspect(
+            TeeRkpState(serverSigned = true, provisioningManufacturer = "Samsung"),
+            snapshot("samsung"),
+        )
+
+        assertEquals("ro.product.manufacturer", requestedProperty)
+        assertEquals(RkpProvisionedManufacturerAnomalyKind.NONE, result.anomalyKind)
+        assertEquals("samsung", result.systemManufacturer)
+        assertEquals("samsung", result.attestedManufacturer)
+        assertEquals("Samsung", result.buildManufacturer)
+        assertEquals("Build.MANUFACTURER_FOR_ATTESTATION", result.buildManufacturerSource)
+        assertEquals(6, result.comparisons.size)
+    }
+
+    @Test
+    fun `every available pair is compared and mismatching pair is named`() {
+        val result = compareRkpManufacturers(
+            rkp = TeeRkpState(serverSigned = true, provisioningManufacturer = "Samsung"),
+            attestedManufacturer = "Samsung",
+            buildManufacturer = "Samsung",
+            systemManufacturer = "Xiaomi",
+        )
+
+        assertEquals(RkpProvisionedManufacturerAnomalyKind.MISMATCH, result.anomalyKind)
+        assertEquals(6, result.comparisons.size)
+        assertEquals(3, result.comparisons.count { !it.matches })
+        assertTrue(result.detail.contains("ro.product.manufacturer=Xiaomi"))
+        assertTrue(result.detail.contains("ATTESTATION_ID_MANUFACTURER=Samsung"))
+    }
+
+    @Test
+    fun `spelling differences allowed by previous check still match`() {
+        assertTrue(manufacturerNamesAgree("samsung", "Samsung Electronics Co., Ltd."))
+    }
+
+    @Test
+    fun `attestation manufacturer takes priority with public build fallback`() {
         assertEquals(
-            RkpProvisionedManufacturerAnomalyKind.NONE,
-            classifyRkpProvisionedManufacturer("samsung", "samsung"),
+            BuildManufacturerReference("Attestation Brand", "Build.MANUFACTURER_FOR_ATTESTATION"),
+            selectBuildManufacturer("Attestation Brand", "Product Brand"),
+        )
+        assertEquals(
+            BuildManufacturerReference("Product Brand", "Build.MANUFACTURER fallback"),
+            selectBuildManufacturer("unknown", "Product Brand"),
         )
     }
 
     @Test
-    fun `spelling differences are not a mismatch`() {
-        // map[3] 和 ATTESTATION_ID_MANUFACTURER 的写法经常不同，归一化后单向包含即视为一致
-        // map[3] and ATTESTATION_ID_MANUFACTURER are often spelled differently. Containment after normalising counts as agreement.
-        assertEquals(
-            RkpProvisionedManufacturerAnomalyKind.NONE,
-            classifyRkpProvisionedManufacturer("samsung", "Samsung Electronics Co., Ltd."),
+    fun `missing RKP value leaves attestation and property comparison active`() {
+        val result = compareRkpManufacturers(
+            rkp = TeeRkpState(serverSigned = false, provisioningManufacturer = "untrusted"),
+            attestedManufacturer = "Samsung",
+            buildManufacturer = "Samsung",
+            systemManufacturer = "Samsung",
         )
-        assertTrue(manufacturerNamesAgree("Google", "google"))
-        assertFalse(manufacturerNamesAgree("samsung", "Xiaomi"))
+
+        assertEquals(RkpProvisionedManufacturerAnomalyKind.PARTIALLY_EVALUATED, result.anomalyKind)
+        assertEquals(3, result.comparisons.size)
+        assertTrue(result.comparisons.all { it.matches })
+        assertTrue(result.unavailableSources.single().contains("RKP map[3]"))
     }
 
     @Test
-    fun `disagreeing manufacturers are reported`() {
-        assertEquals(
-            RkpProvisionedManufacturerAnomalyKind.MISMATCH,
-            classifyRkpProvisionedManufacturer("samsung", "Xiaomi"),
+    fun `property read failure leaves other available pair comparison active`() {
+        val probe = RkpProvisionedManufacturerProbe(
+            readAttestationManufacturer = { Result.success("Samsung") },
+            readProperty = { Result.failure(IllegalStateException("hidden API")) },
         )
+        val result = probe.inspect(
+            TeeRkpState(serverSigned = true, provisioningManufacturer = "Samsung"),
+            snapshot("Samsung"),
+        )
+
+        assertEquals(RkpProvisionedManufacturerAnomalyKind.PARTIALLY_EVALUATED, result.anomalyKind)
+        assertEquals(3, result.comparisons.size)
+        assertTrue(result.unavailableSources.contains("ro.product.manufacturer"))
     }
 
-    @Test
-    fun `certs issued never dismisses the check`() {
-        // certs_issued 只是报告上下文，不参与判定：无论签发量多大，这条交叉核对都照常给结论
-        // certs_issued is reporting context only and takes no part in the verdict: however large the issuance count,
-        // this cross-check still reaches a conclusion.
-        assertEquals(
-            RkpProvisionedManufacturerAnomalyKind.MISMATCH,
-            classifyRkpProvisionedManufacturer("samsung", "Xiaomi"),
-        )
-        assertEquals(
-            RkpProvisionedManufacturerAnomalyKind.NONE,
-            classifyRkpProvisionedManufacturer("samsung", "samsung"),
-        )
-    }
-
-    @Test
-    fun `missing sides dismiss instead of judging`() {
-        assertEquals(
-            RkpProvisionedManufacturerAnomalyKind.DISMISSED_NO_PROVISIONING_MANUFACTURER,
-            classifyRkpProvisionedManufacturer(null, "samsung"),
-        )
-        assertEquals(
-            RkpProvisionedManufacturerAnomalyKind.DISMISSED_NO_ATTESTED_MANUFACTURER,
-            classifyRkpProvisionedManufacturer("samsung", null),
-        )
-    }
-
-    @Test
-    fun `detail names both sides on a mismatch`() {
-        val detail = buildRkpProvisionedManufacturerDetail(
-            anomalyKind = RkpProvisionedManufacturerAnomalyKind.MISMATCH,
-            provisioningManufacturer = "samsung",
-            attestedManufacturer = "Xiaomi",
-        )
-        assertTrue(detail.contains("samsung"))
-        assertTrue(detail.contains("Xiaomi"))
-    }
+    private fun snapshot(manufacturer: String?) = AttestationSnapshot(
+        tier = TeeTier.STRONGBOX,
+        attestationVersion = 400,
+        keymasterVersion = 400,
+        attestationTier = TeeTier.STRONGBOX,
+        keymasterTier = TeeTier.STRONGBOX,
+        challengeVerified = true,
+        challengeSummary = null,
+        rootOfTrust = null,
+        osVersion = null,
+        osPatchLevel = null,
+        vendorPatchLevel = null,
+        bootPatchLevel = null,
+        deviceInfo = AttestedDeviceInfo(manufacturer = manufacturer),
+        rawCertificates = emptyList(),
+        displayCertificates = emptyList(),
+    )
 }

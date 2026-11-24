@@ -20,6 +20,9 @@ package com.eltavine.duckdetector.features.tee.data.verification.strongbox
 import android.security.keystore.KeyInfo
 import android.security.keystore.StrongBoxUnavailableException
 import com.eltavine.duckdetector.capability.attestation.domain.TeeTier
+import java.security.cert.X509Certificate
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
 import java.security.InvalidAlgorithmParameterException
 import java.security.ProviderException
 
@@ -95,3 +98,33 @@ internal data class StrongBoxAttestationAssessment(
     val hardFailure: String? = null,
     val warning: String? = null,
 )
+
+internal fun assessStrongBoxIntermediateSubject(
+    chain: List<X509Certificate>,
+): StrongBoxAttestationAssessment {
+    if (chain.isEmpty()) {
+        return StrongBoxAttestationAssessment(
+            warning = "StrongBox attestation certificate chain was unavailable, so its intermediate subject could not be checked.",
+        )
+    }
+
+    val intermediateSubjects = chain.drop(1).dropLast(1).map {
+        it.subjectX500Principal.encoded
+    }
+    return if (hasStrongBoxIntermediateSubjectMarker(intermediateSubjects)) {
+        StrongBoxAttestationAssessment()
+    } else {
+        StrongBoxAttestationAssessment(
+            hardFailure = "StrongBox attestation chain had no intermediate certificate subject with O=StrongBox.",
+        )
+    }
+}
+
+internal fun hasStrongBoxIntermediateSubjectMarker(subjects: List<ByteArray>): Boolean =
+    subjects.any { encodedSubject ->
+        runCatching {
+            X500Name.getInstance(encodedSubject).getRDNs(BCStyle.O).any { organization ->
+                organization.first.value.toString().equals("STRONGBOX", ignoreCase = true)
+            }
+        }.getOrDefault(false)
+    }

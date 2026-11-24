@@ -154,6 +154,13 @@
       "reason": "Calls a hidden Keystore2 grant method to probe KeyMint capabilities."
     },
     {
+      "path": "feature/tee/data/src/main/kotlin/com/eltavine/duckdetector/features/tee/data/verification/rkp/RkpProvisionedManufacturerProbe.kt",
+      "uses": [
+        "operations"
+      ],
+      "reason": "Reads the hidden Build.MANUFACTURER_FOR_ATTESTATION field through HiddenApiBypass without adding process-wide hidden API exemptions."
+    },
+    {
       "path": "feature/tee/data/src/main/kotlin/com/eltavine/duckdetector/features/tee/data/verification/keystore/KeyStoreGrantJavaApi.kt",
       "uses": [
         "operations"
