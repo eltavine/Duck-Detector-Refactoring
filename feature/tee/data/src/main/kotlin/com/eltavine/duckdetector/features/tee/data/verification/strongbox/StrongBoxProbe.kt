@@ -65,6 +65,9 @@ class StrongBoxBehaviorProbeSuite(
 
         attestationAssessment.hardFailure?.let(hardFailures::add)
         attestationAssessment.warning?.let(warnings::add)
+        val subjectAssessment = assessStrongBoxIntermediateSubject(attestation?.rawCertificates.orEmpty())
+        subjectAssessment.hardFailure?.let(hardFailures::add)
+        subjectAssessment.warning?.let(warnings::add)
 
         val rsa4096Acceptance = testRsa4096Acceptance()
         if (rsa4096Acceptance == StrongBoxAcceptance.ACCEPTED) {

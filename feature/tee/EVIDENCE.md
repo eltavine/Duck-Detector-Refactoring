@@ -17,6 +17,28 @@ The TEE detector asks whether this device's hardware-backed keystore behaves lik
 - Result states: consistent, suspicious, tampered, broken (no hardware-backed trust), inconclusive.
 - Interpretation: chain and policy contradictions raise hard or soft policy indicators; a consistent chain is reported as aligned, never as proof that the TEE is genuine.
 
+### StrongBox intermediate subject marker
+
+- Observable signal: the Subject name of intermediate certificates in the attestation chain returned for a key requested from advertised StrongBox.
+- Producing subsystem: the StrongBox attestation certificate chain returned by Android Keystore.
+- Mechanism: exclude the leaf and root certificates, then check whether at least one intermediate certificate has an organization (`O`) RDN equal to `STRONGBOX`, ignoring case. CTS scans the intermediate subject string for `strongbox`; this probe narrows that check to the organization field so a matching common name alone does not count.
+- References: CTS `cts/tests/tests/keystore/src/android/keystore/cts/KeyAttestationTest.java`, the user-referenced android-latest-release line 2442; Android Keystore attestation documentation.
+- Applicability: only runs in the StrongBox probe when the package manager advertises StrongBox. An unavailable chain is reported as unavailable.
+- Visibility limits: the app sees the chain returned by Keystore; an interception layer may substitute it. The subject marker is a consistency check, not proof of physical hardware identity.
+- Result states: organization marker found, marker absent, chain unavailable.
+- Interpretation: an available StrongBox chain with no `O=STRONGBOX` intermediate raises a hard probe finding. A found organization marker is consistent with the expected chain naming, not proof of a genuine StrongBox.
+
+### RKP manufacturer cross-check
+
+- Observable signal: manufacturer key 3 in authenticated RKP ProvisioningInfo, `ATTESTATION_ID_MANUFACTURER` parsed from the leaf attestation extension, the attestation-side Build manufacturer selected by Android, and `ro.product.manufacturer`.
+- Producing subsystem: the RKP server signs ProvisioningInfo into the certificate chain, KeyMint supplies the attestation ID, `Build.MANUFACTURER_FOR_ATTESTATION` supplies Android's preferred attestation-side value, and the system property service supplies the current product manufacturer.
+- Mechanism: read the hidden `Build.MANUFACTURER_FOR_ATTESTATION` field through HiddenApiBypass. If it is unavailable, empty or `unknown`, use public `Build.MANUFACTURER`, matching Android's key generation fallback. Compare every available pair across the four values. Only use key 3 when the RKP analyzer has established a pinned Google root, adjacent extension placement and valid local certificate signatures. Normalize case and punctuation and allow containment for known naming differences such as `samsung` and `Samsung Electronics Co., Ltd.`. Missing values leave remaining pair checks active.
+- References: [Android provisioning extension schema](https://source.android.com/docs/security/features/keystore/attestation#provisioninginfo_extension_schema), [Android verification procedure](https://developer.android.com/privacy-and-security/security-key-attestation#retrieve-and-verify), and AOSP `AndroidKeyStoreKeyPairGeneratorSpi.java` lines 769–774, which prefers `Build.MANUFACTURER_FOR_ATTESTATION` and falls back to `Build.MANUFACTURER`. AOSP `Build.java` lines 118–130 defines `MANUFACTURER` from `ro.product.manufacturer` and declares the separate attestation field; issue 566467877 is a discovery reference for the key-3 observation.
+- Applicability: compare all pairs among values available in this scan. Key 3 is used only from authenticated RKP chains; unavailable attestation ID, hidden Build field or system property does not suppress comparisons between the other values. If the preferred Build field is unavailable, the public Build field is used as a fallback.
+- Visibility limits: local chain validation can be intercepted on a compromised OS. `MANUFACTURER_FOR_ATTESTATION` may intentionally differ from `ro.product.manufacturer`; Build's public manufacturer and `ro.product.manufacturer` are two access paths to the same property, not independent evidence. A mismatch does not by itself establish which source changed.
+- Result states: all available values agree, at least one pair differs, partial comparison, no pair available.
+- Interpretation: report which pair differs and the original values. A match is not proof that any source is genuine.
+
 ### RKP provisioning build metadata
 
 - Observable signal: CBOR key 5 in the provisioning information extension, OID `1.3.6.1.4.1.11129.2.1.30`, displayed in the RKP build metadata row with its original nested keys and values.

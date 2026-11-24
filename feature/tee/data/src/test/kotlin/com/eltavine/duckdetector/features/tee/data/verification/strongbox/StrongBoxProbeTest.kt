@@ -21,6 +21,7 @@ import android.security.keystore.StrongBoxUnavailableException
 import com.eltavine.duckdetector.capability.attestation.domain.TeeTier
 import java.security.InvalidAlgorithmParameterException
 import java.security.ProviderException
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -160,5 +161,23 @@ class StrongBoxProbeTest {
             assessment.hardFailure,
         )
         assertNull(assessment.warning)
+    }
+
+    @Test
+    fun `intermediate subject with strongbox organization is recognized case insensitively`() {
+        assertTrue(
+            hasStrongBoxIntermediateSubjectMarker(
+                listOf(X500Name("CN=Android,O=STRONGBOX").encoded),
+            ),
+        )
+    }
+
+    @Test
+    fun `strongbox text in another subject field does not count as organization`() {
+        assertFalse(
+            hasStrongBoxIntermediateSubjectMarker(
+                listOf(X500Name("CN=StrongBox Android,O=Google").encoded),
+            ),
+        )
     }
 }

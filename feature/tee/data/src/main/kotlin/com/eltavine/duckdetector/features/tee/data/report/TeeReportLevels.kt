@@ -162,8 +162,8 @@ internal fun rkpProvisionedManufacturerLevel(artifacts: TeeScanArtifacts): TeeSi
 ) {
     RkpProvisionedManufacturerAnomalyKind.MISMATCH -> TeeSignalLevel.FAIL
     RkpProvisionedManufacturerAnomalyKind.NONE -> TeeSignalLevel.PASS
-    RkpProvisionedManufacturerAnomalyKind.DISMISSED_NO_PROVISIONING_MANUFACTURER,
-    RkpProvisionedManufacturerAnomalyKind.DISMISSED_NO_ATTESTED_MANUFACTURER -> TeeSignalLevel.INFO
+    RkpProvisionedManufacturerAnomalyKind.PARTIALLY_EVALUATED,
+    RkpProvisionedManufacturerAnomalyKind.UNAVAILABLE -> TeeSignalLevel.INFO
 }
 
 internal fun indicatorLevel(
