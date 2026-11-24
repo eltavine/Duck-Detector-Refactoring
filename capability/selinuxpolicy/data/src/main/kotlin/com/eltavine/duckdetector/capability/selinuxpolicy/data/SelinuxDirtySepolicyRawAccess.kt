@@ -109,9 +109,16 @@ internal object SelinuxRawAccess {
         return runCatching { nativeProbeXxksuFdReuse() }.getOrNull()
     }
 
+    /** Untimed SELinuxFS /access ignored-fourth-field experiment; app_zygote parent only. */
+    fun probeXxksuAccessTail(): String? {
+        if (!SelinuxContextValidityBridge.isNativeLibraryLoaded) return null
+        return runCatching { nativeProbeXxksuAccessTail() }.getOrNull()
+    }
+
     private external fun nativeContextNode(context: String): String
 
     private external fun nativeMeasureKsuContextTiming(procAttr: Boolean): LongArray?
 
     private external fun nativeProbeXxksuFdReuse(): String?
+    private external fun nativeProbeXxksuAccessTail(): String?
 }

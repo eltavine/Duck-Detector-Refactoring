@@ -48,6 +48,7 @@ class SelinuxContextValidityPayloadCodecTest {
             ksuProcAttrTimingBatchDifferencesNs =
                 List(9) { (4 - it) * 1_000_000L } + -900L + List(18) { (17 - it).toLong() } + 1_500L,
             xxksuFdReuseRaw = "fd_reuse_preflight=PASS\nfd_reuse_case=xxksu_to_valid first_ret=-1 errno=22 second_ret=27 errno=0",
+            xxksuAccessTailRaw = "access_tail_pid=18489 uid=10743 carrier=u:r:app_zygote:s0:c512,c768 enforcing=1 seccomp=2\naccess_tail_case=tail_ksu round=0 size=63 open_errno=0 write_ret=-1 write_errno=22 read_ret=-1 read_errno=0 response=[]",
             queryMethod = "raw selinuxfs write",
             ksuDomainValid = true,
             ksuFileValid = false,
@@ -139,6 +140,7 @@ class SelinuxContextValidityPayloadCodecTest {
         assertEquals(snapshot.ksuTimingBatchDifferencesNs, parsed.ksuTimingBatchDifferencesNs)
         assertEquals(snapshot.ksuProcAttrTimingBatchDifferencesNs, parsed.ksuProcAttrTimingBatchDifferencesNs)
         assertEquals(snapshot.xxksuFdReuseRaw, parsed.xxksuFdReuseRaw)
+        assertEquals(snapshot.xxksuAccessTailRaw, parsed.xxksuAccessTailRaw)
         assertEquals(snapshot.queryMethod, parsed.queryMethod)
         assertTrue(parsed.ksuDomainValid == true)
         assertTrue(parsed.ksuFileValid == false)

@@ -39,6 +39,66 @@ The SELinux detector asks whether SELinux is enforcing for this app, whether the
 - Result states: clean, valid root context, unavailable.
 - Interpretation: a valid root-tool context is supporting evidence of a modified policy.
 
+### xxksu SELinuxFS ignored fourth-field access transaction probe
+
+- Observable signal: the **same first three fields** of a legal
+  `/sys/fs/selinux/access` query return a valid six-field AV answer with
+  ordinary fourth-field suffixes `:inv:`, `:inv_file:`, and `:ksuX`,
+  but return `EINVAL` when the otherwise ignored fourth field is
+  `:ksu:` or `:ksu_file:`. The hidden candidate tails and their
+  placebos have **identical byte lengths**.
+- Producing subsystem: ACK 5.15 `sel_write_access` parses
+  `sscanf("%s %s %hu")` (three tokens), ignoring any extra field.
+  xxksu/backslashxx's `sh_simple_transaction_get` can instead scan
+  the full transaction-page buffer via `ksu_should_destroy_context`
+  before the native parser, rejecting a token outside the parsed query.
+- Source evidence: `SelinuxHideAttrProbe`
+  `app/src/main/cpp/selinuxfs_access_tail.cpp` and
+  `docs/SELINUXFS_IGNORED_TAIL_PROBE_2026-11-24.md`;
+  ACK 5.15
+  [selinuxfs.c](https://github.com/aosp-mirror/kernel_common/blob/android13-5.15-2025-01_r1/security/selinux/selinuxfs.c),
+  xxksu
+  [selinux_hide_arm64.c](https://github.com/backslashxx/KernelSU/blob/9a02a5c1e552fb21cdb505c3c0428901eca43848/kernel/feature/selinux_hide_arm64.c)
+  and
+  [selinux_hide.h](https://github.com/backslashxx/KernelSU/blob/9a02a5c1e552fb21cdb505c3c0428901eca43848/kernel/feature/selinux_hide.h).
+- Reachability: the **app_zygote preload parent**, not an isolated
+  service child, with app UID, `u:r:app_zygote:s0` (including MLS),
+  enforcing SELinux and `Seccomp: 2`, through a fresh `O_RDWR`
+  transaction FD per query. Actual App Zygote permission and successful
+  three-field `/access` oracle were observed on Xiaomi 13. No root or
+  SELinux SID change is required in the APK.
+- Controls and classification: require four complete alternating-order
+  repetitions of the same `source target process_class` prefix,
+  `base`, both equal-length placebos, and `:ksuX` to write/read
+  successfully and return **exactly the same six-field AV text**.
+  An invalid *source* must return `EINVAL`. **Only** if both
+  `:ksu:` and `:ksu_file:` tails return precisely `-1/EINVAL`
+  in all four repetitions, report the strong parser/scanner mismatch
+  (Danger). Both hidden tails succeeding is `not observed` with
+  `isSecure=null`; mixed/unexpected responses, failed controls,
+  missing/duplicate records and denied access are inconclusive or
+  unavailable, never clean or danger.
+- Controlled real-device evidence: probe repository has two
+  ON → OFF → OFF → ON sequences, eight independent App Zygote parents,
+  16 observations per state and tail. ON rejects both hidden tails;
+  OFF accepts both; normal tails succeed throughout. This is a
+  same-device xxksu version observation, **not** an independent Duck
+  APK real-device acceptance test or cross-device false-positive bound.
+  Duck's parser regression tests now also replay **four real ON and
+  four real OFF observations** retained from the Probe logs, with only
+  logcat framing and unused exploratory cases omitted. The fixtures
+  preserve recorded errno, byte counts, AV responses and the ON/OFF
+  seqno difference (1 versus 9), and the requested three-field query
+  prefix is reconstructed from the captured carrier and process-class
+  index. Native compilation, Debug APK assembly and SELinux feature/
+  capability unit tests succeeded; APK-level ON/OFF verification on
+  a target running this xxksu revision remains outstanding.
+- Relationship: the `/context` embedded-NUL tail and old same-FD
+  channels may expose related hiding mechanisms. Their results are
+  separate diagnostic rows but cannot automatically be treated as
+  statistically independent root evidence. No negative observation
+  proves absence of SELinux Hide.
+
 ### xxksu SELinuxFS same-FD transaction-state probe
 
 - Observable signal: **one file descriptor**, opened as `O_WRONLY` to

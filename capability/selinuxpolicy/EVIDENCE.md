@@ -6,6 +6,31 @@ The SELinux policy capability asks the loaded policy questions an ordinary app c
 
 ## Signals
 
+### Ignored SELinuxFS /access fourth-field scan (xxksu)
+
+- Observable signal: successful `/access` computation on a valid
+  self-to-self `process` class triple versus `EINVAL` rejection only
+  when an **ignored fourth field** contains `:ksu:` or `:ksu_file:`.
+- Producing subsystem: ACK 5.15 `sel_write_access` reads only three
+  `sscanf` fields; xxksu scans the whole copied transaction buffer
+  before running the parser. Source and real-device ON/OFF evidence:
+  `SelinuxHideAttrProbe/docs/SELINUXFS_IGNORED_TAIL_PROBE_2026-11-24.md`.
+- Collection: app_zygote parent after existing probes, 4 rounds with
+  alternating case order, **fresh O_RDWR FD per query**. Records contain
+  full caller identity, SECComp/enforcing, process class, frozen common
+  three-field prefix, bytes written, errno, read bytes/error and the
+  six-field AV answer. No root API, policy modification or SID transition.
+- Consumption: only the feature interprets observations. It requires
+  a self-query success, equal-length benign tails and a partial-match
+  control with identical AV responses, plus an EINVAL invalid-source
+  negative control. A four-round dual-hidden-tail EINVAL split is a
+  version-specific anomaly; missing data, denied permissions, malformed
+  identity or mixed results must never become positive.
+- Scope: App Zygote and SELinuxFS permissions vary across vendor
+  policies. The native payload alone does not identify KernelSU, and
+  hidden-tail effects share the same SELinux Hide mechanism as other
+  SELinuxFS probes.
+
 ### Context validity
 
 - Observable signal: whether contexts such as u:r:magisk:s0 are valid in the loaded policy.
