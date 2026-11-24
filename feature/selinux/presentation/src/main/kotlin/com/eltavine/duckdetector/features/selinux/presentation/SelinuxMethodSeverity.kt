@@ -48,6 +48,10 @@ internal fun methodStatus(result: SelinuxCheckResult): DetectorStatus {
         return if (result.isSecure == false) DetectorStatus.danger()
         else DetectorStatus.info(InfoKind.SUPPORT)
     }
+    if (result.oracle == SelinuxOracle.XXKSU_CONTEXT_NUL) {
+        return if (result.isSecure == false) DetectorStatus.danger()
+        else DetectorStatus.info(InfoKind.SUPPORT)
+    }
     if (result.oracle == SelinuxOracle.CONTEXT_VALIDITY) {
         return when (result.contextValidity?.verdict) {
             SelinuxContextValidityVerdict.KSU_PRESENT -> DetectorStatus.danger()
