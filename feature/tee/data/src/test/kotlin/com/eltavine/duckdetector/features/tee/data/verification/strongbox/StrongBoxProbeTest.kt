@@ -164,19 +164,19 @@ class StrongBoxProbeTest {
     }
 
     @Test
-    fun `intermediate subject with strongbox organization is recognized case insensitively`() {
+    fun `intermediate subject containing strongbox is recognized case insensitively`() {
         assertTrue(
             hasStrongBoxIntermediateSubjectMarker(
-                listOf(X500Name("CN=Android,O=STRONGBOX").encoded),
+                listOf(X500Name("CN=Android StrongBox,O=Google").encoded),
             ),
         )
     }
 
     @Test
-    fun `strongbox text in another subject field does not count as organization`() {
+    fun `intermediate subject without strongbox text is not recognized`() {
         assertFalse(
             hasStrongBoxIntermediateSubjectMarker(
-                listOf(X500Name("CN=StrongBox Android,O=Google").encoded),
+                listOf(X500Name("CN=Android,O=Google").encoded),
             ),
         )
     }

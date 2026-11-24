@@ -22,7 +22,6 @@ import android.security.keystore.StrongBoxUnavailableException
 import com.eltavine.duckdetector.capability.attestation.domain.TeeTier
 import java.security.cert.X509Certificate
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import java.security.InvalidAlgorithmParameterException
 import java.security.ProviderException
 
@@ -115,7 +114,7 @@ internal fun assessStrongBoxIntermediateSubject(
         StrongBoxAttestationAssessment()
     } else {
         StrongBoxAttestationAssessment(
-            hardFailure = "StrongBox attestation chain had no intermediate certificate subject with O=StrongBox.",
+            hardFailure = "StrongBox attestation chain had no intermediate certificate subject containing StrongBox.",
         )
     }
 }
@@ -123,8 +122,6 @@ internal fun assessStrongBoxIntermediateSubject(
 internal fun hasStrongBoxIntermediateSubjectMarker(subjects: List<ByteArray>): Boolean =
     subjects.any { encodedSubject ->
         runCatching {
-            X500Name.getInstance(encodedSubject).getRDNs(BCStyle.O).any { organization ->
-                organization.first.value.toString().equals("STRONGBOX", ignoreCase = true)
-            }
+            X500Name.getInstance(encodedSubject).toString().contains("STRONGBOX", ignoreCase = true)
         }.getOrDefault(false)
     }

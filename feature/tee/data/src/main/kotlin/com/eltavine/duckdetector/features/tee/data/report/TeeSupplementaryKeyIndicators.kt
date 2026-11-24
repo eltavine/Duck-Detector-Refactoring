@@ -225,6 +225,6 @@ internal fun MutableList<TeeEvidenceItem>.addNativeAndStrongBoxIndicators(artifa
         )
     }
     artifacts.strongBox.hardFailures.forEach { message ->
-        add(fact("StrongBox", message, TeeSignalLevel.WARN))
+        add(fact("StrongBox", message, TeeSignalLevel.FAIL))
     }
 }
