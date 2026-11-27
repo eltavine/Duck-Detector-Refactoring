@@ -265,6 +265,7 @@ internal fun timingSideChannelLevel(artifacts: TeeScanArtifacts): TeeSignalLevel
 
 internal fun strongBoxLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
     artifacts.strongBox.hardFailures.isNotEmpty() -> TeeSignalLevel.FAIL
+    artifacts.strongBox.binderObservation?.failed == true -> TeeSignalLevel.FAIL
     artifacts.strongBox.warnings.isNotEmpty() -> TeeSignalLevel.INFO
     artifacts.strongBox.available -> TeeSignalLevel.PASS
     else -> TeeSignalLevel.INFO

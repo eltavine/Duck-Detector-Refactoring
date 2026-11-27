@@ -106,11 +106,12 @@ internal class TeeDeepCheckRunner(
     private val operationPruningProbe = OperationPruningProbe()
     private val dualAlgorithmProbe = DualAlgorithmChainProbe(trustAnalyzer)
     private val idAttestationProbe = IdAttestationProbe()
-    private val strongBoxProbe = StrongBoxBehaviorProbeSuite(appContext, collector)
+    private val strongBoxProbe = StrongBoxBehaviorProbeSuite(collector)
 
     suspend fun collect(
         useStrongBox: Boolean,
         deepChecksAllowed: Boolean,
+        strongBoxAdvertised: Boolean,
         snapshot: com.eltavine.duckdetector.capability.attestation.data.AttestationSnapshot,
         vintfKeyMintVersion: VintfKeyMintVersionResult,
         timingSideChannel: com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult,
@@ -192,7 +193,7 @@ internal class TeeDeepCheckRunner(
             dualAlgorithmProbe.inspect(comparison.first, comparison.second)
         }
         val idAttestation = async { idAttestationProbe.inspect(snapshot) }
-        val strongBox = async { strongBoxProbe.inspect() }
+        val strongBox = async { strongBoxProbe.inspect(strongBoxAdvertised) }
         val pairConsistencyResult = pairConsistency.await()
         val aesGcmResult = aesGcm.await()
         val lifecycleResult = lifecycle.await()

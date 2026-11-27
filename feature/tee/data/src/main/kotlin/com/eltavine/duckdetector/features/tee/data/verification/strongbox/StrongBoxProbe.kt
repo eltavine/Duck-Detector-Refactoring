@@ -17,8 +17,6 @@
 
 package com.eltavine.duckdetector.features.tee.data.verification.strongbox
 
-import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
@@ -35,16 +33,10 @@ import java.security.KeyStore
 import java.security.Signature
 import java.security.spec.ECGenParameterSpec
 
-class StrongBoxBehaviorProbeSuite(
-    context: Context,
+internal class StrongBoxBehaviorProbeSuite(
     private val collector: AndroidAttestationCollector = AndroidAttestationCollector(),
 ) {
-
-    private val appContext = context.applicationContext
-
-    fun inspect(): StrongBoxBehaviorResult {
-        val advertised =
-            appContext.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+    fun inspect(advertised: Boolean): StrongBoxBehaviorResult {
         if (!advertised) {
             return StrongBoxBehaviorResult(
                 requested = false,

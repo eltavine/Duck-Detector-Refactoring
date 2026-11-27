@@ -311,7 +311,7 @@ internal fun checkItems(
             if (artifacts.idAttestation.mismatches.isNotEmpty()) TeeSignalLevel.WARN else TeeSignalLevel.INFO
         )
     )
-    add(fact("StrongBox", strongBoxValue(artifacts), strongBoxLevel(artifacts), topic = TeeEvidenceTopic.STRONGBOX))
+    add(strongBoxFact(artifacts))
     add(fact("Native", nativeValue(artifacts), nativeSignalLevel(artifacts), topic = TeeEvidenceTopic.NATIVE))
     add(fact("Soter", artifacts.soter.summary, soterLevel(artifacts), topic = TeeEvidenceTopic.SOTER))
 }

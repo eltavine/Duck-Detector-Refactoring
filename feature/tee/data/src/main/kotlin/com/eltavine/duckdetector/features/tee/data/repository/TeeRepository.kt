@@ -40,6 +40,7 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystor
 import com.eltavine.duckdetector.features.tee.data.verification.rkp.RkpProvisionedManufacturerProbe
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.VintfKeyMintVersionProbe
 import com.eltavine.duckdetector.features.tee.data.verification.rkp.RkpExtensionAnalyzer
+import com.eltavine.duckdetector.features.tee.data.verification.strongbox.inspectStrongBoxBinder
 import com.eltavine.duckdetector.features.tee.domain.TeeReport
 import com.eltavine.duckdetector.core.detector.DetectorScanner
 import com.eltavine.duckdetector.features.tee.domain.TeeSoterState
@@ -87,6 +88,22 @@ class TeeRepository(
             val bootConsistency = bootConsistencyProbe.inspect(snapshot)
             val supplementaryAttestationInfo = supplementaryAttestationInfoProbe.inspect(snapshot)
             val vintfKeyMintVersion = vintfKeyMintVersionProbe.inspect(snapshot)
+            val deepChecksAllowed = snapshot.tier == TeeTier.TEE || snapshot.tier == TeeTier.STRONGBOX
+            val binderCheckSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            val strongBoxAdvertised = if (deepChecksAllowed || binderCheckSupported) {
+                val feature = runCatching {
+                    appContext.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+                }
+                if (binderCheckSupported) feature.getOrNull() else feature.getOrThrow()
+            } else {
+                null
+            }
+            val strongBoxBinder = inspectStrongBoxBinder(
+                sdkInt = Build.VERSION.SDK_INT,
+                manifestPaths = vintfKeyMintVersion.strongBoxManifestPaths,
+                advertised = strongBoxAdvertised,
+                readMergedManifest = { vintfKeyMintVersionProbe.mergedDeviceManifestDeclaresStrongBox() },
+            )
             // 这条探针要成对生成带 attestation 的 key，代价明显，因此只在硬件 KeyMint 层级下运行
             // This probe generates attested keys pairwise and is visibly expensive, so it only runs on a hardware KeyMint tier.
             // keystore2 的 RkpdProvisioned 分支从 Android 15 起才有 process_certificate_chain 调用点
@@ -96,7 +113,7 @@ class TeeRepository(
                     probeRan = false,
                     detail = "Skipped because keystore2 has no certificate post-processing call site below Android 15.",
                 )
-            } else if (snapshot.tier == TeeTier.TEE || snapshot.tier == TeeTier.STRONGBOX) {
+            } else if (deepChecksAllowed) {
                 runCatching {
                     postProcessingProbe.inspect(useStrongBox = snapshot.tier == TeeTier.STRONGBOX)
                 }.getOrElse {
@@ -118,7 +135,8 @@ class TeeRepository(
             )
             val deepChecks = deepCheckRunner.collect(
                 useStrongBox = snapshot.tier == TeeTier.STRONGBOX,
-                deepChecksAllowed = snapshot.tier == TeeTier.TEE || snapshot.tier == TeeTier.STRONGBOX,
+                deepChecksAllowed = deepChecksAllowed,
+                strongBoxAdvertised = strongBoxAdvertised == true,
                 snapshot = snapshot,
                 vintfKeyMintVersion = vintfKeyMintVersion,
                 timingSideChannel = timingSideChannel,
@@ -169,7 +187,7 @@ class TeeRepository(
                     pruning = deepChecks.pruning,
                     dualAlgorithm = deepChecks.dualAlgorithm,
                     idAttestation = deepChecks.idAttestation,
-                    strongBox = deepChecks.strongBox,
+                    strongBox = deepChecks.strongBox.copy(binderObservation = strongBoxBinder),
                     native = native,
                     soter = soter,
                     bootConsistency = bootConsistency,
