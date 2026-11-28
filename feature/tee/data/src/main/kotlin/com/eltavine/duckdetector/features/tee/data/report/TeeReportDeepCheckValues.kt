@@ -17,6 +17,9 @@
 
 package com.eltavine.duckdetector.features.tee.data.report
 
+import com.eltavine.duckdetector.features.tee.domain.TeeEvidenceItem
+import com.eltavine.duckdetector.features.tee.domain.TeeEvidenceTopic
+
 internal fun keyMetadataSemanticsValue(artifacts: TeeScanArtifacts): String {
     val result = artifacts.keyMetadataSemantics
     return when {
@@ -90,13 +93,34 @@ internal fun biometricIntegrationValue(artifacts: TeeScanArtifacts): String {
     }
 }
 
+internal fun strongBoxFact(artifacts: TeeScanArtifacts): TeeEvidenceItem = fact(
+    "StrongBox",
+    strongBoxValue(artifacts),
+    strongBoxLevel(artifacts),
+    hiddenCopyText = artifacts.strongBox.binderObservation?.let { binder ->
+        listOf(binder.detail, artifacts.strongBox.keyInfoUnavailableDetail)
+            .filter(String::isNotBlank)
+            .joinToString("\n")
+    },
+    topic = TeeEvidenceTopic.STRONGBOX,
+)
+
 internal fun strongBoxValue(artifacts: TeeScanArtifacts): String {
     val strongBox = artifacts.strongBox
-    if (strongBox.hardFailures.isNotEmpty()) {
-        return strongBox.hardFailures.first()
+    val binder = strongBox.binderObservation
+    val binderFailure = binder?.takeIf { it.failed }?.let {
+        if (strongBox.available && !it.missingSystemFeature) {
+            "A StrongBox key was observed. The Keystore2 query also failed during this scan."
+        } else {
+            it.summary
+        }
     }
+    strongBox.hardFailures.firstOrNull()?.let { failure ->
+        return listOfNotNull(failure, binderFailure).joinToString(" • ")
+    }
+
     val state = when {
-        !strongBox.requested && !strongBox.advertised -> "Not advertised"
+        binderFailure != null -> binderFailure
         strongBox.available -> buildString {
             append("Available")
             strongBox.keyInfoLevel?.let {
@@ -104,7 +128,6 @@ internal fun strongBoxValue(artifacts: TeeScanArtifacts): String {
                 append(it)
             }
         }
-
         // "Not confirmed" covers both a key that came back without StrongBox backing and a probe
         // that never got an answer. Only the first is evidence about the device, so name the
         // reason whenever the probe recorded one.
@@ -116,17 +139,15 @@ internal fun strongBoxValue(artifacts: TeeScanArtifacts): String {
             }
         }
 
+        binder != null -> binder.summary
+        !strongBox.advertised -> "Not advertised"
         else -> "Skipped"
     }
     // Warnings follow the state instead of replacing it. They are INFO-level notes here, and a
     // working StrongBox that signed quickly is still a working StrongBox, so leading with the
     // note used to hide both availability and the reported key level. All of them are kept
     // because showing only the first dropped the rest.
-    return if (strongBox.warnings.isEmpty()) {
-        state
-    } else {
-        (listOf(state) + strongBox.warnings).joinToString(" • ")
-    }
+    return (listOf(state) + strongBox.warnings).joinToString(" • ")
 }
 
 internal fun listEntriesConsistencyValue(artifacts: TeeScanArtifacts): String {

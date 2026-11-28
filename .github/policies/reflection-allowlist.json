@@ -262,6 +262,13 @@
       "reason": "Calls the hidden Keystore2 supplementary attestation info method through HiddenApiBypass."
     },
     {
+      "path": "feature/tee/data/src/main/kotlin/com/eltavine/duckdetector/features/tee/data/verification/keystore/VintfKeyMintVersionProbe.kt",
+      "uses": [
+        "operations"
+      ],
+      "reason": "Calls the hidden VintfObject.report method on Android 13 to distinguish the merged device HAL manifest from raw XML and compatibility matrices."
+    },
+    {
       "path": "feature/dangerousapps/data/src/main/kotlin/com/eltavine/duckdetector/features/dangerousapps/data/probes/hma/HmaPlatformCalls.kt",
       "uses": [
         "operations"

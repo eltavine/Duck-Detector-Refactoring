@@ -29,13 +29,16 @@ class TeeReportReducer(
         val patchState = buildPatchState(artifacts)
         val policyHardIndicators = collectPolicyHardIndicators(artifacts)
         val policySoftIndicators = collectPolicySoftIndicators(artifacts, patchState)
-        val supplementaryIndicators = collectSupplementaryIndicators(artifacts)
+        val scoredSupplementaryIndicators = collectSupplementaryIndicators(artifacts)
+        // A StrongBox routing inconsistency affects review status without adding tamper evidence.
+        val supplementaryIndicators =
+            scoredSupplementaryIndicators + listOfNotNull(strongBoxAvailabilityIndicator(artifacts))
         val effectiveTier = effectiveTier(artifacts)
         val verdict = determineVerdict(artifacts, policyHardIndicators, policySoftIndicators)
         val supplementaryDangerCount =
-            supplementaryIndicators.count { it.level == TeeSignalLevel.FAIL }
+            scoredSupplementaryIndicators.count { it.level == TeeSignalLevel.FAIL }
         val supplementaryWarningCount =
-            supplementaryIndicators.count { it.level == TeeSignalLevel.WARN }
+            scoredSupplementaryIndicators.count { it.level == TeeSignalLevel.WARN }
         val tamperScore = (
                 (policyHardIndicators.size * 28) +
                         (policySoftIndicators.size * 8) +

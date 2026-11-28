@@ -17,8 +17,10 @@
 
 package com.eltavine.duckdetector.features.tee.data.verification.keystore
 
+import android.os.Build
 import com.eltavine.duckdetector.capability.attestation.data.AttestationSnapshot
 import com.eltavine.duckdetector.capability.attestation.domain.TeeTier
+import com.eltavine.duckdetector.core.platform.HiddenSystemProperties
 import com.eltavine.duckdetector.core.platform.PlatformFailureName
 import java.io.File
 import java.io.StringReader
@@ -33,7 +35,20 @@ class VintfKeyMintVersionProbe(
 ) {
 
     fun inspect(snapshot: AttestationSnapshot): VintfKeyMintVersionResult {
-        val manifest = readManifests()
+        val skuManifestPaths = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ensureHiddenApiAccess()
+            currentSkuManifestPaths(
+                vendorSku = HiddenSystemProperties.read("ro.boot.product.vendor.sku").getOrNull(),
+                odmSku = Build.ODM_SKU.takeUnless { it == Build.UNKNOWN },
+            )
+        } else {
+            emptyList()
+        }
+        return inspect(snapshot, skuManifestPaths)
+    }
+
+    internal fun inspect(snapshot: AttestationSnapshot, skuManifestPaths: List<String>): VintfKeyMintVersionResult {
+        val manifest = readManifests(skuManifestPaths)
         val actualKeymasterVersion = snapshot.keymasterVersion
         val actualAttestationVersion = snapshot.attestationVersion
         // Tier and version-family mismatches are treated as hard mismatches before any declaration match,
@@ -126,10 +141,26 @@ class VintfKeyMintVersionProbe(
                     keymasterVersion = actualKeymasterVersion,
                 )
             },
+            strongBoxManifestPaths = manifest.strongBoxPaths,
         )
     }
 
-    private fun readManifests(): ManifestReadResult {
+    internal fun mergedDeviceManifestDeclaresStrongBox(
+        readReport: () -> Array<*>? = {
+            // On Android 13, libvintf merges the device manifest directly in this process.
+            ensureHiddenApiAccess()
+            loadClass("android.os.VintfObject").getMethod("report").invoke(null) as? Array<*>
+        },
+    ): Boolean? {
+        val reports = runCatching(readReport).getOrNull() ?: return null
+        return reports.asSequence()
+            .filterIsInstance<String>()
+            .mapNotNull { xml -> runCatching { parseManifest("merged device manifest", xml) }.getOrNull() }
+            .firstOrNull { it.isDeviceManifest }
+            ?.declaresStrongBox
+    }
+
+    private fun readManifests(skuManifestPaths: List<String>): ManifestReadResult {
         val files = linkedMapOf<String, File>()
         val unreadablePaths = mutableListOf<String>()
         manifestDirs.forEach { path ->
@@ -156,10 +187,14 @@ class VintfKeyMintVersionProbe(
         }
 
         val declarations = mutableListOf<VintfKeyMintVersionDeclaration>()
-        files.values.forEach { file ->
+        val strongBoxPaths = mutableListOf<String>()
+        val skuFiles = skuManifestPaths.map(::File).filter { it.isFile }.associateBy { it.absolutePath }
+        (files + skuFiles).forEach { (path, file) ->
+            // SKU files supplement the StrongBox file evidence without affecting the version comparison.
+            val compareVersions = path in files
             val xml = runCatching { file.readText() }.getOrElse { throwable ->
-                if (isPotentialKeyMintManifestPath(file.absolutePath, includeAggregateManifest = true)) {
-                    unreadablePaths += "${file.absolutePath}: ${describe(throwable)}"
+                if (compareVersions && isPotentialKeyMintManifestPath(path, includeAggregateManifest = true)) {
+                    unreadablePaths += "$path: ${describe(throwable)}"
                 }
                 null
             } ?: return@forEach
@@ -170,27 +205,33 @@ class VintfKeyMintVersionProbe(
             // 部分厂商会把其他 HAL 的非 XML 碎片放进 VINTF 目录。若无差别解析全部 *.xml，
             // 无关文件的语法错误会污染已经完整匹配的 KeyMint 结果。这里只解析带目标标识的片段；
             // 真正属于 KeyMint/Keymaster 的损坏片段仍按 UNREADABLE 处理。
-            if (!isPotentialKeyMintManifest(file.absolutePath, xml)) {
+            if (!isPotentialKeyMintManifest(path, xml)) {
                 return@forEach
             }
-            declarations += runCatching { parseManifest(file.absolutePath, xml) }.getOrElse { throwable ->
-                unreadablePaths += "${file.absolutePath}: ${describe(throwable)}"
-                emptyList()
+            val manifest = runCatching { parseManifest(path, xml) }.getOrElse { throwable ->
+                if (compareVersions) unreadablePaths += "$path: ${describe(throwable)}"
+                return@forEach
+            }
+            if (compareVersions) declarations += manifest.declarations
+            if (manifest.declaresStrongBox) {
+                strongBoxPaths += path
             }
         }
         return ManifestReadResult(
             declarations = declarations.distinct(),
             unreadablePaths = unreadablePaths.distinct(),
+            strongBoxPaths = strongBoxPaths,
         )
     }
 
-    private fun parseManifest(sourcePath: String, xml: String): List<VintfKeyMintVersionDeclaration> {
-        val document = DocumentBuilderFactory.newInstance()
+    private fun parseManifest(sourcePath: String, xml: String): ParsedManifest {
+        val root = DocumentBuilderFactory.newInstance()
             .newDocumentBuilder()
             .parse(InputSource(StringReader(xml)))
+            .documentElement
         val declarations = mutableListOf<VintfKeyMintVersionDeclaration>()
 
-        directChildElements(document.documentElement, "hal").forEach { halElement ->
+        directChildElements(root, "hal").forEach { halElement ->
             val hal = HalBuilder(
                 sourcePath = sourcePath,
                 format = halElement.getAttribute("format").orEmpty(),
@@ -208,7 +249,10 @@ class VintfKeyMintVersionProbe(
             declarations += hal.toDeclarations()
         }
 
-        return declarations
+        return ParsedManifest(
+            isDeviceManifest = root.tagName == "manifest" && root.getAttribute("type") == "device",
+            declarations = declarations,
+        )
     }
 
     private fun directChildElements(parent: Element, tagName: String): List<Element> {
@@ -274,7 +318,23 @@ class VintfKeyMintVersionProbe(
     private data class ManifestReadResult(
         val declarations: List<VintfKeyMintVersionDeclaration>,
         val unreadablePaths: List<String>,
+        val strongBoxPaths: List<String>,
     )
+
+    private data class ParsedManifest(
+        val isDeviceManifest: Boolean,
+        val declarations: List<VintfKeyMintVersionDeclaration>,
+    ) {
+        val declaresStrongBox: Boolean
+            get() = isDeviceManifest && declarations.any { declaration ->
+                declaration.instance == STRONGBOX_INSTANCE && when (declaration.family) {
+                    VintfKeyMintVersionFamily.KEYMINT_AIDL -> declaration.format == "aidl"
+                    VintfKeyMintVersionFamily.KEYMASTER_HIDL ->
+                        (declaration.format == "hidl" || declaration.format.isEmpty()) &&
+                            (declaration.vintfVersion == "4.0" || declaration.vintfVersion == "4.1")
+                }
+            }
+    }
 
     companion object {
         private val VINTF_MANIFEST_DIRS = listOf(
@@ -300,4 +360,16 @@ class VintfKeyMintVersionProbe(
         )
     }
 
+}
+
+internal fun currentSkuManifestPaths(vendorSku: String?, odmSku: String?): List<String> = buildList {
+    fun safeSku(sku: String?): String? = sku?.takeIf { value ->
+        value.isNotBlank() && value.none { it == '/' || it == '\\' || it == '\u0000' }
+    }
+
+    safeSku(vendorSku)?.let { add("/vendor/etc/vintf/manifest_$it.xml") }
+    safeSku(odmSku)?.let {
+        add("/odm/etc/vintf/manifest_$it.xml")
+        add("/odm/etc/manifest_$it.xml")
+    }
 }

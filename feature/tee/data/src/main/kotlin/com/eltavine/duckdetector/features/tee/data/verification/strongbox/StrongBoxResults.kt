@@ -110,6 +110,17 @@ enum class StrongBoxAcceptance {
         get() = this == ACCEPTED || this == REFUSED_BY_KEYSTORE
 }
 
+data class StrongBoxBinderObservation(
+    val queryFailed: Boolean,
+    val confirmedDeclaration: Boolean,
+    val summary: String,
+    val detail: String,
+    val missingSystemFeature: Boolean = false,
+) {
+    val failed: Boolean
+        get() = missingSystemFeature || (queryFailed && confirmedDeclaration)
+}
+
 data class StrongBoxBehaviorResult(
     val requested: Boolean,
     val advertised: Boolean,
@@ -141,6 +152,7 @@ data class StrongBoxBehaviorResult(
      * decides whether that count is a ceiling the platform imposed or just where the probe gave up.
      */
     val concurrentHandles: ConcurrentSigningHandleObservation = ConcurrentSigningHandleObservation(),
+    val binderObservation: StrongBoxBinderObservation? = null,
 ) {
     /**
      * Only [hardFailures] count. [warnings] are informational notes such as an unusually fast

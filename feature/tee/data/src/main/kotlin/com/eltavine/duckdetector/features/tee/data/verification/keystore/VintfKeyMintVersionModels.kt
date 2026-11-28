@@ -93,6 +93,7 @@ data class VintfKeyMintVersionResult(
     val vendorApiLevel: Int? = null,
     val vendorApiDetail: String = "Vendor API level was not required.",
     val detail: String,
+    val strongBoxManifestPaths: List<String> = emptyList(),
 ) {
     val diagnosticCopyText: String
         get() = buildString {

@@ -265,13 +265,15 @@ class Keystore2PrivateBinderClient {
     }
 
     fun resolveSecurityLevel(service: Any, level: Int): Any? {
-        return runCatching {
-            val method = service.javaClass.methods.firstOrNull {
-                it.name == "getSecurityLevel" && it.parameterTypes.size == 1
-            } ?: throw NoSuchMethodException("Unable to find hidden getSecurityLevel(int) on ${service.javaClass.name}")
-            method.isAccessible = true
-            method.invoke(service, level)
-        }.getOrNull()
+        return runCatching { resolveSecurityLevelOrThrow(service, level) }.getOrNull()
+    }
+
+    internal fun resolveSecurityLevelOrThrow(service: Any, level: Int): Any? {
+        val method = service.javaClass.methods.firstOrNull {
+            it.name == "getSecurityLevel" && it.parameterTypes.size == 1
+        } ?: throw NoSuchMethodException("Unable to find hidden getSecurityLevel(int) on ${service.javaClass.name}")
+        method.isAccessible = true
+        return method.invoke(service, level)
     }
 
     fun toObjectArray(value: Any?): Array<Any?> {

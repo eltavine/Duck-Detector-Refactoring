@@ -224,7 +224,23 @@ internal fun MutableList<TeeEvidenceItem>.addNativeAndStrongBoxIndicators(artifa
             )
         )
     }
-    artifacts.strongBox.hardFailures.forEach { message ->
-        add(fact("StrongBox", message, TeeSignalLevel.FAIL))
+    val strongBox = artifacts.strongBox
+    strongBox.hardFailures.forEachIndexed { index, message ->
+        add(
+            if (index == 0 && strongBox.binderObservation?.failed == true) {
+                strongBoxFact(artifacts)
+            } else {
+                fact("StrongBox", message, TeeSignalLevel.FAIL)
+            },
+        )
+    }
+}
+
+internal fun strongBoxAvailabilityIndicator(artifacts: TeeScanArtifacts): TeeEvidenceItem? {
+    val strongBox = artifacts.strongBox
+    return if (strongBox.hardFailures.isEmpty() && strongBox.binderObservation?.failed == true) {
+        strongBoxFact(artifacts)
+    } else {
+        null
     }
 }
