@@ -18,6 +18,7 @@
 package com.eltavine.duckdetector.features.tee.data.verification.strongbox
 
 import android.os.Build
+import com.eltavine.duckdetector.core.platform.HiddenServiceManager
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.Keystore2PrivateBinderClient
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.describeKeystoreThrowable
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.keystoreServiceSpecificErrorCode
@@ -28,6 +29,7 @@ internal fun inspectStrongBoxBinder(
     manifestPaths: List<String>,
     advertised: Boolean?,
     readMergedManifest: () -> Boolean?,
+    listServices: () -> Result<List<String>> = HiddenServiceManager::listServices,
     querySecurityLevel: () -> Any? = {
         val client = Keystore2PrivateBinderClient()
         val service = checkNotNull(client.getKeystoreService()) { "Keystore2 service interface unavailable" }
@@ -39,7 +41,12 @@ internal fun inspectStrongBoxBinder(
     // Android 14 libvintf can omit vendor APEX fragments when the app cannot read the APEX list.
     val checkMergedManifest = sdkInt == Build.VERSION_CODES.TIRAMISU
     val mergedDeclaration = if (checkMergedManifest) readMergedManifest() else null
-    val confirmedDeclaration = advertised == true || mergedDeclaration == true
+    // ServiceManager authorizes listing separately from finding the KeyMint binder.
+    val serviceList = listServices()
+    val serviceNames = serviceList.getOrNull()
+    val listFailure = serviceList.exceptionOrNull()
+    val strongBoxRegistered = STRONGBOX_KEYMINT_SERVICE in serviceNames.orEmpty()
+    val confirmedDeclaration = advertised == true || mergedDeclaration == true || strongBoxRegistered
     val shouldQuery = !checkMergedManifest || confirmedDeclaration ||
         (mergedDeclaration != false && manifestPaths.isNotEmpty())
     if (!shouldQuery && advertised == false && mergedDeclaration == false) return null
@@ -71,6 +78,14 @@ internal fun inspectStrongBoxBinder(
         } else if (!checkMergedManifest) {
             add("No StrongBox declaration was found in the readable VINTF files.")
         }
+        add(
+            when {
+                strongBoxRegistered -> "ServiceManager lists $STRONGBOX_KEYMINT_SERVICE"
+                listFailure != null -> "Could not list ServiceManager services (${describeKeystoreThrowable(listFailure)})"
+                serviceNames.isNullOrEmpty() -> "ServiceManager service list was unavailable"
+                else -> "ServiceManager did not list $STRONGBOX_KEYMINT_SERVICE"
+            },
+        )
     }
     if (!shouldQuery) {
         return StrongBoxBinderObservation(
@@ -88,15 +103,20 @@ internal fun inspectStrongBoxBinder(
     if (hardwareUnavailable && advertised == false && !confirmedDeclaration && manifestPaths.isEmpty()) return null
 
     val interfaceAvailable = query.getOrNull() != null
-    val missingSystemFeature = advertised == false && (mergedDeclaration == true || interfaceAvailable)
+    val registeredInterfaceMissing = strongBoxRegistered && query.isSuccess && !interfaceAvailable
+    val missingSystemFeature = advertised == false &&
+        (mergedDeclaration == true || strongBoxRegistered || interfaceAvailable)
     val queryIssue = when {
         hardwareUnavailable -> "Keystore2 reports it unavailable."
         invocationFailure != null -> "The Keystore2 query failed."
+        registeredInterfaceMissing -> "Keystore2 returned no StrongBox interface."
         else -> null
     }
     val summary = when {
         missingSystemFeature && mergedDeclaration == true ->
             listOfNotNull("VINTF declares StrongBox. Android does not advertise it.", queryIssue).joinToString(" ")
+        missingSystemFeature && strongBoxRegistered ->
+            listOfNotNull("ServiceManager lists StrongBox. Android does not advertise it.", queryIssue).joinToString(" ")
         missingSystemFeature -> "Keystore2 exposes a StrongBox interface. Android does not advertise it."
         !confirmedDeclaration && advertised == false && manifestPaths.isNotEmpty() ->
             "VINTF XML lists StrongBox. Android does not advertise it."
@@ -112,7 +132,7 @@ internal fun inspectStrongBoxBinder(
         else -> "getSecurityLevel(STRONGBOX) returned no interface"
     }
     return StrongBoxBinderObservation(
-        queryFailed = invocationFailure != null,
+        queryFailed = invocationFailure != null || registeredInterfaceMissing,
         confirmedDeclaration = confirmedDeclaration,
         summary = summary,
         detail = (declarations + queryDetail).joinToString("\n"),
@@ -121,4 +141,5 @@ internal fun inspectStrongBoxBinder(
 }
 
 private const val HARDWARE_TYPE_UNAVAILABLE = -68
+private const val STRONGBOX_KEYMINT_SERVICE = "android.hardware.security.keymint.IKeyMintDevice/strongbox"
 private const val DECLARATION_UNVERIFIED = "StrongBox declaration could not be verified"
